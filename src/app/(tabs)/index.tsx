@@ -61,19 +61,26 @@ export default function TurfDiscoveryScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Top App Bar */}
         <View style={[styles.header, { backgroundColor: theme.background }]}>
-          <Pressable style={styles.locationSelector}>
-            <Ionicons name="location" size={16} color={theme.secondary} />
-            <ThemedText type="labelMd" style={{ color: theme.secondary, marginLeft: 4 }}>
-              London, UK
+          <Pressable style={styles.userProfileBtn} onPress={() => router.push('/profile')}>
+            <Image
+              source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI' }}
+              style={styles.headerAvatar}
+            />
+            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: Spacing.xs, fontFamily: 'HankenGrotesk_700Bold' }}>
+              Azarudeen
             </ThemedText>
-            <Ionicons name="chevron-down" size={12} color={theme.secondary} style={{ marginLeft: 2 }} />
           </Pressable>
           <ThemedText type="displayLgMobile" style={styles.headerTitle}>
             SPORTS OS
           </ThemedText>
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="notifications-outline" size={22} color={theme.secondary} />
-          </Pressable>
+          <View style={styles.headerRightActions}>
+            <Pressable style={styles.iconButton} onPress={() => router.push('/network-activity')}>
+              <Ionicons name="pulse" size={20} color={theme.secondary} />
+            </Pressable>
+            <Pressable style={styles.iconButton}>
+              <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
+            </Pressable>
+          </View>
         </View>
 
         <ScrollView
@@ -399,15 +406,27 @@ const styles = StyleSheet.create({
     borderBottomColor: '#0000000a',
     zIndex: 10,
   },
-  locationSelector: {
+  userProfileBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 4,
+  },
+  headerAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#c3c7cb',
   },
   headerTitle: {
     fontFamily: 'HankenGrotesk_800ExtraBold',
     fontSize: 20,
     letterSpacing: -0.5,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   iconButton: {
     padding: 4,

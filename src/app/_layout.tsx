@@ -84,6 +84,20 @@ export default function RootLayout() {
             presentation: 'modal' 
           }} 
         />
+        <Stack.Screen 
+          name="profile" 
+          options={{ 
+            animation: 'slide_from_right', 
+            presentation: 'card' 
+          }} 
+        />
+        <Stack.Screen 
+          name="network-activity" 
+          options={{ 
+            animation: 'slide_from_right', 
+            presentation: 'card' 
+          }} 
+        />
       </Stack>
     </ThemeProvider>
   );

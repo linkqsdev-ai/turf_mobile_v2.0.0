@@ -17,54 +17,80 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-// Mock Sports Categories
-const CATEGORIES = [
-  { id: 'football', name: 'Football', icon: 'football' },
-  { id: 'cricket', name: 'Cricket', icon: 'fitness' },
-  { id: 'tennis', name: 'Tennis', icon: 'tennisball' },
-  { id: 'basketball', name: 'Basketball', icon: 'basketball' },
-  { id: 'futsal', name: 'Futsal', icon: 'shirt-outline' },
+// Booking Asset Categories
+const ASSET_CATEGORIES = [
+  { id: 'turf', name: 'Turf', icon: 'football-outline', desc: 'Football, Cricket, Tennis' },
+  { id: 'pool', name: 'Swimming Pool', icon: 'water-outline', desc: 'Olympic-size, Heated' },
+  { id: 'event', name: 'Event Hall', icon: 'calendar-outline', desc: 'Tourneys & Matches' },
+  { id: 'gym', name: 'Gym & Fitness', icon: 'barbell-outline', desc: 'Workouts, Training' },
 ];
 
-// Mock Venues Data
-const TRENDING_VENUES = [
-  { id: 'skyline', name: 'Skyline Arena Elite', location: 'Canary Wharf, London', price: '$25', rating: '4.9', distance: '1.2 miles', image: require('@/assets/images/illustrations/stadium.png'), sport: 'FOOTBALL' },
-  { id: 'lords', name: "Lord's View Pavillion", location: "St John's Wood, London", price: '$22', rating: '4.8', distance: '2.5 miles', image: require('@/assets/images/illustrations/cricket_player.png'), sport: 'CRICKET' },
-  { id: 'the-grid', name: 'The Grid Multisport', location: 'Stratford Central, London', price: '$18', rating: '4.7', distance: '3.4 miles', image: require('@/assets/images/illustrations/football_player.png'), sport: 'MULTI-SPORT' },
-];
+// Mock Venues classified by Category
+const BOOKING_VENUES: Record<string, any[]> = {
+  turf: [
+    { id: 'skyline', name: 'Skyline Arena Elite', location: 'Canary Wharf, London', price: '$25', rating: '4.9', distance: '1.2 miles', image: require('@/assets/images/illustrations/stadium.png'), sport: 'FOOTBALL' },
+    { id: 'lords', name: "Lord's View Pavillion", location: "St John's Wood, London", price: '$22', rating: '4.8', distance: '2.5 miles', image: require('@/assets/images/illustrations/cricket_player.png'), sport: 'CRICKET' },
+    { id: 'the-grid', name: 'The Grid Multisport', location: 'Stratford Central, London', price: '$18', rating: '4.7', distance: '3.4 miles', image: require('@/assets/images/illustrations/football_player.png'), sport: 'MULTI-SPORT' },
+  ],
+  pool: [
+    { id: 'aquatic', name: 'Olympic Aquatic Center', location: 'Stratford Park, London', price: '$35', rating: '4.9', distance: '3.6 miles', image: require('@/assets/images/illustrations/athletes.png'), sport: 'SWIMMING' },
+    { id: 'hydro', name: 'Hydro Splash Arena', location: 'Greenwich, London', price: '$30', rating: '4.6', distance: '4.8 miles', image: require('@/assets/images/illustrations/tennis_player.png'), sport: 'SWIMMING' },
+  ],
+  event: [
+    { id: 'pavilion', name: 'Wembley Exhibition Hall', location: 'Wembley, London', price: '$120', rating: '4.9', distance: '8.2 miles', image: require('@/assets/images/illustrations/team_huddle.png'), sport: 'EVENT HALL' },
+  ],
+  gym: [
+    { id: 'iron', name: 'Iron Club Fitness', location: 'Covent Garden, London', price: '$15', rating: '4.8', distance: '0.8 miles', image: require('@/assets/images/illustrations/basketball_player.png'), sport: 'FITNESS' },
+  ],
+};
 
 export default function ExploreTab() {
   const theme = useTheme();
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('football');
+  const [selectedCategory, setSelectedCategory] = useState('turf');
 
   const handleVenueClick = (id: string, name: string) => {
+    // If the venue is one of our details-supported lookups (skyline, the-grid, lords), navigate to details
+    const supportedIds = ['skyline', 'the-grid', 'lords'];
+    const targetId = supportedIds.includes(id) ? id : 'skyline';
     router.push({
       pathname: '/details',
-      params: { id, name },
+      params: { id: targetId, name },
     });
   };
+
+  const handleProfilePress = () => router.push('/profile');
+  const handleNetworkPress = () => router.push('/network-activity');
+
+  const activeVenues = BOOKING_VENUES[selectedCategory] || [];
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Top App Bar */}
+        {/* Top App Bar with new layout specifications */}
         <View style={[styles.header, { backgroundColor: theme.background }]}>
-          <Pressable style={styles.locationSelector}>
-            <Ionicons name="location" size={16} color={theme.secondary} />
-            <ThemedText type="labelMd" style={{ color: theme.secondary, marginLeft: 4 }}>
-              London, UK
+          <Pressable style={styles.userProfileBtn} onPress={handleProfilePress}>
+            <Image
+              source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI' }}
+              style={styles.headerAvatar}
+            />
+            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: Spacing.xs, fontFamily: 'HankenGrotesk_700Bold' }}>
+              Azarudeen
             </ThemedText>
-            <Ionicons name="chevron-down" size={12} color={theme.secondary} style={{ marginLeft: 2 }} />
           </Pressable>
           <ThemedText type="displayLgMobile" style={styles.headerTitle}>
             SPORTS OS
           </ThemedText>
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="notifications-outline" size={22} color={theme.secondary} />
-          </Pressable>
+          <View style={styles.headerRightActions}>
+            <Pressable style={styles.iconButton} onPress={handleNetworkPress}>
+              <Ionicons name="pulse" size={20} color={theme.secondary} />
+            </Pressable>
+            <Pressable style={styles.iconButton}>
+              <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
+            </Pressable>
+          </View>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -75,7 +101,7 @@ export default function ExploreTab() {
               <Ionicons name="search" size={20} color={theme.textSecondary} style={{ marginRight: 8 }} />
               <TextInput
                 style={[styles.searchInput, { color: theme.text }]}
-                placeholder="Search venues, sports, or regions..."
+                placeholder="Search courts, pools, halls, or gyms..."
                 placeholderTextColor={theme.textSecondary + 'aa'}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -86,68 +112,52 @@ export default function ExploreTab() {
             </View>
           </View>
 
-          {/* Horizontal Categories */}
+          {/* Booking Categories Bento Grid */}
           <View style={styles.section}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScroll}>
-              {CATEGORIES.map(category => {
+            <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.sm, letterSpacing: 0.5 }}>
+              SELECT ASSET TYPE
+            </ThemedText>
+            
+            <View style={styles.assetGrid}>
+              {ASSET_CATEGORIES.map(category => {
                 const isActive = category.id === selectedCategory;
                 return (
                   <Pressable
                     key={category.id}
                     onPress={() => setSelectedCategory(category.id)}
                     style={[
-                      styles.categoryTab,
-                      isActive
-                        ? { backgroundColor: theme.primary }
-                        : { backgroundColor: theme.surfaceHigh, borderColor: theme.outlineVariant + '1a' },
+                      styles.assetCell,
+                      { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
+                      isActive && { borderColor: theme.secondaryContainer, borderWidth: 2 },
+                      Shadows.level1
                     ]}
                   >
-                    <Ionicons name={category.icon as any} size={16} color={isActive ? '#ffffff' : theme.textSecondary} />
-                    <ThemedText type="labelMd" style={{ color: isActive ? '#ffffff' : theme.textSecondary, marginLeft: 6 }}>
+                    <View style={[styles.assetIconWrap, { backgroundColor: isActive ? theme.secondaryContainer + '1a' : theme.surface }]}>
+                      <Ionicons name={category.icon as any} size={22} color={isActive ? theme.secondary : theme.text} />
+                    </View>
+                    <ThemedText type="labelMd" style={{ color: theme.text, marginTop: Spacing.xs, fontFamily: 'HankenGrotesk_700Bold' }}>
                       {category.name}
+                    </ThemedText>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, textAlign: 'center', marginTop: 2 }}>
+                      {category.desc}
                     </ThemedText>
                   </Pressable>
                 );
               })}
-            </ScrollView>
-          </View>
-
-          {/* Map View Promo Card */}
-          <View style={styles.section}>
-            <View style={[styles.mapPromoCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
-              <Image
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAs7ZFxpDuTY0Y20RzzsmBGxAjht8U5AihgJyskprBmTPKVYrEOab08NWaF-4BFy3UjwPr46PMa9oRy0TqoklyqETyaI3T9xbHvBGj0vyYb99qgZn6w5StHhG9_NAMWkvZiyjhoW9QJ4TVDCuUjWD2x6xrp0HlAaAIVRu2xmLKg6V1CrRxUQiNFhiU_n_PBx9V6T9ZF5x3yGwizSIx_I4x5fTWBozUqBJ77o8N5RyeuxUvrf6uWewzXD86IF4X_G5brMzCocIakM-w' }}
-                style={styles.mapImage}
-                contentFit="cover"
-              />
-              <View style={styles.mapPromoOverlay}>
-                <View style={[styles.mapPromoBadge, { backgroundColor: theme.primaryContainer }]}>
-                  <Ionicons name="map" size={14} color="#ffffff" />
-                  <ThemedText type="labelSm" style={{ color: '#ffffff', marginLeft: 4, fontWeight: '700' }}>
-                    EXPLORE MAP
-                  </ThemedText>
-                </View>
-                <ThemedText type="headlineSm" style={{ color: '#111c2c', marginTop: Spacing.xs }}>
-                  Find Venues Near You
-                </ThemedText>
-                <ThemedText type="bodySm" style={{ color: '#43474b', marginTop: Spacing.half }}>
-                  Interactive grid overview of 24 sport courts in Greater London.
-                </ThemedText>
-              </View>
             </View>
           </View>
 
-          {/* Trending Venues Section */}
+          {/* Trending Venues / Results list */}
           <View style={[styles.section, { paddingBottom: 100 }]}>
             <View style={styles.sectionHeader}>
-              <ThemedText type="headlineSm">Trending Venues</ThemedText>
+              <ThemedText type="headlineSm">Available Venues</ThemedText>
               <Pressable>
                 <ThemedText type="labelMd" style={{ color: theme.secondary }}>VIEW ALL</ThemedText>
               </Pressable>
             </View>
 
             <View style={styles.trendingList}>
-              {TRENDING_VENUES.map(venue => (
+              {activeVenues.map(venue => (
                 <Pressable
                   key={venue.id}
                   onPress={() => handleVenueClick(venue.id, venue.name)}
@@ -181,6 +191,15 @@ export default function ExploreTab() {
                   </View>
                 </Pressable>
               ))}
+
+              {activeVenues.length === 0 && (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="location-outline" size={48} color={theme.textSecondary + '44'} />
+                  <ThemedText type="bodyMd" style={{ color: theme.textSecondary, marginTop: Spacing.md }}>
+                    No venues found in this category.
+                  </ThemedText>
+                </View>
+              )}
             </View>
           </View>
 
@@ -207,15 +226,27 @@ const styles = StyleSheet.create({
     borderBottomColor: '#0000000a',
     zIndex: 10,
   },
-  locationSelector: {
+  userProfileBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 4,
+  },
+  headerAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#c3c7cb',
   },
   headerTitle: {
     fontFamily: 'HankenGrotesk_800ExtraBold',
     fontSize: 20,
     letterSpacing: -0.5,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   iconButton: {
     padding: 4,
@@ -261,45 +292,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  categoriesScroll: {
-    gap: Spacing.xs,
-    paddingVertical: Spacing.base,
-  },
-  categoryTab: {
+  assetGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    justifyContent: 'space-between',
   },
-  mapPromoCard: {
+  assetCell: {
+    width: '48%',
     borderRadius: BorderRadius.xl,
-    overflow: 'hidden',
     borderWidth: 1,
-    height: 180,
-    position: 'relative',
-  },
-  mapImage: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.35,
-  },
-  mapPromoOverlay: {
-    position: 'absolute',
-    inset: 0,
-    justifyContent: 'center',
-    padding: Spacing.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
-  },
-  mapPromoBadge: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
+    padding: Spacing.md,
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.default,
+  },
+  assetIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   trendingList: {
     gap: Spacing.md,
@@ -338,5 +349,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: BorderRadius.md,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
   },
 });
