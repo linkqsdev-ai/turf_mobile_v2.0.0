@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create Player - APEX VELOCITY</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#eceef0",
+                        "on-primary-container": "#6f84ac",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed-variant": "#594400",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary-container": "#001b3d",
+                        "tertiary": "#000000",
+                        "on-surface-variant": "#44474e",
+                        "outline": "#74777f",
+                        "on-tertiary-container": "#75859d",
+                        "on-surface": "#191c1e",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "surface-container-low": "#f2f4f6",
+                        "outline-variant": "#c4c6cf",
+                        "inverse-primary": "#b1c7f2",
+                        "tertiary-fixed": "#d3e4fe",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-dim": "#d8dadc",
+                        "primary-fixed-dim": "#b1c7f2",
+                        "inverse-surface": "#2d3133",
+                        "surface": "#f7f9fb",
+                        "secondary-container": "#ffc703",
+                        "background": "#f7f9fb",
+                        "primary-fixed": "#d6e3ff",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "secondary": "#765b00",
+                        "primary": "#000000",
+                        "surface-bright": "#f7f9fb",
+                        "on-secondary-fixed": "#251a00",
+                        "surface-container-high": "#e6e8ea",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-fixed-dim": "#f5bf00",
+                        "on-primary-fixed": "#001b3d",
+                        "on-background": "#191c1e",
+                        "on-secondary-container": "#6e5400",
+                        "surface-tint": "#495f84",
+                        "tertiary-container": "#0b1c30",
+                        "on-primary-fixed-variant": "#31476b",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "surface-container-highest": "#e0e3e5",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#ffdf94",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "lg": "24px",
+                        "md": "16px",
+                        "2xl": "64px",
+                        "xl": "40px",
+                        "sm": "8px",
+                        "base": "4px",
+                        "margin": "32px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "label-md": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-sm": ["Hanken Grotesk"],
+                        "headline-sm": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Hanken Grotesk', sans-serif; }
+        .glass-header { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .transition-all { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .sidebar-gradient { background: linear-gradient(180deg, #001b3d 0%, #000000 100%); }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+<!-- Top AppBar - Following JSON Structure -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-gutter h-16 bg-surface/80 dark:bg-surface-container/80 backdrop-blur-md shadow-[0px_4px_20px_rgba(0,27,61,0.08)]">
+<div class="flex items-center gap-4">
+<button class="flex items-center justify-center p-2 rounded-full hover:bg-surface-container-high transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<h1 class="font-display-lg text-headline-md tracking-tighter text-primary">APEX VELOCITY</h1>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-container-high p-2 rounded-full transition-colors" data-icon="notifications">notifications</span>
+<div class="h-8 w-8 rounded-full bg-primary-container overflow-hidden">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a young athlete in a high-key lighting setup. The style is clean and corporate, featuring a minimalist white background and a sophisticated color palette of deep navy and bright white. The lighting is soft and flattering, creating a premium and focused mood suitable for an elite sports management interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmqCEtkBNt2WgKbUQccnUzA_prLeiCR1C2YltOh79BuUDY7z4AjQnqOqj0rY7ffI4d0iTssz71mr0m1DFJFvNb5FpTkJd3heKN-j1KPh4Z6fwpfrcEXdC0BS9WDPu4DqzaMM8T1e9_Fs4Yw3IG3BRkdavsYcVbNSVpuiARsC3VT7T8bzqZOwJhWROH1lC9zhFyUIZoyNKlYZ_-97-0LHFeeUguG81o-EQiVGdZRefeW2-Ro3pDf7TbiDG77bvJJ6UNWDbJ2s2_Bb4"/>
+</div>
+</div>
+</header>
+<main class="pt-24 pb-12 px-gutter max-w-[1280px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left Column: Visual & Instructions -->
+<div class="lg:col-span-4 space-y-6">
+<div class="bg-primary-container p-8 rounded-xl relative overflow-hidden h-[400px] flex flex-col justify-end group shadow-[0px_12px_48px_rgba(0,27,61,0.12)]">
+<img alt="Athlete Silhouette" class="absolute top-0 right-0 w-full h-full object-cover opacity-40 group-hover:scale-110 transition-all duration-700 pointer-events-none" src="https://lh3.googleusercontent.com/aida/AP1WRLsrliF0Cd3A1noW1I-8QmrA86jnUIhi367jWWnWwX_4cOBZvy0pEfT2NOP469vVIgcettV0_tGsG8CLAVsU4gpyVZYJY30Ms2S9po_TAFCHtuZGlN0TfD6UKPJL-W4zBAou4QiM6fwBAoQ70des2-UtAfllHZdyG7TSX_arZ0Gj7rIEGoIjW_lyUG2y-nnju08P3-ZpQxYURos2c2MwDDLdxzAOYHCf2_wzduUmBoMEaIV3RjBJMlYV2MM"/>
+<div class="relative z-10">
+<span class="font-label-md text-label-md text-secondary-container bg-secondary-container/10 px-3 py-1 rounded-full inline-block mb-4">NEW REGISTRATION</span>
+<h2 class="font-headline-lg text-headline-lg text-on-secondary mb-2">Build Your Legacy</h2>
+<p class="font-body-md text-body-md text-on-primary-container/80 leading-relaxed">Create a professional profile for Non-Stricker. Input precise athletic data to ensure peak performance tracking across the APEX ecosystem.</p>
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container via-transparent to-transparent"></div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/30">
+<h3 class="font-headline-sm text-headline-sm mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">info</span>
+                    Requirement Checklist
+                </h3>
+<ul class="space-y-3 font-body-sm text-body-sm text-on-surface-variant">
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span> Legal full name for official records</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span> Verified primary playing role</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span> Technical style specifications</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-secondary-container text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span> High-resolution profile imagery</li>
+</ul>
+</div>
+</div>
+<!-- Right Column: Registration Form -->
+<div class="lg:col-span-8">
+<div class="bg-surface-container-lowest p-8 lg:p-10 rounded-xl border border-outline-variant shadow-[0px_4px_20px_rgba(0,27,61,0.08)]">
+<form class="space-y-10" onsubmit="event.preventDefault(); alert('Player Profile Created Successfully!');">
+<!-- Section 1: Profile Photo -->
+<div class="flex flex-col md:flex-row items-center gap-8 border-b border-outline-variant pb-8">
+<div class="relative group">
+<div class="w-32 h-32 rounded-full bg-surface-container border-2 border-dashed border-outline flex items-center justify-center overflow-hidden transition-all group-hover:border-secondary">
+<span class="material-symbols-outlined text-on-surface-variant text-4xl group-hover:text-secondary">add_a_photo</span>
+<input accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" type="file"/>
+</div>
+<div class="absolute -bottom-2 -right-2 bg-secondary-container text-on-secondary-container p-2 rounded-full shadow-lg">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">edit</span>
+</div>
+</div>
+<div class="text-center md:text-left">
+<h4 class="font-headline-sm text-headline-sm mb-1">Player Portrait</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Upload a high-quality photo. JPG or PNG, max 5MB. Recommended ratio 1:1.</p>
+</div>
+</div>
+<!-- Section 2: Personal Details -->
+<div class="space-y-6">
+<div class="flex items-center gap-2 text-secondary mb-2">
+<span class="material-symbols-outlined">person</span>
+<h4 class="font-label-md text-label-md tracking-widest uppercase">Identity Information</h4>
+</div>
+<div class="grid grid-cols-1 gap-6">
+<div class="relative">
+<label class="font-label-md text-label-md text-on-surface-variant mb-2 block">FULL NAME</label>
+<input class="w-full bg-surface border-0 border-b-2 border-outline-variant focus:border-primary-container focus:ring-0 px-4 py-3 font-body-md text-body-md transition-all placeholder:text-outline-variant" placeholder="e.g. Rahul S. Dravid" type="text"/>
+</div>
+</div>
+</div>
+<!-- Section 3: Technical Specs -->
+<div class="space-y-6">
+<div class="flex items-center gap-2 text-secondary mb-2">
+<span class="material-symbols-outlined">sports_cricket</span>
+<h4 class="font-label-md text-label-md tracking-widest uppercase">Performance Profile</h4>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Playing Role -->
+<div>
+<label class="font-label-md text-label-md text-on-surface-variant mb-3 block">PLAYING ROLE</label>
+<div class="grid grid-cols-2 gap-3">
+<button class="py-3 px-4 rounded-lg border-2 border-outline-variant text-body-sm font-semibold hover:border-secondary-container hover:bg-secondary-container/5 transition-all text-center focus:bg-secondary-container focus:text-on-secondary-container focus:border-secondary-container active:scale-95" type="button">Batsman</button>
+<button class="py-3 px-4 rounded-lg border-2 border-outline-variant text-body-sm font-semibold hover:border-secondary-container hover:bg-secondary-container/5 transition-all text-center focus:bg-secondary-container focus:text-on-secondary-container focus:border-secondary-container active:scale-95" type="button">Bowler</button>
+<button class="py-3 px-4 rounded-lg border-2 border-outline-variant text-body-sm font-semibold hover:border-secondary-container hover:bg-secondary-container/5 transition-all text-center focus:bg-secondary-container focus:text-on-secondary-container focus:border-secondary-container active:scale-95" type="button">All-Rounder</button>
+<button class="py-3 px-4 rounded-lg border-2 border-outline-variant text-body-sm font-semibold hover:border-secondary-container hover:bg-secondary-container/5 transition-all text-center focus:bg-secondary-container focus:text-on-secondary-container focus:border-secondary-container active:scale-95" type="button">Wicketkeeper</button>
+</div>
+</div>
+<!-- Technical Specs Dropdowns -->
+<div class="space-y-6">
+<div>
+<label class="font-label-md text-label-md text-on-surface-variant mb-2 block">BATTING STYLE</label>
+<select class="w-full bg-surface border-0 border-b-2 border-outline-variant focus:border-primary-container focus:ring-0 px-2 py-3 font-body-md text-body-md">
+<option>Right Hand Bat</option>
+<option>Left Hand Bat</option>
+</select>
+</div>
+<div>
+<label class="font-label-md text-label-md text-on-surface-variant mb-2 block">BOWLING STYLE</label>
+<select class="w-full bg-surface border-0 border-b-2 border-outline-variant focus:border-primary-container focus:ring-0 px-2 py-3 font-body-md text-body-md">
+<option>None / Not Applicable</option>
+<option>Right-arm Fast</option>
+<option>Right-arm Off-break</option>
+<option>Left-arm Orthodox</option>
+<option>Left-arm Chinaman</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="pt-8 flex flex-col sm:flex-row gap-4">
+<button class="flex-1 bg-primary-container text-on-secondary font-headline-sm text-headline-sm py-4 rounded-xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all active:scale-95" type="submit">
+                            Create Player Profile
+                        </button>
+<button class="px-8 bg-surface-container-high text-on-surface-variant font-headline-sm text-headline-sm py-4 rounded-xl border border-outline-variant/30 hover:bg-surface-container-highest transition-all" type="button">
+                            Save Draft
+                        </button>
+</div>
+</form>
+</div>
+</div>
+</main>
+<!-- Bottom Nav Bar - Following JSON Structure -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-surface dark:bg-surface-container shadow-[0px_-12px_48px_rgba(0,27,61,0.12)] rounded-t-full md:hidden">
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant transition-all hover:text-primary active:scale-90 duration-150">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant transition-all hover:text-primary active:scale-90 duration-150">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-label-md text-label-md">Explore</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant transition-all hover:text-primary active:scale-90 duration-150">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span class="font-label-md text-label-md">Teams</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant transition-all hover:text-primary active:scale-90 duration-150">
+<span class="material-symbols-outlined" data-icon="sports_soccer">sports_soccer</span>
+<span class="font-label-md text-label-md">Matches</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1.5 transition-all hover:text-primary active:scale-90 duration-150">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</div>
+</nav>
+<script>
+        // Simple micro-interaction for button selection
+        document.querySelectorAll('button[type="button"].border-2').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const parent = this.parentElement;
+                parent.querySelectorAll('button').forEach(b => {
+                    b.classList.remove('bg-secondary-container', 'text-on-secondary-container', 'border-secondary-container');
+                    b.classList.add('border-outline-variant');
+                });
+                this.classList.add('bg-secondary-container', 'text-on-secondary-container', 'border-secondary-container');
+                this.classList.remove('border-outline-variant');
+            });
+        });
+
+        // Atmospheric parallax on silhouette
+        window.addEventListener('mousemove', (e) => {
+            const silhouette = document.querySelector('img[src*="IMAGE_63"]');
+            if (silhouette) {
+                const moveX = (e.clientX - window.innerWidth / 2) * 0.01;
+                const moveY = (e.clientY - window.innerHeight / 2) * 0.01;
+                silhouette.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.1)`;
+            }
+        });
+    </script>
+</body></html>

@@ -40,7 +40,7 @@ const VENUE_DETAILS: Record<string, {
     pitch: '5G Rubber Infill',
     hours: '07:00 - 23:00',
     capacity: '14 Players (7v7)',
-    image: require('@/assets/images/illustrations/stadium.png'),
+    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9H8hZV1gCxBOC9fWHjQyhn5ukWJhiNGuP6cNDATeIj2gP6JceuAOrhkqeTXWFS75Y0nw0QANCmhRdo0NYvbdmh4Xrs2itBjykGtZr0Y91KEzjUMyOoM-B-owetUT1u8vwmIZlGJkcKdkgVfU0TIGzuVVlTN3lhwfdg5OWwHMCKOyPJGWWdIKySwofsCUjnq9pJi4WH0BMDAi73A53u0OeKj_Ufmh6V4PVwghrjz5aX16NlvQZLOkQRC51252maP-4ZXwNw3MwVfU',
     about: "London's premier rooftop football venue. Features a state-of-the-art 5G shock-pad rubber infill surface, high-density professional floodlighting, and spectacular views of the Canary Wharf financial district. Perfect for competitive leagues or friendly evening kickabouts.",
     amenities: [
       { icon: 'flashlight', title: 'Professional Floodlights' },
@@ -58,7 +58,7 @@ const VENUE_DETAILS: Record<string, {
     pitch: 'Indoor Woodcourt',
     hours: '08:00 - 22:00',
     capacity: '10 Players (5v5)',
-    image: require('@/assets/images/illustrations/football_player.png'),
+    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDYH5UnRgCz_j_xsBoTCePAImR1ZHOP1RfajoZLHKUgxQwU2qFlQ8NWyiYz_-6zqqufh9YnYe3jfTI8tuaUrjmH6obvvea2p2vYA7ndyut0M5-lxcOtwTVQQwh58VRPis3197lvVOpVGsJ6YCx55CCy4Q_1CqZxk1rVqp9mBGHM-rDNwh7PGYSDJt6Vq4tmn6G1gXGiZsm13J0D1BFkKFRb8WvrWqqyLWxu-oSZsnMp6YXOONRG89ypF-GKlh96WMcF3HOikmE9l-g',
     about: "High-performance indoor multi-sport hub. Perfect for futsal, basketball, or volleyball. Features sprung timber subflooring, acoustic dampening panels, and championship-grade overhead LED lighting. Fully climate-controlled for year-round sports.",
     amenities: [
       { icon: 'thermometer', title: 'Indoor Heating/AC' },
@@ -76,7 +76,7 @@ const VENUE_DETAILS: Record<string, {
     pitch: 'Hybrid Grass Turf',
     hours: '06:00 - 23:00',
     capacity: '22 Players (11v11)',
-    image: require('@/assets/images/illustrations/cricket_player.png'),
+    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgd1vfTA0Wj7Aw7aa0JRKzQ5y-6py-pQtMBI-gst90jIWFZoLSiIKBngPK1pn2UxzH_X3pN_lyCt75AnQxS2ssN4J4LUIYpph_JK48kGmSoO16OFhs5uLgsc_Yu3PIrOEneDELuLpKY8BDiUsatTLvRSu0sukxSfAxInyA2XknjvcswWPyUJA2YeNlJ2Vg2t7N807Cydno4uUCtypPyLkI0hi7Xl4DnWaNBueVN4jqiXqkqrc8MEPwQF24g45uu8z8gsXQ9IL87oI',
     about: "Experience elite-level cricket at Lord's View Pavillion. Situated in the heart of St John's Wood, our facility provides a professional-grade hybrid surface that replicates international standard bounce and seam. Perfect for competitive matches or focused training sessions under high-intensity floodlights.",
     amenities: [
       { icon: 'flashlight', title: 'Professional Floodlights' },
@@ -108,7 +108,16 @@ export default function TurfDetailsScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Navigation TopAppBar */}
         <View style={[styles.header, { backgroundColor: theme.background }]}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Pressable 
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)');
+              }
+            }} 
+            style={styles.backButton}
+          >
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </Pressable>
           <ThemedText type="headlineSm" style={styles.headerTitle} numberOfLines={1}>

@@ -35,24 +35,29 @@ export default function MatchesScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Top App Bar */}
         <View style={[styles.header, { backgroundColor: theme.background }]}>
-          <Pressable style={styles.userProfileBtn} onPress={() => router.push('/profile')}>
-            <Image
-              source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI' }}
-              style={styles.headerAvatar}
-            />
-            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: Spacing.xs, fontFamily: 'HankenGrotesk_700Bold' }}>
+          <View style={styles.headerLeft}>
+            <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', lineHeight: 18 }}>
               Azarudeen
             </ThemedText>
-          </Pressable>
-          <ThemedText type="displayLgMobile" style={styles.headerTitle}>
-            SPORTS OS
-          </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+              <Ionicons name="location-sharp" size={12} color={theme.secondary} />
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
+                London, UK
+              </ThemedText>
+            </View>
+          </View>
           <View style={styles.headerRightActions}>
-            <Pressable style={styles.iconButton} onPress={() => router.push('/network-activity')}>
+            <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
               <Ionicons name="pulse" size={20} color={theme.secondary} />
             </Pressable>
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
+            </Pressable>
+            <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
+              <Image
+                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI' }}
+                style={styles.headerAvatar}
+              />
             </Pressable>
           </View>
         </View>
@@ -345,10 +350,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#0000000a',
     zIndex: 10,
   },
-  userProfileBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
+  headerLeft: {
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
   headerAvatar: {
     width: 28,
@@ -357,11 +361,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#c3c7cb',
   },
-  headerTitle: {
-    fontFamily: 'HankenGrotesk_800ExtraBold',
-    fontSize: 20,
-    letterSpacing: -0.5,
-  },
   headerRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -369,6 +368,10 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 4,
+  },
+  profileIconButton: {
+    padding: 4,
+    marginLeft: 4,
   },
   scrollContent: {
     paddingBottom: 40,

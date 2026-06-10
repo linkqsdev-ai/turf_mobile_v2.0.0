@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create Team | APEX VELOCITY</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container": "#eceef0",
+                      "on-primary-container": "#6f84ac",
+                      "on-secondary": "#ffffff",
+                      "on-secondary-fixed-variant": "#594400",
+                      "inverse-on-surface": "#eff1f3",
+                      "primary-container": "#001b3d",
+                      "tertiary": "#000000",
+                      "on-surface-variant": "#44474e",
+                      "outline": "#74777f",
+                      "on-tertiary-container": "#75859d",
+                      "on-surface": "#191c1e",
+                      "on-tertiary-fixed": "#0b1c30",
+                      "surface-container-low": "#f2f4f6",
+                      "outline-variant": "#c4c6cf",
+                      "inverse-primary": "#b1c7f2",
+                      "tertiary-fixed": "#d3e4fe",
+                      "on-tertiary": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "surface-dim": "#d8dadc",
+                      "primary-fixed-dim": "#b1c7f2",
+                      "inverse-surface": "#2d3133",
+                      "surface": "#f7f9fb",
+                      "secondary-container": "#ffc703",
+                      "background": "#f7f9fb",
+                      "primary-fixed": "#d6e3ff",
+                      "on-primary": "#ffffff",
+                      "error": "#ba1a1a",
+                      "secondary": "#765b00",
+                      "primary": "#000000",
+                      "surface-bright": "#f7f9fb",
+                      "on-secondary-fixed": "#251a00",
+                      "surface-container-high": "#e6e8ea",
+                      "on-tertiary-fixed-variant": "#38485d",
+                      "surface-variant": "#e0e3e5",
+                      "secondary-fixed-dim": "#f5bf00",
+                      "on-primary-fixed": "#001b3d",
+                      "on-background": "#191c1e",
+                      "on-secondary-container": "#6e5400",
+                      "surface-tint": "#495f84",
+                      "tertiary-container": "#0b1c30",
+                      "on-primary-fixed-variant": "#31476b",
+                      "tertiary-fixed-dim": "#b7c8e1",
+                      "surface-container-highest": "#e0e3e5",
+                      "error-container": "#ffdad6",
+                      "secondary-fixed": "#ffdf94",
+                      "on-error": "#ffffff",
+                      "surface-container-lowest": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem",
+                      "custom-32": "32px"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "lg": "24px",
+                      "md": "16px",
+                      "2xl": "64px",
+                      "xl": "40px",
+                      "sm": "8px",
+                      "base": "4px",
+                      "margin": "32px",
+                      "xs": "4px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": ["Hanken Grotesk"],
+                      "body-md": ["Hanken Grotesk"],
+                      "label-md": ["Hanken Grotesk"],
+                      "headline-md": ["Hanken Grotesk"],
+                      "headline-lg": ["Hanken Grotesk"],
+                      "body-lg": ["Hanken Grotesk"],
+                      "display-lg": ["Hanken Grotesk"],
+                      "body-sm": ["Hanken Grotesk"],
+                      "headline-sm": ["Hanken Grotesk"]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bento-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .bento-card:hover {
+            transform: translateY(-2px);
+        }
+        .glass-nav {
+            backdrop-filter: blur(12px);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #001b3d;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body-md text-on-surface antialiased min-h-screen">
+<!-- Top Navigation Bar (Suppressed on focused screens, but including for branding per task "Apex Velocity Styling") -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-gutter h-16 bg-surface/80 dark:bg-surface-container/80 backdrop-blur-md shadow-[0px_4px_20px_rgba(0,27,61,0.08)]">
+<div class="flex items-center gap-4">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container-high transition-colors active:scale-95 duration-200" onclick="window.history.back()">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<h1 class="font-display-lg text-headline-md tracking-tighter text-primary">APEX VELOCITY</h1>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container overflow-hidden border border-outline-variant">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a young athletic coach in a clean sports polo shirt. The background is a soft-focus athletic field under bright morning light. The lighting is high-key and optimistic, following a premium sports OS aesthetic with clean lines and high contrast." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBw-4P6Sarj_JWrpBQTQN1qPB7_qfFBuMUHMn-KCC2wKP9Geo1TQktr-gYmylaiuxwiQdZlcRL2It_FwPuZAH4d31LDUHEu1Mcnw_DYAw3CV3Q4UrxD-dLGnkBeAjAIB4LKRMhHKUQyecVPG31KZg_omRuygkFNMt8V9eepiBaaGs3WjFMRBS9-7oyFoRfu-Xf0pVm3vozSUfyAOqWM1mZqPqr5pStpTP27eP8xxPO5nZtT_T769xuwhIK0YdhxjHvITsNSvMRNN0"/>
+</div>
+</div>
+</header>
+<main class="pt-24 pb-32 px-gutter max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-lg">
+<!-- Decoration / Brand Hero Section -->
+<section class="md:col-span-4 h-full">
+<div class="sticky top-24 space-y-lg">
+<div class="bg-primary-container text-on-primary-container p-lg rounded-custom-32 shadow-[0px_12px_48px_rgba(0,27,61,0.12)] overflow-hidden relative min-h-[400px] flex flex-col justify-between">
+<div class="relative z-10">
+<span class="font-label-md text-label-md uppercase tracking-widest text-secondary-container opacity-80">Foundation</span>
+<h2 class="font-headline-lg text-headline-lg text-white mt-base">Build Your Legacy</h2>
+<p class="font-body-md text-body-md text-on-tertiary-container mt-md leading-relaxed">
+                            Define the core identity of your squad. From home grounds to visual branding, every detail counts in the pursuit of peak performance.
+                        </p>
+</div>
+<div class="absolute inset-0 z-0 opacity-40">
+<img alt="Team Huddle Illustration" class="w-full h-full object-contain object-bottom p-gutter transform scale-110" src="https://lh3.googleusercontent.com/aida/AP1WRLthkHkbRol3Fto895z1eLq1otimJMUbaBA7mmqFkObFdvsSmtTWJfD3WnFVYIiC488X-jaVXJ8FMJT18mXFrfHmMUf-Z1lSZVZ4Qbyiu9rGG3Ktw-PFfaxJkgXYDmh2gZXdxo6-QXuycdm0KWSEnaKF_OZKYYbHBe-jInn6IO9-aTIVDUpnWea__HW4s3H7DVvMwoqgjW_ibbDYe1e_06NvdnnbHe6Zjf6aJVILlfSTH-wtrquIoAMnVjk"/>
+</div>
+<div class="relative z-10 bg-white/10 backdrop-blur-md border border-white/20 p-md rounded-xl mt-xl">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary-container">verified</span>
+<span class="font-label-md text-label-md text-white">Apex Professional Standards</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Multi-Step Team Creation Form -->
+<section class="md:col-span-8">
+<form class="space-y-lg" id="create-team-form">
+<!-- Step 1: Identity -->
+<div class="bg-white border border-outline-variant rounded-custom-32 p-lg shadow-[0px_4px_20px_rgba(0,27,61,0.08)] bento-card">
+<div class="flex items-center gap-4 mb-xl">
+<div class="w-12 h-12 bg-surface-container-low rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">badge</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm">Identity &amp; Branding</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">How the world recognizes your team.</p>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-lg">
+<!-- Logo Upload -->
+<div class="col-span-1 flex flex-col items-center">
+<label class="font-label-md text-label-md mb-md self-start">Team Crest</label>
+<div class="relative group cursor-pointer w-32 h-32 rounded-custom-32 bg-surface-container-low border-2 border-dashed border-outline-variant hover:border-primary transition-all flex flex-col items-center justify-center overflow-hidden">
+<input class="absolute inset-0 opacity-0 cursor-pointer z-10" id="logo-input" type="file"/>
+<div class="text-center p-md" id="logo-placeholder">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">cloud_upload</span>
+<p class="text-[10px] font-bold mt-1 text-on-surface-variant uppercase tracking-tighter">Upload</p>
+</div>
+<img class="hidden absolute inset-0 w-full h-full object-cover" data-alt="A minimalist and modern sports logo emblem displayed on a light surface. The design features sharp geometric lines and a golden trophy motif, set against a pristine white background. The lighting is clinical and bright, emphasizing a high-performance athletic brand identity." id="logo-preview"/>
+</div>
+</div>
+<!-- Basic Info Fields -->
+<div class="sm:col-span-2 space-y-md">
+<div class="group">
+<label class="font-label-md text-label-md block mb-base text-on-surface-variant group-focus-within:text-primary transition-colors" for="team-name">Team Name</label>
+<input class="w-full bg-surface-container-lowest border-outline-variant focus:border-primary-container focus:ring-0 rounded-lg py-3 px-4 transition-all" id="team-name" placeholder="e.g. London Strikers" type="text"/>
+</div>
+<div class="grid grid-cols-2 gap-md">
+<div class="group">
+<label class="font-label-md text-label-md block mb-base text-on-surface-variant group-focus-within:text-primary" for="short-name">Short Name</label>
+<input class="w-full bg-surface-container-lowest border-outline-variant focus:border-primary-container focus:ring-0 rounded-lg py-3 px-4 transition-all" id="short-name" placeholder="LSR" type="text"/>
+</div>
+<div class="group">
+<label class="font-label-md text-label-md block mb-base text-on-surface-variant group-focus-within:text-primary" for="sport-select">Sport</label>
+<select class="w-full bg-surface-container-lowest border-outline-variant focus:border-primary-container focus:ring-0 rounded-lg py-3 px-4 transition-all appearance-none" id="sport-select">
+<option>Football</option>
+<option>Basketball</option>
+<option>Cricket</option>
+<option>Rugby</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Step 2: Home Ground -->
+<div class="bg-white border border-outline-variant rounded-custom-32 p-lg shadow-[0px_4px_20px_rgba(0,27,61,0.08)] bento-card">
+<div class="flex items-center gap-4 mb-xl">
+<div class="w-12 h-12 bg-surface-container-low rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">stadium</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm">Venue</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Where you defend your pride.</p>
+</div>
+</div>
+<div class="space-y-md">
+<div class="group">
+<label class="font-label-md text-label-md block mb-base text-on-surface-variant group-focus-within:text-primary" for="home-ground">Home Ground Name</label>
+<input class="w-full bg-surface-container-lowest border-outline-variant focus:border-primary-container focus:ring-0 rounded-lg py-3 px-4 transition-all" id="home-ground" placeholder="e.g. Apex Central Arena" type="text"/>
+</div>
+<div class="relative w-full h-48 rounded-xl overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A wide panoramic shot of a modern, empty sports stadium during the golden hour. The pristine green turf is perfectly manicured, and the architectural steel structure of the stands reflects a warm, setting sun. The atmosphere is peaceful yet charged with potential, using a sophisticated cool-gray and gold lighting palette." data-location="London" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAppGobRWVg1yrsZtZxObNOUOQShpWHJn6Ii4LcC2JPrO8wosAdbevqWa5mznjtcamdu6GI1gBf4AKQTP_69t5Wu--iixyERUa12AO1ynWkhdoqywYRjdmI8m8Ypo3Qz6DMegaQV7yb2jsqxtyognVyyXu06S8ej2SthcQb2GjGJYSLdayPuJ89CAAtHE0az-UhcD8Zx5QtAnM-yPg04uxYZg3p_0Nh509hptaZRaOKbjxLOLx3M7kx82rAochF7_0VWNhyx2tAZPM"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-md">
+<button class="flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-label-md font-label-md hover:bg-white/30 transition-all" type="button">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                                    Set Location
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Step 3: Preferences & Actions -->
+<div class="bg-white border border-outline-variant rounded-custom-32 p-lg shadow-[0px_4px_20px_rgba(0,27,61,0.08)] bento-card">
+<div class="flex flex-col sm:flex-row items-center justify-between gap-lg">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-surface-container-low rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">settings</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm">Finalize Team</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Review settings and launch your club.</p>
+</div>
+</div>
+<div class="flex items-center gap-4 w-full sm:w-auto">
+<button class="flex-1 sm:flex-none px-6 py-3 rounded-xl border border-outline-variant font-label-md text-label-md text-on-surface hover:bg-surface-container transition-all active:scale-95" type="button">
+                                Save Draft
+                            </button>
+<button class="flex-1 sm:flex-none px-8 py-3 rounded-xl bg-primary text-white font-label-md text-label-md shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95" type="submit">
+                                Create Team
+                            </button>
+</div>
+</div>
+</div>
+</form>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Hidden on Desktop) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-surface dark:bg-surface-container rounded-t-full shadow-[0px_-12px_48px_rgba(0,27,61,0.12)]">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:text-primary transition-all active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:text-primary transition-all active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-md text-label-md mt-1">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1.5 active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">groups</span>
+<span class="font-label-md text-label-md mt-1">Teams</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:text-primary transition-all active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">sports_soccer</span>
+<span class="font-label-md text-label-md mt-1">Matches</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:text-primary transition-all active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md mt-1">Profile</span>
+</a>
+</nav>
+<script>
+        // Logo Preview Interaction
+        const logoInput = document.getElementById('logo-input');
+        const logoPreview = document.getElementById('logo-preview');
+        const logoPlaceholder = document.getElementById('logo-placeholder');
+
+        logoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    logoPreview.src = event.target.result;
+                    logoPreview.classList.remove('hidden');
+                    logoPlaceholder.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Simple Form Submission Micro-interaction
+        document.getElementById('create-team-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">sync</span> Processing';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                btn.innerHTML = '<span class="material-symbols-outlined text-sm">check_circle</span> Team Created';
+                btn.classList.replace('bg-primary', 'bg-green-600');
+            }, 1500);
+        });
+    </script>
+</body></html>

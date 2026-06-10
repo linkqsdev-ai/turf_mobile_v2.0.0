@@ -61,24 +61,29 @@ export default function TurfDiscoveryScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Top App Bar */}
         <View style={[styles.header, { backgroundColor: theme.background }]}>
-          <Pressable style={styles.userProfileBtn} onPress={() => router.push('/profile')}>
-            <Image
-              source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI' }}
-              style={styles.headerAvatar}
-            />
-            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: Spacing.xs, fontFamily: 'HankenGrotesk_700Bold' }}>
+          <View style={styles.headerLeft}>
+            <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', lineHeight: 18 }}>
               Azarudeen
             </ThemedText>
-          </Pressable>
-          <ThemedText type="displayLgMobile" style={styles.headerTitle}>
-            SPORTS OS
-          </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+              <Ionicons name="location-sharp" size={12} color={theme.secondary} />
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
+                London, UK
+              </ThemedText>
+            </View>
+          </View>
           <View style={styles.headerRightActions}>
-            <Pressable style={styles.iconButton} onPress={() => router.push('/network-activity')}>
+            <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
               <Ionicons name="pulse" size={20} color={theme.secondary} />
             </Pressable>
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
+            </Pressable>
+            <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
+              <Image
+                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI' }}
+                style={styles.headerAvatar}
+              />
             </Pressable>
           </View>
         </View>
@@ -236,7 +241,7 @@ export default function TurfDiscoveryScreen() {
               </View>
 
               <Image
-                source={require('@/assets/images/illustrations/stadium.png')}
+                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9H8hZV1gCxBOC9fWHjQyhn5ukWJhiNGuP6cNDATeIj2gP6JceuAOrhkqeTXWFS75Y0nw0QANCmhRdo0NYvbdmh4Xrs2itBjykGtZr0Y91KEzjUMyOoM-B-owetUT1u8vwmIZlGJkcKdkgVfU0TIGzuVVlTN3lhwfdg5OWwHMCKOyPJGWWdIKySwofsCUjnq9pJi4WH0BMDAi73A53u0OeKj_Ufmh6V4PVwghrjz5aX16NlvQZLOkQRC51252maP-4ZXwNw3MwVfU' }}
                 style={styles.turfImage}
                 contentFit="cover"
               />
@@ -280,6 +285,7 @@ export default function TurfDiscoveryScreen() {
                     />
                   </Pressable>
                 </View>
+
               </View>
             </Pressable>
 
@@ -289,7 +295,7 @@ export default function TurfDiscoveryScreen() {
               style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
             >
               <Image
-                source={require('@/assets/images/illustrations/football_player.png')}
+                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDYH5UnRgCz_j_xsBoTCePAImR1ZHOP1RfajoZLHKUgxQwU2qFlQ8NWyiYz_-6zqqufh9YnYe3jfTI8tuaUrjmH6obvvea2p2vYA7ndyut0M5-lxcOtwTVQQwh58VRPis3197lvVOpVGsJ6YCx55CCy4Q_1CqZxk1rVqp9mBGHM-rDNwh7PGYSDJt6Vq4tmn6G1gXGiZsm13J0D1BFkKFRb8WvrWqqyLWxu-oSZsnMp6YXOONRG89ypF-GKlh96WMcF3HOikmE9l-g' }}
                 style={styles.turfImage}
                 contentFit="cover"
               />
@@ -335,7 +341,7 @@ export default function TurfDiscoveryScreen() {
               style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
             >
               <Image
-                source={require('@/assets/images/illustrations/cricket_player.png')}
+                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgd1vfTA0Wj7Aw7aa0JRKzQ5y-6py-pQtMBI-gst90jIWFZoLSiIKBngPK1pn2UxzH_X3pN_lyCt75AnQxS2ssN4J4LUIYpph_JK48kGmSoO16OFhs5uLgsc_Yu3PIrOEneDELuLpKY8BDiUsatTLvRSu0sukxSfAxInyA2XknjvcswWPyUJA2YeNlJ2Vg2t7N807Cydno4uUCtypPyLkI0hi7Xl4DnWaNBueVN4jqiXqkqrc8MEPwQF24g45uu8z8gsXQ9IL87oI' }}
                 style={styles.turfImage}
                 contentFit="cover"
               />
@@ -406,10 +412,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#0000000a',
     zIndex: 10,
   },
-  userProfileBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
+  headerLeft: {
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
   headerAvatar: {
     width: 28,
@@ -418,11 +423,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#c3c7cb',
   },
-  headerTitle: {
-    fontFamily: 'HankenGrotesk_800ExtraBold',
-    fontSize: 20,
-    letterSpacing: -0.5,
-  },
   headerRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -430,6 +430,10 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 4,
+  },
+  profileIconButton: {
+    padding: 4,
+    marginLeft: 4,
   },
   scrollContent: {
     paddingBottom: 40,

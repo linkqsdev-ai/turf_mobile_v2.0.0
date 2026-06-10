@@ -1,0 +1,239 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Sports OS | Secure Access</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#eceef0",
+                        "inverse-primary": "#b1c7f2",
+                        "outline": "#74777f",
+                        "on-primary-fixed": "#001b3d",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-container": "#75859d",
+                        "surface-container-low": "#f2f4f6",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-container": "#6e5400",
+                        "background": "#f7f9fb",
+                        "tertiary-fixed": "#d3e4fe",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#d8dadc",
+                        "secondary-container": "#ffc703",
+                        "primary-fixed-dim": "#b1c7f2",
+                        "outline-variant": "#c4c6cf",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "on-secondary-fixed": "#251a00",
+                        "surface-tint": "#495f84",
+                        "on-error": "#ffffff",
+                        "secondary": "#765b00",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-variant": "#e0e3e5",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "inverse-surface": "#2d3133",
+                        "surface-container-high": "#e6e8ea",
+                        "secondary-fixed": "#ffdf94",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#000000",
+                        "surface-container-lowest": "#ffffff",
+                        "surface": "#f7f9fb",
+                        "on-surface": "#191c1e",
+                        "on-secondary-fixed-variant": "#594400",
+                        "tertiary-container": "#0b1c30",
+                        "on-background": "#191c1e",
+                        "on-surface-variant": "#44474e",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "on-primary-fixed-variant": "#31476b",
+                        "on-primary-container": "#6f84ac",
+                        "primary": "#000000",
+                        "primary-fixed": "#d6e3ff",
+                        "primary-container": "#001b3d",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-bright": "#f7f9fb",
+                        "secondary-fixed-dim": "#f5bf00",
+                        "on-error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem",
+                        "login-card": "32px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "sm": "8px",
+                        "gutter": "24px",
+                        "margin": "32px",
+                        "lg": "24px",
+                        "2xl": "64px",
+                        "base": "4px",
+                        "xl": "40px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Hanken Grotesk"],
+                        "headline-sm": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "label-md": ["Hanken Grotesk"],
+                        "body-sm": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #FDFCF8; /* Soft Cream Background */
+            color: #191c1e;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+        }
+        .login-card-shadow {
+            box-shadow: 0px 12px 48px rgba(0, 27, 61, 0.12);
+        }
+        .input-focus-effect:focus-within {
+            border-bottom: 2px solid #001b3d;
+        }
+    </style>
+</head>
+<body class="font-body-md text-body-md antialiased min-h-screen flex flex-col items-center justify-center p-gutter">
+<!-- Header Section -->
+<header class="text-center mb-xl w-full max-w-xl">
+<h1 class="font-display-lg text-display-lg tracking-tighter text-primary-container mb-sm">
+            SPORTS OS
+        </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-md mx-auto">
+            The elite management platform for peak athletic performance.
+        </p>
+</header>
+<!-- Main Login Card -->
+<main class="w-full max-w-[480px] bg-white rounded-login-card login-card-shadow overflow-hidden relative border border-outline-variant/30">
+<!-- Top Illustration Section -->
+<div class="flex justify-center pt-xl pb-md">
+<div class="w-32 h-32 relative group">
+<img alt="Security Shield and Key" class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida/AP1WRLulY1wAwjsMYA5Z8dGPn6jtNfBNKxUOj8KmioRSgDmBPVm_gn9FopCQVzO2cRMvmXH0C0zD7qs9WGqpvfqEqAfDQmTt1bHvgg5XvtrjueVaQrzjjF6k5nWAZIO8biDF2ng7ynUVAvKEzqM5dtCGt99_qRPiS_hxhT31eizE5LaZdHxd_y9XVMBcYPt8rKYaAXWOw7KNutL1Hx_TmysGjBFp1RnI1uHEbZ7q9A7mdedEuQFSUEkErjzRQjo">
+</div>
+</div>
+<div class="px-xl pb-xl">
+<h2 class="font-headline-md text-headline-md text-primary-container text-center mb-xl">
+                Secure Access
+            </h2>
+<form class="space-y-lg" onsubmit="return false;">
+<!-- Email Input -->
+<div class="space-y-xs group">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase" for="email">Email Address</label>
+<div class="flex items-center border-b border-outline-variant py-sm group-focus-within:border-primary-container transition-all">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary-container mr-md">mail</span>
+<input class="bg-transparent border-none focus:ring-0 w-full font-body-md text-body-md p-0 placeholder:text-outline-variant" id="email" placeholder="athlete@sportsos.com" type="email">
+</div>
+</div>
+<!-- Password Input -->
+<div class="space-y-xs group">
+<div class="flex justify-between items-center">
+<label class="font-label-md text-label-md text-on-surface-variant uppercase" for="password">Password</label>
+<a class="font-label-md text-label-md text-secondary hover:text-on-secondary-fixed-variant transition-colors" href="#">Forgot Password?</a>
+</div>
+<div class="flex items-center border-b border-outline-variant py-sm group-focus-within:border-primary-container transition-all">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary-container mr-md">lock</span>
+<input class="bg-transparent border-none focus:ring-0 w-full font-body-md text-body-md p-0 placeholder:text-outline-variant" id="password" placeholder="••••••••" type="password">
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-primary-container transition-colors">visibility</span>
+</div>
+</div>
+<!-- Sign In Button -->
+<button class="w-full bg-primary-container text-on-primary py-md rounded-xl flex items-center justify-center group hover:bg-tertiary-container transition-all active:scale-[0.98] mt-xl">
+<span class="font-headline-sm text-headline-sm mr-sm">Sign In</span>
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</form>
+<!-- Divider -->
+<div class="relative my-xl">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-outline-variant/50"></div>
+</div>
+<div class="relative flex justify-center text-xs">
+<span class="bg-white px-md font-label-md text-label-md text-on-surface-variant">OR CONTINUE WITH</span>
+</div>
+</div>
+<!-- Social Logins -->
+<div class="grid grid-cols-2 gap-md">
+<button class="flex items-center justify-center py-md px-lg border border-outline-variant rounded-xl hover:bg-surface-container-low transition-colors active:scale-95">
+<svg class="w-5 h-5 mr-sm" viewBox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+<span class="font-label-md text-label-md text-on-surface">Google</span>
+</button>
+<button class="flex items-center justify-center py-md px-lg border border-outline-variant rounded-xl hover:bg-surface-container-low transition-colors active:scale-95">
+<svg class="w-5 h-5 mr-sm" viewBox="0 0 24 24">
+<path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.74 1.15 0 1.91-.77 3.51-.6 1.66.17 2.83.84 3.51 1.95-3.66 1.83-2.92 6.64.67 8.08-.73 1.8-1.77 3.8-2.77 2.8zm-4.75-13.3c-.08-2.14 1.74-3.95 3.75-4.14.28 2.25-1.99 4.31-3.75 4.14z" fill="currentColor"></path>
+</svg>
+<span class="font-label-md text-label-md text-on-surface">Apple</span>
+</button>
+</div>
+</div>
+<!-- Gold Accent Bottom Bar -->
+<div class="h-2 bg-secondary-container"></div>
+</main>
+<!-- Footer -->
+<footer class="mt-xl text-center">
+<p class="font-body-md text-body-md text-on-surface-variant">
+            Don't have an account? 
+            <a class="text-secondary font-bold hover:underline ml-xs" href="#">Request Access</a>
+</p>
+</footer>
+<!-- Interactive Layer -->
+<script>
+        // Simple Micro-interaction for input fields
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.parentElement.classList.add('scale-[1.01]');
+            });
+            input.addEventListener('blur', () => {
+                input.parentElement.parentElement.classList.remove('scale-[1.01]');
+            });
+        });
+
+        // Atmosphere: Subtle mouse parallax effect for the background
+        document.addEventListener('mousemove', (e) => {
+            const moveX = (e.clientX - window.innerWidth / 2) / 50;
+            const moveY = (e.clientY - window.innerHeight / 2) / 50;
+            document.querySelector('main').style.transform = `translate(${moveX}px, ${moveY}px)`;
+        });
+    </script>
+</body></html>

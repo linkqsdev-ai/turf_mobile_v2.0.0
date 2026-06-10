@@ -1,0 +1,387 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Profile | SPORTS OS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#ffc703",
+                        "surface-container-high": "#e6e8ea",
+                        "secondary": "#765b00",
+                        "primary-container": "#001b3d",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface": "#f7f9fb",
+                        "secondary-fixed": "#ffdf94",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "on-surface": "#191c1e",
+                        "secondary-fixed-dim": "#f5bf00",
+                        "primary-fixed-dim": "#b1c7f2",
+                        "tertiary": "#000000",
+                        "background": "#f7f9fb",
+                        "on-tertiary-container": "#75859d",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "on-secondary-fixed": "#251a00",
+                        "tertiary-container": "#0b1c30",
+                        "inverse-primary": "#b1c7f2",
+                        "inverse-surface": "#2d3133",
+                        "surface-container": "#eceef0",
+                        "on-surface-variant": "#44474e",
+                        "primary-fixed": "#d6e3ff",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#6e5400",
+                        "surface-dim": "#d8dadc",
+                        "surface-bright": "#f7f9fb",
+                        "on-primary-container": "#6f84ac",
+                        "on-background": "#191c1e",
+                        "primary": "#000000",
+                        "outline-variant": "#c4c6cf",
+                        "tertiary-fixed": "#d3e4fe",
+                        "error": "#ba1a1a",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-tint": "#495f84",
+                        "surface-container-low": "#f2f4f6",
+                        "on-primary-fixed-variant": "#31476b",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#001b3d",
+                        "outline": "#74777f",
+                        "on-secondary-fixed-variant": "#594400"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem",
+                        "32": "2rem"
+                    },
+                    "spacing": {
+                        "margin": "32px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "xl": "40px",
+                        "md": "16px",
+                        "sm": "8px",
+                        "gutter": "24px",
+                        "2xl": "64px",
+                        "base": "4px",
+                        "lux": "32px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Hanken Grotesk"],
+                        "headline-sm": ["Hanken Grotesk"],
+                        "body-sm": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        body {
+            background-color: #f7f9fb;
+            color: #191c1e;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+        .premium-shadow {
+            box-shadow: 0 12px 40px -12px rgba(0, 27, 61, 0.12);
+        }
+        .deep-shadow {
+            box-shadow: 0 20px 50px -12px rgba(0, 27, 61, 0.18);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="font-body-md text-body-md bg-background min-h-screen pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-md dark:bg-primary-container/90 shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex justify-between items-center px-margin h-16 border-b border-outline-variant/30">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-secondary dark:text-secondary-fixed">location_on</span>
+<h1 class="font-display-lg text-display-lg font-bold tracking-tight text-primary dark:text-primary-fixed text-[24px] leading-tight">SPORTS OS</h1>
+</div>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-on-surface-variant dark:text-on-primary-container hover:opacity-80 transition-opacity active:scale-95 transition-transform duration-150">notifications</button>
+<div class="h-10 w-10 rounded-full bg-secondary-container border border-outline-variant overflow-hidden">
+<img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI">
+</div>
+</div>
+</header>
+<main class="pt-24 px-margin max-w-[1280px] mx-auto">
+<!-- Hero Profile Section -->
+<section class="mb-xl">
+<div class="glass-panel rounded-32 p-lux flex flex-col md:flex-row items-center md:items-start gap-lg relative overflow-hidden deep-shadow">
+<!-- Decorative background element -->
+<div class="absolute -right-16 -top-16 w-64 h-64 bg-secondary-fixed opacity-10 rounded-full blur-3xl"></div>
+<div class="relative">
+<div class="w-32 h-32 md:w-40 md:h-40 rounded-32 overflow-hidden border-4 border-white premium-shadow">
+<img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDW4Z6h58MfJ8O1mg-A3i11xJbzet7PRQwXk5rgT51IjJBmVbwVnpCfoyZI1f6umHFv7mQEu88KSZxW77ZcYhxvneXFtUV9cROVIXt3GSjcKeTBauzFhrDyosSkXA54kmTGvolE1lNJPt9bSEIaWBqNgoLvt_ouwolTdzZqzfWEf7Yc_N79ntJLtWYZwFPxIWkXmRC9bES2DQuclKCia5Kb4_H0iUwDW96sPn9ISDRK5xhLAb9X-9RAQa-RnY6lKMPHlMydjCvPn5k">
+</div>
+<div class="absolute -bottom-2 -right-2 bg-secondary-container text-on-secondary-container px-sm py-xs rounded-lg shadow-md font-label-md text-label-md border border-white">
+                        PRO ELITE
+                    </div>
+</div>
+<div class="flex-1 text-center md:text-left">
+<div class="flex flex-col md:flex-row md:items-center gap-sm mb-xs">
+<h2 class="font-headline-lg text-headline-lg text-primary">Marcus Sterling</h2>
+<span class="hidden md:block w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Forward · London, UK</p>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl mb-md">Dedicated performance athlete focusing on tactical execution and explosive power. Currently competing in the Diamond League and lead captain of Blue Falcons FC.</p>
+<div class="flex flex-wrap justify-center md:justify-start gap-sm">
+<button class="bg-primary text-on-primary px-lg py-sm rounded-xl font-label-md text-label-md hover:bg-on-surface-variant active:scale-95 transition-all shadow-md">EDIT PROFILE</button>
+<button class="border-2 border-outline text-primary px-lg py-sm rounded-xl font-label-md text-label-md hover:bg-surface-container-low active:scale-95 transition-all">SHARE STATS</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Stats Bento Grid -->
+<section class="mb-xl">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-md flex items-center gap-xs">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0"><img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuTHnSNwcyH4BxFXcOzsz49VPBoqOBbptmHmbC9ud8KF1falXya6EbJUL_Uibq0DbTMR9jeoqHSn96fFwzumLyIDvfM8HMB4ha_sfAnWgeFTo_YlLGfCinv1T1ObmacO9hCfBA169d2kxx5DRXUHblYb34KgrK_6JfrDDFmPPdW0r3gqxS2YCh2LbAJmW6DLhrFc_m_wys_RV3_hOughMls-lf1dL4wql0vriP65MtXWgLUV1rPqzdx25Q"></div> PERFORMANCE OVERVIEW
+            </h3>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter">
+<div class="bg-white border border-outline-variant/30 p-lux rounded-32 premium-shadow transition-all hover:-translate-y-1 hover:deep-shadow">
+<p class="font-label-md text-label-md text-on-surface-variant mb-xs">MATCHES PLAYED</p>
+<div class="flex items-end justify-between">
+<span class="font-display-lg text-display-lg text-primary leading-none">142</span>
+<span class="text-secondary font-bold font-label-md text-label-md">+12% vs LY</span>
+</div>
+</div>
+<div class="bg-white border border-outline-variant/30 p-lux rounded-32 premium-shadow transition-all hover:-translate-y-1 hover:deep-shadow">
+<p class="font-label-md text-label-md text-on-surface-variant mb-xs">TOTAL WINS</p>
+<div class="flex items-end justify-between">
+<span class="font-display-lg text-display-lg text-primary leading-none">89</span>
+<span class="text-green-600 font-bold font-label-md text-label-md">62.6% WR</span>
+</div>
+</div>
+<div class="bg-primary-container p-lux rounded-32 md:col-span-2 relative overflow-hidden deep-shadow group">
+<div class="relative z-10">
+<p class="font-label-md text-label-md text-on-primary-container mb-xs uppercase tracking-widest">SKILL RATING</p>
+<div class="flex items-baseline gap-sm">
+<span class="font-display-lg text-display-lg text-white leading-none">2,840</span>
+<span class="text-secondary-fixed font-headline-sm text-headline-sm">PLATINUM</span>
+</div>
+<div class="mt-md w-full bg-white/10 h-2 rounded-full overflow-hidden">
+<div class="bg-secondary-container h-full w-[85%] transition-all duration-1000 group-hover:w-[88%]"></div>
+</div>
+</div>
+<span class="material-symbols-outlined absolute -right-8 -bottom-8 text-white/5 text-[160px]" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+</div>
+</div>
+</section>
+<!-- Main Content Area -->
+<div class="flex flex-col lg:flex-row gap-xl">
+<!-- Left Column: Teams -->
+<div class="flex-1">
+<div class="mb-lg rounded-32 overflow-hidden deep-shadow bg-white relative">
+<img alt="Club Community" class="w-full h-56 object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLsc-p9LNafOZ1s0XNvsry058SauJeeElNyBuxym6ZhiCwUG-0KP3qZ9-Sv9OP3OVnhWKioZVSoN3EOcZ2Kc1OJKGOZSB9ioEnBSpLCgsYN-AgQXrVnc2O42rAutO6l6aFEvLsUgBHN57i3-AzCKTfZRam7oDm5L2CnDWRLIXfdFRBK8iz2MsaYQVAdtk0OH1XwkBTPbr18Wr5zuBBhvwfiVQv44xHBz7SD6kBdiyxqkNCP8zmwoVF8DaWI">
+<div class="absolute inset-0 bg-gradient-to-t from-primary/60 to-transparent"></div>
+<div class="absolute bottom-6 left-8">
+<h4 class="text-white font-headline-md">Club Community</h4>
+<p class="text-white/80 font-body-sm">Connect with elite athletes globally</p>
+</div>
+</div>
+<div class="flex justify-between items-end mb-md">
+<h3 class="font-headline-sm text-headline-sm text-primary">MY TEAMS</h3>
+<button class="text-secondary font-label-md text-label-md hover:underline font-bold">VIEW ALL</button>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-md">
+<!-- Team Card 1 -->
+<div class="bg-white border border-outline-variant/30 rounded-32 p-lux flex items-center gap-md hover:border-secondary transition-all cursor-pointer group premium-shadow">
+<div class="w-16 h-16 bg-surface-container-high rounded-2xl flex items-center justify-center border border-outline-variant/30 overflow-hidden shrink-0 shadow-sm">
+<img alt="Tennis" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuTHnSNwcyH4BxFXcOzsz49VPBoqOBbptmHmbC9ud8KF1falXya6EbJUL_Uibq0DbTMR9jeoqHSn96fFwzumLyIDvfM8HMB4ha_sfAnWgeFTo_YlLGfCinv1T1ObmacO9hCfBA169d2kxx5DRXUHblYb34KgrK_6JfrDDFmPPdW0r3gqxS2YCh2LbAJmW6DLhrFc_m_wys_RV3_hOughMls-lf1dL4wql0vriP65MtXWgLUV1rPqzdx25Q">
+</div>
+<div class="flex-1">
+<p class="font-headline-sm text-[16px] text-primary mb-0">Elite Tennis Club</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Lead Member · Tier 1</p>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-secondary transition-colors">chevron_right</span>
+</div>
+<!-- Team Card 2 -->
+<div class="bg-white border border-outline-variant/30 rounded-32 p-lux flex items-center gap-md hover:border-secondary transition-all cursor-pointer group premium-shadow">
+<div class="w-16 h-16 bg-surface-container-high rounded-2xl flex items-center justify-center border border-outline-variant/30 overflow-hidden shrink-0 shadow-sm">
+<img alt="Badminton" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLtGrukm090UMiaEXzYLxmGpI8Xl1QH72Cuxq34R2XbGhFZNAIrWqZ8Sylg7smJvokpH3r7aJbIJmSjMpS6IJh2XrFLcXQHf4InWsa-WkzkAs17U-lvw1h7-BpqgoJTKnspe5Cb5jkT5nrdIHgCI3kVPn_c9Gtt8D1o6CxZrrrXJDZ49hXdHLod9v8XNZLKRJ1g1m9UsXPV9nhu49QZpvjE_mz-vYRwdnf-MZE3YRCmiM31usyJSE5tw-g">
+</div>
+<div class="flex-1">
+<p class="font-headline-sm text-[16px] text-primary mb-0">Imperial Badminton</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Active Pro · Regional</p>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-secondary transition-colors">chevron_right</span>
+</div>
+</div>
+<!-- Recent Activity -->
+<div class="mt-xl">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-md">RECENT ACTIVITY</h3>
+<div class="space-y-sm bg-white rounded-32 p-lux premium-shadow border border-outline-variant/30">
+<!-- Activity Item 1 -->
+<div class="flex gap-md p-md hover:bg-surface-container-lowest transition-colors rounded-2xl">
+<div class="w-12 h-12 rounded-full bg-secondary-container/20 flex items-center justify-center shrink-0 border border-secondary-container/30">
+<img class="w-full h-full object-cover rounded-full" src="https://lh3.googleusercontent.com/aida/AP1WRLtGrukm090UMiaEXzYLxmGpI8Xl1QH72Cuxq34R2XbGhFZNAIrWqZ8Sylg7smJvokpH3r7aJbIJmSjMpS6IJh2XrFLcXQHf4InWsa-WkzkAs17U-lvw1h7-BpqgoJTKnspe5Cb5jkT5nrdIHgCI3kVPn_c9Gtt8D1o6CxZrrrXJDZ49hXdHLod9v8XNZLKRJ1g1m9UsXPV9nhu49QZpvjE_mz-vYRwdnf-MZE3YRCmiM31usyJSE5tw-g">
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="font-body-md text-body-md text-primary"><span class="font-bold">Victory vs Titans XI</span> — Scored 2 goals, 1 assist</p>
+<span class="font-label-md text-label-md text-on-surface-variant">2h ago</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">Blue Falcons Stadium · Match Performance: 9.4/10</p>
+</div>
+</div>
+<!-- Activity Item 2 -->
+<div class="flex gap-md p-md hover:bg-surface-container-lowest transition-colors rounded-2xl">
+<div class="w-12 h-12 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0 border border-primary-container/20">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">fitness_center</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="font-body-md text-body-md text-primary"><span class="font-bold">Strength Training</span> — High Intensity Session</p>
+<span class="font-label-md text-label-md text-on-surface-variant">Yesterday</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">Personal Best: 120kg Deadlift (3 reps)</p>
+</div>
+</div>
+<!-- Activity Item 3 -->
+<div class="flex gap-md p-md hover:bg-surface-container-lowest transition-colors rounded-2xl">
+<div class="w-12 h-12 rounded-full bg-secondary-container/20 flex items-center justify-center shrink-0 border border-secondary-container/30">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="font-body-md text-body-md text-primary"><span class="font-bold">Achievement Unlocked</span> — "Clutch Performer"</p>
+<span class="font-label-md text-label-md text-on-surface-variant">3d ago</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">Won 5 matches in a row with decisive late-game plays.</p>
+</div>
+</div>
+</div>
+<button class="w-full py-md text-center text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-low transition-colors rounded-2xl mt-sm border-2 border-dashed border-outline-variant/50">
+                        LOAD MORE ACTIVITY
+                    </button>
+</div>
+</div>
+<!-- Right Column: Sidebar Data -->
+<div class="lg:w-[320px] flex flex-col gap-lg">
+<div class="bg-white border border-outline-variant/30 rounded-32 p-lux deep-shadow">
+<h4 class="font-headline-sm text-[18px] text-primary mb-md flex items-center justify-between">
+    HEALTH VITALS
+    <span class="material-symbols-outlined text-outline text-lg">ecg</span>
+</h4>
+<div class="space-y-md">
+<div class="flex justify-between items-center">
+<span class="font-body-md text-body-md text-on-surface-variant">Recovery Score</span>
+<span class="font-bold text-green-600">92%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2.5 rounded-full overflow-hidden">
+<div class="bg-green-500 h-full w-[92%] shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>
+</div>
+<div class="flex justify-between items-center pt-xs">
+<span class="font-body-md text-body-md text-on-surface-variant">Heart Rate (Avg)</span>
+<span class="font-bold text-primary">54 BPM</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-md text-body-md text-on-surface-variant">Sleep Quality</span>
+<span class="font-bold text-secondary">Optimal</span>
+</div>
+</div>
+</div>
+<div class="bg-primary-container text-white rounded-32 p-lux relative overflow-hidden deep-shadow">
+<h4 class="font-headline-sm text-[18px] mb-sm">UPCOMING MATCH</h4>
+<p class="font-label-md text-label-md text-on-primary-container mb-md font-bold tracking-widest">SATURDAY, 18:30 GMT</p>
+<div class="flex items-center justify-between mb-lg">
+<div class="text-center">
+<div class="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mb-xs border border-white/10 premium-shadow">BF</div>
+<span class="font-label-md text-label-md uppercase font-bold">Falcons</span>
+</div>
+<span class="font-headline-md text-headline-md text-secondary-container">VS</span>
+<div class="text-center">
+<div class="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mb-xs border border-white/10 premium-shadow">WS</div>
+<span class="font-label-md text-label-md uppercase font-bold">Wolves</span>
+</div>
+</div>
+<button class="w-full bg-secondary-container text-on-secondary-container py-md rounded-2xl font-bold font-label-md text-label-md hover:opacity-90 transition-all shadow-lg active:scale-95">
+                        VIEW PRE-MATCH BRIEF
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 bg-white/95 backdrop-blur-md border-t border-outline-variant/30 shadow-[0_-8px_32px_rgba(0,0,0,0.08)] rounded-t-32 flex justify-around items-center h-20 px-base pb-safe">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors px-md active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors px-md active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-md text-label-md">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors px-md active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-label-md text-label-md">Teams</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors px-md active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">sports_soccer</span>
+<span class="font-label-md text-label-md">Matches</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary font-bold px-md active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for skill bar
+        document.addEventListener('DOMContentLoaded', () => {
+            const skillBar = document.querySelector('.bg-secondary-container');
+            if(skillBar) {
+                skillBar.style.width = '0%';
+                setTimeout(() => {
+                    skillBar.style.width = '85%';
+                }, 400);
+            }
+        });
+    </script>
+</body></html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Sports OS - Player Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f0f3ff; /* Premium light gray/surface-container-low */
+            -webkit-tap-highlight-color: transparent;
+        }
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        /* Custom high-depth shadows */
+        .premium-shadow {
+            box-shadow: 0 20px 40px -12px rgba(17, 28, 44, 0.15);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#ffddb4",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#633f00",
+                        "inverse-primary": "#b8c9d5",
+                        "secondary-container": "#feae2c",
+                        "primary-fixed-dim": "#b8c9d5",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#c3c7cb",
+                        "surface-dim": "#cfdaf1",
+                        "inverse-surface": "#263142",
+                        "background": "#f9f9ff",
+                        "outline": "#73787b",
+                        "on-tertiary-container": "#928f88",
+                        "on-primary-container": "#81919c",
+                        "surface-container-highest": "#d8e3fa",
+                        "on-surface": "#111c2c", /* Navy text */
+                        "inverse-on-surface": "#ebf1ff",
+                        "tertiary-container": "#292823",
+                        "primary": "#05151e", /* Deep Navy */
+                        "primary-fixed": "#d4e5f1",
+                        "on-surface-variant": "#43474b",
+                        "on-primary-fixed": "#0d1d26",
+                        "surface-tint": "#50616b",
+                        "tertiary-fixed-dim": "#cac6bf",
+                        "on-background": "#111c2c",
+                        "on-error-container": "#93000a",
+                        "surface-container": "#e7eeff",
+                        "surface-bright": "#f9f9ff",
+                        "secondary": "#835500", /* Gold accent source */
+                        "surface-container-lowest": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#494741",
+                        "primary-container": "#1a2a33",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed": "#291800",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f0f3ff",
+                        "surface-container-high": "#dee8ff",
+                        "on-tertiary-fixed": "#1d1c17",
+                        "tertiary": "#14140f",
+                        "on-primary-fixed-variant": "#394953",
+                        "tertiary-fixed": "#e7e2da",
+                        "secondary-fixed-dim": "#ffb955",
+                        "on-secondary": "#ffffff",
+                        "surface": "#f9f9ff",
+                        "surface-variant": "#d8e3fa",
+                        "on-secondary-container": "#6b4500"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "3xl": "32px", /* Requested border radius */
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "lg": "24px",
+                        "container-margin": "20px",
+                        "xl": "32px",
+                        "sm": "12px",
+                        "md": "16px",
+                        "gutter": "12px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "label-sm": ["Plus Jakarta Sans"],
+                        "label-md": ["Plus Jakarta Sans"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-md-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "display-lg-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-body-md text-primary">
+<!-- Top AppBar -->
+<header class="bg-surface-container-low/80 backdrop-blur-md w-full top-0 sticky z-50 flex justify-between items-center px-container-margin py-md transition-all duration-300">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-secondary">location_on</span>
+<h1 class="font-display-lg-mobile text-display-lg-mobile font-bold tracking-tighter text-primary">SPORTS OS</h1>
+</div>
+<div class="flex items-center gap-md">
+<button class="active:scale-95 transition-transform duration-150 p-2 bg-white rounded-full premium-shadow">
+<span class="material-symbols-outlined text-primary">search</span>
+</button>
+<button class="active:scale-95 transition-transform duration-150 relative p-2 bg-white rounded-full premium-shadow">
+<span class="material-symbols-outlined text-primary">notifications</span>
+<span class="absolute top-1 right-1 w-2.5 h-2.5 bg-secondary-container rounded-full border-2 border-white"></span>
+</button>
+</div>
+</header>
+<main class="px-container-margin pt-lg pb-[100px]">
+<!-- Welcome Header with Athlete Illustration -->
+<section class="mb-xl relative overflow-hidden flex items-center justify-between min-h-[140px]">
+<div class="z-10 max-w-[60%]">
+<h2 class="font-headline-md-mobile text-headline-md-mobile text-on-surface-variant">Hello, Alex</h2>
+<p class="font-display-lg-mobile text-display-lg-mobile text-primary font-bold mt-xs leading-tight">Let's become more Productive</p>
+</div>
+<div class="absolute -right-4 top-0 w-40 h-40 opacity-20 pointer-events-none">
+<img alt="Athlete Silhouette" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLsrliF0Cd3A1noW1I-8QmrA86jnUIhi367jWWnWwX_4cOBZvy0pEfT2NOP469vVIgcettV0_tGsG8CLAVsU4gpyVZYJY30Ms2S9po_TAFCHtuZGlN0TfD6UKPJL-W4zBAou4QiM6fwBAoQ70des2-UtAfllHZdyG7TSX_arZ0Gj7rIEGoIjW_lyUG2y-nnju08P3-ZpQxYURos2c2MwDDLdxzAOYHCf2_wzduUmBoMEaIV3RjBJMlYV2MM">
+</div>
+</section>
+<!-- Daily Plan Card -->
+<section class="mb-xl">
+<div class="bg-primary p-xl rounded-3xl premium-shadow flex items-center justify-between overflow-hidden relative">
+<div class="z-10">
+<h3 class="font-headline-sm text-secondary-fixed mb-xs">Daily Plan</h3>
+<p class="text-on-primary-container font-label-md text-label-md">4 of 5 targets reached</p>
+<button class="mt-lg bg-secondary-container text-primary font-label-md text-label-md px-lg py-md rounded-full font-bold active:scale-90 transition-all premium-shadow">
+                        VIEW TASKS
+                    </button>
+</div>
+<!-- Progress Ring -->
+<div class="relative flex items-center justify-center">
+<svg class="w-28 h-28">
+<circle class="text-primary-container stroke-current" cx="56" cy="56" fill="transparent" r="48" stroke-width="8"></circle>
+<circle class="progress-ring-circle text-secondary-container stroke-current" cx="56" cy="56" fill="transparent" r="48" stroke-dasharray="301.59" stroke-dashoffset="60.3" stroke-linecap="round" stroke-width="10"></circle>
+</svg>
+<span class="absolute font-headline-md text-secondary-fixed">80%</span>
+</div>
+<!-- Decorative Gold Glow -->
+<div class="absolute -right-10 -bottom-10 w-40 h-40 bg-secondary-container/10 rounded-full blur-3xl"></div>
+</div>
+</section>
+<!-- Today's Schedule -->
+<section class="mb-xl">
+<div class="flex justify-between items-end mb-md px-1">
+<h3 class="font-headline-sm text-primary">Today's Schedule</h3>
+<a class="text-secondary font-label-md text-label-md font-bold uppercase tracking-wider hover:underline" href="#">View Calendar</a>
+</div>
+<div class="space-y-md">
+<!-- Schedule Card: Match -->
+<div class="bg-surface-container-lowest p-lg rounded-3xl premium-shadow border border-white/40 flex gap-md items-center active:scale-98 transition-all">
+<div class="w-16 h-16 rounded-2xl bg-secondary-container/10 flex items-center justify-center p-2">
+<img alt="Football Mark" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida/AP1WRLtktV94nJFc0U5ggptbWUmJdSyDpzbXQmz0_Q8mx0mGuM0jwTvOYvB8NJV5PiYkP9f7ZvujLKNMFqOAPGdU64Qf9kcw9LBrrNmqyA5SjFWCFo74KLUo6y9pQIsIzQqXje9l_-qoQw07AzB9s9fy4ANoskUlqNfHpM6Ef8ELcIqwSXwbJuToojtZEvvCDg9-2XbE-mNw9LGBe8tgJp6rRCzHknvrnmculyjYWwW0eukUl3qTOYtxBH8daw">
+</div>
+<div class="flex-1">
+<h4 class="font-headline-sm text-primary">Match vs Tigers</h4>
+<div class="flex items-center gap-xs mt-xs">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">schedule</span>
+<p class="font-label-md text-label-md text-on-surface-variant">14:30 - 16:00 • Stadium A</p>
+</div>
+</div>
+<div class="bg-secondary-container text-primary font-label-md text-[10px] px-2 py-1 rounded-full font-bold">
+                        LIVE
+                    </div>
+</div>
+<!-- Schedule Card: Practice -->
+<div class="bg-surface-container-lowest p-lg rounded-3xl premium-shadow border border-white/40 flex gap-md items-center active:scale-98 transition-all">
+<div class="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[32px]">fitness_center</span>
+</div>
+<div class="flex-1">
+<h4 class="font-headline-sm text-primary">Practice Session</h4>
+<div class="flex items-center gap-xs mt-xs">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">schedule</span>
+<p class="font-label-md text-label-md text-on-surface-variant">18:00 - 19:30 • Gym</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Stats Preview Section -->
+<section class="mb-xl">
+<h3 class="font-headline-sm text-primary mb-md px-1">Quick Analytics</h3>
+<div class="bento-grid">
+<div class="col-span-1 bg-white p-lg rounded-3xl premium-shadow flex flex-col justify-between aspect-square border border-white/40">
+<div class="w-12 h-12 bg-primary/5 rounded-2xl flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[28px]">speed</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Top Speed</p>
+<p class="font-headline-md text-primary">34.2 <span class="text-label-sm font-normal">km/h</span></p>
+</div>
+</div>
+<div class="col-span-1 bg-primary p-lg rounded-3xl premium-shadow flex flex-col justify-between aspect-square text-secondary-fixed">
+<div class="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+<span class="material-symbols-outlined text-[28px] text-secondary-container" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<div>
+<p class="font-label-md text-label-md opacity-60 uppercase tracking-wider">Avg. Power</p>
+<p class="font-headline-md">280<span class="text-label-sm font-normal">W</span></p>
+</div>
+</div>
+</div>
+</section>
+<!-- Performance Graph -->
+<section class="mb-xl">
+<div class="bg-surface-container-lowest p-xl rounded-3xl premium-shadow border border-white/40 overflow-hidden">
+<div class="flex justify-between items-center mb-lg">
+<h3 class="font-label-md text-label-md font-bold text-primary uppercase tracking-widest">Weekly Performance</h3>
+<span class="material-symbols-outlined text-outline-variant">more_horiz</span>
+</div>
+<div class="h-32 w-full flex items-end justify-between gap-md px-xs">
+<div class="w-full bg-primary/10 h-1/2 rounded-t-lg"></div>
+<div class="w-full bg-primary/10 h-2/3 rounded-t-lg"></div>
+<div class="w-full bg-secondary-container h-4/5 rounded-t-lg premium-shadow"></div>
+<div class="w-full bg-primary h-full rounded-t-lg"></div>
+<div class="w-full bg-primary/10 h-1/3 rounded-t-lg"></div>
+<div class="w-full bg-primary/10 h-1/2 rounded-t-lg"></div>
+<div class="w-full bg-primary/10 h-2/3 rounded-t-lg"></div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-[32px] bg-primary shadow-[0_-10px_30px_rgba(5,21,30,0.2)] flex justify-around items-center h-[80px] px-gutter pb-safe">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center justify-center text-secondary-fixed bg-secondary-container/10 rounded-2xl px-md py-base transition-transform duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-md text-label-md mt-1 font-bold">Home</span>
+</a>
+<!-- Explore -->
+<a class="flex flex-col items-center justify-center text-on-primary-container opacity-50 hover:opacity-100 transition-opacity duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-md text-label-md mt-1">Explore</span>
+</a>
+<!-- Teams -->
+<a class="flex flex-col items-center justify-center text-on-primary-container opacity-50 hover:opacity-100 transition-opacity duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-label-md text-label-md mt-1">Teams</span>
+</a>
+<!-- Matches -->
+<a class="flex flex-col items-center justify-center text-on-primary-container opacity-50 hover:opacity-100 transition-opacity duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined">sports_soccer</span>
+<span class="font-label-md text-label-md mt-1">Matches</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-primary-container opacity-50 hover:opacity-100 transition-opacity duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md mt-1">Profile</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for the progress ring
+        window.addEventListener('DOMContentLoaded', () => {
+            const circle = document.querySelector('.progress-ring-circle');
+            if (circle) {
+                const radius = circle.r.baseVal.value;
+                const circumference = radius * 2 * Math.PI;
+                circle.style.strokeDasharray = `${circumference} ${circumference}`;
+                
+                // Animate to 80%
+                const offset = circumference - (80 / 100) * circumference;
+                setTimeout(() => {
+                    circle.style.strokeDashoffset = offset;
+                }, 100);
+            }
+        });
+
+        // Scroll shadow for header
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            if (window.scrollY > 10) {
+                header.classList.add('shadow-lg');
+            } else {
+                header.classList.remove('shadow-lg');
+            }
+        });
+    </script>
+</body></html>

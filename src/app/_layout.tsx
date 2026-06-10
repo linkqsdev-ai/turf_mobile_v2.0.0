@@ -92,7 +92,21 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
-          name="network-activity" 
+          name="player-profile" 
+          options={{ 
+            animation: 'slide_from_right', 
+            presentation: 'card' 
+          }} 
+        />
+        <Stack.Screen 
+          name="network" 
+          options={{ 
+            animation: 'slide_from_right', 
+            presentation: 'card' 
+          }} 
+        />
+        <Stack.Screen 
+          name="edit-profile" 
           options={{ 
             animation: 'slide_from_right', 
             presentation: 'card' 

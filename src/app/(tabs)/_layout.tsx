@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Platform, View } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -52,36 +52,36 @@ export default function TabLayout() {
       <Tabs.Screen
         name="matches"
         options={{
-          title: 'Match',
+          title: 'Matches',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'football' : 'football-outline'} size={22} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Book',
+          title: 'Explore',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'add-circle' : 'add-circle-outline'} size={22} color={color} />
+            <MaterialCommunityIcons name="soccer-field" size={24} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="tournaments"
         options={{
-          title: 'Tournaments',
+          title: 'Leagues',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'ribbon' : 'ribbon-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'trophy' : 'trophy-outline'} size={22} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="teams"
         options={{
-          title: 'Club',
+          title: 'Teams',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'shield' : 'shield-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} />
           ),
         }}
       />

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&amp;family=Plus+Jakarta+Sans:wght@500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@100..900&amp;family=Plus+Jakarta+Sans:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        body {
+            background-color: #f9f9ff;
+            font-family: 'Hanken Grotesk', sans-serif;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#43474b",
+                    "on-secondary-container": "#6b4500",
+                    "inverse-on-surface": "#ebf1ff",
+                    "secondary": "#835500",
+                    "tertiary-fixed-dim": "#cac6bf",
+                    "inverse-surface": "#263142",
+                    "on-secondary-fixed": "#291800",
+                    "surface-container-low": "#f0f3ff",
+                    "surface-tint": "#50616b",
+                    "on-secondary-fixed-variant": "#633f00",
+                    "surface-container": "#e7eeff",
+                    "tertiary-container": "#292823",
+                    "secondary-container": "#feae2c",
+                    "on-tertiary-container": "#928f88",
+                    "primary-fixed-dim": "#b8c9d5",
+                    "background": "#f9f9ff",
+                    "surface-container-highest": "#d8e3fa",
+                    "on-primary-fixed-variant": "#394953",
+                    "secondary-fixed-dim": "#ffb955",
+                    "on-surface": "#111c2c",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-primary": "#b8c9d5",
+                    "on-tertiary-fixed-variant": "#494741",
+                    "on-primary": "#ffffff",
+                    "surface": "#f9f9ff",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#ffddb4",
+                    "outline": "#73787b",
+                    "error": "#ba1a1a",
+                    "primary": "#05151e",
+                    "surface-dim": "#cfdaf1",
+                    "on-background": "#111c2c",
+                    "surface-container-high": "#dee8ff",
+                    "tertiary": "#14140f",
+                    "surface-bright": "#f9f9ff",
+                    "on-tertiary": "#ffffff",
+                    "outline-variant": "#c3c7cb",
+                    "primary-fixed": "#d4e5f1",
+                    "on-primary-container": "#81919c",
+                    "primary-container": "#1a2a33",
+                    "on-error": "#ffffff",
+                    "on-primary-fixed": "#0d1d26",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#e7e2da",
+                    "on-tertiary-fixed": "#1d1c17",
+                    "surface-variant": "#d8e3fa",
+                    "on-secondary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sm": "12px",
+                    "gutter": "12px",
+                    "md": "16px",
+                    "xs": "8px",
+                    "container-margin": "20px",
+                    "xl": "32px",
+                    "base": "4px",
+                    "lg": "24px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Hanken Grotesk"],
+                    "label-sm": ["Plus Jakarta Sans"],
+                    "display-lg": ["Hanken Grotesk"],
+                    "headline-sm": ["Hanken Grotesk"],
+                    "body-lg": ["Hanken Grotesk"],
+                    "body-md": ["Hanken Grotesk"],
+                    "label-md": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface mb-24">
+<!-- Top Navigation -->
+<header class="w-full top-0 sticky z-50 bg-surface dark:bg-primary shadow-sm shadow-[0_20px_20px_-15px_rgba(26,42,51,0.06)] flex justify-between items-center px-container-margin py-md">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-secondary dark:text-secondary-fixed">location_on</span>
+<h1 class="font-display-lg text-display-lg-mobile font-bold tracking-tighter text-primary dark:text-secondary-fixed">SPORTS OS</h1>
+</div>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-secondary dark:text-secondary-fixed hover:opacity-80 transition-opacity active:scale-95 transition-transform duration-150">notifications</button>
+</div>
+</header>
+<main class="px-container-margin pt-lg space-y-xl">
+<!-- User Analytics / Personal Ranking -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<div class="md:col-span-2 bg-primary-container text-on-primary rounded-xl p-lg flex flex-col justify-between relative overflow-hidden shadow-sm">
+<div class="relative z-10">
+<p class="font-label-md text-label-md opacity-70 uppercase tracking-widest">Global Ranking</p>
+<h2 class="font-headline-md text-headline-md mt-base">Elite Division • #428</h2>
+<div class="flex items-center gap-xs mt-md">
+<span class="bg-secondary-container text-on-secondary-container px-sm py-base rounded-full text-label-sm font-label-sm">Top 5% Skill Level</span>
+</div>
+</div>
+<div class="mt-lg grid grid-cols-3 gap-md relative z-10">
+<div>
+<p class="font-label-sm text-label-sm opacity-60">Win Rate</p>
+<p class="font-headline-sm text-headline-sm">78.4%</p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm opacity-60">Avg Score</p>
+<p class="font-headline-sm text-headline-sm">24.5</p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm opacity-60">Matches</p>
+<p class="font-headline-sm text-headline-sm">112</p>
+</div>
+</div>
+<!-- Subtle Decorative Elements -->
+<div class="absolute -right-10 -bottom-10 w-48 h-48 bg-secondary rounded-full blur-[80px] opacity-20"></div>
+</div>
+<div class="bg-surface-container-highest rounded-xl p-lg flex flex-col items-center justify-center text-center shadow-sm">
+<div class="w-20 h-20 rounded-full border-4 border-secondary-container flex items-center justify-center relative">
+<span class="material-symbols-outlined text-primary text-[40px]" style="font-variation-settings: 'FILL' 1;">stars</span>
+<div class="absolute -top-1 -right-1 bg-secondary text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border-2 border-surface-container-highest">LVL 12</div>
+</div>
+<p class="mt-md font-headline-sm text-headline-sm text-primary">AI Matcher Active</p>
+<p class="font-body-md text-body-md text-on-surface-variant px-sm">Analyzing 48 teams in your local metro area.</p>
+</div>
+</section>
+<!-- Top Matches for You (Bento Style) -->
+<section>
+<div class="flex justify-between items-end mb-md px-base">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-primary">Top Matches for You</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Recommended based on your Elite ranking</p>
+</div>
+<button class="text-secondary font-label-md text-label-md uppercase tracking-wider">See All</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+<!-- Team Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl p-md border border-outline-variant/30 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start">
+<img alt="Team Logo" class="w-14 h-14 rounded-lg object-cover" data-alt="A professional sports team logo featuring a minimalist golden eagle against a deep navy background, designed with sharp geometric lines and a modern corporate aesthetic. The logo is displayed on a clean white surface with soft studio lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-rGNcjfTOqIbCc14x83aW-UxvfwQbFlcyDJxfiI8ZW54ZEnoJj_6XMl36rA1HACKrvZtNCIXvr2C0OqBv5ofBMDmbIsSGwIrg2aJM6DZx1zCnA069mfIswX4BSiH74irw7LbjrSEwBGaYOv0_fpov0HxNwPi1B5BdSEpnDqfWgU_xCKwSaiqALibZA8IOqlYOz9imbDWNkZmSV8pARy8d4yXq8r-UQfa53HcEMorKjJfPcj6rcEJfGV2ObHglEC_gDfnRZFIpxEo"/>
+<span class="bg-secondary-container/20 text-secondary font-label-sm text-label-sm px-sm py-base rounded-full">98% Match</span>
+</div>
+<div class="mt-md">
+<h4 class="font-headline-sm text-headline-sm">Apex Strikers</h4>
+<div class="flex items-center gap-xs text-on-surface-variant mt-base">
+<span class="material-symbols-outlined text-sm">groups</span>
+<span class="font-label-md text-label-md">11/15 Members</span>
+</div>
+</div>
+<div class="mt-lg flex gap-sm">
+<button class="flex-1 bg-primary text-on-primary py-sm rounded-full font-label-md text-label-md hover:opacity-90 active:scale-95 transition-all">Join Team</button>
+<button class="w-12 h-12 flex items-center justify-center border border-outline-variant rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- Team Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl p-md border border-outline-variant/30 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start">
+<img alt="Team Logo" class="w-14 h-14 rounded-lg object-cover" data-alt="A sleek minimalist team crest for a football club, utilizing a vibrant gold shield on a dark charcoal gray background. The design is clean, using bold sans-serif typography and high-contrast lines, reflecting a modern and disciplined sports brand identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC27_sMupG-KKQYGExlCC6jh1Hz8MMwNB4ZLyAuvVT6GMSVNR8gR63WMVahWw2zVuH69vP6Xnmtd785xVgIpPIZhNp1FgG6oal0b6r7d3LRAjFIuSLJHC1J6wRU7zwYOOUIb7eWImHSqIQtNp7E1R5vzKBpYF3Jhu8-L6wUUpfi6gj6X3lqTzcfchjKo9PEhSxok_aJgpWJ6WPMVBuVPMy9OydQS16g3vXG9xyh3sCStFOe6od9nQNVfcMdy8sQnfE_24wh8FNOjZg"/>
+<span class="bg-secondary-container/20 text-secondary font-label-sm text-label-sm px-sm py-base rounded-full">92% Match</span>
+</div>
+<div class="mt-md">
+<h4 class="font-headline-sm text-headline-sm">Vanguard FC</h4>
+<div class="flex items-center gap-xs text-on-surface-variant mt-base">
+<span class="material-symbols-outlined text-sm">groups</span>
+<span class="font-label-md text-label-md">8/12 Members</span>
+</div>
+</div>
+<div class="mt-lg flex gap-sm">
+<button class="flex-1 bg-primary text-on-primary py-sm rounded-full font-label-md text-label-md hover:opacity-90 active:scale-95 transition-all">Join Team</button>
+<button class="w-12 h-12 flex items-center justify-center border border-outline-variant rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- Team Card 3 (Featured) -->
+<div class="bg-secondary-container text-on-secondary-container rounded-xl p-md border border-secondary shadow-[0_8px_30px_rgba(245,166,35,0.15)] relative overflow-hidden">
+<div class="flex justify-between items-start relative z-10">
+<div class="w-14 h-14 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-3xl">bolt</span>
+</div>
+<span class="bg-primary text-on-primary font-label-sm text-label-sm px-sm py-base rounded-full">Pro Recommended</span>
+</div>
+<div class="mt-md relative z-10">
+<h4 class="font-headline-sm text-headline-sm">Volt Titans</h4>
+<div class="flex items-center gap-xs text-on-secondary-container/80 mt-base">
+<span class="material-symbols-outlined text-sm">groups</span>
+<span class="font-label-md text-label-md">14/15 Members (1 Slot!)</span>
+</div>
+</div>
+<div class="mt-lg relative z-10">
+<button class="w-full bg-primary text-on-primary py-sm rounded-full font-label-md text-label-md hover:bg-primary/90 active:scale-95 transition-all">Apply to Join</button>
+</div>
+<!-- Decorative patterns -->
+<div class="absolute right-0 bottom-0 opacity-10 pointer-events-none">
+<span class="material-symbols-outlined text-9xl">sports_soccer</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Nearby Players -->
+<section class="pb-xl">
+<div class="flex justify-between items-center mb-md px-base">
+<h3 class="font-headline-sm text-headline-sm text-primary">Nearby Players</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant bg-surface-variant px-sm py-base rounded-full">Within 5 miles</span>
+</div>
+<div class="flex gap-md overflow-x-auto pb-md no-scrollbar">
+<!-- Player 1 -->
+<div class="flex-shrink-0 w-40 bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-sm flex flex-col items-center text-center shadow-sm">
+<img alt="Player Avatar" class="w-16 h-16 rounded-full object-cover border-2 border-surface-container-high" data-alt="A portrait of a focused male athlete with a modern athletic haircut, lit with dramatic rim lighting. The background is a soft, blurred sports arena in cool navy and white tones, emphasizing a professional and determined personality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwiTApfe0o_RaqgJPOgwCwUoJOk5a-qURKYl1A-9FxZeB8x9qTVqXywrqy6IclWma9rq9ZdILzzfiqktsymmNEBzBmz9IQYz9EC41lvoVmcY8RKoFfgGsXCIOKixxDWP1s9iw6wnorlxbVOwd6HSIIxxJ_4pwgvcoVM1c06QUzUHGMNKLReh5GxVNlfBXttjYeRmFhjHt26l82tpXWJvUsIV4HVL2-OLKtQXbd1o_hL8u_i6tPbx3d3nlUD1NWOU7e4vT4VSOFpHE"/>
+<p class="mt-sm font-label-md text-label-md font-bold text-primary">Marcus J.</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Midfielder • Lv. 10</p>
+<button class="mt-md w-full border border-secondary text-secondary py-xs rounded-full font-label-sm text-label-sm hover:bg-secondary/5 transition-colors">Invite</button>
+</div>
+<!-- Player 2 -->
+<div class="flex-shrink-0 w-40 bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-sm flex flex-col items-center text-center shadow-sm">
+<img alt="Player Avatar" class="w-16 h-16 rounded-full object-cover border-2 border-surface-container-high" data-alt="A high-quality studio portrait of a confident female soccer player, looking directly into the camera with a slight smile. The lighting is bright and airy with a modern corporate feel, maintaining a clean palette of whites, creams, and subtle navy accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDy5u79u9FGtMYLM4OozDUBFxSn_yFHUC7XGseArv7EQumoUcmp92KgSAgEWAyQG-45a-r6WENe5dWEvlUS7pGHK_wjlmB0v9MsVsdAY7rD4JzJDEWN5G5OCrZruIPCGZgua6cLKBMOSeC8cMffFOMWS51oY_CI_oky9U2dQyr6hxzDY3EllzG3udNuRlSkTFvxYmoTu4p5ZKFl5VfjisvWHOOsJ7z5ph0yuqThIR0N0dxIAiABfmkirYi2DPRyUL0yCMBpxqct9s"/>
+<p class="mt-sm font-label-md text-label-md font-bold text-primary">Elena S.</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Forward • Lv. 14</p>
+<button class="mt-md w-full border border-secondary text-secondary py-xs rounded-full font-label-sm text-label-sm hover:bg-secondary/5 transition-colors">Invite</button>
+</div>
+<!-- Player 3 -->
+<div class="flex-shrink-0 w-40 bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-sm flex flex-col items-center text-center shadow-sm">
+<img alt="Player Avatar" class="w-16 h-16 rounded-full object-cover border-2 border-surface-container-high" data-alt="A headshot of a professional-looking athlete in his late 20s, featuring warm sunlight catching his profile against a minimalist urban background. The aesthetic is clean and high-performance, fitting the Sports OS brand identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpEy_V_9S92rHtrQqA_z6DpgTDdxk03F2cpHa-hWdSYcT0-84wHP7qTeVDLC2l7TsJzc9LOMPtF7pW-XQDaEwtC3YwZfF4wB1_CZn09sGaA86sxLZKNZXWcGYu9gPF4Q8lYNMIkWIJ-tbsPA6W4v0VL_kg5AQRCdatYKE5WNtj6T3TbaRNyjHhk9A7NQefFpYyBs1-GZ1UQZgi7BbiPK-RYhznI4ujjNNYCjqUuQqC_ihQ6aqzokG6tvXfrWVmZAg0z_oJ5-wbhsI"/>
+<p class="mt-sm font-label-md text-label-md font-bold text-primary">David W.</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">GK • Lv. 11</p>
+<button class="mt-md w-full border border-secondary text-secondary py-xs rounded-full font-label-sm text-label-sm hover:bg-secondary/5 transition-colors">Invite</button>
+</div>
+<!-- Player 4 -->
+<div class="flex-shrink-0 w-40 bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-sm flex flex-col items-center text-center shadow-sm">
+<img alt="Player Avatar" class="w-16 h-16 rounded-full object-cover border-2 border-surface-container-high" data-alt="A striking portrait of a focused young female athlete, shot in a high-key studio setting. The lighting is soft and professional, and the overall style is minimalist and high-end, using the brand's primary color palette for a cohesive, energetic feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBft7tvKQ1qeQ18COQM9a_Zs43l21EhIIovhWCC6gDOjxD88v1Dx0Wty9PFi6a4kYLAbmSHgEF0qciQYAvr4QKQS8FOHTlGg__fln5xnhWSsXc_k9aIf-OiktYjChEgDCzGS_TUEiWH27R_FNaHu8O88tkzCC6FWcCJkUEtTlS4Kojr9iA3Ne_TT6rfVyLMuhlXZmxMxrFWi0aW8c4wQYjOQO3nCxP4by6aEnli2utdZQXuutM7RbJ8b_yHj-xNEPhzns3WU1lT4ps"/>
+<p class="mt-sm font-label-md text-label-md font-bold text-primary">Sarah K.</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Defense • Lv. 12</p>
+<button class="mt-md w-full border border-secondary text-secondary py-xs rounded-full font-label-sm text-label-sm hover:bg-secondary/5 transition-colors">Invite</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-primary dark:bg-primary-container shadow-[0_-4px_20px_rgba(0,0,0,0.1)] flex justify-around items-center h-[72px] px-gutter pb-safe">
+<a class="flex flex-col items-center justify-center text-on-primary-container opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-primary-container opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-md text-label-md">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary-fixed bg-secondary-container/10 rounded-full px-xs py-base active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">groups</span>
+<span class="font-label-md text-label-md">Teams</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-primary-container opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">sports_soccer</span>
+<span class="font-label-md text-label-md">Matches</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-primary-container opacity-60 hover:opacity-100 transition-opacity active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for Join Buttons
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', function() {
+                if (this.innerText === 'Join Team' || this.innerText === 'Apply to Join') {
+                    const originalText = this.innerText;
+                    this.innerText = 'Request Sent';
+                    this.classList.add('bg-secondary');
+                    this.classList.remove('bg-primary');
+                    setTimeout(() => {
+                        this.innerText = originalText;
+                        this.classList.remove('bg-secondary');
+                        this.classList.add('bg-primary');
+                    }, 2000);
+                }
+            });
+        });
+    </script>
+</body></html>

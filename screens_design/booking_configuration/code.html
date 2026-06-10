@@ -1,0 +1,427 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Booking Configuration | Lord's View Pavillion</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Hanken Grotesk', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#001b3d",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "tertiary-container": "#0b1c30",
+                        "outline-variant": "#c4c6cf",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary-fixed-dim": "#b1c7f2",
+                        "on-secondary-fixed-variant": "#594400",
+                        "background": "#f7f9fb",
+                        "primary-fixed": "#d6e3ff",
+                        "on-error-container": "#93000a",
+                        "primary": "#000000",
+                        "outline": "#74777f",
+                        "inverse-primary": "#b1c7f2",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#495f84",
+                        "on-primary-fixed-variant": "#31476b",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "inverse-surface": "#2d3133",
+                        "surface": "#f7f9fb",
+                        "secondary-container": "#ffc703",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#000000",
+                        "on-surface": "#191c1e",
+                        "surface-variant": "#e0e3e5",
+                        "on-secondary-container": "#6e5400",
+                        "surface-container": "#eceef0",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#d3e4fe",
+                        "surface-dim": "#d8dadc",
+                        "surface-container-low": "#f2f4f6",
+                        "secondary-fixed-dim": "#f5bf00",
+                        "on-primary-container": "#6f84ac",
+                        "surface-container-highest": "#e0e3e5",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed": "#251a00",
+                        "on-tertiary-container": "#75859d",
+                        "on-background": "#191c1e",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "on-primary-fixed": "#001b3d",
+                        "secondary-fixed": "#ffdf94",
+                        "on-surface-variant": "#44474e",
+                        "secondary": "#765b00",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-bright": "#f7f9fb",
+                        "on-tertiary-fixed": "#0b1c30"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem",
+                        "premium": "32px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "2xl": "64px",
+                        "margin": "32px",
+                        "xs": "4px",
+                        "md": "16px",
+                        "sm": "8px",
+                        "base": "4px",
+                        "lg": "24px",
+                        "xl": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "body-sm": ["Hanken Grotesk"],
+                        "label-md": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface min-h-screen pb-24 md:pb-0">
+<!-- Top AppBar (from JSON guidance) -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm flex items-center justify-between px-md h-16 w-full">
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-primary hover:bg-surface-variant transition-colors p-2 rounded-full active:scale-95 duration-200">menu</button>
+<h1 class="font-display-lg text-display-lg tracking-tighter text-primary leading-none hidden md:block">Sports OS</h1>
+<h2 class="font-headline-sm text-headline-sm text-primary md:hidden">Book Venue</h2>
+</div>
+<div class="flex items-center gap-md">
+<div class="hidden md:flex gap-lg items-center px-lg">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">DASHBOARD</a>
+<a class="font-label-md text-label-md text-primary font-bold" href="#">BOOKINGS</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">ANALYTICS</a>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-variant overflow-hidden border border-outline-variant">
+<img alt="Profile" data-alt="A professional headshot of a premium sports club member, a man in his 30s with a sharp, clean-cut look. The lighting is soft and studio-quality, emphasizing high-end professionalism. The background is a blurred, sophisticated modern office space with cool tones. This image reflects an elite-tier athlete management persona." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBOEjm_pVuJRYA_7ccsj3pEk7ndTpUJhXBDtudpHX-YqxXR1QoNLRiv8zFuR7JgnpuMyC1LXqcGJ_wm58vqySuP_kym61xVUpdYy6TERp5UaRH3zbzssfmUTFvpawqv1s9FhJfKEeLNdK0QSzH9lRaDP-NjNiLT6Y8sKT2-PY7jW3HfA_rCyZJ-9_yqt2XJOC7DIYzIhxBbcEiFI5av6gpV-cFvAl958b0WtyPi4CM5UH_53ojtyfjUAdTuaRzwGJ7X6OHA6wq258">
+</div>
+</div>
+</header>
+<main class="pt-24 px-gutter max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-gutter pb-xl">
+<!-- Left Column: Venue Context & Selection -->
+<div class="md:col-span-8 flex flex-col gap-gutter">
+<!-- Hero Card -->
+<div class="relative h-64 md:h-80 w-full rounded-premium overflow-hidden shadow-[0px_12px_48px_rgba(0,27,61,0.12)]">
+<img alt="Lord's View Pavillion" class="w-full h-full object-cover" data-alt="An expansive, high-angle view of the iconic Lord's Cricket Ground pavilion. The architecture is grand and historic, set against a perfectly manicured green field. The lighting is warm late-afternoon sun, casting soft long shadows. The overall aesthetic is one of elite prestige and sports heritage, matching a premium Sports OS interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuALu73uxwFh8dMfASql2tC3DaXjWnbkcx6IreW3t4uVSYJZTjYXTAFIL-WXMcyjVY_SaMD4PJLYG3XH5p0OtFEu_cDCgSBDfika9rO-vEjuYzBieEB9SR5W_FUp4-EalIf66NIK4vt01mwAlb2LGdNPrKHnP_V6VMPiBHY9C37TYLHtwK9ezLQsFl_cUrjT7vHe1YyIu3neHVYLe090adnt0diX8TMUGYd2HjumJd-HsLLyxwMPBsakQQIbNySU1G7KQhkwEqKW4xk">
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container/80 via-transparent to-transparent flex flex-col justify-end p-xl">
+<span class="inline-block px-3 py-1 bg-secondary-container text-on-secondary-container font-label-md text-label-md rounded-full mb-sm self-start">PREMIUM VENUE</span>
+<h3 class="font-headline-lg text-headline-lg text-white">Lord's View Pavillion</h3>
+<div class="flex items-center gap-md text-white/80 font-body-sm text-body-sm">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">location_on</span>
+                            St John's Wood Road, London
+                        </div>
+<div class="flex items-center gap-xs border-l border-white/20 pl-md">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                            4.9 (248 Reviews)
+                        </div>
+</div>
+</div>
+</div>
+<!-- Booking Form Container -->
+<div class="bg-surface-container-lowest rounded-premium p-xl shadow-[0px_4px_20px_rgba(0,27,61,0.08)] border border-outline-variant/30">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-xl">
+<!-- Date Picker (Feb) -->
+<div class="flex flex-col gap-md">
+<div class="flex items-center justify-between">
+<h4 class="font-headline-sm text-headline-sm text-primary">February 2024</h4>
+<div class="flex gap-sm">
+<button class="p-2 rounded-full hover:bg-surface-variant transition-colors"><span class="material-symbols-outlined">chevron_left</span></button>
+<button class="p-2 rounded-full hover:bg-surface-variant transition-colors"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+<div class="grid grid-cols-7 text-center font-label-md text-label-md text-on-surface-variant mb-xs">
+<div>MO</div><div>TU</div><div>WE</div><div>TH</div><div>FR</div><div>SA</div><div>SU</div>
+</div>
+<div class="grid grid-cols-7 gap-1">
+<!-- Padding for Feb 1 starting Thursday -->
+<div class="h-10"></div><div class="h-10"></div><div class="h-10"></div>
+<!-- Days -->
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">1</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">2</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">3</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">4</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">5</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">6</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">7</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">8</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">9</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">10</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">11</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md text-outline">12</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">13</button>
+<button class="h-10 flex items-center justify-center rounded-lg bg-secondary-container text-on-secondary-container font-bold shadow-md">14</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">15</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">16</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">17</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">18</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">19</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">20</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">21</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">22</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">23</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">24</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">25</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">26</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">27</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">28</button>
+<button class="h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant font-body-md text-body-md">29</button>
+</div>
+</div>
+<!-- Slot & Duration -->
+<div class="flex flex-col gap-lg">
+    <!-- Day Selector -->
+    <div class="flex items-center gap-sm overflow-x-auto pb-2 custom-scrollbar">
+        <button class="px-6 py-3 rounded-full bg-white text-primary font-bold shadow-sm border border-outline-variant/30 shrink-0">Monday</button>
+        <button class="px-6 py-3 rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors shrink-0">Tuesday</button>
+        <button class="px-6 py-3 rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors shrink-0">Wednesday</button>
+        <button class="px-6 py-3 rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors shrink-0">Thursday</button>
+        <button class="px-6 py-3 rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors shrink-0">Friday</button>
+        <button class="px-6 py-3 rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors shrink-0">Saturday</button>
+        <button class="px-6 py-3 rounded-full text-on-surface-variant hover:bg-surface-variant transition-colors shrink-0">Sunday</button>
+    </div>
+
+    <!-- Time Slots Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-md">
+        <!-- Row 1 -->
+        <button class="flex items-center justify-center gap-2 p-4 rounded-xl bg-surface-container-low text-on-surface-variant hover:border-primary border border-transparent transition-all">
+            <span class="material-symbols-outlined text-[20px]">light_mode</span>
+            <span class="font-bold">08:00</span>
+        </button>
+        <button class="flex items-center justify-center gap-2 p-4 rounded-xl bg-surface-container-low text-on-surface-variant hover:border-primary border border-transparent transition-all">
+            <span class="material-symbols-outlined text-[20px]">light_mode</span>
+            <span class="font-bold">09:00</span>
+        </button>
+        <button class="flex items-center justify-center gap-2 p-4 rounded-xl bg-primary text-white shadow-md">
+            <span class="material-symbols-outlined text-[20px]">light_mode</span>
+            <span class="font-bold">10:00</span>
+        </button>
+        <button class="flex items-center justify-center gap-2 p-4 rounded-xl bg-primary text-white shadow-md">
+            <span class="material-symbols-outlined text-[20px]">light_mode</span>
+            <span class="font-bold">11:00</span>
+        </button>
+        <!-- Row 2 -->
+        <button class="flex items-center justify-center gap-2 p-4 rounded-xl bg-primary text-white shadow-md">
+            <span class="material-symbols-outlined text-[20px]">wb_sunny</span>
+            <span class="font-bold">12:00</span>
+        </button>
+        <button class="flex items-center justify-center gap-2 p-4 rounded-xl bg-primary text-white shadow-md">
+            <span class="material-symbols-outlined text-[20px]">wb_sunny</span>
+            <span class="font-bold">13:00</span>
+        </button>
+        <button class="flex items-center justify-center gap-2 p-4 rounded-xl bg-primary text-white shadow-md">
+            <span class="material-symbols-outlined text-[20px]">wb_sunny</span>
+            <span class="font-bold">14:00</span>
+        </button>
+        <button class="flex items-center justify-center gap-2 p-4 rounded-xl bg-primary text-white shadow-md">
+            <span class="material-symbols-outlined text-[20px]">wb_sunny</span>
+            <span class="font-bold">15:00</span>
+        </button>
+        <!-- Row 3 -->
+        <button class="flex items-center justify-center gap-2 p-4 rounded-xl bg-surface-container-low text-on-surface-variant/40 cursor-not-allowed">
+            <span class="material-symbols-outlined text-[20px]">wb_sunny</span>
+            <span class="font-bold">16:00</span>
+        </button>
+        <button class="flex items-center justify-center gap-2 p-4 rounded-xl bg-surface-container-low text-on-surface-variant/40 cursor-not-allowed">
+            <span class="material-symbols-outlined text-[20px]">wb_sunny</span>
+            <span class="font-bold">17:00</span>
+        </button>
+        <button class="flex items-center justify-center gap-2 p-4 rounded-xl bg-surface-container-low text-on-surface-variant/40 cursor-not-allowed">
+            <span class="material-symbols-outlined text-[20px]">wb_sunny</span>
+            <span class="font-bold">18:00</span>
+        </button>
+        <button class="flex items-center justify-center gap-2 p-4 rounded-xl bg-surface-container-low text-on-surface-variant/40 cursor-not-allowed">
+            <span class="material-symbols-outlined text-[20px]">bedtime</span>
+            <span class="font-bold">19:00</span>
+        </button>
+    </div>
+
+    <!-- UTC Notice -->
+    <div class="flex items-center gap-xs text-on-surface-variant font-body-sm text-body-sm mt-md">
+        <span class="material-symbols-outlined text-[18px]">info</span>
+        <span class="">The time slots are in UTC. Assign accordingly. <a href="#" class="text-primary font-bold underline">Refer Timezones</a></span>
+    </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Summary & Confirmation -->
+<div class="md:col-span-4 flex flex-col gap-gutter">
+<div class="sticky top-24 bg-primary-container text-white rounded-premium p-xl shadow-[0px_12px_48px_rgba(0,27,61,0.12)] flex flex-col gap-xl">
+<div>
+<h3 class="font-headline-sm text-headline-sm mb-xs">Booking Summary</h3>
+<p class="font-body-sm text-body-sm text-on-primary-container">Review your session details before final confirmation.</p>
+</div>
+<div class="space-y-md">
+<div class="flex items-start gap-md">
+<div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-secondary-container">calendar_month</span>
+</div>
+<div>
+<div class="font-label-md text-label-md text-on-primary-container">DATE</div>
+<div class="font-body-md text-body-md font-bold">Wednesday, Feb 14, 2024</div>
+</div>
+</div>
+<div class="flex items-start gap-md">
+<div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-secondary-container">schedule</span>
+</div>
+<div>
+<div class="font-label-md text-label-md text-on-primary-container">TIME SLOT</div>
+<div class="font-body-md text-body-md font-bold">12:30 PM - 02:30 PM</div>
+<div class="font-body-sm text-body-sm text-on-primary-container">Afternoon Session • 2 Hours</div>
+</div>
+</div>
+<div class="flex items-start gap-md">
+<div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-secondary-container">stadium</span>
+</div>
+<div>
+<div class="font-label-md text-label-md text-on-primary-container">COURT / AREA</div>
+<div class="font-body-md text-body-md font-bold">Pavillion Main Wing</div>
+</div>
+</div>
+</div>
+<div class="pt-xl border-t border-white/10">
+<div class="flex justify-between items-center mb-sm">
+<span class="font-body-md text-body-md text-on-primary-container">Court Hire Fee</span>
+<span class="font-body-md text-body-md">£120.00</span>
+</div>
+<div class="flex justify-between items-center mb-md">
+<span class="font-body-md text-body-md text-on-primary-container">Service Charge (Elite)</span>
+<span class="font-body-md text-body-md">£12.00</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-headline-sm text-headline-sm">Total</span>
+<span class="font-headline-sm text-headline-sm text-secondary-container">£132.00</span>
+</div>
+</div>
+<button class="w-full py-4 bg-secondary-container text-on-secondary-fixed font-bold rounded-xl flex items-center justify-center gap-md hover:brightness-110 active:scale-[0.98] transition-all">
+                    CONFIRM BOOKING
+                    <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<p class="text-center font-label-md text-label-md text-on-primary-container">
+                    Cancellation policy applies. 24h notice required.
+                </p>
+</div>
+<!-- Additional Add-ons -->
+<div class="bg-surface-container-low rounded-premium p-lg border border-outline-variant/30">
+<h4 class="font-label-md text-label-md text-on-surface-variant mb-md tracking-widest uppercase">Professional Services</h4>
+<div class="flex items-center justify-between p-md bg-white rounded-xl mb-sm shadow-sm border border-outline-variant/10">
+<div class="flex items-center gap-md">
+<div class="w-8 h-8 rounded bg-secondary-container/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-[20px]">sports_cricket</span>
+</div>
+<span class="font-body-sm text-body-sm font-bold">Pro Net Coach</span>
+</div>
+<button class="px-3 py-1 bg-primary text-white font-label-md text-label-md rounded">+ ADD</button>
+</div>
+<div class="flex items-center justify-between p-md bg-white rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex items-center gap-md">
+<div class="w-8 h-8 rounded bg-secondary-container/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-[20px]">videocam</span>
+</div>
+<span class="font-body-sm text-body-sm font-bold">HD Match Recording</span>
+</div>
+<button class="px-3 py-1 bg-primary text-white font-label-md text-label-md rounded">+ ADD</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile Only, from JSON guidance) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 bg-surface rounded-t-xl border-t border-outline-variant shadow-[0px_-4px_20px_rgba(0,27,61,0.08)] flex justify-around items-center h-20 px-sm pb-safe">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-label-md text-label-md">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 transition-all active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">event_available</span>
+<span class="font-label-md text-label-md">Bookings</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-label-md text-label-md">Performance</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-150" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for date selection
+        const dateButtons = document.querySelectorAll('.grid-cols-7 button');
+        dateButtons.forEach(btn => {
+            if (!btn.classList.contains('text-outline')) { // Only for active days
+                btn.addEventListener('click', () => {
+                    dateButtons.forEach(b => {
+                        b.classList.remove('bg-secondary-container', 'text-on-secondary-container', 'font-bold', 'shadow-md');
+                        if (!b.classList.contains('text-outline')) {
+                            b.classList.add('hover:bg-surface-variant');
+                        }
+                    });
+                    btn.classList.add('bg-secondary-container', 'text-on-secondary-container', 'font-bold', 'shadow-md');
+                    btn.classList.remove('hover:bg-surface-variant');
+                });
+            }
+        });
+
+        // Simple duration selection
+        const durationButtons = document.querySelectorAll('.flex.wrap button');
+        durationButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                durationButtons.forEach(b => {
+                    b.classList.remove('border-2', 'border-primary', 'bg-primary', 'text-white');
+                    b.classList.add('border', 'border-outline-variant');
+                });
+                btn.classList.add('border-2', 'border-primary', 'bg-primary', 'text-white');
+                btn.classList.remove('border', 'border-outline-variant');
+            });
+        });
+    </script>
+
+
+</body></html>

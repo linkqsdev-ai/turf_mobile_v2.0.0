@@ -207,7 +207,16 @@ export default function LiveScoringScreen() {
         {/* Navigation TopAppBar */}
         <View style={[styles.header, { backgroundColor: theme.background }]}>
           <View style={styles.headerLeft}>
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <Pressable 
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)');
+                }
+              }} 
+              style={styles.backButton}
+            >
               <Ionicons name="arrow-back" size={24} color={theme.text} />
             </Pressable>
             <ThemedText type="headlineSm" style={styles.headerTitle}>
