@@ -468,43 +468,44 @@ export default function CreateTournamentScreen() {
           </Pressable>
         </View>
 
-        {/* Horizontal Wizard Progress Tracker */}
+        {/* Horizontal Wizard Progress Tracker - Premium Compact Design */}
         <View style={[styles.progressTracker, { backgroundColor: theme.surfaceLow }]}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.wizardScroll}>
+          <View style={styles.wizardContainer}>
             {STEPS.map((step, idx) => {
               const isActive = idx === currentStep;
               const isPassed = idx < currentStep;
               return (
-                <View key={step.title} style={styles.wizardStep}>
-                  <View style={[
-                    styles.wizardIconCircle,
-                    { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant },
-                    isPassed && { backgroundColor: theme.primary, borderColor: theme.primary },
-                    isActive && { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
-                  ]}>
-                    <Ionicons 
-                      name={step.icon as any} 
-                      size={16} 
-                      color={isActive ? '#6b4500' : isPassed ? '#ffffff' : theme.textSecondary} 
-                    />
+                <React.Fragment key={step.title}>
+                  <View style={styles.wizardStepCompact}>
+                    <View style={[
+                      styles.wizardIconCircle,
+                      { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant },
+                      isPassed && { backgroundColor: theme.primary, borderColor: theme.primary },
+                      isActive && { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
+                    ]}>
+                      <Ionicons 
+                        name={(isPassed ? 'checkmark' : step.icon) as any} 
+                        size={14} 
+                        color={isActive ? '#6b4500' : isPassed ? '#ffffff' : theme.textSecondary} 
+                      />
+                    </View>
                   </View>
-                  <ThemedText 
-                    type="labelSm" 
-                    style={[
-                      styles.wizardText, 
-                      { color: theme.textSecondary },
-                      isActive && { color: theme.text, fontWeight: 'bold' }
-                    ]}
-                  >
-                    {step.title}
-                  </ThemedText>
                   {idx < STEPS.length - 1 && (
-                    <View style={[styles.wizardLine, { backgroundColor: theme.outlineVariant }]} />
+                    <View style={[
+                      styles.wizardLineCompact, 
+                      { backgroundColor: isPassed ? theme.primary : theme.outlineVariant }
+                    ]} />
                   )}
-                </View>
+                </React.Fragment>
               );
             })}
-          </ScrollView>
+          </View>
+          <ThemedText 
+            type="labelSm" 
+            style={[styles.wizardActiveLabel, { color: theme.text }]}
+          >
+            {`Step ${currentStep + 1} of 6: ${STEPS[currentStep].title}`}
+          </ThemedText>
         </View>
 
         {/* Wizard Form Area */}
@@ -569,16 +570,20 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
   },
   progressTracker: {
-    paddingVertical: 12,
-  },
-  wizardScroll: {
-    paddingHorizontal: Spacing.containerMargin,
+    paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  wizardStep: {
+  wizardContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    justifyContent: 'center',
+    width: '100%',
+    paddingHorizontal: Spacing.containerMargin,
+  },
+  wizardStepCompact: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   wizardIconCircle: {
     width: 28,
@@ -588,14 +593,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  wizardText: {
-    marginLeft: 6,
-    fontSize: 10,
+  wizardLineCompact: {
+    flex: 1,
+    height: 2,
+    maxHeight: 2,
+    minWidth: 10,
+    maxWidth: 30,
+    marginHorizontal: 4,
   },
-  wizardLine: {
-    width: 20,
-    height: 1,
-    marginLeft: 12,
+  wizardActiveLabel: {
+    marginTop: 8,
+    fontFamily: 'HankenGrotesk_700Bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontSize: 11,
+    textAlign: 'center',
   },
   formScroll: {
     flex: 1,
