@@ -116,6 +116,24 @@ const INITIAL_TOURNAMENTS = [
   }
 ];
 
+const formatDateRange = (start: string, end: string) => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return `${start} - ${end}`;
+  }
+  const startMonth = months[startDate.getMonth()];
+  const startDay = startDate.getDate();
+  const endMonth = months[endDate.getMonth()];
+  const endDay = endDate.getDate();
+  
+  if (startMonth === endMonth) {
+    return `${startDay} - ${endDay} ${startMonth}`;
+  }
+  return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
+};
+
 export default function TournamentsTab() {
   const theme = useTheme();
   const router = useRouter();
@@ -393,7 +411,7 @@ export default function TournamentsTab() {
                       viewMode === 'grid' ? styles.gridCardWidth : null
                     ]}
                   >
-                    <View style={[styles.skeletonImage, { backgroundColor: theme.surfaceLow }]} />
+                    <View style={[styles.skeletonImage, { backgroundColor: theme.surfaceLow }, viewMode === 'grid' && { height: 80 }]} />
                     <View style={styles.skeletonContent}>
                       <View style={[styles.skeletonTextLine, { width: '40%', backgroundColor: theme.surfaceLow }]} />
                       <View style={[styles.skeletonTextLine, { width: '80%', marginTop: 8, backgroundColor: theme.surfaceLow }]} />
@@ -437,7 +455,7 @@ export default function TournamentsTab() {
                       })}
                     >
                       {/* Banner and Badges */}
-                      <View style={styles.cardHeader}>
+                      <View style={[styles.cardHeader, viewMode === 'grid' && { height: 95 }]}>
                         <Image source={t.banner} style={styles.tournamentCardImage} contentFit="cover" />
                         
                         {/* Live Badge */}
@@ -468,7 +486,7 @@ export default function TournamentsTab() {
                       </View>
 
                       {/* Card Info */}
-                      <View style={styles.tournamentCardInfo}>
+                      <View style={[styles.tournamentCardInfo, viewMode === 'grid' && { padding: 10 }]}>
                         <View style={styles.rowBetween}>
                           <View style={[styles.sportBadge, { backgroundColor: theme.surfaceLow }]}>
                             <ThemedText type="labelSm" style={{ color: theme.primary, textTransform: 'uppercase', fontSize: 9, fontWeight: 'bold' }}>
@@ -485,7 +503,7 @@ export default function TournamentsTab() {
                             t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2' }
                           ]}>
                             <ThemedText type="labelSm" style={[
-                              { fontSize: 10, fontWeight: '700' },
+                              { fontSize: viewMode === 'grid' ? 8 : 10, fontWeight: '700' },
                               t.registrationStatus === 'Registering' && { color: '#0f9f58' },
                               t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
                               t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
@@ -496,52 +514,79 @@ export default function TournamentsTab() {
                           </View>
                         </View>
 
-                        <ThemedText type="headlineSm" numberOfLines={1} style={{ marginTop: Spacing.xs, color: theme.text }}>
+                        <ThemedText 
+                          type={viewMode === 'grid' ? 'bodyMd' : 'headlineSm'} 
+                          numberOfLines={1} 
+                          style={{ marginTop: Spacing.xs, color: theme.text, fontFamily: 'HankenGrotesk_700Bold' }}
+                        >
                           {t.name}
                         </ThemedText>
 
                         {/* Location */}
-                        <View style={styles.iconInfoRow}>
-                          <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
-                          <ThemedText type="bodySm" numberOfLines={1} style={{ color: theme.textSecondary, marginLeft: 4, flex: 1 }}>
+                        <View style={[styles.iconInfoRow, { marginTop: viewMode === 'grid' ? 4 : 8 }]}>
+                          <Ionicons name="location-outline" size={viewMode === 'grid' ? 12 : 14} color={theme.textSecondary} />
+                          <ThemedText 
+                            type={viewMode === 'grid' ? 'labelSm' : 'bodySm'} 
+                            numberOfLines={1} 
+                            style={{ color: theme.textSecondary, marginLeft: 4, flex: 1, fontSize: viewMode === 'grid' ? 11 : 12 }}
+                          >
                             {t.location}
                           </ThemedText>
                         </View>
 
                         {/* Dates */}
                         <View style={styles.iconInfoRow}>
-                          <Ionicons name="calendar-outline" size={14} color={theme.textSecondary} />
-                          <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 4 }}>
-                            {t.startDate} to {t.endDate}
+                          <Ionicons name="calendar-outline" size={viewMode === 'grid' ? 12 : 14} color={theme.textSecondary} />
+                          <ThemedText 
+                            type={viewMode === 'grid' ? 'labelSm' : 'bodySm'} 
+                            numberOfLines={1} 
+                            style={{ color: theme.textSecondary, marginLeft: 4, fontSize: viewMode === 'grid' ? 11 : 12 }}
+                          >
+                            {formatDateRange(t.startDate, t.endDate)}
                           </ThemedText>
                         </View>
 
                         {/* Teams & Format */}
-                        <View style={styles.teamsRow}>
-                          <Ionicons name="people-outline" size={14} color={theme.textSecondary} />
-                          <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 4 }}>
-                            {t.teamsCount}/{t.maxTeams} Teams • {t.type}
+                        <View style={[styles.teamsRow, { marginBottom: viewMode === 'grid' ? 4 : Spacing.xs }]}>
+                          <Ionicons name="people-outline" size={viewMode === 'grid' ? 12 : 14} color={theme.textSecondary} />
+                          <ThemedText 
+                            type={viewMode === 'grid' ? 'labelSm' : 'bodySm'} 
+                            numberOfLines={1} 
+                            style={{ color: theme.textSecondary, marginLeft: 4, fontSize: viewMode === 'grid' ? 11 : 12 }}
+                          >
+                            {t.teamsCount}/{t.maxTeams} Teams {viewMode === 'grid' ? '' : `• ${t.type}`}
                           </ThemedText>
                         </View>
 
                         {/* Footer Section */}
-                        <View style={[styles.tournamentCardFooter, { borderTopColor: theme.outlineVariant + '33' }]}>
+                        <View style={[
+                          styles.tournamentCardFooter, 
+                          { borderTopColor: theme.outlineVariant + '33' },
+                          viewMode === 'grid' && { marginTop: 8, paddingTop: 8 }
+                        ]}>
                           <View>
-                            <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>PRIZE POOL</ThemedText>
-                            <ThemedText type="bodyLg" style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.secondaryContainer }}>
+                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: viewMode === 'grid' ? 9 : 11 }}>PRIZE POOL</ThemedText>
+                            <ThemedText 
+                              type={viewMode === 'grid' ? 'bodyMd' : 'bodyLg'} 
+                              style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.secondaryContainer, fontSize: viewMode === 'grid' ? 13 : 16 }}
+                            >
                               {t.prizePool}
                             </ThemedText>
                           </View>
 
                           <View style={styles.cardFooterActions}>
                             <Pressable 
-                              style={[styles.registerBtnInCard, { backgroundColor: theme.primary }]}
+                              style={[
+                                styles.registerBtnInCard, 
+                                { backgroundColor: theme.primary },
+                                viewMode === 'grid' && { paddingHorizontal: 8, paddingVertical: 4 }
+                              ]}
                               onPress={() => router.push({
                                 pathname: '/team-registration',
                                 params: { id: t.id, name: t.name }
                               })}
                             >
-                              <ThemedText type="labelSm" style={{ color: '#ffffff' }}>Register</ThemedText>
+                              <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: viewMode === 'grid' ? 10 : 12 }}>Register</ThemedText>
                             </Pressable>
                           </View>
                         </View>
@@ -671,6 +716,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     borderColor: '#c3c7cb55',
+    flexShrink: 0,
   },
   categoriesSection: {
     marginTop: Spacing.md,
@@ -683,6 +729,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: BorderRadius.full,
+    flexShrink: 0,
   },
   statusFiltersSection: {
     marginTop: Spacing.sm,
@@ -692,6 +739,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
+    flexShrink: 0,
   },
   listSection: {
     marginTop: Spacing.md,
