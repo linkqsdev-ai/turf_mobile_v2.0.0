@@ -5,6 +5,7 @@ import {
   ScrollView,
   Pressable,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -17,14 +18,37 @@ import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
+const BANNERS: Record<string, any> = {
+  football: { uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9H8hZV1gCxBOC9fWHjQyhn5ukWJhiNGuP6cNDATeIj2gP6JceuAOrhkqeTXWFS75Y0nw0QANCmhRdo0NYvbdmh4Xrs2itBjykGtZr0Y91KEzjUMyOoM-B-owetUT1u8vwmIZlGJkcKdkgVfU0TIGzuVVlTN3lhwfdg5OWwHMCKOyPJGWWdIKySwofsCUjnq9pJi4WH0BMDAi73A53u0OeKj_Ufmh6V4PVwghrjz5aX16NlvQZLOkQRC51252maP-4ZXwNw3MwVfU' }, // Premium Football Arena
+  multisport: { uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDYH5UnRgCz_j_xsBoTCePAImR1ZHOP1RfajoZLHKUgxQwU2qFlQ8NWyiYz_-6zqqufh9YnYe3jfTI8tuaUrjmH6obvvea2p2vYA7ndyut0M5-lxcOtwTVQQwh58VRPis3197lvVOpVGsJ6YCx55CCy4Q_1CqZxk1rVqp9mBGHM-rDNwh7PGYSDJt6Vq4tmn6G1gXGiZsm13J0D1BFkKFRb8WvrWqqyLWxu-oSZsnMp6YXOONRG89ypF-GKlh96WMcF3HOikmE9l-g' }, // Indoor Multisport Hub
+  cricket: { uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgd1vfTA0Wj7Aw7aa0JRKzQ5y-6py-pQtMBI-gst90jIWFZoLSiIKBngPK1pn2UxzH_X3pN_lyCt75AnQxS2ssN4J4LUIYpph_JK48kGmSoO16OFhs5uLgsc_Yu3PIrOEneDELuLpKY8BDiUsatTLvRSu0sukxSfAxInyA2XknjvcswWPyUJA2YeNlJ2Vg2t7N807Cydno4uUCtypPyLkI0hi7Xl4DnWaNBueVN4jqiXqkqrc8MEPwQF24g45uu8z8gsXQ9IL87oI' }, // Cricket Pitch Night
+  checkout: { uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBrIeKWYsLxon2GlQroYjnKVPqbeEnzeZiUZZ66CS06N5lbQ6MVSfOE-hColTE6vO6R5n1-bbL_cX-FjW9ejhGGsOeF-oZuoniI7zrrjF_Im8cMeI1IQaIPPl2Mm_XTP52C0Hkood--_ZK22d3Y_tQbO8xBHh5eS8yONy6ot93tgSxXVz2H18xWI0l2EBv6WrOWm8NhnH_-kSXo0bhv0p-MeWPtkT0mEOuYpzsvJ9LUe3eu3QC6YZZU6zVrz5F5A68HtNAmq_qmBOw' }, // Cricket Pitch Daylight
+  community: { uri: 'https://lh3.googleusercontent.com/aida/AP1WRLsc-p9LNafOZ1s0XNvsry058SauJeeElNyBuxym6ZhiCwUG-0KP3qZ9-Sv9OP3OVnhWKioZVSoN3EOcZ2Kc1OJKGOZSB9ioEnBSpLCgsYN-AgQXrVnc2O42rAutO6l6aFEvLsUgBHN57i3-AzCKTfZRam7oDm5L2CnDWRLIXfdFRBK8iz2MsaYQVAdtk0OH1XwkBTPbr18Wr5zuBBhvwfiVQv44xHBz7SD6kBdiyxqkNCP8zmwoVF8DaWI' }, // Club Community
+};
+
 const TABS = ['Performance', 'Feed', 'Ranking', 'Profile'] as const;
 type TabType = typeof TABS[number];
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { profile } = useUserProfile();
+  const { profile, updateProfile } = useUserProfile();
   const [activeTab, setActiveTab] = useState<TabType>('Profile');
+
+  const handleSelectBanner = () => {
+    Alert.alert(
+      'Change Profile Banner',
+      'Select a realistic mock arena cover for your banner:',
+      [
+        { text: 'Premium Football Arena', onPress: () => updateProfile({ bannerImage: 'football' }) },
+        { text: 'Indoor Multisport Hub', onPress: () => updateProfile({ bannerImage: 'multisport' }) },
+        { text: 'Cricket Pitch Night', onPress: () => updateProfile({ bannerImage: 'cricket' }) },
+        { text: 'Cricket Pitch Daylight', onPress: () => updateProfile({ bannerImage: 'checkout' }) },
+        { text: 'Club Community', onPress: () => updateProfile({ bannerImage: 'community' }) },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -56,19 +80,27 @@ export default function ProfileScreen() {
           <View style={[styles.heroCard, { backgroundColor: '#0f1721', borderWidth: 0 }, Shadows.level2]}>
             {/* Banner Image */}
             <Image 
-              source={require('@/assets/images/illustrations/stadium.png')} 
+              source={BANNERS[profile.bannerImage || 'football']} 
               style={styles.heroBannerImage} 
               contentFit="cover"
             />
             
+            {/* Edit Banner Option */}
+            <Pressable 
+              onPress={handleSelectBanner}
+              style={styles.editBannerBtn}
+            >
+              <Ionicons name="camera" size={14} color="#ffffff" />
+            </Pressable>
+            
             {/* Avatar & Floating Actions Overlap Banner */}
             <View style={styles.avatarRow}>
-              {/* Left Action Button (Settings) */}
+              {/* Left Action Button (Edit Profile - moved from bottom) */}
               <Pressable 
                 onPress={() => router.push('/edit-profile')}
-                style={[styles.circularActionBtn, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}
+                style={[styles.circularActionBtn, { backgroundColor: 'rgba(15, 23, 33, 0.85)', borderColor: 'rgba(255, 255, 255, 0.2)' }]}
               >
-                <Ionicons name="settings-outline" size={18} color="#ffffff" />
+                <Ionicons name="create-outline" size={18} color="#ffffff" />
               </Pressable>
 
               {/* Central Avatar */}
@@ -85,12 +117,14 @@ export default function ProfileScreen() {
                 </Pressable>
               </View>
 
-              {/* Right Action Button (Time/History) */}
+              {/* Right Action Button (Share Stats - moved from bottom) */}
               <Pressable 
-                onPress={() => setActiveTab('Feed')}
-                style={[styles.circularActionBtn, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}
+                onPress={() => {
+                  Alert.alert('Share Stats', 'Your profile stats link has been copied to your clipboard!');
+                }}
+                style={[styles.circularActionBtn, { backgroundColor: 'rgba(15, 23, 33, 0.85)', borderColor: 'rgba(255, 255, 255, 0.2)' }]}
               >
-                <Ionicons name="time-outline" size={18} color="#ffffff" />
+                <Ionicons name="share-social-outline" size={18} color="#ffffff" />
               </Pressable>
             </View>
 
@@ -138,19 +172,6 @@ export default function ProfileScreen() {
                 <ThemedText type="headlineSm" style={{ color: '#ffffff' }}>89</ThemedText>
                 <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 2, fontSize: 10 }}>Wins</ThemedText>
               </View>
-            </View>
-
-            {/* Action Vector Icon Buttons (Mock-Matched) */}
-            <View style={styles.heroActionIconsRow}>
-              <Pressable 
-                onPress={() => router.push('/edit-profile')}
-                style={[styles.actionIconBtn, { backgroundColor: theme.secondaryContainer }]}
-              >
-                <Ionicons name="create-outline" size={20} color={theme.onSecondaryContainer} />
-              </Pressable>
-              <Pressable style={[styles.actionIconBtnOutline, { borderColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                <Ionicons name="share-social-outline" size={20} color="#ffffff" />
-              </Pressable>
             </View>
           </View>
         </View>
@@ -341,7 +362,7 @@ export default function ProfileScreen() {
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>3 days ago</ThemedText>
                     </View>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 2 }}>
-                      Earned the "Centurion" badge for completing 100 competitive bookings this season.
+                      {"Earned the \"Centurion\" badge for completing 100 competitive bookings this season."}
                     </ThemedText>
                   </View>
                 </View>
@@ -746,6 +767,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
+  },
+  editBannerBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(15, 23, 33, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    zIndex: 30,
   },
   
   // Tab Bar Styles

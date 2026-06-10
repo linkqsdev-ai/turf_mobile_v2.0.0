@@ -17,6 +17,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 // Mock Data for Dates
 const DATES = [
@@ -39,6 +40,7 @@ const SPORTS = [
 export default function TurfDiscoveryScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { profile } = useUserProfile();
   
   const [selectedDate, setSelectedDate] = useState('13');
   const [selectedSport, setSelectedSport] = useState('all');
@@ -63,12 +65,12 @@ export default function TurfDiscoveryScreen() {
         <View style={[styles.header, { backgroundColor: theme.background }]}>
           <View style={styles.headerLeft}>
             <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', lineHeight: 18 }}>
-              Azarudeen
+              {profile.name}
             </ThemedText>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
               <Ionicons name="location-sharp" size={12} color={theme.secondary} />
               <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
-                London, UK
+                {profile.location}
               </ThemedText>
             </View>
           </View>
@@ -81,7 +83,7 @@ export default function TurfDiscoveryScreen() {
             </Pressable>
             <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
               <Image
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI' }}
+                source={{ uri: profile.avatarUrl }}
                 style={styles.headerAvatar}
               />
             </Pressable>
@@ -219,7 +221,10 @@ export default function TurfDiscoveryScreen() {
                   Compete with the best local teams and win the championship trophy.
                 </ThemedText>
 
-                <Pressable style={[styles.bannerButton, { backgroundColor: theme.secondaryContainer }]}>
+                <Pressable 
+                  onPress={() => router.push('/(tabs)/tournaments')}
+                  style={[styles.bannerButton, { backgroundColor: theme.secondaryContainer }]}
+                >
                   <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer }}>Join Now</ThemedText>
                 </Pressable>
               </View>

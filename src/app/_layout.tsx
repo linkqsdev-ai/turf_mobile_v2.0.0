@@ -112,6 +112,41 @@ export default function RootLayout() {
             presentation: 'card' 
           }} 
         />
+        <Stack.Screen 
+          name="create-tournament" 
+          options={{ 
+            animation: 'slide_from_bottom', 
+            presentation: 'card' 
+          }} 
+        />
+        <Stack.Screen 
+          name="tournament-details" 
+          options={{ 
+            animation: 'slide_from_right', 
+            presentation: 'card' 
+          }} 
+        />
+        <Stack.Screen 
+          name="team-registration" 
+          options={{ 
+            animation: 'slide_from_right', 
+            presentation: 'card' 
+          }} 
+        />
+        <Stack.Screen 
+          name="team-management" 
+          options={{ 
+            animation: 'slide_from_right', 
+            presentation: 'card' 
+          }} 
+        />
+        <Stack.Screen 
+          name="fixture-management" 
+          options={{ 
+            animation: 'slide_from_right', 
+            presentation: 'card' 
+          }} 
+        />
       </Stack>
     </ThemeProvider>
   );
