@@ -5,8 +5,6 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Platform,
-  Dimensions,
   Animated,
   ActivityIndicator,
 } from 'react-native';
@@ -16,10 +14,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
+import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-
-const { width } = Dimensions.get('window');
 
 interface RosterPlayer {
   id: string;
@@ -63,10 +59,10 @@ export default function TeamRegistrationScreen() {
 
   // Admin Data State
   const [adminTeams, setAdminTeams] = useState<AdminTeam[]>([
-    { id: 'at1', name: 'Red Devils FC', manager: 'John Doe', payment: 'Paid (£175)', status: 'Pending' },
-    { id: 'at2', name: 'Blue Tigers', manager: 'Marcus Vance', payment: 'Paid (£175)', status: 'Approved' },
+    { id: 'at1', name: 'Red Devils FC', manager: 'John Doe', payment: 'Paid (₹175)', status: 'Pending' },
+    { id: 'at2', name: 'Blue Tigers', manager: 'Marcus Vance', payment: 'Paid (₹175)', status: 'Approved' },
     { id: 'at3', name: 'London United', manager: 'Rob Miller', payment: 'Pending', status: 'Changes Requested' },
-    { id: 'at4', name: 'Titans CC', manager: 'Sam Wilson', payment: 'Paid (£175)', status: 'Pending' },
+    { id: 'at4', name: 'Titans CC', manager: 'Sam Wilson', payment: 'Paid (₹175)', status: 'Pending' },
   ]);
 
   // Custom Toast State
@@ -192,15 +188,15 @@ export default function TeamRegistrationScreen() {
                   </View>
                   <View style={[styles.invoiceRow, { borderBottomColor: theme.outlineVariant + '22' }]}>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Entry Fee</ThemedText>
-                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>£150.00</ThemedText>
+                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹150.00</ThemedText>
                   </View>
                   <View style={[styles.invoiceRow, { borderBottomColor: theme.outlineVariant + '22' }]}>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Admin Processing</ThemedText>
-                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>£25.00</ThemedText>
+                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹25.00</ThemedText>
                   </View>
                   <View style={[styles.invoiceRow, { borderBottomWidth: 0 }]}>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Total Charged</ThemedText>
-                    <ThemedText type="bodySm" style={{ color: theme.secondaryContainer, fontWeight: 'bold' }}>£175.00</ThemedText>
+                    <ThemedText type="bodySm" style={{ color: theme.secondaryContainer, fontWeight: 'bold' }}>₹175.00</ThemedText>
                   </View>
                 </View>
 
@@ -317,15 +313,15 @@ export default function TeamRegistrationScreen() {
                 <View style={[styles.paymentPortal, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant }]}>
                   <View style={styles.rowBetween}>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Entry Fee</ThemedText>
-                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>£150.00</ThemedText>
+                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹150.00</ThemedText>
                   </View>
                   <View style={styles.rowBetween}>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Processing</ThemedText>
-                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>£25.00</ThemedText>
+                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹25.00</ThemedText>
                   </View>
                   <View style={[styles.rowBetween, { borderTopWidth: 1, borderTopColor: theme.outlineVariant + '33', marginTop: 12, paddingTop: 8 }]}>
                     <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>Total Due</ThemedText>
-                    <ThemedText type="bodyLg" style={{ color: theme.secondaryContainer, fontWeight: 'bold' }}>£175.00</ThemedText>
+                    <ThemedText type="bodyLg" style={{ color: theme.secondaryContainer, fontWeight: 'bold' }}>₹175.00</ThemedText>
                   </View>
 
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: Spacing.md, marginBottom: 8 }}>Select Payment Method</ThemedText>

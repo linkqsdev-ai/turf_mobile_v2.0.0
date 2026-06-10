@@ -4,7 +4,6 @@ import {
   View,
   ScrollView,
   Pressable,
-  Platform,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,7 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, Spacing, BorderRadius, Shadows } from '@/constants/theme';
+import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 // Slots details
@@ -103,7 +102,7 @@ export default function BookingConfigurationScreen() {
   const handleConfirmBooking = () => {
     Alert.alert(
       "Booking Confirmed",
-      `Your session at ${venue.name} on Wed, Feb ${selectedDayOfMonth} is confirmed.\nTotal: £${total.toFixed(2)}`,
+      `Your session at ${venue.name} on Wed, Feb ${selectedDayOfMonth} is confirmed.\nTotal: ₹${total.toFixed(2)}`,
       [
         {
           text: "Back to Home",
@@ -334,7 +333,7 @@ export default function BookingConfigurationScreen() {
                 </View>
                 <View style={{ marginLeft: Spacing.sm }}>
                   <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Pro Net Coach</ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>+£45.00 / Session</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>+₹45.00 / Session</ThemedText>
                 </View>
               </View>
               <Pressable
@@ -357,7 +356,7 @@ export default function BookingConfigurationScreen() {
                 </View>
                 <View style={{ marginLeft: Spacing.sm }}>
                   <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>HD Match Recording</ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>+£25.00 / Session</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>+₹25.00 / Session</ThemedText>
                 </View>
               </View>
               <Pressable
@@ -430,28 +429,28 @@ export default function BookingConfigurationScreen() {
               <View style={styles.priceBreakdown}>
                 <View style={styles.priceRow}>
                   <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer }}>Court Hire Fee</ThemedText>
-                  <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>£{courtFee.toFixed(2)}</ThemedText>
+                  <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>₹{courtFee.toFixed(2)}</ThemedText>
                 </View>
                 {coachAdded && (
                   <View style={styles.priceRow}>
                     <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer }}>Pro Net Coach</ThemedText>
-                    <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>£{coachFee.toFixed(2)}</ThemedText>
+                    <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>₹{coachFee.toFixed(2)}</ThemedText>
                   </View>
                 )}
                 {recordingAdded && (
                   <View style={styles.priceRow}>
                     <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer }}>HD Match Recording</ThemedText>
-                    <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>£{recordingFee.toFixed(2)}</ThemedText>
+                    <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>₹{recordingFee.toFixed(2)}</ThemedText>
                   </View>
                 )}
                 <View style={styles.priceRow}>
                   <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer }}>Service Charge</ThemedText>
-                  <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>£{serviceCharge.toFixed(2)}</ThemedText>
+                  <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>₹{serviceCharge.toFixed(2)}</ThemedText>
                 </View>
                 <View style={[styles.priceRow, { borderTopWidth: 1, borderTopColor: '#ffffff1a', paddingTop: Spacing.md, marginTop: Spacing.sm }]}>
                   <ThemedText type="headlineSm" style={{ color: '#ffffff' }}>Total</ThemedText>
                   <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer, fontFamily: 'HankenGrotesk_800ExtraBold' }}>
-                    £{total.toFixed(2)}
+                    ₹{total.toFixed(2)}
                   </ThemedText>
                 </View>
               </View>

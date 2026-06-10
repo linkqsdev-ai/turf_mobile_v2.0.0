@@ -3,9 +3,8 @@ import {
   StyleSheet,
   View,
   ScrollView,
+  TextInput,
   Pressable,
-  Platform,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -14,19 +13,48 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, Spacing, BorderRadius, Shadows } from '@/constants/theme';
+import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
-const { width } = Dimensions.get('window');
+// Mock Data for Dates
+const DATES = [
+  { id: '12', day: 'MON', date: '12' },
+  { id: '13', day: 'TUE', date: '13' }, // Active initially
+  { id: '14', day: 'WED', date: '14' },
+  { id: '15', day: 'THU', date: '15' },
+  { id: '16', day: 'FRI', date: '16' },
+  { id: '17', day: 'SAT', date: '17' },
+];
+
+// Mock Data for Sports Categories
+const SPORTS = [
+  { id: 'all', name: 'All Sports', icon: 'apps' },
+  { id: 'football', name: 'Football', icon: 'football' },
+  { id: 'cricket', name: 'Cricket', icon: 'fitness' },
+  { id: 'tennis', name: 'Tennis', icon: 'tennisball' },
+];
 
 export default function ExploreScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { profile } = useUserProfile();
+  
+  const [selectedDate, setSelectedDate] = useState('13');
+  const [selectedSport, setSelectedSport] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [favorites, setFavorites] = useState<Record<string, boolean>>({ 'skyline': false });
 
-  const handleProfilePress = () => router.push('/profile');
-  const handleNetworkPress = () => router.push('/network');
+  const toggleFavorite = (id: string) => {
+    setFavorites(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleTurfSelect = (id: string, name: string) => {
+    router.push({
+      pathname: '/details',
+      params: { id, name },
+    });
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -45,13 +73,13 @@ export default function ExploreScreen() {
             </View>
           </View>
           <View style={styles.headerRightActions}>
-            <Pressable style={styles.iconButton} onPress={handleNetworkPress}>
+            <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
               <Ionicons name="pulse" size={20} color={theme.secondary} />
             </Pressable>
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
             </Pressable>
-            <Pressable style={styles.profileIconButton} onPress={handleProfilePress}>
+            <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
               <Image
                 source={{ uri: profile.avatarUrl }}
                 style={styles.headerAvatar}
@@ -64,188 +92,305 @@ export default function ExploreScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Welcome Header Section */}
-          <View style={styles.welcomeSection}>
-            <View style={styles.welcomeTextContainer}>
-              <ThemedText type="headlineMd" style={{ color: theme.textSecondary }}>
-                Hello, {profile.name.split(' ')[0]}
-              </ThemedText>
-              <ThemedText type="headlineLg" style={styles.welcomeHeadline}>
-                {"Let's become more Productive"}
-              </ThemedText>
-            </View>
-            <Image
-              source={{ uri: 'https://lh3.googleusercontent.com/aida/AP1WRLsrliF0Cd3A1noW1I-8QmrA86jnUIhi367jWWnWwX_4cOBZvy0pEfT2NOP469vVIgcettV0_tGsG8CLAVsU4gpyVZYJY30Ms2S9po_TAFCHtuZGlN0TfD6UKPJL-W4zBAou4QiM6fwBAoQ70des2-UtAfllHZdyG7TSX_arZ0Gj7rIEGoIjW_lyUG2y-nnju08P3-ZpQxYURos2c2MwDDLdxzAOYHCf2_wzduUmBoMEaIV3RjBJMlYV2MM' }}
-              style={styles.welcomeIllustration}
-              contentFit="contain"
-            />
-          </View>
-
-          {/* Daily Plan Card */}
-          <View style={styles.section}>
-            <View style={[styles.dailyPlanCard, { backgroundColor: theme.primaryContainer }, Shadows.level3]}>
-              <View style={styles.planInfo}>
-                <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer }}>
-                  Daily Plan
-                </ThemedText>
-                <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer, marginTop: 4 }}>
-                  4 of 5 targets reached
-                </ThemedText>
-                <Pressable style={[styles.viewTasksButton, { backgroundColor: theme.secondaryContainer }]}>
-                  <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontFamily: 'HankenGrotesk_700Bold' }}>
-                    VIEW TASKS
-                  </ThemedText>
-                </Pressable>
-              </View>
-              
-              {/* Custom Circular Progress */}
-              <View style={[styles.progressRing, { borderColor: 'rgba(255, 255, 255, 0.1)' }]}>
-                <View style={[styles.progressRingInner, { borderColor: theme.secondaryContainer }]}>
-                  <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer, fontFamily: 'HankenGrotesk_700Bold' }}>
-                    80%
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Today's Schedule */}
+          {/* Calendar Picker Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <ThemedText type="headlineSm">{"Today's Schedule"}</ThemedText>
-              <Pressable>
-                <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_700Bold' }}>
-                  VIEW CALENDAR
-                </ThemedText>
-              </Pressable>
+              <ThemedText type="headlineMd">February</ThemedText>
+              <ThemedText type="labelMd" style={{ color: theme.textSecondary }}>2024</ThemedText>
             </View>
-
-            <View style={styles.scheduleList}>
-              {/* Live Match Card */}
-              <View style={[styles.scheduleCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
-                <View style={[styles.scheduleIconWrap, { backgroundColor: theme.secondaryContainer + '1a' }]}>
-                  <Image
-                    source={{ uri: 'https://lh3.googleusercontent.com/aida/AP1WRLtktV94nJFc0U5ggptbWUmJdSyDpzbXQmz0_Q8mx0mGuM0jwTvOYvB8NJV5PiYkP9f7ZvujLKNMFqOAPGdU64Qf9kcw9LBrrNmqyA5SjFWCFo74KLUo6y9pQIsIzQqXje9l_-qoQw07AzB9s9fy4ANoskUlqNfHpM6Ef8ELcIqwSXwbJuToojtZEvvCDg9-2XbE-mNw9LGBe8tgJp6rRCzHknvrnmculyjYWwW0eukUl3qTOYtxBH8daw' }}
-                    style={styles.scheduleIllustration}
-                  />
-                </View>
-                <View style={styles.scheduleInfo}>
-                  <ThemedText type="headlineSm" style={styles.scheduleTitle}>
-                    Match vs Tigers
-                  </ThemedText>
-                  <View style={styles.scheduleTimeRow}>
-                    <Ionicons name="time-outline" size={14} color={theme.textSecondary} />
-                    <ThemedText type="bodyMd" style={styles.scheduleTimeText}>
-                      14:30 - 16:00 • Stadium A
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.calendarContainer}
+            >
+              {DATES.map((item) => {
+                const isActive = item.date === selectedDate;
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => setSelectedDate(item.date)}
+                    style={[
+                      styles.calendarDay,
+                      isActive
+                        ? { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
+                        : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
+                    ]}
+                  >
+                    <ThemedText
+                      type="labelSm"
+                      style={{
+                        color: isActive ? theme.onSecondaryContainer : theme.textSecondary,
+                        opacity: isActive ? 0.8 : 1,
+                      }}
+                    >
+                      {item.day}
                     </ThemedText>
-                  </View>
-                </View>
-                <View style={[styles.liveBadge, { backgroundColor: theme.secondaryContainer }]}>
-                  <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 10 }}>
-                    LIVE
-                  </ThemedText>
-                </View>
-              </View>
-
-              {/* Practice Session Card */}
-              <View style={[styles.scheduleCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
-                <View style={[styles.scheduleIconWrap, { backgroundColor: theme.surface }]}>
-                  <Ionicons name="barbell" size={24} color={theme.primary} />
-                </View>
-                <View style={styles.scheduleInfo}>
-                  <ThemedText type="headlineSm" style={styles.scheduleTitle}>
-                    Practice Session
-                  </ThemedText>
-                  <View style={styles.scheduleTimeRow}>
-                    <Ionicons name="time-outline" size={14} color={theme.textSecondary} />
-                    <ThemedText type="bodyMd" style={styles.scheduleTimeText}>
-                      18:00 - 19:30 • Gym
+                    <ThemedText
+                      type="headlineSm"
+                      style={{
+                        color: isActive ? theme.text : theme.text,
+                        fontFamily: isActive ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_600SemiBold',
+                        marginTop: 4,
+                      }}
+                    >
+                      {item.date}
                     </ThemedText>
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.outlineVariant} />
-              </View>
-            </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
 
-          {/* Stats Preview Section */}
+          {/* Search & Filter Section */}
           <View style={styles.section}>
-            <ThemedText type="headlineSm" style={{ marginBottom: Spacing.md }}>
-              Quick Analytics
-            </ThemedText>
-            <View style={styles.bentoRow}>
-              {/* Top Speed Card */}
-              <View style={[styles.bentoCell, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
-                <View style={[styles.bentoIconWrap, { backgroundColor: theme.surface }]}>
-                  <Ionicons name="speedometer-outline" size={20} color={theme.primary} />
-                </View>
-                <View style={styles.bentoTextWrap}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5 }}>
-                    TOP SPEED
-                  </ThemedText>
-                  <ThemedText type="headlineSm" style={{ marginTop: 2 }}>
-                    34.2 <ThemedText type="labelSm" style={{ fontWeight: 'normal' }}>km/h</ThemedText>
-                  </ThemedText>
-                </View>
-              </View>
+            <View style={[styles.searchContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+              <Ionicons name="search" size={20} color={theme.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                style={[styles.searchInput, { color: theme.text }]}
+                placeholder="Search venues or sports..."
+                placeholderTextColor={theme.textSecondary + 'aa'}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
 
-              {/* Avg Power Card */}
-              <View style={[styles.bentoCell, { backgroundColor: theme.primaryContainer }, Shadows.level3]}>
-                <View style={[styles.bentoIconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}>
-                  <Ionicons name="flash" size={20} color={theme.secondaryContainer} />
-                </View>
-                <View style={styles.bentoTextWrap}>
-                  <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, opacity: 0.6, letterSpacing: 0.5 }}>
-                    AVG. POWER
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filtersContainer}
+            >
+              {SPORTS.map((sport) => {
+                const isActive = sport.id === selectedSport;
+                return (
+                  <Pressable
+                    key={sport.id}
+                    onPress={() => setSelectedSport(sport.id)}
+                    style={[
+                      styles.filterChip,
+                      isActive
+                        ? { backgroundColor: theme.primary }
+                        : { backgroundColor: theme.surfaceHigh, borderColor: theme.outlineVariant + '1a' },
+                    ]}
+                  >
+                    {sport.id !== 'all' && (
+                      <Ionicons
+                        name={sport.icon as any}
+                        size={14}
+                        color={isActive ? theme.onPrimary : theme.textSecondary}
+                        style={{ marginRight: 6 }}
+                      />
+                    )}
+                    <ThemedText
+                      type="labelMd"
+                      style={{ color: isActive ? theme.onPrimary : theme.textSecondary }}
+                    >
+                      {sport.name}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* Tournaments Section */}
+          <View style={styles.section}>
+            <View style={[styles.bannerContainer, { backgroundColor: theme.primaryContainer }]}>
+              {/* Illustration Accent background */}
+              <Image
+                source={require('@/assets/images/illustrations/trophy.png')}
+                style={styles.bannerIllustration}
+                contentFit="contain"
+              />
+              
+              <View style={styles.bannerContent}>
+                <View style={styles.bannerBadgeContainer}>
+                  <View style={[styles.bannerBadge, { backgroundColor: theme.secondaryContainer }]}>
+                    <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontWeight: '800' }}>MAJOR</ThemedText>
+                  </View>
+                  <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, marginLeft: 8 }}>
+                    Ends in 2 days
                   </ThemedText>
-                  <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer, marginTop: 2 }}>
-                    280 <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, fontWeight: 'normal' }}>W</ThemedText>
-                  </ThemedText>
                 </View>
+
+                <ThemedText type="headlineSm" style={styles.bannerTitle}>
+                  London Community Cup 2024
+                </ThemedText>
+                <ThemedText type="bodyMd" style={styles.bannerSub}>
+                  Compete with the best local teams and win the championship trophy.
+                </ThemedText>
+
+                <Pressable 
+                  onPress={() => router.push('/(tabs)/tournaments')}
+                  style={[styles.bannerButton, { backgroundColor: theme.secondaryContainer }]}
+                >
+                  <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer }}>Join Now</ThemedText>
+                </Pressable>
               </View>
             </View>
           </View>
 
-          {/* Performance Graph Card */}
-          <View style={[styles.section, { paddingBottom: 100 }]}>
-            <View style={[styles.graphCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}>
-              <View style={styles.graphHeader}>
-                <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', letterSpacing: 0.5 }}>
-                  WEEKLY PERFORMANCE
-                </ThemedText>
-                <Ionicons name="ellipsis-horizontal" size={20} color={theme.textSecondary} />
+          {/* Turf List */}
+          <View style={[styles.section, { gap: Spacing.lg, paddingBottom: 100 }]}>
+            
+            {/* Skyline Arena Elite (AI Recommended) */}
+            <Pressable
+              onPress={() => handleTurfSelect('skyline', 'Skyline Arena Elite')}
+              style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
+            >
+              {/* AI Recommended Badge */}
+              <View style={[styles.aiBadge, { backgroundColor: theme.secondaryContainer }]}>
+                <Ionicons name="sparkles" size={10} color={theme.onSecondaryContainer} />
+                <ThemedText type="labelMd" style={[styles.aiBadgeText, { color: theme.onSecondaryContainer }]}>AI RECOMMENDED</ThemedText>
               </View>
-              <View style={styles.graphBarsContainer}>
-                <View style={styles.graphBarCol}>
-                  <View style={[styles.graphBar, { height: 40, backgroundColor: theme.primary + '1a' }]} />
-                  <ThemedText type="labelSm" style={styles.graphBarLabel}>M</ThemedText>
+
+              <Image
+                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9H8hZV1gCxBOC9fWHjQyhn5ukWJhiNGuP6cNDATeIj2gP6JceuAOrhkqeTXWFS75Y0nw0QANCmhRdo0NYvbdmh4Xrs2itBjykGtZr0Y91KEzjUMyOoM-B-owetUT1u8vwmIZlGJkcKdkgVfU0TIGzuVVlTN3lhwfdg5OWwHMCKOyPJGWWdIKySwofsCUjnq9pJi4WH0BMDAi73A53u0OeKj_Ufmh6V4PVwghrjz5aX16NlvQZLOkQRC51252maP-4ZXwNw3MwVfU' }}
+                style={styles.turfImage}
+                contentFit="cover"
+              />
+              
+              <View style={styles.priceTag}>
+                <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer }}>₹25</ThemedText>
+                <ThemedText type="labelSm" style={{ color: '#ffffff' }}>/hr</ThemedText>
+              </View>
+
+              <View style={styles.cardInfo}>
+                <View style={styles.cardHeaderRow}>
+                  <View>
+                    <ThemedText type="labelMd" style={{ color: theme.secondary }}>FOOTBALL</ThemedText>
+                    <ThemedText type="headlineSm" style={styles.turfTitle}>Skyline Arena Elite</ThemedText>
+                    <View style={styles.locationRow}>
+                      <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
+                      <ThemedText type="bodyMd" style={styles.locationText}>Canary Wharf, East London</ThemedText>
+                    </View>
+                  </View>
+                  <View style={[styles.ratingBadge, { backgroundColor: theme.surface }]}>
+                    <Ionicons name="star" size={12} color={theme.secondaryContainer} />
+                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4 }}>4.9</ThemedText>
+                  </View>
                 </View>
-                <View style={styles.graphBarCol}>
-                  <View style={[styles.graphBar, { height: 55, backgroundColor: theme.primary + '1a' }]} />
-                  <ThemedText type="labelSm" style={styles.graphBarLabel}>T</ThemedText>
+
+                <View style={styles.cardActions}>
+                  <Pressable 
+                    onPress={() => handleTurfSelect('skyline', 'Skyline Arena Elite')}
+                    style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
+                  >
+                    <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer }}>Instant Book</ThemedText>
+                  </Pressable>
+                  <Pressable 
+                    onPress={() => toggleFavorite('skyline')}
+                    style={[styles.favButton, { borderColor: theme.outlineVariant }]}
+                  >
+                    <Ionicons 
+                      name={favorites['skyline'] ? 'heart' : 'heart-outline'} 
+                      size={18} 
+                      color={favorites['skyline'] ? theme.error : theme.textSecondary} 
+                    />
+                  </Pressable>
                 </View>
-                <View style={styles.graphBarCol}>
-                  <View style={[styles.graphBar, { height: 75, backgroundColor: theme.secondaryContainer }]} />
-                  <ThemedText type="labelSm" style={[styles.graphBarLabel, { color: theme.secondary, fontFamily: 'HankenGrotesk_700Bold' }]}>W</ThemedText>
+
+              </View>
+            </Pressable>
+
+            {/* The Grid Multisport */}
+            <Pressable
+              onPress={() => handleTurfSelect('the-grid', 'The Grid Multisport')}
+              style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
+            >
+              <Image
+                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDYH5UnRgCz_j_xsBoTCePAImR1ZHOP1RfajoZLHKUgxQwU2qFlQ8NWyiYz_-6zqqufh9YnYe3jfTI8tuaUrjmH6obvvea2p2vYA7ndyut0M5-lxcOtwTVQQwh58VRPis3197lvVOpVGsJ6YCx55CCy4Q_1CqZxk1rVqp9mBGHM-rDNwh7PGYSDJt6Vq4tmn6G1gXGiZsm13J0D1BFkKFRb8WvrWqqyLWxu-oSZsnMp6YXOONRG89ypF-GKlh96WMcF3HOikmE9l-g' }}
+                style={styles.turfImage}
+                contentFit="cover"
+              />
+              
+              <View style={styles.priceTag}>
+                <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer }}>₹18</ThemedText>
+                <ThemedText type="labelSm" style={{ color: '#ffffff' }}>/hr</ThemedText>
+              </View>
+
+              <View style={styles.cardInfo}>
+                <View style={styles.cardHeaderRow}>
+                  <View>
+                    <ThemedText type="labelMd" style={{ color: theme.secondary }}>MULTI-SPORT</ThemedText>
+                    <ThemedText type="headlineSm" style={styles.turfTitle}>The Grid Multisport</ThemedText>
+                    <View style={styles.locationRow}>
+                      <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
+                      <ThemedText type="bodyMd" style={styles.locationText}>Stratford Central</ThemedText>
+                    </View>
+                  </View>
+                  <View style={[styles.ratingBadge, { backgroundColor: theme.surface }]}>
+                    <Ionicons name="star" size={12} color={theme.secondaryContainer} />
+                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4 }}>4.7</ThemedText>
+                  </View>
                 </View>
-                <View style={styles.graphBarCol}>
-                  <View style={[styles.graphBar, { height: 90, backgroundColor: theme.primary }]} />
-                  <ThemedText type="labelSm" style={styles.graphBarLabel}>T</ThemedText>
-                </View>
-                <View style={styles.graphBarCol}>
-                  <View style={[styles.graphBar, { height: 35, backgroundColor: theme.primary + '1a' }]} />
-                  <ThemedText type="labelSm" style={styles.graphBarLabel}>F</ThemedText>
-                </View>
-                <View style={styles.graphBarCol}>
-                  <View style={[styles.graphBar, { height: 50, backgroundColor: theme.primary + '1a' }]} />
-                  <ThemedText type="labelSm" style={styles.graphBarLabel}>S</ThemedText>
-                </View>
-                <View style={styles.graphBarCol}>
-                  <View style={[styles.graphBar, { height: 60, backgroundColor: theme.primary + '1a' }]} />
-                  <ThemedText type="labelSm" style={styles.graphBarLabel}>S</ThemedText>
+
+                <View style={styles.cardActions}>
+                  <Pressable style={[styles.actionButton, { backgroundColor: theme.primary, marginRight: 8 }]}>
+                    <ThemedText type="labelMd" style={{ color: theme.onPrimary }}>Set Reminder</ThemedText>
+                  </Pressable>
+                  <Pressable 
+                    onPress={() => handleTurfSelect('the-grid', 'The Grid Multisport')}
+                    style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
+                  >
+                    <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer }}>Book Now</ThemedText>
+                  </Pressable>
                 </View>
               </View>
-            </View>
+            </Pressable>
+
+            {/* Lord's View Pavillion */}
+            <Pressable
+              onPress={() => handleTurfSelect('lords', "Lord's View Pavillion")}
+              style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
+            >
+              <Image
+                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgd1vfTA0Wj7Aw7aa0JRKzQ5y-6py-pQtMBI-gst90jIWFZoLSiIKBngPK1pn2UxzH_X3pN_lyCt75AnQxS2ssN4J4LUIYpph_JK48kGmSoO16OFhs5uLgsc_Yu3PIrOEneDELuLpKY8BDiUsatTLvRSu0sukxSfAxInyA2XknjvcswWPyUJA2YeNlJ2Vg2t7N807Cydno4uUCtypPyLkI0hi7Xl4DnWaNBueVN4jqiXqkqrc8MEPwQF24g45uu8z8gsXQ9IL87oI' }}
+                style={styles.turfImage}
+                contentFit="cover"
+              />
+              
+              <View style={styles.priceTag}>
+                <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer }}>₹22</ThemedText>
+                <ThemedText type="labelSm" style={{ color: '#ffffff' }}>/hr</ThemedText>
+              </View>
+
+              <View style={styles.cardInfo}>
+                <View style={styles.cardHeaderRow}>
+                  <View>
+                    <ThemedText type="labelMd" style={{ color: theme.secondary }}>CRICKET</ThemedText>
+                    <ThemedText type="headlineSm" style={styles.turfTitle}>{"Lord's View Pavillion"}</ThemedText>
+                    <View style={styles.locationRow}>
+                      <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
+                      <ThemedText type="bodyMd" style={styles.locationText}>{"St John's Wood"}</ThemedText>
+                    </View>
+                  </View>
+                  <View style={[styles.ratingBadge, { backgroundColor: theme.surface }]}>
+                    <Ionicons name="star" size={12} color={theme.secondaryContainer} />
+                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4 }}>4.8</ThemedText>
+                  </View>
+                </View>
+
+                <View style={styles.cardActions}>
+                  <Pressable 
+                    onPress={() => handleTurfSelect('lords', "Lord's View Pavillion")}
+                    style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
+                  >
+                    <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer }}>Instant Book</ThemedText>
+                  </Pressable>
+                  <Pressable 
+                    onPress={() => toggleFavorite('lords')}
+                    style={[styles.favButton, { borderColor: theme.outlineVariant }]}
+                  >
+                    <Ionicons 
+                      name={favorites['lords'] ? 'heart' : 'heart-outline'} 
+                      size={18} 
+                      color={favorites['lords'] ? theme.error : theme.textSecondary} 
+                    />
+                  </Pressable>
+                </View>
+              </View>
+            </Pressable>
+
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -300,175 +445,218 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
     paddingHorizontal: Spacing.containerMargin,
   },
-  welcomeSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Spacing.lg,
-    paddingHorizontal: Spacing.containerMargin,
-    position: 'relative',
-    height: 120,
-  },
-  welcomeTextContainer: {
-    width: '65%',
-    justifyContent: 'center',
-  },
-  welcomeHeadline: {
-    marginTop: Spacing.xs,
-    fontFamily: 'HankenGrotesk_700Bold',
-    lineHeight: 32,
-  },
-  welcomeIllustration: {
-    width: 110,
-    height: 110,
-    position: 'absolute',
-    right: Spacing.containerMargin,
-    opacity: 0.95,
-  },
-  dailyPlanCard: {
-    borderRadius: BorderRadius.premium,
-    padding: Spacing.lg,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  planInfo: {
-    flex: 1,
-  },
-  viewTasksButton: {
-    marginTop: Spacing.md,
-    alignSelf: 'flex-start',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
-  },
-  progressRing: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    borderWidth: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressRingInner: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    borderWidth: 8,
-    position: 'absolute',
-    top: -8,
-    left: -8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
-  scheduleList: {
+  calendarContainer: {
     gap: Spacing.sm,
+    paddingVertical: Spacing.base,
   },
-  scheduleCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: BorderRadius.premium,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: '#c3c7cb33',
-  },
-  scheduleIconWrap: {
-    width: 44,
-    height: 44,
+  calendarDay: {
+    width: 52,
+    height: 72,
     borderRadius: BorderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.md,
-    overflow: 'hidden',
+    borderWidth: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  scheduleIllustration: {
-    width: 32,
-    height: 32,
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.md,
+    height: 48,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  scheduleInfo: {
+  searchInput: {
     flex: 1,
+    height: '100%',
+    fontFamily: 'HankenGrotesk_400Regular',
+    fontSize: 14,
+    paddingVertical: 0,
   },
-  scheduleTitle: {
-    fontSize: 15,
+  filtersContainer: {
+    gap: Spacing.xs,
+    marginTop: Spacing.md,
+    paddingBottom: 2,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  bannerContainer: {
+    borderRadius: BorderRadius.premium,
+    padding: Spacing.lg,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: '#001b3d',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 5,
+  },
+  bannerIllustration: {
+    position: 'absolute',
+    right: -20,
+    top: 0,
+    width: '45%',
+    height: '100%',
+    opacity: 0.25,
+  },
+  bannerContent: {
+    zIndex: 2,
+    width: '70%',
+  },
+  bannerBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+  },
+  bannerBadge: {
+    backgroundColor: '#feae2c',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.default,
+  },
+  bannerTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontFamily: 'HankenGrotesk_700Bold',
+    marginBottom: Spacing.base,
+    lineHeight: 22,
+  },
+  bannerSub: {
+    color: '#81919c',
+    fontSize: 13,
+    marginBottom: Spacing.md,
+    lineHeight: 18,
+  },
+  bannerButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#feae2c',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.full,
+  },
+  turfCard: {
+    borderRadius: BorderRadius.premium,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#c3c7cb33',
+    position: 'relative',
+  },
+  aiBadge: {
+    position: 'absolute',
+    top: Spacing.md,
+    left: Spacing.md,
+    zIndex: 5,
+    backgroundColor: 'rgba(254, 174, 44, 0.95)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  aiBadgeText: {
+    color: '#6b4500',
+    fontSize: 10,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    marginLeft: 4,
+  },
+  turfImage: {
+    width: '100%',
+    height: 196,
+  },
+  priceTag: {
+    position: 'absolute',
+    bottom: 120, // positioned over the image
+    right: Spacing.md,
+    backgroundColor: 'rgba(5, 21, 30, 0.9)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.xl,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    zIndex: 5,
+  },
+  cardInfo: {
+    padding: Spacing.lg,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  turfTitle: {
+    color: '#111c2c',
+    marginTop: 2,
+    fontSize: 18,
     fontFamily: 'HankenGrotesk_700Bold',
   },
-  scheduleTimeRow: {
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
-    gap: 4,
+    marginLeft: -2,
   },
-  scheduleTimeText: {
+  locationText: {
     color: '#43474b',
-    fontSize: 12,
+    fontSize: 13,
+    marginLeft: 2,
   },
-  liveBadge: {
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: BorderRadius.md,
   },
-  bentoRow: {
+  cardActions: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  bentoCell: {
-    flex: 1,
-    borderRadius: BorderRadius.premium,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: '#c3c7cb33',
-    aspectRatio: 1,
-    justifyContent: 'space-between',
-  },
-  bentoIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: BorderRadius.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-  },
-  bentoTextWrap: {
     marginTop: Spacing.lg,
   },
-  graphCard: {
-    borderRadius: BorderRadius.premium,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: '#c3c7cb33',
-  },
-  graphHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  graphBarsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    height: 100,
-    paddingHorizontal: Spacing.xs,
-  },
-  graphBarCol: {
-    alignItems: 'center',
+  actionButton: {
     flex: 1,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#feae2c',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  graphBar: {
-    width: 14,
-    borderRadius: 4,
-  },
-  graphBarLabel: {
-    marginTop: Spacing.sm,
-    color: '#81919c',
-    fontSize: 10,
+  favButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: Spacing.sm,
   },
 });

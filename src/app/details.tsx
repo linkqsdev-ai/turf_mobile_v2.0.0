@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   Platform,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -14,7 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, Spacing, BorderRadius, Shadows } from '@/constants/theme';
+import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 // Mock Data lookup for the venues
@@ -34,7 +33,7 @@ const VENUE_DETAILS: Record<string, {
   'skyline': {
     name: 'Skyline Arena Elite',
     location: 'Canary Wharf, East London',
-    price: '$25/hr',
+    price: '₹25/hr',
     rating: '4.9',
     reviews: '184 REVIEWS',
     pitch: '5G Rubber Infill',
@@ -52,7 +51,7 @@ const VENUE_DETAILS: Record<string, {
   'the-grid': {
     name: 'The Grid Multisport',
     location: 'Stratford Central, London',
-    price: '$18/hr',
+    price: '₹18/hr',
     rating: '4.7',
     reviews: '96 REVIEWS',
     pitch: 'Indoor Woodcourt',
@@ -70,7 +69,7 @@ const VENUE_DETAILS: Record<string, {
   'lords': {
     name: "Lord's View Pavillion",
     location: "St John's Wood, London",
-    price: '$22/hr',
+    price: '₹22/hr',
     rating: '4.8',
     reviews: '124 REVIEWS',
     pitch: 'Hybrid Grass Turf',

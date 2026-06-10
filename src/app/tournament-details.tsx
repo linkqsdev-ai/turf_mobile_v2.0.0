@@ -4,8 +4,6 @@ import {
   View,
   ScrollView,
   Pressable,
-  Platform,
-  Dimensions,
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,10 +13,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
+import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-
-const { width } = Dimensions.get('window');
 
 const TABS = [
   'Overview',
@@ -67,7 +63,7 @@ export default function TournamentDetailsScreen() {
   // Mock Info based on params or default
   const tournamentName = (params.name as string) || 'London Cup 2026';
   const tournamentSport = (params.sport as string) || 'Football';
-  const tournamentPrize = (params.prize as string) || '£2,500';
+  const tournamentPrize = (params.prize as string) || '₹2,500';
 
   // Sub-renders for each tab
   const renderOverview = () => (

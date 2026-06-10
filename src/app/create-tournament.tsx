@@ -5,8 +5,6 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Platform,
-  Dimensions,
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,10 +13,8 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
+import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-
-const { width } = Dimensions.get('window');
 
 const STEPS = [
   { title: 'Basic', icon: 'information-circle-outline' },
@@ -62,14 +58,14 @@ export default function CreateTournamentScreen() {
     pointSystem: '3 pts Win, 1 pt Draw, 0 pts Loss',
     
     // Section 5: Fees
-    entryFee: '£150',
-    registrationFee: '£25',
-    deposit: '£50',
+    entryFee: '₹150',
+    registrationFee: '₹25',
+    deposit: '₹50',
     
     // Section 6: Prizes
-    winnerPrize: '£2,500 + Gold Trophy',
-    runnerPrize: '£1,000 + Silver Medal',
-    mvpPrize: '£200 + Boot Trophy',
+    winnerPrize: '₹2,500 + Gold Trophy',
+    runnerPrize: '₹1,000 + Silver Medal',
+    mvpPrize: '₹200 + Boot Trophy',
   });
 
   // Action feedback toasts
@@ -383,7 +379,7 @@ export default function CreateTournamentScreen() {
               <ThemedText type="labelSm" style={styles.inputLabel}>Entry Fee (per Team)</ThemedText>
               <TextInput
                 style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                placeholder="e.g. £150"
+                placeholder="e.g. ₹150"
                 value={form.entryFee}
                 onChangeText={(v) => updateField('entryFee', v)}
               />
@@ -394,7 +390,7 @@ export default function CreateTournamentScreen() {
                 <ThemedText type="labelSm" style={styles.inputLabel}>Admin / Reg Fee</ThemedText>
                 <TextInput
                   style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                  placeholder="e.g. £25"
+                  placeholder="e.g. ₹25"
                   value={form.registrationFee}
                   onChangeText={(v) => updateField('registrationFee', v)}
                 />
@@ -403,7 +399,7 @@ export default function CreateTournamentScreen() {
                 <ThemedText type="labelSm" style={styles.inputLabel}>Security Deposit</ThemedText>
                 <TextInput
                   style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                  placeholder="e.g. £50"
+                  placeholder="e.g. ₹50"
                   value={form.deposit}
                   onChangeText={(v) => updateField('deposit', v)}
                 />
@@ -420,7 +416,7 @@ export default function CreateTournamentScreen() {
               <ThemedText type="labelSm" style={styles.inputLabel}>First Prize (Winner)</ThemedText>
               <TextInput
                 style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                placeholder="e.g. £2,500 + Cup"
+                placeholder="e.g. ₹2,500 + Cup"
                 value={form.winnerPrize}
                 onChangeText={(v) => updateField('winnerPrize', v)}
               />
@@ -430,7 +426,7 @@ export default function CreateTournamentScreen() {
               <ThemedText type="labelSm" style={styles.inputLabel}>Runner-Up Prize</ThemedText>
               <TextInput
                 style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                placeholder="e.g. £1,000 + Medals"
+                placeholder="e.g. ₹1,000 + Medals"
                 value={form.runnerPrize}
                 onChangeText={(v) => updateField('runnerPrize', v)}
               />
@@ -440,7 +436,7 @@ export default function CreateTournamentScreen() {
               <ThemedText type="labelSm" style={styles.inputLabel}>Individual MVPs / Other Awards</ThemedText>
               <TextInput
                 style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                placeholder="e.g. MVP £200, Golden Boot"
+                placeholder="e.g. MVP ₹200, Golden Boot"
                 value={form.mvpPrize}
                 onChangeText={(v) => updateField('mvpPrize', v)}
               />
