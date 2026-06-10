@@ -1,8 +1,44 @@
 import { Tabs } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Platform, View } from 'react-native';
+import { Platform, View, StyleSheet } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+
+function TabIcon({ 
+  focused, 
+  color, 
+  iconName, 
+  library = 'Ionicons' 
+}: { 
+  focused: boolean; 
+  color: any; 
+  iconName: string; 
+  library?: 'Ionicons' | 'MaterialCommunityIcons';
+}) {
+  return (
+    <View style={styles.iconContainer}>
+      <View style={[
+        styles.iconWrapper,
+        focused && styles.iconWrapperActive
+      ]}>
+        {library === 'Ionicons' ? (
+          <Ionicons 
+            name={focused ? iconName as any : `${iconName}-outline` as any} 
+            size={20} 
+            color={color} 
+          />
+        ) : (
+          <MaterialCommunityIcons 
+            name={iconName as any} 
+            size={22} 
+            color={color} 
+          />
+        )}
+      </View>
+      {focused && <View style={styles.activeDot} />}
+    </View>
+  );
+}
 
 export default function TabLayout() {
   const theme = useTheme();
@@ -14,21 +50,22 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#81919c', // Muted Navy Gray
         tabBarStyle: {
           backgroundColor: '#05151e', // Dark Navy background (Technical OS contrast)
-          borderTopWidth: 0,
-          height: Platform.OS === 'ios' ? 88 : 72,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(254, 174, 44, 0.08)', // Premium subtle border
+          height: Platform.OS === 'ios' ? 90 : 76,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 14,
           paddingTop: 8,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          shadowColor: '#001b3d',
-          shadowOffset: { width: 0, height: -8 },
-          shadowOpacity: 0.12,
-          shadowRadius: 20,
-          elevation: 10,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: -10 },
+          shadowOpacity: 0.2,
+          shadowRadius: 24,
+          elevation: 15,
         },
         tabBarLabelStyle: {
           fontFamily: 'PlusJakartaSans_700Bold',
@@ -45,7 +82,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />
+            <TabIcon focused={focused} color={color} iconName="home" />
           ),
         }}
       />
@@ -54,25 +91,25 @@ export default function TabLayout() {
         options={{
           title: 'Matches',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'football' : 'football-outline'} size={22} color={color} />
+            <TabIcon focused={focused} color={color} iconName="football" />
           ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
+          title: 'Book',
           tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons name="soccer-field" size={24} color={color} />
+            <TabIcon focused={focused} color={color} iconName="soccer-field" library="MaterialCommunityIcons" />
           ),
         }}
       />
       <Tabs.Screen
         name="tournaments"
         options={{
-          title: 'Leagues',
+          title: 'Tournament',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'trophy' : 'trophy-outline'} size={22} color={color} />
+            <TabIcon focused={focused} color={color} iconName="trophy" />
           ),
         }}
       />
@@ -81,10 +118,38 @@ export default function TabLayout() {
         options={{
           title: 'Teams',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} />
+            <TabIcon focused={focused} color={color} iconName="people" />
           ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    width: 60,
+  },
+  iconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 36,
+    width: 52,
+    borderRadius: 18,
+    backgroundColor: 'transparent',
+  },
+  iconWrapperActive: {
+    backgroundColor: 'rgba(254, 174, 44, 0.15)', // Premium soft gold glow backdrop
+  },
+  activeDot: {
+    position: 'absolute',
+    bottom: -2,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#feae2c', // Sleek gold active dot
+  },
+});
