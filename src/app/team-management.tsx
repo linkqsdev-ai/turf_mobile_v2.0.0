@@ -495,4 +495,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     alignItems: 'center',
   },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
 });

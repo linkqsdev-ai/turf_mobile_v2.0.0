@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   mapGridOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0.15,
     flexDirection: 'column',
     justifyContent: 'space-between',
