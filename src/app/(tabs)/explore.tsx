@@ -17,6 +17,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { CoinTossModal } from '@/components/coin-toss-modal';
 
 // Mock Data for Dates
 const DATES = [
@@ -50,6 +51,7 @@ export default function ExploreScreen() {
   const [selectedSport, setSelectedSport] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<Record<string, boolean>>({ 'skyline': false, 'the-grid': false, 'lords': false, 'wembley': false });
+  const [coinTossVisible, setCoinTossVisible] = useState(false);
 
   // Action feedback toasts
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -114,7 +116,7 @@ export default function ExploreScreen() {
             <Pressable style={styles.iconButton} onPress={() => triggerToast('No new notifications')}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
             </Pressable>
-            <Pressable style={styles.iconButton} onPress={() => triggerToast('Coin balance: 150 coins')}>
+            <Pressable style={styles.iconButton} onPress={() => setCoinTossVisible(true)}>
               <FontAwesome5 name="coins" size={16} color={theme.secondary} />
             </Pressable>
           </View>
@@ -288,7 +290,7 @@ export default function ExploreScreen() {
                   <ThemedText type="labelSm" style={[styles.aiBadgeText, { color: theme.onSecondaryContainer }]}>AI</ThemedText>
                 </View>
                 <Image
-                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD9H8hZV1gCxBOC9fWHjQyhn5ukWJhiNGuP6cNDATeIj2gP6JceuAOrhkqeTXWFS75Y0nw0QANCmhRdo0NYvbdmh4Xrs2itBjykGtZr0Y91KEzjUMyOoM-B-owetUT1u8vwmIZlGJkcKdkgVfU0TIGzuVVlTN3lhwfdg5OWwHMCKOyPJGWWdIKySwofsCUjnq9pJi4WH0BMDAi73A53u0OeKj_Ufmh6V4PVwghrjz5aX16NlvQZLOkQRC51252maP-4ZXwNw3MwVfU' }}
+                  source={{ uri: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80' }}
                   style={styles.turfImage}
                   contentFit="cover"
                 />
@@ -296,7 +298,7 @@ export default function ExploreScreen() {
 
               <View style={styles.cardInfo}>
                 <View style={styles.cardHeaderRow}>
-                  <ThemedText type="labelSm" style={{ color: theme.secondary, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>FOOTBALL</ThemedText>
+                  <MaterialCommunityIcons name="soccer" size={14} color={theme.secondary} />
                   <View style={styles.ratingBadge}>
                     <Ionicons name="star" size={10} color={theme.secondaryContainer} />
                     <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.9</ThemedText>
@@ -348,7 +350,7 @@ export default function ExploreScreen() {
             >
               <View style={styles.imageContainer}>
                 <Image
-                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDYH5UnRgCz_j_xsBoTCePAImR1ZHOP1RfajoZLHKUgxQwU2qFlQ8NWyiYz_-6zqqufh9YnYe3jfTI8tuaUrjmH6obvvea2p2vYA7ndyut0M5-lxcOtwTVQQwh58VRPis3197lvVOpVGsJ6YCx55CCy4Q_1CqZxk1rVqp9mBGHM-rDNwh7PGYSDJt6Vq4tmn6G1gXGiZsm13J0D1BFkKFRb8WvrWqqyLWxu-oSZsnMp6YXOONRG89ypF-GKlh96WMcF3HOikmE9l-g' }}
+                  source={{ uri: 'https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=600&q=80' }}
                   style={styles.turfImage}
                   contentFit="cover"
                 />
@@ -356,7 +358,7 @@ export default function ExploreScreen() {
 
               <View style={styles.cardInfo}>
                 <View style={styles.cardHeaderRow}>
-                  <ThemedText type="labelSm" style={{ color: theme.secondary, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>MULTI-SPORT</ThemedText>
+                  <Ionicons name="grid" size={14} color={theme.secondary} />
                   <View style={styles.ratingBadge}>
                     <Ionicons name="star" size={10} color={theme.secondaryContainer} />
                     <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.7</ThemedText>
@@ -408,7 +410,7 @@ export default function ExploreScreen() {
             >
               <View style={styles.imageContainer}>
                 <Image
-                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgd1vfTA0Wj7Aw7aa0JRKzQ5y-6py-pQtMBI-gst90jIWFZoLSiIKBngPK1pn2UxzH_X3pN_lyCt75AnQxS2ssN4J4LUIYpph_JK48kGmSoO16OFhs5uLgsc_Yu3PIrOEneDELuLpKY8BDiUsatTLvRSu0sukxSfAxInyA2XknjvcswWPyUJA2YeNlJ2Vg2t7N807Cydno4uUCtypPyLkI0hi7Xl4DnWaNBueVN4jqiXqkqrc8MEPwQF24g45uu8z8gsXQ9IL87oI' }}
+                  source={{ uri: 'https://images.unsplash.com/photo-1531415080290-bc98545ab3ef?auto=format&fit=crop&w=600&q=80' }}
                   style={styles.turfImage}
                   contentFit="cover"
                 />
@@ -416,7 +418,7 @@ export default function ExploreScreen() {
 
               <View style={styles.cardInfo}>
                 <View style={styles.cardHeaderRow}>
-                  <ThemedText type="labelSm" style={{ color: theme.secondary, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>CRICKET</ThemedText>
+                  <MaterialCommunityIcons name="cricket" size={14} color={theme.secondary} />
                   <View style={styles.ratingBadge}>
                     <Ionicons name="star" size={10} color={theme.secondaryContainer} />
                     <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.8</ThemedText>
@@ -468,7 +470,7 @@ export default function ExploreScreen() {
             >
               <View style={styles.imageContainer}>
                 <Image
-                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI' }}
+                  source={{ uri: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80' }}
                   style={styles.turfImage}
                   contentFit="cover"
                 />
@@ -476,7 +478,7 @@ export default function ExploreScreen() {
 
               <View style={styles.cardInfo}>
                 <View style={styles.cardHeaderRow}>
-                  <ThemedText type="labelSm" style={{ color: theme.secondary, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>FOOTBALL</ThemedText>
+                  <MaterialCommunityIcons name="soccer" size={14} color={theme.secondary} />
                   <View style={styles.ratingBadge}>
                     <Ionicons name="star" size={10} color={theme.secondaryContainer} />
                     <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.6</ThemedText>
@@ -530,6 +532,7 @@ export default function ExploreScreen() {
           <ThemedText type="labelSm" style={{ color: '#ffffff' }}>{toastMsg}</ThemedText>
         </Animated.View>
       )}
+      <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
     </ThemedView>
   );
 }
@@ -701,14 +704,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#c3c7cb33',
-    padding: 10,
+    height: 116,
     marginBottom: 12,
   },
   imageContainer: {
-    width: 90,
-    height: 90,
-    borderRadius: 12,
-    overflow: 'hidden',
+    width: 110,
+    height: 116,
     position: 'relative',
   },
   turfImage: {
@@ -735,7 +736,7 @@ const styles = StyleSheet.create({
   },
   cardInfo: {
     flex: 1,
-    paddingLeft: 12,
+    padding: 10,
     justifyContent: 'space-between',
   },
   cardHeaderRow: {

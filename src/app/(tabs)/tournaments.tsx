@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { CoinTossModal } from '@/components/coin-toss-modal';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -139,16 +140,17 @@ export default function TournamentsTab() {
   const router = useRouter();
 
   // State Management
-  const [tournaments, setTournaments] = useState(INITIAL_TOURNAMENTS);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState('All');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [tournaments, setTournaments] = useState(INITIAL_TOURNAMENTS);
+  const [simulateLoading, setSimulateLoading] = useState(false);
+  const [coinTossVisible, setCoinTossVisible] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [sortBy, setSortBy] = useState('Date'); // 'Date' or 'Prize'
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(['t1']);
   
   // Simulator Controls
-  const [simulateLoading, setSimulateLoading] = useState(false);
   const [simulateEmpty, setSimulateEmpty] = useState(false);
 
   // Custom Toast State
@@ -253,7 +255,7 @@ export default function TournamentsTab() {
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondaryContainer} />
             </Pressable>
-            <Pressable style={styles.iconButton}>
+            <Pressable style={styles.iconButton} onPress={() => setCoinTossVisible(true)}>
               <FontAwesome5 name="coins" size={16} color={theme.secondaryContainer} />
             </Pressable>
           </View>
@@ -611,6 +613,7 @@ export default function TournamentsTab() {
           <ThemedText type="labelSm" style={{ color: '#ffffff' }}>{toastMessage}</ThemedText>
         </Animated.View>
       )}
+      <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
     </ThemedView>
   );
 }

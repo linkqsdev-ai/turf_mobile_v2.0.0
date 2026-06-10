@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { CoinTossModal } from '@/components/coin-toss-modal';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -22,6 +23,7 @@ export default function MatchesScreen() {
   const theme = useTheme();
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState('All');
+  const [coinTossVisible, setCoinTossVisible] = useState(false);
 
   const handleMatchCenterSelect = (matchId: string) => {
     router.push({
@@ -61,7 +63,7 @@ export default function MatchesScreen() {
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
             </Pressable>
-            <Pressable style={styles.iconButton}>
+            <Pressable style={styles.iconButton} onPress={() => setCoinTossVisible(true)}>
               <FontAwesome5 name="coins" size={16} color={theme.secondary} />
             </Pressable>
           </View>
@@ -334,6 +336,7 @@ export default function MatchesScreen() {
         </Pressable>
 
       </SafeAreaView>
+      <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
     </ThemedView>
   );
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { CoinTossModal } from '@/components/coin-toss-modal';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -20,6 +21,7 @@ export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { profile } = useUserProfile();
+  const [coinTossVisible, setCoinTossVisible] = useState(false);
 
   const handleProfilePress = () => router.push('/profile');
   const handleNetworkPress = () => router.push('/network');
@@ -55,7 +57,7 @@ export default function HomeScreen() {
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
             </Pressable>
-            <Pressable style={styles.iconButton}>
+            <Pressable style={styles.iconButton} onPress={() => setCoinTossVisible(true)}>
               <FontAwesome5 name="coins" size={16} color={theme.secondary} />
             </Pressable>
           </View>
@@ -250,6 +252,7 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+      <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
     </ThemedView>
   );
 }
