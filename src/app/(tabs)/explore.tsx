@@ -5,10 +5,11 @@ import {
   ScrollView,
   TextInput,
   Pressable,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
@@ -29,10 +30,15 @@ const DATES = [
 
 // Mock Data for Sports Categories
 const SPORTS = [
-  { id: 'all', name: 'All Sports', icon: 'apps' },
-  { id: 'football', name: 'Football', icon: 'football' },
-  { id: 'cricket', name: 'Cricket', icon: 'fitness' },
-  { id: 'tennis', name: 'Tennis', icon: 'tennisball' },
+  { id: 'all', name: 'All', icon: 'grid', library: 'Ionicons' },
+  { id: 'football', name: 'Football', icon: 'soccer', library: 'MaterialCommunityIcons' },
+  { id: 'cricket', name: 'Cricket', icon: 'cricket', library: 'MaterialCommunityIcons' },
+  { id: 'tennis', name: 'Tennis', icon: 'tennis', library: 'MaterialCommunityIcons' },
+  { id: 'swimming', name: 'Swim', icon: 'swim', library: 'MaterialCommunityIcons' },
+  { id: 'badminton', name: 'Badminton', icon: 'badminton', library: 'MaterialCommunityIcons' },
+  { id: 'event', name: 'Event', icon: 'calendar-star', library: 'MaterialCommunityIcons' },
+  { id: 'movie', name: 'Movie', icon: 'movie', library: 'MaterialCommunityIcons' },
+  { id: 'resort', name: 'Resort', icon: 'umbrella-beach', library: 'MaterialCommunityIcons' },
 ];
 
 export default function ExploreScreen() {
@@ -43,7 +49,28 @@ export default function ExploreScreen() {
   const [selectedDate, setSelectedDate] = useState('13');
   const [selectedSport, setSelectedSport] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [favorites, setFavorites] = useState<Record<string, boolean>>({ 'skyline': false });
+  const [favorites, setFavorites] = useState<Record<string, boolean>>({ 'skyline': false, 'the-grid': false, 'lords': false, 'wembley': false });
+
+  // Action feedback toasts
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const toastOpacity = useState(new Animated.Value(0))[0];
+
+  const triggerToast = (msg: string) => {
+    setToastMsg(msg);
+    Animated.sequence([
+      Animated.timing(toastOpacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.delay(1800),
+      Animated.timing(toastOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setToastMsg(null));
+  };
 
   const toggleFavorite = (id: string) => {
     setFavorites(prev => ({ ...prev, [id]: !prev[id] }));
@@ -62,28 +89,33 @@ export default function ExploreScreen() {
         {/* Top App Bar */}
         <View style={[styles.header, { backgroundColor: theme.background }]}>
           <View style={styles.headerLeft}>
-            <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', lineHeight: 18 }}>
-              {profile.name}
-            </ThemedText>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-              <Ionicons name="location-sharp" size={12} color={theme.secondary} />
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
-                {profile.location}
+            <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
+              <Image
+                source={{ uri: profile.avatarUrl }}
+                style={styles.headerAvatar}
+              />
+            </Pressable>
+            <View style={styles.headerTextGroup}>
+              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', lineHeight: 18 }}>
+                {profile.name}
               </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                <Ionicons name="location-sharp" size={12} color={theme.secondary} />
+                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
+                  {profile.location}
+                </ThemedText>
+              </View>
             </View>
           </View>
           <View style={styles.headerRightActions}>
             <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
               <Ionicons name="pulse" size={20} color={theme.secondary} />
             </Pressable>
-            <Pressable style={styles.iconButton}>
+            <Pressable style={styles.iconButton} onPress={() => triggerToast('No new notifications')}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
             </Pressable>
-            <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
-              <Image
-                source={{ uri: profile.avatarUrl }}
-                style={styles.headerAvatar}
-              />
+            <Pressable style={styles.iconButton} onPress={() => triggerToast('Coin balance: 150 coins')}>
+              <FontAwesome5 name="coins" size={16} color={theme.secondary} />
             </Pressable>
           </View>
         </View>
@@ -168,21 +200,33 @@ export default function ExploreScreen() {
                     style={[
                       styles.filterChip,
                       isActive
-                        ? { backgroundColor: theme.primary }
-                        : { backgroundColor: theme.surfaceHigh, borderColor: theme.outlineVariant + '1a' },
+                        ? { backgroundColor: '#feae2c', borderColor: '#feae2c' }
+                        : { backgroundColor: theme.surfaceLow, borderColor: 'transparent' },
                     ]}
                   >
-                    {sport.id !== 'all' && (
+                    {sport.library === 'Ionicons' ? (
                       <Ionicons
                         name={sport.icon as any}
                         size={14}
-                        color={isActive ? theme.onPrimary : theme.textSecondary}
-                        style={{ marginRight: 6 }}
+                        color={isActive ? '#05151e' : theme.textSecondary}
+                        style={{ marginRight: 4 }}
+                      />
+                    ) : (
+                      <MaterialCommunityIcons
+                        name={sport.icon as any}
+                        size={15}
+                        color={isActive ? '#05151e' : theme.textSecondary}
+                        style={{ marginRight: 4 }}
                       />
                     )}
                     <ThemedText
                       type="labelMd"
-                      style={{ color: isActive ? theme.onPrimary : theme.textSecondary }}
+                      style={{ 
+                        color: isActive ? '#05151e' : theme.textSecondary,
+                        fontFamily: 'HankenGrotesk_700Bold',
+                        fontSize: 10.5,
+                        letterSpacing: 0.2,
+                      }}
                     >
                       {sport.name}
                     </ThemedText>
@@ -230,65 +274,70 @@ export default function ExploreScreen() {
           </View>
 
           {/* Turf List */}
-          <View style={[styles.section, { gap: Spacing.lg, paddingBottom: 100 }]}>
+          <View style={[styles.section, { gap: 10, paddingBottom: 100 }]}>
             
             {/* Skyline Arena Elite (AI Recommended) */}
             <Pressable
               onPress={() => handleTurfSelect('skyline', 'Skyline Arena Elite')}
               style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
             >
-              {/* AI Recommended Badge */}
-              <View style={[styles.aiBadge, { backgroundColor: theme.secondaryContainer }]}>
-                <Ionicons name="sparkles" size={10} color={theme.onSecondaryContainer} />
-                <ThemedText type="labelMd" style={[styles.aiBadgeText, { color: theme.onSecondaryContainer }]}>AI RECOMMENDED</ThemedText>
-              </View>
-
-              <Image
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9H8hZV1gCxBOC9fWHjQyhn5ukWJhiNGuP6cNDATeIj2gP6JceuAOrhkqeTXWFS75Y0nw0QANCmhRdo0NYvbdmh4Xrs2itBjykGtZr0Y91KEzjUMyOoM-B-owetUT1u8vwmIZlGJkcKdkgVfU0TIGzuVVlTN3lhwfdg5OWwHMCKOyPJGWWdIKySwofsCUjnq9pJi4WH0BMDAi73A53u0OeKj_Ufmh6V4PVwghrjz5aX16NlvQZLOkQRC51252maP-4ZXwNw3MwVfU' }}
-                style={styles.turfImage}
-                contentFit="cover"
-              />
-              
-              <View style={styles.priceTag}>
-                <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer }}>₹25</ThemedText>
-                <ThemedText type="labelSm" style={{ color: '#ffffff' }}>/hr</ThemedText>
+              <View style={styles.imageContainer}>
+                {/* AI Recommended Badge */}
+                <View style={[styles.aiBadge, { backgroundColor: theme.secondaryContainer }]}>
+                  <Ionicons name="sparkles" size={8} color={theme.onSecondaryContainer} />
+                  <ThemedText type="labelSm" style={[styles.aiBadgeText, { color: theme.onSecondaryContainer }]}>AI</ThemedText>
+                </View>
+                <Image
+                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD9H8hZV1gCxBOC9fWHjQyhn5ukWJhiNGuP6cNDATeIj2gP6JceuAOrhkqeTXWFS75Y0nw0QANCmhRdo0NYvbdmh4Xrs2itBjykGtZr0Y91KEzjUMyOoM-B-owetUT1u8vwmIZlGJkcKdkgVfU0TIGzuVVlTN3lhwfdg5OWwHMCKOyPJGWWdIKySwofsCUjnq9pJi4WH0BMDAi73A53u0OeKj_Ufmh6V4PVwghrjz5aX16NlvQZLOkQRC51252maP-4ZXwNw3MwVfU' }}
+                  style={styles.turfImage}
+                  contentFit="cover"
+                />
               </View>
 
               <View style={styles.cardInfo}>
                 <View style={styles.cardHeaderRow}>
-                  <View>
-                    <ThemedText type="labelMd" style={{ color: theme.secondary }}>FOOTBALL</ThemedText>
-                    <ThemedText type="headlineSm" style={styles.turfTitle}>Skyline Arena Elite</ThemedText>
-                    <View style={styles.locationRow}>
-                      <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
-                      <ThemedText type="bodyMd" style={styles.locationText}>Canary Wharf, East London</ThemedText>
-                    </View>
+                  <ThemedText type="labelSm" style={{ color: theme.secondary, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>FOOTBALL</ThemedText>
+                  <View style={styles.ratingBadge}>
+                    <Ionicons name="star" size={10} color={theme.secondaryContainer} />
+                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.9</ThemedText>
                   </View>
-                  <View style={[styles.ratingBadge, { backgroundColor: theme.surface }]}>
-                    <Ionicons name="star" size={12} color={theme.secondaryContainer} />
-                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4 }}>4.9</ThemedText>
-                  </View>
+                </View>
+
+                <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text }]} numberOfLines={1}>
+                  Skyline Arena Elite
+                </ThemedText>
+
+                <View style={styles.locationRow}>
+                  <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                  <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
+                    Canary Wharf, East London
+                  </ThemedText>
                 </View>
 
                 <View style={styles.cardActions}>
-                  <Pressable 
-                    onPress={() => handleTurfSelect('skyline', 'Skyline Arena Elite')}
-                    style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
-                  >
-                    <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer }}>Instant Book</ThemedText>
-                  </Pressable>
-                  <Pressable 
-                    onPress={() => toggleFavorite('skyline')}
-                    style={[styles.favButton, { borderColor: theme.outlineVariant }]}
-                  >
-                    <Ionicons 
-                      name={favorites['skyline'] ? 'heart' : 'heart-outline'} 
-                      size={18} 
-                      color={favorites['skyline'] ? theme.error : theme.textSecondary} 
-                    />
-                  </Pressable>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                    <ThemedText type="headlineSm" style={{ color: theme.secondary, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' }}>₹25</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>/hr</ThemedText>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Pressable 
+                      onPress={() => handleTurfSelect('skyline', 'Skyline Arena Elite')}
+                      style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
+                    >
+                      <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontSize: 11, fontFamily: 'HankenGrotesk_700Bold' }}>Book Now</ThemedText>
+                    </Pressable>
+                    <Pressable 
+                      onPress={() => toggleFavorite('skyline')}
+                      style={[styles.favButton, { borderColor: theme.outlineVariant }]}
+                    >
+                      <Ionicons 
+                        name={favorites['skyline'] ? 'heart' : 'heart-outline'} 
+                        size={14} 
+                        color={favorites['skyline'] ? theme.error : theme.textSecondary} 
+                      />
+                    </Pressable>
+                  </View>
                 </View>
-
               </View>
             </Pressable>
 
@@ -297,43 +346,57 @@ export default function ExploreScreen() {
               onPress={() => handleTurfSelect('the-grid', 'The Grid Multisport')}
               style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
             >
-              <Image
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDYH5UnRgCz_j_xsBoTCePAImR1ZHOP1RfajoZLHKUgxQwU2qFlQ8NWyiYz_-6zqqufh9YnYe3jfTI8tuaUrjmH6obvvea2p2vYA7ndyut0M5-lxcOtwTVQQwh58VRPis3197lvVOpVGsJ6YCx55CCy4Q_1CqZxk1rVqp9mBGHM-rDNwh7PGYSDJt6Vq4tmn6G1gXGiZsm13J0D1BFkKFRb8WvrWqqyLWxu-oSZsnMp6YXOONRG89ypF-GKlh96WMcF3HOikmE9l-g' }}
-                style={styles.turfImage}
-                contentFit="cover"
-              />
-              
-              <View style={styles.priceTag}>
-                <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer }}>₹18</ThemedText>
-                <ThemedText type="labelSm" style={{ color: '#ffffff' }}>/hr</ThemedText>
+              <View style={styles.imageContainer}>
+                <Image
+                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDYH5UnRgCz_j_xsBoTCePAImR1ZHOP1RfajoZLHKUgxQwU2qFlQ8NWyiYz_-6zqqufh9YnYe3jfTI8tuaUrjmH6obvvea2p2vYA7ndyut0M5-lxcOtwTVQQwh58VRPis3197lvVOpVGsJ6YCx55CCy4Q_1CqZxk1rVqp9mBGHM-rDNwh7PGYSDJt6Vq4tmn6G1gXGiZsm13J0D1BFkKFRb8WvrWqqyLWxu-oSZsnMp6YXOONRG89ypF-GKlh96WMcF3HOikmE9l-g' }}
+                  style={styles.turfImage}
+                  contentFit="cover"
+                />
               </View>
 
               <View style={styles.cardInfo}>
                 <View style={styles.cardHeaderRow}>
-                  <View>
-                    <ThemedText type="labelMd" style={{ color: theme.secondary }}>MULTI-SPORT</ThemedText>
-                    <ThemedText type="headlineSm" style={styles.turfTitle}>The Grid Multisport</ThemedText>
-                    <View style={styles.locationRow}>
-                      <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
-                      <ThemedText type="bodyMd" style={styles.locationText}>Stratford Central</ThemedText>
-                    </View>
-                  </View>
-                  <View style={[styles.ratingBadge, { backgroundColor: theme.surface }]}>
-                    <Ionicons name="star" size={12} color={theme.secondaryContainer} />
-                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4 }}>4.7</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: theme.secondary, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>MULTI-SPORT</ThemedText>
+                  <View style={styles.ratingBadge}>
+                    <Ionicons name="star" size={10} color={theme.secondaryContainer} />
+                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.7</ThemedText>
                   </View>
                 </View>
 
+                <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text }]} numberOfLines={1}>
+                  The Grid Multisport
+                </ThemedText>
+
+                <View style={styles.locationRow}>
+                  <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                  <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
+                    Stratford Central
+                  </ThemedText>
+                </View>
+
                 <View style={styles.cardActions}>
-                  <Pressable style={[styles.actionButton, { backgroundColor: theme.primary, marginRight: 8 }]}>
-                    <ThemedText type="labelMd" style={{ color: theme.onPrimary }}>Set Reminder</ThemedText>
-                  </Pressable>
-                  <Pressable 
-                    onPress={() => handleTurfSelect('the-grid', 'The Grid Multisport')}
-                    style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
-                  >
-                    <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer }}>Book Now</ThemedText>
-                  </Pressable>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                    <ThemedText type="headlineSm" style={{ color: theme.secondary, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' }}>₹18</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>/hr</ThemedText>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Pressable 
+                      onPress={() => handleTurfSelect('the-grid', 'The Grid Multisport')}
+                      style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
+                    >
+                      <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontSize: 11, fontFamily: 'HankenGrotesk_700Bold' }}>Book Now</ThemedText>
+                    </Pressable>
+                    <Pressable 
+                      onPress={() => toggleFavorite('the-grid')}
+                      style={[styles.favButton, { borderColor: theme.outlineVariant }]}
+                    >
+                      <Ionicons 
+                        name={favorites['the-grid'] ? 'heart' : 'heart-outline'} 
+                        size={14} 
+                        color={favorites['the-grid'] ? theme.error : theme.textSecondary} 
+                      />
+                    </Pressable>
+                  </View>
                 </View>
               </View>
             </Pressable>
@@ -343,50 +406,117 @@ export default function ExploreScreen() {
               onPress={() => handleTurfSelect('lords', "Lord's View Pavillion")}
               style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
             >
-              <Image
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgd1vfTA0Wj7Aw7aa0JRKzQ5y-6py-pQtMBI-gst90jIWFZoLSiIKBngPK1pn2UxzH_X3pN_lyCt75AnQxS2ssN4J4LUIYpph_JK48kGmSoO16OFhs5uLgsc_Yu3PIrOEneDELuLpKY8BDiUsatTLvRSu0sukxSfAxInyA2XknjvcswWPyUJA2YeNlJ2Vg2t7N807Cydno4uUCtypPyLkI0hi7Xl4DnWaNBueVN4jqiXqkqrc8MEPwQF24g45uu8z8gsXQ9IL87oI' }}
-                style={styles.turfImage}
-                contentFit="cover"
-              />
-              
-              <View style={styles.priceTag}>
-                <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer }}>₹22</ThemedText>
-                <ThemedText type="labelSm" style={{ color: '#ffffff' }}>/hr</ThemedText>
+              <View style={styles.imageContainer}>
+                <Image
+                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgd1vfTA0Wj7Aw7aa0JRKzQ5y-6py-pQtMBI-gst90jIWFZoLSiIKBngPK1pn2UxzH_X3pN_lyCt75AnQxS2ssN4J4LUIYpph_JK48kGmSoO16OFhs5uLgsc_Yu3PIrOEneDELuLpKY8BDiUsatTLvRSu0sukxSfAxInyA2XknjvcswWPyUJA2YeNlJ2Vg2t7N807Cydno4uUCtypPyLkI0hi7Xl4DnWaNBueVN4jqiXqkqrc8MEPwQF24g45uu8z8gsXQ9IL87oI' }}
+                  style={styles.turfImage}
+                  contentFit="cover"
+                />
               </View>
 
               <View style={styles.cardInfo}>
                 <View style={styles.cardHeaderRow}>
-                  <View>
-                    <ThemedText type="labelMd" style={{ color: theme.secondary }}>CRICKET</ThemedText>
-                    <ThemedText type="headlineSm" style={styles.turfTitle}>{"Lord's View Pavillion"}</ThemedText>
-                    <View style={styles.locationRow}>
-                      <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
-                      <ThemedText type="bodyMd" style={styles.locationText}>{"St John's Wood"}</ThemedText>
-                    </View>
-                  </View>
-                  <View style={[styles.ratingBadge, { backgroundColor: theme.surface }]}>
-                    <Ionicons name="star" size={12} color={theme.secondaryContainer} />
-                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4 }}>4.8</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: theme.secondary, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>CRICKET</ThemedText>
+                  <View style={styles.ratingBadge}>
+                    <Ionicons name="star" size={10} color={theme.secondaryContainer} />
+                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.8</ThemedText>
                   </View>
                 </View>
 
+                <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text }]} numberOfLines={1}>
+                  {"Lord's View Pavillion"}
+                </ThemedText>
+
+                <View style={styles.locationRow}>
+                  <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                  <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
+                    {"St John's Wood"}
+                  </ThemedText>
+                </View>
+
                 <View style={styles.cardActions}>
-                  <Pressable 
-                    onPress={() => handleTurfSelect('lords', "Lord's View Pavillion")}
-                    style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
-                  >
-                    <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer }}>Instant Book</ThemedText>
-                  </Pressable>
-                  <Pressable 
-                    onPress={() => toggleFavorite('lords')}
-                    style={[styles.favButton, { borderColor: theme.outlineVariant }]}
-                  >
-                    <Ionicons 
-                      name={favorites['lords'] ? 'heart' : 'heart-outline'} 
-                      size={18} 
-                      color={favorites['lords'] ? theme.error : theme.textSecondary} 
-                    />
-                  </Pressable>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                    <ThemedText type="headlineSm" style={{ color: theme.secondary, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' }}>₹22</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>/hr</ThemedText>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Pressable 
+                      onPress={() => handleTurfSelect('lords', "Lord's View Pavillion")}
+                      style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
+                    >
+                      <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontSize: 11, fontFamily: 'HankenGrotesk_700Bold' }}>Book Now</ThemedText>
+                    </Pressable>
+                    <Pressable 
+                      onPress={() => toggleFavorite('lords')}
+                      style={[styles.favButton, { borderColor: theme.outlineVariant }]}
+                    >
+                      <Ionicons 
+                        name={favorites['lords'] ? 'heart' : 'heart-outline'} 
+                        size={14} 
+                        color={favorites['lords'] ? theme.error : theme.textSecondary} 
+                      />
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            </Pressable>
+
+            {/* Wembley Turf Hub (New 4th Card) */}
+            <Pressable
+              onPress={() => handleTurfSelect('wembley', 'Wembley Turf Hub')}
+              style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
+            >
+              <View style={styles.imageContainer}>
+                <Image
+                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI' }}
+                  style={styles.turfImage}
+                  contentFit="cover"
+                />
+              </View>
+
+              <View style={styles.cardInfo}>
+                <View style={styles.cardHeaderRow}>
+                  <ThemedText type="labelSm" style={{ color: theme.secondary, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>FOOTBALL</ThemedText>
+                  <View style={styles.ratingBadge}>
+                    <Ionicons name="star" size={10} color={theme.secondaryContainer} />
+                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.6</ThemedText>
+                  </View>
+                </View>
+
+                <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text }]} numberOfLines={1}>
+                  Wembley Turf Hub
+                </ThemedText>
+
+                <View style={styles.locationRow}>
+                  <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                  <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
+                    Wembley Park, London
+                  </ThemedText>
+                </View>
+
+                <View style={styles.cardActions}>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                    <ThemedText type="headlineSm" style={{ color: theme.secondary, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' }}>₹30</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>/hr</ThemedText>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Pressable 
+                      onPress={() => handleTurfSelect('wembley', 'Wembley Turf Hub')}
+                      style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
+                    >
+                      <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontSize: 11, fontFamily: 'HankenGrotesk_700Bold' }}>Book Now</ThemedText>
+                    </Pressable>
+                    <Pressable 
+                      onPress={() => toggleFavorite('wembley')}
+                      style={[styles.favButton, { borderColor: theme.outlineVariant }]}
+                    >
+                      <Ionicons 
+                        name={favorites['wembley'] ? 'heart' : 'heart-outline'} 
+                        size={14} 
+                        color={favorites['wembley'] ? theme.error : theme.textSecondary} 
+                      />
+                    </Pressable>
+                  </View>
                 </View>
               </View>
             </Pressable>
@@ -394,6 +524,12 @@ export default function ExploreScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+      {/* Floating Toast Notification */}
+      {toastMsg && (
+        <Animated.View style={[styles.toastContainer, { opacity: toastOpacity, backgroundColor: theme.primaryContainer }]}>
+          <ThemedText type="labelSm" style={{ color: '#ffffff' }}>{toastMsg}</ThemedText>
+        </Animated.View>
+      )}
     </ThemedView>
   );
 }
@@ -416,15 +552,20 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   headerLeft: {
-    flexDirection: 'column',
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   headerAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#c3c7cb',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#feae2c', // Gold ring around avatar
+  },
+  headerTextGroup: {
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
   headerRightActions: {
     flexDirection: 'row',
@@ -435,8 +576,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   profileIconButton: {
-    padding: 4,
-    marginLeft: 4,
+    padding: 2,
   },
   scrollContent: {
     paddingBottom: 40,
@@ -496,11 +636,10 @@ const styles = StyleSheet.create({
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
+    paddingHorizontal: 10,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'transparent',
+    height: 32,
   },
   bannerContainer: {
     borderRadius: BorderRadius.premium,
@@ -557,106 +696,108 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
   },
   turfCard: {
+    flexDirection: 'row',
     borderRadius: BorderRadius.premium,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#c3c7cb33',
+    padding: 10,
+    marginBottom: 12,
+  },
+  imageContainer: {
+    width: 90,
+    height: 90,
+    borderRadius: 12,
+    overflow: 'hidden',
     position: 'relative',
-  },
-  aiBadge: {
-    position: 'absolute',
-    top: Spacing.md,
-    left: Spacing.md,
-    zIndex: 5,
-    backgroundColor: 'rgba(254, 174, 44, 0.95)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  aiBadgeText: {
-    color: '#6b4500',
-    fontSize: 10,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    marginLeft: 4,
   },
   turfImage: {
     width: '100%',
-    height: 196,
+    height: '100%',
   },
-  priceTag: {
+  aiBadge: {
     position: 'absolute',
-    bottom: 120, // positioned over the image
-    right: Spacing.md,
-    backgroundColor: 'rgba(5, 21, 30, 0.9)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.xl,
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    top: 4,
+    left: 4,
     zIndex: 5,
+    backgroundColor: 'rgba(254, 174, 44, 0.95)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  aiBadgeText: {
+    color: '#6b4500',
+    fontSize: 8,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    marginLeft: 2,
   },
   cardInfo: {
-    padding: Spacing.lg,
+    flex: 1,
+    paddingLeft: 12,
+    justifyContent: 'space-between',
   },
   cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   turfTitle: {
     color: '#111c2c',
-    marginTop: 2,
-    fontSize: 18,
+    fontSize: 14,
     fontFamily: 'HankenGrotesk_700Bold',
+    lineHeight: 18,
+    marginVertical: 2,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
-    marginLeft: -2,
   },
   locationText: {
     color: '#43474b',
-    fontSize: 13,
+    fontSize: 11,
     marginLeft: 2,
+    flex: 1,
   },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.md,
   },
   cardActions: {
     flexDirection: 'row',
-    marginTop: Spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
   },
   actionButton: {
-    flex: 1,
-    height: 44,
+    height: 28,
     borderRadius: BorderRadius.full,
+    paddingHorizontal: 12,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#feae2c',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   favButton: {
-    width: 44,
-    height: 44,
+    width: 28,
+    height: 28,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: Spacing.sm,
+    marginLeft: 6,
+  },
+  toastContainer: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.premium,
+    zIndex: 999,
   },
 });

@@ -8,12 +8,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, Spacing, BorderRadius, Shadows } from '@/constants/theme';
+import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 const FILTERS = ['Me', 'All', 'Live', 'Upcoming', 'Finished'];
@@ -36,14 +36,22 @@ export default function MatchesScreen() {
         {/* Top App Bar */}
         <View style={[styles.header, { backgroundColor: theme.background }]}>
           <View style={styles.headerLeft}>
-            <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', lineHeight: 18 }}>
-              Azarudeen
-            </ThemedText>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-              <Ionicons name="location-sharp" size={12} color={theme.secondary} />
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
-                London, UK
+            <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
+              <Image
+                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI' }}
+                style={styles.headerAvatar}
+              />
+            </Pressable>
+            <View style={styles.headerTextGroup}>
+              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', lineHeight: 18 }}>
+                Azarudeen
               </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                <Ionicons name="location-sharp" size={12} color={theme.secondary} />
+                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
+                  London, UK
+                </ThemedText>
+              </View>
             </View>
           </View>
           <View style={styles.headerRightActions}>
@@ -53,11 +61,8 @@ export default function MatchesScreen() {
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
             </Pressable>
-            <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
-              <Image
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI' }}
-                style={styles.headerAvatar}
-              />
+            <Pressable style={styles.iconButton}>
+              <FontAwesome5 name="coins" size={16} color={theme.secondary} />
             </Pressable>
           </View>
         </View>
@@ -351,15 +356,20 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   headerLeft: {
-    flexDirection: 'column',
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   headerAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#c3c7cb',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#feae2c', // Gold ring around avatar
+  },
+  headerTextGroup: {
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
   headerRightActions: {
     flexDirection: 'row',
@@ -370,8 +380,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   profileIconButton: {
-    padding: 4,
-    marginLeft: 4,
+    padding: 2,
   },
   scrollContent: {
     paddingBottom: 40,

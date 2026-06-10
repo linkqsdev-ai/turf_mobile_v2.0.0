@@ -1,48 +1,48 @@
 import { Tabs } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Platform, View, StyleSheet } from 'react-native';
-import { Colors } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 
 function TabIcon({ 
   focused, 
   color, 
   iconName, 
-  library = 'Ionicons' 
+  library = 'Ionicons',
+  isBook = false
 }: { 
   focused: boolean; 
   color: any; 
   iconName: string; 
   library?: 'Ionicons' | 'MaterialCommunityIcons';
+  isBook?: boolean;
 }) {
   return (
-    <View style={styles.iconContainer}>
+    <View style={[styles.iconContainer, isBook && styles.iconContainerBook]}>
       <View style={[
         styles.iconWrapper,
-        focused && styles.iconWrapperActive
+        focused && styles.iconWrapperActive,
+        isBook && styles.iconWrapperBook,
+        isBook && focused && styles.iconWrapperBookActive
       ]}>
         {library === 'Ionicons' ? (
           <Ionicons 
             name={focused ? iconName as any : `${iconName}-outline` as any} 
             size={20} 
-            color={color} 
+            color={isBook && focused ? '#05151e' : color} 
           />
         ) : (
           <MaterialCommunityIcons 
             name={iconName as any} 
-            size={22} 
-            color={color} 
+            size={24} 
+            color={isBook ? (focused ? '#05151e' : '#feae2c') : color} 
           />
         )}
       </View>
-      {focused && <View style={styles.activeDot} />}
+      {focused && !isBook && <View style={styles.activeDot} />}
     </View>
   );
 }
 
 export default function TabLayout() {
-  const theme = useTheme();
-
   return (
     <Tabs
       screenOptions={{
@@ -68,8 +68,8 @@ export default function TabLayout() {
           elevation: 15,
         },
         tabBarLabelStyle: {
-          fontFamily: 'PlusJakartaSans_700Bold',
-          fontSize: 10,
+          fontFamily: 'HankenGrotesk_700Bold', // Premium attractive font family
+          fontSize: 8.8, // Slightly reduced to fit "TOURNAMENT" fully on all devices
           letterSpacing: 0.5,
           textTransform: 'uppercase',
           marginTop: 4,
@@ -91,7 +91,7 @@ export default function TabLayout() {
         options={{
           title: 'Matches',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} iconName="football" />
+            <TabIcon focused={focused} color={color} iconName="calendar-number" />
           ),
         }}
       />
@@ -100,7 +100,13 @@ export default function TabLayout() {
         options={{
           title: 'Book',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} iconName="soccer-field" library="MaterialCommunityIcons" />
+            <TabIcon 
+              focused={focused} 
+              color={color} 
+              iconName="stadium" 
+              library="MaterialCommunityIcons" 
+              isBook={true} 
+            />
           ),
         }}
       />
@@ -133,6 +139,9 @@ const styles = StyleSheet.create({
     height: 48,
     width: 60,
   },
+  iconContainerBook: {
+    transform: [{ translateY: -12 }], // Floating Central Button shift up
+  },
   iconWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -143,6 +152,24 @@ const styles = StyleSheet.create({
   },
   iconWrapperActive: {
     backgroundColor: 'rgba(254, 174, 44, 0.15)', // Premium soft gold glow backdrop
+  },
+  iconWrapperBook: {
+    height: 50,
+    width: 50,
+    borderRadius: 25,
+    backgroundColor: '#12202a',
+    borderWidth: 1.5,
+    borderColor: 'rgba(254, 174, 44, 0.4)',
+    // Shadow for premium floating look
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  iconWrapperBookActive: {
+    backgroundColor: '#feae2c',
+    borderColor: '#feae2c',
   },
   activeDot: {
     position: 'absolute',
