@@ -426,20 +426,6 @@ export default function TeamRegistrationScreen() {
                 if (t.status === 'Rejected') leftBorderColor = '#ba1a1a'; // Red
                 if (t.status === 'Changes Requested') leftBorderColor = '#2980b9'; // Blue
 
-                // Determine status badge colors
-                let statusBg = '#fff4e5';
-                let statusColor = '#e67e22';
-                if (t.status === 'Approved') {
-                  statusBg = '#e2f9ec';
-                  statusColor = '#0f9f58';
-                } else if (t.status === 'Rejected') {
-                  statusBg = '#ffdad6';
-                  statusColor = '#ba1a1a';
-                } else if (t.status === 'Changes Requested') {
-                  statusBg = '#e6f0fa';
-                  statusColor = '#2980b9';
-                }
-
                 const method = t.paymentMethod || 'Card';
 
                 return (
@@ -455,127 +441,120 @@ export default function TeamRegistrationScreen() {
                       Shadows.level2
                     ]}
                   >
-                    {/* Dark Premium Card Header */}
-                    <View style={[styles.adminCardHeader, { backgroundColor: theme.primaryContainer }]}>
-                      <Image source={t.logo} style={styles.adminTeamLogo} contentFit="cover" />
-                      
-                      <View style={styles.adminHeaderInfo}>
-                        <ThemedText style={styles.adminTeamName} numberOfLines={1}>
+                    {/* Header: Team name left, status label right */}
+                    <View style={styles.mockHeaderRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <Image source={t.logo} style={styles.adminTeamLogo} contentFit="cover" />
+                        <ThemedText style={styles.mockTitleText} numberOfLines={1}>
                           {t.name}
                         </ThemedText>
-                        <View style={styles.adminTimeRow}>
-                          <Ionicons name="time-outline" size={11} color="#81919c" />
-                          <ThemedText style={styles.adminTimeText}>
-                            {t.requestDate || '10m ago'}
-                          </ThemedText>
-                        </View>
                       </View>
-
-                      <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
-                        <ThemedText style={[styles.statusText, { color: statusColor }]}>
+                      
+                      <View style={[
+                        styles.statusLabel,
+                        t.status === 'Pending' && { backgroundColor: '#fff4e5' },
+                        t.status === 'Approved' && { backgroundColor: '#e2f9ec' },
+                        t.status === 'Rejected' && { backgroundColor: '#ffdad6' },
+                        t.status === 'Changes Requested' && { backgroundColor: '#e6f0fa' }
+                      ]}>
+                        <ThemedText type="labelSm" style={[
+                          { fontSize: 8, fontWeight: '800' },
+                          t.status === 'Pending' && { color: '#e67e22' },
+                          t.status === 'Approved' && { color: '#0f9f58' },
+                          t.status === 'Rejected' && { color: '#ba1a1a' },
+                          t.status === 'Changes Requested' && { color: '#2980b9' }
+                        ]}>
                           {t.status.toUpperCase()}
                         </ThemedText>
                       </View>
                     </View>
 
-                    {/* Card Body */}
-                    <View style={styles.adminCardBody}>
-                      {/* Tinted Info Container */}
-                      <View style={[styles.adminInfoBox, { backgroundColor: theme.surfaceLow }]}>
-                        
-                        {/* Row 1: Manager & Roster */}
-                        <View style={[styles.adminDetailRowCombined, { borderTopWidth: 0, paddingTop: 0 }]}>
-                          <View style={styles.combinedItem}>
-                            <Ionicons name="person-outline" size={13} color={theme.textSecondary} style={styles.detailIcon} />
-                            <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
-                              {t.manager}
-                            </ThemedText>
-                          </View>
-                          <View style={styles.combinedSeparator} />
-                          <View style={styles.combinedItem}>
-                            <Ionicons name="people-outline" size={13} color={theme.textSecondary} style={styles.detailIcon} />
-                            <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
-                              {(t.rosterCount !== undefined ? t.rosterCount : 8)} Players
-                            </ThemedText>
-                          </View>
-                        </View>
-
-                        {/* Row 2: Phone & Email */}
-                        <View style={styles.adminDetailRowCombined}>
-                          <View style={styles.combinedItem}>
-                            <Ionicons name="call-outline" size={13} color={theme.textSecondary} style={styles.detailIcon} />
-                            <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
-                              {t.phone || '+44 7911 123456'}
-                            </ThemedText>
-                          </View>
-                          <View style={styles.combinedSeparator} />
-                          <View style={styles.combinedItem}>
-                            <Ionicons name="mail-outline" size={13} color={theme.textSecondary} style={{ marginRight: 6 }} />
-                            <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
-                              {t.email || 'manager@example.com'}
-                            </ThemedText>
-                          </View>
-                        </View>
-
-                        {/* Row 3: Payment Method */}
-                        <View style={styles.adminDetailRowCombined}>
-                          <View style={styles.combinedItem}>
-                            <Ionicons name="card-outline" size={13} color={theme.textSecondary} style={styles.detailIcon} />
-                            <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
-                              Method: {method}
-                            </ThemedText>
-                          </View>
-                        </View>
-                      </View>
-
-                      {/* Actions Row */}
-                      <View style={styles.adminActionsRow}>
-                        {/* Left: Fee Status */}
-                        <View style={styles.adminActionsLeft}>
-                          <Ionicons name="wallet-outline" size={14} color={theme.textSecondary} />
-                          <ThemedText 
-                            type="labelSm" 
-                            style={[
-                              styles.feeStatusText, 
-                              { 
-                                color: t.payment === 'Pending' ? theme.error : '#0f9f58', 
-                                fontWeight: 'bold',
-                                marginLeft: 4
-                              }
-                            ]}
-                          >
-                            {t.payment}
-                          </ThemedText>
-                        </View>
-
-                        {/* Right: Icon-only Action Buttons */}
-                        <View style={styles.adminActionsRight}>
-                          {/* Request Info Button */}
-                          <Pressable 
-                            style={styles.adminIconBtnInfo}
-                            onPress={() => handleAdminAction(t.id, 'Request Changes')}
-                          >
-                            <Ionicons name="chatbubble-ellipses-outline" size={14} color="#2980b9" />
-                          </Pressable>
-
-                          {/* Reject Button */}
-                          <Pressable 
-                            style={styles.adminIconBtnReject}
-                            onPress={() => handleAdminAction(t.id, 'Reject')}
-                          >
-                            <Ionicons name="close" size={14} color="#ba1a1a" />
-                          </Pressable>
-
-                          {/* Approve Button */}
-                          <Pressable 
-                            style={styles.adminIconBtnApprove}
-                            onPress={() => handleAdminAction(t.id, 'Approve')}
-                          >
-                            <Ionicons name="checkmark" size={14} color="#ffffff" />
-                          </Pressable>
-                        </View>
+                    {/* Subheader: REGISTRATION INFO left, time right (like + Add Session) */}
+                    <View style={styles.mockSubheaderRow}>
+                      <ThemedText style={styles.mockSubheaderLeft}>
+                        REGISTRATION INFO
+                      </ThemedText>
+                      <View style={styles.mockSubheaderRightBtn}>
+                        <ThemedText style={styles.mockSubheaderRight}>
+                          + Requested {t.requestDate || '10m ago'}
+                        </ThemedText>
                       </View>
                     </View>
+
+                    {/* Thin separator line */}
+                    <View style={[styles.mockSeparator, { backgroundColor: theme.outlineVariant + '22' }]} />
+
+                    {/* Main Row: (8) Roster Players left, Manager right */}
+                    <View style={styles.mockMainRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="people-outline" size={14} color={theme.text} style={{ marginRight: 6 }} />
+                        <ThemedText style={styles.mockMainLeftText}>
+                          ({(t.rosterCount !== undefined ? t.rosterCount : 8)}) Roster Players
+                        </ThemedText>
+                      </View>
+                      <ThemedText style={styles.mockMainRightText}>
+                        Manager: {t.manager}
+                      </ThemedText>
+                    </View>
+
+                    {/* Invoice Box */}
+                    <View style={[styles.mockInvoiceBox, { borderColor: theme.outlineVariant + '33' }]}>
+                      {/* Top part: Manager contact info */}
+                      <View style={[styles.mockInvoiceTop, { backgroundColor: theme.surfaceLow }]}>
+                        <View style={styles.mockInvoiceDetailRow}>
+                          <Ionicons name="call-outline" size={12} color={theme.textSecondary} style={{ marginRight: 6 }} />
+                          <ThemedText style={styles.mockInvoiceLabel}>Phone</ThemedText>
+                          <ThemedText style={styles.mockInvoiceVal}>{t.phone || '+44 7911 123456'}</ThemedText>
+                        </View>
+                        <View style={[styles.mockInvoiceDetailRow, { marginTop: 6 }]}>
+                          <Ionicons name="mail-outline" size={12} color={theme.textSecondary} style={{ marginRight: 6 }} />
+                          <ThemedText style={styles.mockInvoiceLabel}>Email</ThemedText>
+                          <ThemedText style={styles.mockInvoiceVal} numberOfLines={1}>{t.email || 'manager@example.com'}</ThemedText>
+                        </View>
+                      </View>
+
+                      {/* Bottom part: sky blue invoice total bar */}
+                      <View style={[styles.mockInvoiceBottom, { backgroundColor: '#e7eeff' }]}>
+                        <ThemedText style={styles.mockTotalLabel}>Fees Status ({method})</ThemedText>
+                        <ThemedText 
+                          style={[
+                            styles.mockTotalVal, 
+                            { color: t.payment === 'Pending' ? theme.error : '#0f9f58' }
+                          ]}
+                        >
+                          {t.payment}
+                        </ThemedText>
+                      </View>
+                    </View>
+
+                    {/* Buttons Section */}
+                    {/* Row 1: Secondary Reject and Request Info */}
+                    <View style={styles.mockBtnRow}>
+                      <Pressable 
+                        style={[styles.adminBtnSecondary, { borderColor: '#ba1a1a' }]}
+                        onPress={() => handleAdminAction(t.id, 'Reject')}
+                      >
+                        <Ionicons name="close-circle-outline" size={14} color="#ba1a1a" style={{ marginRight: 4 }} />
+                        <ThemedText type="labelSm" style={{ color: '#ba1a1a', fontWeight: 'bold' }}>Reject</ThemedText>
+                      </Pressable>
+
+                      <Pressable 
+                        style={[styles.adminBtnSecondary, { borderColor: '#2980b9' }]}
+                        onPress={() => handleAdminAction(t.id, 'Request Changes')}
+                      >
+                        <Ionicons name="chatbubble-ellipses-outline" size={14} color="#2980b9" style={{ marginRight: 4 }} />
+                        <ThemedText type="labelSm" style={{ color: '#2980b9', fontWeight: 'bold' }}>Request Info</ThemedText>
+                      </Pressable>
+                    </View>
+
+                    {/* Row 2: Full-width Gold Primary Button */}
+                    <Pressable 
+                      style={[styles.mockFullWidthBtn, { backgroundColor: theme.secondaryContainer }]}
+                      onPress={() => handleAdminAction(t.id, 'Approve')}
+                    >
+                      <Ionicons name="checkmark-circle-outline" size={16} color="#6b4500" style={{ marginRight: 6 }} />
+                      <ThemedText style={styles.mockFullWidthBtnText}>Approve Registration</ThemedText>
+                    </Pressable>
                   </View>
                 );
               })}
@@ -761,12 +740,6 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: BorderRadius.md,
   },
-  adminCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
   adminTeamLogo: {
     width: 44,
     height: 44,
@@ -774,140 +747,135 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#feae2c',
   },
-  adminHeaderInfo: {
-    flex: 1,
-    marginLeft: 12,
+  mockHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 10,
   },
-  adminTeamName: {
-    color: '#ffffff',
-    fontSize: 15,
+  mockTitleText: {
+    fontSize: 16,
     fontWeight: 'bold',
-    fontFamily: 'HankenGrotesk_700Bold',
-  },
-  adminTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  adminTimeText: {
-    color: '#81919c',
-    fontSize: 10,
-    marginLeft: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.md,
-  },
-  statusText: {
-    fontSize: 8,
-    fontWeight: '800',
-  },
-  adminCardBody: {
-    padding: 12,
-  },
-  adminInfoBox: {
-    padding: 12,
-    borderRadius: BorderRadius.xl,
-    gap: 10,
-    marginVertical: 12,
-  },
-  adminInfoRowGroup: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  adminInfoRowHalf: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '48%',
-  },
-  adminDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  adminDetailRowCombined: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: '#c3c7cb22',
-    paddingTop: 8,
-  },
-  combinedItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    color: '#111c2c',
+    marginLeft: 10,
     flex: 1,
   },
-  combinedSeparator: {
-    width: 1,
-    height: 14,
-    backgroundColor: '#c3c7cb44',
-    marginHorizontal: 8,
+  mockSubheaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
   },
-  detailIcon: {
-    marginRight: 8,
+  mockSubheaderLeft: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#81919c',
+    letterSpacing: 0.5,
   },
-  adminGridText: {
+  mockSubheaderRightBtn: {
+    backgroundColor: '#feae2c15',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.default,
+  },
+  mockSubheaderRight: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#feae2c',
+  },
+  mockSeparator: {
+    height: 1,
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  mockMainRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  mockMainLeftText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: '#111c2c',
+  },
+  mockMainRightText: {
+    fontSize: 12,
+    color: '#43474b',
+  },
+  mockInvoiceBox: {
+    marginHorizontal: 16,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  mockInvoiceTop: {
+    padding: 12,
+  },
+  mockInvoiceDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mockInvoiceLabel: {
     fontSize: 11,
+    color: '#43474b',
+    width: 50,
+  },
+  mockInvoiceVal: {
+    fontSize: 12,
+    color: '#111c2c',
     fontWeight: '500',
     flex: 1,
   },
-  boldText: {
-    fontWeight: 'bold',
-    color: '#111c2c',
-  },
-  adminActionsRow: {
+  mockInvoiceBottom: {
+    padding: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
   },
-  adminActionsLeft: {
+  mockTotalLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#43474b',
+  },
+  mockTotalVal: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  mockBtnRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    marginBottom: 12,
   },
-  feeStatusText: {
-    fontSize: 11,
+  adminBtnSecondary: {
+    flex: 1,
+    height: 38,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  mockFullWidthBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 44,
+    borderRadius: BorderRadius.xl,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  mockFullWidthBtnText: {
+    fontSize: 14,
     fontWeight: 'bold',
-  },
-  adminActionsRight: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  adminIconBtnApprove: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#0f9f58',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#0f9f58',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  adminIconBtnReject: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#ba1a1a',
-    backgroundColor: '#ffdad611',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  adminIconBtnInfo: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#2980b9',
-    backgroundColor: '#e6f0fa11',
-    justifyContent: 'center',
-    alignItems: 'center',
+    color: '#6b4500',
   },
   toastContainer: {
     position: 'absolute',
