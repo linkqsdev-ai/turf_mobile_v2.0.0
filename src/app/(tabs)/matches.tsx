@@ -6,6 +6,7 @@ import {
   Pressable,
   Platform,
   Animated,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -25,7 +26,7 @@ const FILTERS = ['Me', 'All', 'Live', 'Upcoming', 'Finished'];
 export default function MatchesScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const [selectedFilter, setSelectedFilter] = useState('All');
+  const [selectedFilter, setSelectedFilter] = useState('Me');
   const [coinTossVisible, setCoinTossVisible] = useState(false);
 
   // Spring scale animations for floating buttons
@@ -156,16 +157,16 @@ export default function MatchesScreen() {
                   contentFit="contain"
                 />
 
-                <View style={styles.cardHeader}>
+                 <View style={styles.cardHeader}>
                   <View style={styles.badgeRow}>
                     <Ionicons name="podium-outline" size={12} color={theme.error} />
                     <ThemedText type="labelSm" style={{ color: theme.error, fontWeight: '700', marginLeft: 4 }}>
                       IPL 2026
                     </ThemedText>
                   </View>
-                  <View style={[styles.meBadge, { backgroundColor: theme.secondaryContainer + '22', borderColor: theme.secondaryContainer, borderWidth: 1, flexDirection: 'row', alignItems: 'center' }]}>
-                    <Ionicons name="person" size={9} color={theme.secondary} style={{ marginRight: 3 }} />
-                    <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '800', fontSize: 10 }}>Me</ThemedText>
+                  <View style={[styles.meBadge, { backgroundColor: theme.secondaryContainer + '22', borderColor: theme.secondaryContainer, borderWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 5, paddingVertical: 1.5 }]}>
+                    <Ionicons name="person" size={8} color={theme.secondary} style={{ marginRight: 2 }} />
+                    <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8.5 }}>Me</ThemedText>
                   </View>
                 </View>
 
@@ -177,7 +178,7 @@ export default function MatchesScreen() {
                       <View style={[styles.teamLetterLogo, { backgroundColor: theme.primaryContainer }]}>
                         <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>RCB</ThemedText>
                       </View>
-                      <ThemedText type="bodyMd" style={{ marginLeft: 8, fontWeight: '700', fontSize: 15 }}>
+                      <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
                         RCB
                       </ThemedText>
                     </View>
@@ -200,12 +201,12 @@ export default function MatchesScreen() {
                       <View style={[styles.teamLetterLogo, { backgroundColor: theme.outlineVariant, marginLeft: 6 }]}>
                         <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>KXI</ThemedText>
                       </View>
-                      <ThemedText type="bodyMd" style={{ color: theme.text, fontWeight: '700', textAlign: 'right', marginRight: 8, fontSize: 15 }}>
+                      <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', textAlign: 'right', marginRight: 8 }}>
                         KXI
                       </ThemedText>
                     </View>
-                    <ThemedText style={{ fontSize: 22, color: theme.textSecondary, fontFamily: 'HankenGrotesk_600SemiBold', marginTop: 8, textAlign: 'right' }}>
-                      Yet to bat
+                    <ThemedText style={{ fontSize: 26, color: theme.textSecondary, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 8, textAlign: 'right' }}>
+                      -
                     </ThemedText>
                     <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 2, textAlign: 'right' }}>
                       2nd innings
@@ -235,6 +236,25 @@ export default function MatchesScreen() {
             </Pressable>
           </View>
 
+          {/* Offer Announcement Banner */}
+          <View style={styles.section}>
+            <View style={[styles.offerBannerContainer, { backgroundColor: theme.primaryContainer }, Shadows.level2]}>
+              <View style={styles.offerBannerLeft}>
+                <View style={styles.offerBadge}>
+                  <ThemedText style={styles.offerBadgeText}>SPECIAL DEALS</ThemedText>
+                </View>
+                <ThemedText style={styles.offerTitle}>Flat 20% OFF this Weekend!</ThemedText>
+                <ThemedText style={styles.offerSubtitle}>Book any premium turf. Code: WEEKEND20</ThemedText>
+              </View>
+              <Pressable 
+                style={styles.offerBookBtn} 
+                onPress={() => router.push('/(tabs)/explore')}
+              >
+                <ThemedText style={styles.offerBookBtnText}>Book Now</ThemedText>
+              </Pressable>
+            </View>
+          </View>
+
           {/* TODAY Section */}
           <View style={styles.section}>
             <ThemedText type="labelMd" style={[styles.sectionHeader, { color: theme.textSecondary, textTransform: 'none' }]}>
@@ -259,9 +279,9 @@ export default function MatchesScreen() {
                       Summer Futsal League
                     </ThemedText>
                   </View>
-                  <View style={[styles.meBadge, { backgroundColor: theme.secondaryContainer + '22', borderColor: theme.secondaryContainer, borderWidth: 1, flexDirection: 'row', alignItems: 'center' }]}>
-                    <Ionicons name="person" size={9} color={theme.secondary} style={{ marginRight: 3 }} />
-                    <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '800', fontSize: 10 }}>Me</ThemedText>
+                  <View style={[styles.meBadge, { backgroundColor: theme.secondaryContainer + '22', borderColor: theme.secondaryContainer, borderWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 5, paddingVertical: 1.5 }]}>
+                    <Ionicons name="person" size={8} color={theme.secondary} style={{ marginRight: 2 }} />
+                    <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8.5 }}>Me</ThemedText>
                   </View>
                 </View>
 
@@ -384,6 +404,32 @@ export default function MatchesScreen() {
             </Pressable>
           </View>
 
+          {/* Tournaments Ad Banner */}
+          <View style={styles.section}>
+            <View style={[styles.tourneyAdCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+              <View style={styles.tourneyAdHeader}>
+                <View style={[styles.tourneyAdBadge, { backgroundColor: theme.secondaryContainer + '22' }]}>
+                  <Ionicons name="trophy-outline" size={11} color={theme.secondary} />
+                  <ThemedText style={{ color: theme.secondary, fontSize: 8.5, fontFamily: 'PlusJakartaSans_800ExtraBold', marginLeft: 4, letterSpacing: 0.5 }}>UPCOMING TOURNAMENT</ThemedText>
+                </View>
+                <ThemedText style={styles.tourneyAdSlots}>12/16 Slots Filled</ThemedText>
+              </View>
+              
+              <View style={styles.tourneyAdBody}>
+                <View style={styles.tourneyAdInfo}>
+                  <ThemedText style={styles.tourneyAdTitle}>Canary Wharf Cup 2026</ThemedText>
+                  <ThemedText style={styles.tourneyAdMeta}>Cricket Knockout • ₹5,000 Prize Pool</ThemedText>
+                </View>
+                <Pressable 
+                  style={[styles.tourneyAdBtn, { backgroundColor: theme.primary }]}
+                  onPress={() => router.push('/(tabs)/tournaments')}
+                >
+                  <ThemedText style={styles.tourneyAdBtnText}>Register Team</ThemedText>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+
           {/* YESTERDAY Section */}
           <View style={[styles.section, { paddingBottom: 120 }]}>
             <ThemedText type="labelMd" style={[styles.sectionHeader, { color: theme.textSecondary, textTransform: 'none' }]}>
@@ -397,8 +443,8 @@ export default function MatchesScreen() {
             >
               <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
                 <View style={styles.cardHeader}>
-                  <View style={[styles.leagueTypeBadge, { backgroundColor: theme.secondary + '14', borderColor: theme.secondary + '33', borderWidth: 1 }]}>
-                    <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '700' }}>
+                  <View style={[styles.leagueTypeBadge, { backgroundColor: theme.secondary + '14', borderColor: theme.secondary + '33', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: BorderRadius.default }]}>
+                    <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 9.5 }}>
                       T20 Blast
                     </ThemedText>
                   </View>
@@ -410,7 +456,7 @@ export default function MatchesScreen() {
                     <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
                       <ThemedText type="labelSm" style={{ color: theme.text }}>MT</ThemedText>
                     </View>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_600SemiBold' }}>
+                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
                       Middlesex Titans
                     </ThemedText>
                     <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
@@ -421,7 +467,7 @@ export default function MatchesScreen() {
                     <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
                       <ThemedText type="labelSm" style={{ color: theme.text }}>SS</ThemedText>
                     </View>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_600SemiBold' }}>
+                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
                       Sussex Sharks
                     </ThemedText>
                     <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
@@ -450,6 +496,40 @@ export default function MatchesScreen() {
               </View>
             </Pressable>
 
+            {/* Open Challenge / Bid Match Card */}
+            <View style={[styles.challengeCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+              <View style={styles.challengeHeader}>
+                <View style={styles.challengeBadge}>
+                  <Ionicons name="flash-outline" size={12} color="#feae2c" />
+                  <ThemedText style={styles.challengeBadgeText}>OPEN CHALLENGE</ThemedText>
+                </View>
+                <View style={styles.challengeBidBadge}>
+                  <FontAwesome5 name="coins" size={10} color={theme.secondary} style={{ marginRight: 4 }} />
+                  <ThemedText style={styles.challengeBidText}>100 Coins Bid</ThemedText>
+                </View>
+              </View>
+              
+              <View style={styles.challengeTeamInfo}>
+                <View style={styles.challengeTeamHeader}>
+                  <Image source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXu-rGNcjfTOqIbCc14x83aW-UxvfwQbFlcyDJxfiI8ZW54ZEnoJj_6XMl36rA1HACKrvZtNCIXvr2C0OqBv5ofBMDmbIsSGwIrg2aJM6DZx1zCnA069mfIswX4BSiH74irw7LbjrSEwBGaYOv0_fpov0HxNwPi1B5BdSEpnDqfWgU_xCKwSaiqALibZA8IOqlYOz9imbDWNkZmSV8pARy8d4yXq8r-UQfa53HcEMorKjJfPcj6rcEJfGV2ObHglEC_gDfnRZFIpxEo' }} style={styles.challengeTeamLogo} contentFit="cover" />
+                  <View style={{ marginLeft: 8 }}>
+                    <ThemedText style={styles.challengeTeamName}>Apex Strikers</ThemedText>
+                    <ThemedText style={styles.challengeTeamRank}>Elite Div • Rank #42</ThemedText>
+                  </View>
+                </View>
+                <ThemedText style={styles.challengeDescription}>
+                  Looking for a competitive 7v7 Football match today at 19:30. Accepting bids from Elite tier teams.
+                </ThemedText>
+              </View>
+              
+              <Pressable 
+                style={[styles.challengeBtn, { backgroundColor: theme.secondary }]}
+                onPress={() => Alert.alert('Bid Match', 'You have bid 100 coins to play Apex Strikers. Your challenge request is pending.')}
+              >
+                <ThemedText style={styles.challengeBtnText}>Bid to Play</ThemedText>
+              </Pressable>
+            </View>
+
             {/* Match 2: Champions League */}
             <Pressable
               onPress={() => handleMatchCenterSelect('yesterday-football-1', 'football')}
@@ -457,8 +537,8 @@ export default function MatchesScreen() {
             >
               <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
                 <View style={styles.cardHeader}>
-                  <View style={[styles.leagueTypeBadge, { backgroundColor: '#e8f0fe', borderColor: '#d2e3fc', borderWidth: 1 }]}>
-                    <ThemedText type="labelSm" style={{ color: '#1a73e8', fontWeight: '700' }}>
+                  <View style={[styles.leagueTypeBadge, { backgroundColor: '#e8f0fe', borderColor: '#d2e3fc', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: BorderRadius.default }]}>
+                    <ThemedText type="labelSm" style={{ color: '#1a73e8', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 9.5 }}>
                       Champions League
                     </ThemedText>
                   </View>
@@ -470,7 +550,7 @@ export default function MatchesScreen() {
                     <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
                       <ThemedText type="labelSm" style={{ color: theme.text }}>RM</ThemedText>
                     </View>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_600SemiBold' }}>
+                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
                       Real Madrid
                     </ThemedText>
                     <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
@@ -481,7 +561,7 @@ export default function MatchesScreen() {
                     <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
                       <ThemedText type="labelSm" style={{ color: theme.text }}>MC</ThemedText>
                     </View>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_600SemiBold' }}>
+                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
                       Manchester City
                     </ThemedText>
                     <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
@@ -536,7 +616,7 @@ export default function MatchesScreen() {
               style={[styles.fab, { backgroundColor: theme.secondaryContainer }]}
               onPress={() => router.push('/new-match')}
             >
-              <MaterialCommunityIcons name="calendar-plus" size={24} color={theme.onSecondaryContainer} />
+              <Ionicons name="add" size={28} color={theme.onSecondaryContainer} />
             </Pressable>
           </Animated.View>
         </View>
@@ -811,5 +891,197 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+  },
+  // Offers Banner
+  offerBannerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: BorderRadius.premium,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  offerBannerLeft: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  offerBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+    marginBottom: 4,
+  },
+  offerBadgeText: {
+    color: '#ffffff',
+    fontSize: 8,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    letterSpacing: 0.8,
+  },
+  offerTitle: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontFamily: 'HankenGrotesk_700Bold',
+  },
+  offerSubtitle: {
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 10,
+    fontFamily: 'PlusJakartaSans_500Medium',
+    marginTop: 2,
+  },
+  offerBookBtn: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+  },
+  offerBookBtnText: {
+    color: '#5D68E8',
+    fontSize: 11,
+    fontFamily: 'HankenGrotesk_700Bold',
+  },
+
+  // Tourney Ad Card
+  tourneyAdCard: {
+    padding: 14,
+    borderRadius: BorderRadius.premium,
+    borderWidth: 1,
+    marginTop: 6,
+  },
+  tourneyAdHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  tourneyAdBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.md,
+  },
+  tourneyAdSlots: {
+    fontSize: 10,
+    color: '#E05A47',
+    fontFamily: 'PlusJakartaSans_700Bold',
+  },
+  tourneyAdBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tourneyAdInfo: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  tourneyAdTitle: {
+    fontSize: 14,
+    fontFamily: 'HankenGrotesk_700Bold',
+  },
+  tourneyAdMeta: {
+    fontSize: 11,
+    color: '#43474b',
+    fontFamily: 'PlusJakartaSans_500Medium',
+    marginTop: 2,
+  },
+  tourneyAdBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+  },
+  tourneyAdBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontFamily: 'HankenGrotesk_700Bold',
+  },
+
+  // Challenge Card
+  challengeCard: {
+    padding: 14,
+    borderRadius: BorderRadius.premium,
+    borderWidth: 1,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  challengeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  challengeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#feae2c14',
+    borderColor: '#feae2c33',
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  challengeBadgeText: {
+    color: '#feae2c',
+    fontSize: 8.5,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    marginLeft: 3,
+  },
+  challengeBidBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#5D68E814',
+    borderColor: '#5D68E833',
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  challengeBidText: {
+    color: '#5D68E8',
+    fontSize: 8.5,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    marginLeft: 4,
+  },
+  challengeTeamInfo: {
+    marginBottom: 10,
+  },
+  challengeTeamHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  challengeTeamLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.md,
+  },
+  challengeTeamName: {
+    fontSize: 13,
+    fontFamily: 'HankenGrotesk_700Bold',
+  },
+  challengeTeamRank: {
+    fontSize: 10,
+    color: '#43474b',
+    fontFamily: 'PlusJakartaSans_500Medium',
+  },
+  challengeDescription: {
+    fontSize: 11,
+    color: '#43474b',
+    fontFamily: 'PlusJakartaSans_500Medium',
+    lineHeight: 15,
+  },
+  challengeBtn: {
+    width: '100%',
+    height: 34,
+    borderRadius: BorderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  challengeBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontFamily: 'HankenGrotesk_700Bold',
   },
 });
