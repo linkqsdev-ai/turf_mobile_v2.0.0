@@ -5,10 +5,11 @@ import {
   ScrollView,
   Pressable,
   Platform,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { CoinTossModal } from '@/components/coin-toss-modal';
 
@@ -25,10 +26,32 @@ export default function MatchesScreen() {
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [coinTossVisible, setCoinTossVisible] = useState(false);
 
-  const handleMatchCenterSelect = (matchId: string) => {
+  // Spring scale animations for floating buttons
+  const scaleAnimTeam = useState(new Animated.Value(1))[0];
+  const scaleAnimMatch = useState(new Animated.Value(1))[0];
+
+  const handlePressIn = (anim: Animated.Value) => {
+    Animated.spring(anim, {
+      toValue: 0.92,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 5,
+    }).start();
+  };
+
+  const handlePressOut = (anim: Animated.Value) => {
+    Animated.spring(anim, {
+      toValue: 1.0,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 5,
+    }).start();
+  };
+
+  const handleMatchCenterSelect = (matchId: string, sport: string = 'cricket') => {
     router.push({
       pathname: '/scoring',
-      params: { matchId },
+      params: { matchId, sport },
     });
   };
 
@@ -362,7 +385,10 @@ export default function MatchesScreen() {
             </ThemedText>
 
             {/* Match 1: T20 Blast */}
-            <View style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9 }]}>
+            <Pressable
+              onPress={() => handleMatchCenterSelect('yesterday-cricket-1', 'cricket')}
+              style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9 }]}
+            >
               <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
                 <View style={styles.cardHeader}>
                   <View style={[styles.leagueTypeBadge, { backgroundColor: theme.secondary + '14', borderColor: theme.secondary + '33', borderWidth: 1 }]}>
@@ -405,7 +431,10 @@ export default function MatchesScreen() {
                       Finished
                     </ThemedText>
                   </View>
-                  <Pressable style={styles.matchCenterLink}>
+                  <Pressable
+                    onPress={() => handleMatchCenterSelect('yesterday-cricket-1', 'cricket')}
+                    style={styles.matchCenterLink}
+                  >
                     <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
                       Scorecard
                     </ThemedText>
@@ -413,10 +442,13 @@ export default function MatchesScreen() {
                   </Pressable>
                 </View>
               </View>
-            </View>
+            </Pressable>
 
             {/* Match 2: Champions League */}
-            <View style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9, marginTop: 12 }]}>
+            <Pressable
+              onPress={() => handleMatchCenterSelect('yesterday-football-1', 'football')}
+              style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9, marginTop: 12 }]}
+            >
               <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
                 <View style={styles.cardHeader}>
                   <View style={[styles.leagueTypeBadge, { backgroundColor: '#e8f0fe', borderColor: '#d2e3fc', borderWidth: 1 }]}>
@@ -459,7 +491,10 @@ export default function MatchesScreen() {
                       Finished
                     </ThemedText>
                   </View>
-                  <Pressable style={styles.matchCenterLink}>
+                  <Pressable
+                    onPress={() => handleMatchCenterSelect('yesterday-football-1', 'football')}
+                    style={styles.matchCenterLink}
+                  >
                     <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
                       Scorecard
                     </ThemedText>
@@ -467,27 +502,36 @@ export default function MatchesScreen() {
                   </Pressable>
                 </View>
               </View>
-            </View>
+            </Pressable>
           </View>
         </ScrollView>
 
         {/* FAB Actions */}
         <View style={styles.fabGroup}>
-          <Pressable
-            style={[styles.fabSecondary, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}
-            onPress={() => router.push('/create-team')}
-          >
-            <Ionicons name="shield-outline" size={20} color={theme.secondary} />
-            <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_700Bold', marginLeft: 6, fontSize: 11 }}>
-              Team
-            </ThemedText>
-          </Pressable>
-          <Pressable
-            style={[styles.fab, { backgroundColor: theme.secondaryContainer }, Shadows.level3]}
-            onPress={() => router.push('/new-match')}
-          >
-            <Ionicons name="add" size={28} color={theme.onSecondaryContainer} />
-          </Pressable>
+          <Animated.View style={{ transform: [{ scale: scaleAnimTeam }] }}>
+            <Pressable
+              onPressIn={() => handlePressIn(scaleAnimTeam)}
+              onPressOut={() => handlePressOut(scaleAnimTeam)}
+              style={[styles.fabSecondary, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
+              onPress={() => router.push('/create-team')}
+            >
+              <Ionicons name="shield-outline" size={20} color={theme.secondary} />
+              <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_700Bold', marginLeft: 6, fontSize: 11 }}>
+                Team
+              </ThemedText>
+            </Pressable>
+          </Animated.View>
+
+          <Animated.View style={{ transform: [{ scale: scaleAnimMatch }] }}>
+            <Pressable
+              onPressIn={() => handlePressIn(scaleAnimMatch)}
+              onPressOut={() => handlePressOut(scaleAnimMatch)}
+              style={[styles.fab, { backgroundColor: theme.secondaryContainer }]}
+              onPress={() => router.push('/new-match')}
+            >
+              <MaterialCommunityIcons name="calendar-plus" size={24} color={theme.onSecondaryContainer} />
+            </Pressable>
+          </Animated.View>
         </View>
 
       </SafeAreaView>
@@ -731,6 +775,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 100,
+    // Gold Glow Shadow
+    shadowColor: '#feae2c',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
   fabGroup: {
     position: 'absolute',
@@ -748,5 +798,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
+    // Soft Navy Shadow
+    shadowColor: '#1a2a33',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
 });
