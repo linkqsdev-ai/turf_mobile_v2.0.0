@@ -320,9 +320,9 @@ export default function TournamentsTab() {
                     ]}
                   >
                     {sport.library === 'Ionicons' ? (
-                      <Ionicons name={sport.icon as any} size={20} color={isSelected ? '#6b4500' : theme.text} />
+                      <Ionicons name={sport.icon as any} size={16} color={isSelected ? '#6b4500' : theme.text} />
                     ) : (
-                      <MaterialCommunityIcons name={sport.icon as any} size={20} color={isSelected ? '#6b4500' : theme.text} />
+                      <MaterialCommunityIcons name={sport.icon as any} size={16} color={isSelected ? '#6b4500' : theme.text} />
                     )}
                   </Pressable>
                 );
@@ -445,69 +445,67 @@ export default function TournamentsTab() {
                         <View style={[styles.cutoutTop, { backgroundColor: theme.background }]} />
                         <View style={[styles.cutoutBottom, { backgroundColor: theme.background }]} />
 
+                        {/* Flush Left Image Cover */}
+                        <Image source={t.banner} style={styles.ticketLeftImage} contentFit="cover" />
+
                         {/* Left Section (Details) */}
                         <View style={styles.ticketLeft}>
-                          <View style={styles.ticketHeaderRow}>
-                            <Image source={t.banner} style={styles.ticketThumb} contentFit="cover" />
-                            <View style={styles.ticketDetails}>
-                              <View style={styles.sportAndStatus}>
-                                <View style={styles.sportBadgeRow}>
-                                  {t.sport === 'Football' && <MaterialCommunityIcons name="soccer" size={12} color={theme.secondary} />}
-                                  {t.sport === 'Cricket' && <MaterialCommunityIcons name="cricket" size={12} color={theme.secondary} />}
-                                  {t.sport === 'Tennis' && <MaterialCommunityIcons name="tennis" size={12} color={theme.secondary} />}
-                                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 4 }}>
-                                    {t.sport}
-                                  </ThemedText>
-                                </View>
-
-                                {/* Live or Status badge */}
-                                {t.isLive ? (
-                                  <View style={[styles.statusBadgeInline, { backgroundColor: '#ff1744' }]}>
-                                    <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 8, fontWeight: '800' }}>LIVE</ThemedText>
-                                  </View>
-                                ) : (
-                                  <View style={[
-                                    styles.statusBadgeInline,
-                                    t.registrationStatus === 'Registering' && { backgroundColor: '#e2f9ec' },
-                                    t.registrationStatus === 'Filling Fast' && { backgroundColor: '#fff4e5' },
-                                    t.registrationStatus === 'Upcoming' && { backgroundColor: '#e6f0fa' },
-                                    t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2' }
-                                  ]}>
-                                    <ThemedText type="labelSm" style={[
-                                      { fontSize: 8, fontWeight: '700' },
-                                      t.registrationStatus === 'Registering' && { color: '#0f9f58' },
-                                      t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
-                                      t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
-                                      t.registrationStatus === 'Closed' && { color: '#7f8c8d' }
-                                    ]}>
-                                      {t.registrationStatus}
-                                    </ThemedText>
-                                  </View>
-                                )}
-                              </View>
-
-                              <ThemedText 
-                                type="bodyLg" 
-                                numberOfLines={1} 
-                                style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', marginTop: 4, paddingRight: 40 }}
-                              >
-                                {t.name}
+                          <View style={styles.sportAndStatus}>
+                            <View style={styles.sportBadgeRow}>
+                              {t.sport === 'Football' && <MaterialCommunityIcons name="soccer" size={12} color={theme.secondary} />}
+                              {t.sport === 'Cricket' && <MaterialCommunityIcons name="cricket" size={12} color={theme.secondary} />}
+                              {t.sport === 'Tennis' && <MaterialCommunityIcons name="tennis" size={12} color={theme.secondary} />}
+                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 4 }}>
+                                {t.sport}
                               </ThemedText>
-
-                              <View style={styles.ticketMetaRow}>
-                                <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
-                                <ThemedText type="labelSm" numberOfLines={1} style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2, flex: 1 }}>
-                                  {t.location}
-                                </ThemedText>
-                              </View>
-
-                              <View style={styles.ticketMetaRow}>
-                                <Ionicons name="calendar-outline" size={11} color={theme.textSecondary} />
-                                <ThemedText type="labelSm" numberOfLines={1} style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>
-                                  {formatDateRange(t.startDate, t.endDate)}
-                                </ThemedText>
-                              </View>
                             </View>
+
+                            {/* Live or Status badge */}
+                            {t.isLive ? (
+                              <View style={[styles.statusBadgeInline, { backgroundColor: '#ff1744' }]}>
+                                <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 8, fontWeight: '800' }}>LIVE</ThemedText>
+                              </View>
+                            ) : (
+                              <View style={[
+                                styles.statusBadgeInline,
+                                t.registrationStatus === 'Registering' && { backgroundColor: '#e2f9ec' },
+                                t.registrationStatus === 'Filling Fast' && { backgroundColor: '#fff4e5' },
+                                t.registrationStatus === 'Upcoming' && { backgroundColor: '#e6f0fa' },
+                                t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2' }
+                              ]}>
+                                <ThemedText type="labelSm" style={[
+                                  { fontSize: 8, fontWeight: '700' },
+                                  t.registrationStatus === 'Registering' && { color: '#0f9f58' },
+                                  t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
+                                  t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
+                                  t.registrationStatus === 'Closed' && { color: '#7f8c8d' }
+                                ]}>
+                                  {t.registrationStatus}
+                                </ThemedText>
+                              </View>
+                            )}
+                          </View>
+
+                          <ThemedText 
+                            type="bodyLg" 
+                            numberOfLines={1} 
+                            style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', marginTop: 4 }}
+                          >
+                            {t.name}
+                          </ThemedText>
+
+                          <View style={styles.ticketMetaRow}>
+                            <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                            <ThemedText type="labelSm" numberOfLines={1} style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2, flex: 1 }}>
+                              {t.location}
+                            </ThemedText>
+                          </View>
+
+                          <View style={styles.ticketMetaRow}>
+                            <Ionicons name="calendar-outline" size={11} color={theme.textSecondary} />
+                            <ThemedText type="labelSm" numberOfLines={1} style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>
+                              {formatDateRange(t.startDate, t.endDate)}
+                            </ThemedText>
                           </View>
 
                           {/* Team Progress Bar */}
@@ -524,16 +522,6 @@ export default function TournamentsTab() {
                               <View style={[styles.progressBarFill, { width: progressPercent, backgroundColor: theme.secondaryContainer }]} />
                             </View>
                           </View>
-
-                          {/* Quick Action Overlay (Bookmark & Share) */}
-                          <View style={{ flexDirection: 'row', gap: 6, position: 'absolute', top: 10, right: 10 }}>
-                            <Pressable style={styles.ticketActionBtn} onPress={() => toggleBookmark(t.id)}>
-                              <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={16} color={isBookmarked ? '#feae2c' : theme.textSecondary} />
-                            </Pressable>
-                            <Pressable style={styles.ticketActionBtn} onPress={() => handleShare(t.name)}>
-                              <Ionicons name="share-social-outline" size={16} color={theme.textSecondary} />
-                            </Pressable>
-                          </View>
                         </View>
 
                         {/* Dashed vertical separator line */}
@@ -541,10 +529,22 @@ export default function TournamentsTab() {
 
                         {/* Right Section (Stub) */}
                         <View style={styles.ticketRight}>
-                          <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8 }}>PRIZE POOL</ThemedText>
-                          <ThemedText type="bodyLg" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold', marginVertical: 2 }}>
-                            {t.prizePool}
-                          </ThemedText>
+                          {/* Quick Action Overlay (Bookmark & Share) */}
+                          <View style={styles.stubActions}>
+                            <Pressable style={styles.ticketActionBtn} onPress={() => toggleBookmark(t.id)}>
+                              <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={15} color={isBookmarked ? '#feae2c' : theme.textSecondary} />
+                            </Pressable>
+                            <Pressable style={styles.ticketActionBtn} onPress={() => handleShare(t.name)}>
+                              <Ionicons name="share-social-outline" size={15} color={theme.textSecondary} />
+                            </Pressable>
+                          </View>
+
+                          <View style={{ alignItems: 'center', marginTop: 12 }}>
+                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8 }}>PRIZE POOL</ThemedText>
+                            <ThemedText type="bodyLg" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold', marginVertical: 2 }}>
+                              {t.prizePool}
+                            </ThemedText>
+                          </View>
                           
                           <Pressable 
                             style={[styles.ticketRegisterBtn, { backgroundColor: theme.primary }]}
@@ -928,12 +928,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     position: 'relative',
-    height: 144,
+    height: 160,
   },
   cutoutTop: {
     position: 'absolute',
     top: -8,
-    right: '28%',
+    right: '30%',
     width: 16,
     height: 16,
     borderRadius: 8,
@@ -942,30 +942,21 @@ const styles = StyleSheet.create({
   cutoutBottom: {
     position: 'absolute',
     bottom: -8,
-    right: '28%',
+    right: '30%',
     width: 16,
     height: 16,
     borderRadius: 8,
     zIndex: 10,
+  },
+  ticketLeftImage: {
+    width: 100,
+    height: '100%',
   },
   ticketLeft: {
     flex: 1,
     padding: 12,
     justifyContent: 'space-between',
     position: 'relative',
-  },
-  ticketHeaderRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  ticketThumb: {
-    width: 76,
-    height: 76,
-    borderRadius: BorderRadius.lg,
-  },
-  ticketDetails: {
-    flex: 1,
-    justifyContent: 'center',
   },
   sportAndStatus: {
     flexDirection: 'row',
@@ -1010,24 +1001,31 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderWidth: 1,
     position: 'absolute',
-    right: '28%',
+    right: '30%',
   },
   ticketRight: {
-    width: '28%',
-    padding: 12,
+    width: '30%',
+    padding: 10,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    position: 'relative',
   },
   ticketRegisterBtn: {
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: BorderRadius.full,
-    marginTop: 6,
     width: '100%',
     alignItems: 'center',
   },
   ticketActionBtn: {
-    padding: 4,
+    padding: 2,
+  },
+  stubActions: {
+    flexDirection: 'row',
+    gap: 6,
+    position: 'absolute',
+    top: 6,
+    right: 8,
   },
 
   // Premium Grid Ticket Styles (Grid View)
