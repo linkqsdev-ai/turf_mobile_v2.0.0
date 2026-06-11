@@ -299,7 +299,7 @@ export default function TournamentsTab() {
             </View>
           </View>
 
-          {/* Sport Categories Row */}
+          {/* Sport Categories Row (Aligned Evenly) */}
           <View style={styles.categoriesSection}>
             <View style={styles.categoriesRow}>
               {[
@@ -539,9 +539,9 @@ export default function TournamentsTab() {
                             </Pressable>
                           </View>
 
-                          <View style={styles.prizeContainer}>
-                            <ThemedText type="labelSm" style={[styles.prizeLabel, { color: theme.textSecondary }]}>PRIZE POOL</ThemedText>
-                            <ThemedText type="bodyLg" style={[styles.prizeValue, { color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold' }]}>
+                          <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
+                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8, textAlign: 'center' }}>PRIZE POOL</ThemedText>
+                            <ThemedText type="bodyLg" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold', marginVertical: 2, textAlign: 'center' }}>
                               {t.prizePool}
                             </ThemedText>
                           </View>
@@ -797,7 +797,12 @@ const styles = StyleSheet.create({
   categoriesRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: Spacing.containerMargin,
+  },
+  categoriesScroll: {
+    paddingHorizontal: Spacing.containerMargin,
+    gap: Spacing.sm,
   },
   sportIconCircle: {
     width: 48,
@@ -811,7 +816,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
-    flexShrink: 0,
   },
   filtersRow: {
     flexDirection: 'row',
@@ -843,7 +847,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     alignSelf: 'center',
-    flexShrink: 0,
   },
   listSection: {
     marginTop: Spacing.md,
@@ -1009,7 +1012,9 @@ const styles = StyleSheet.create({
   },
   ticketRight: {
     width: '30%',
-    padding: 10,
+    paddingHorizontal: 8,
+    paddingTop: 32,
+    paddingBottom: 12,
     alignItems: 'center',
     justifyContent: 'space-between',
     position: 'relative',
@@ -1028,23 +1033,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
     position: 'absolute',
-    top: 6,
-    right: 8,
-  },
-  prizeContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    width: '100%',
-    marginTop: 12,
-  },
-  prizeLabel: {
-    fontSize: 8,
-    textAlign: 'center',
-  },
-  prizeValue: {
-    marginVertical: 2,
-    textAlign: 'center',
+    top: 8,
+    alignSelf: 'center',
   },
 
   // Premium Grid Ticket Styles (Grid View)
