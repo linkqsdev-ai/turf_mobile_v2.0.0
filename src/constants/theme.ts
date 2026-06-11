@@ -130,24 +130,24 @@ export const Typography = {
 };
 
 export const Shadows = {
-  // Soft ambient shadows using Deep Navy #001b3d
+  // Soft ambient shadows using Deep Navy #1a2a33
   level1: {
     borderWidth: 1,
-    borderColor: '#c3c7cb33',
+    borderColor: '#c3c7cb22',
   },
   level2: {
-    shadowColor: '#001b3d',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowColor: '#1a2a33',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 3,
   },
   level3: {
-    shadowColor: '#001b3d',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
+    shadowColor: '#1a2a33',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.06,
     shadowRadius: 24,
-    elevation: 8,
+    elevation: 6,
   },
 };
 
@@ -175,8 +175,8 @@ export const BorderRadius = {
   default: 4,
   md: 6,
   lg: 8,
-  xl: 12,
-  '2xl': 16,
+  xl: 16,      // Upgraded to 16px
+  '2xl': 24,   // Upgraded to 24px (Mockup visual styling)
   premium: 32, // Rounded-3xl in Tailwind
   full: 9999,
 };
