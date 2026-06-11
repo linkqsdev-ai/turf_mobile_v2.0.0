@@ -11,10 +11,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Image } from 'expo-image';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing, BorderRadius } from '@/constants/theme';
+import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 interface RosterPlayer {
@@ -28,8 +29,14 @@ interface AdminTeam {
   id: string;
   name: string;
   manager: string;
+  phone: string;
+  email: string;
+  rosterCount: number;
   payment: string;
+  paymentMethod: string;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Changes Requested';
+  logo: string;
+  requestDate: string;
 }
 
 export default function TeamRegistrationScreen() {
@@ -59,10 +66,58 @@ export default function TeamRegistrationScreen() {
 
   // Admin Data State
   const [adminTeams, setAdminTeams] = useState<AdminTeam[]>([
-    { id: 'at1', name: 'Red Devils FC', manager: 'John Doe', payment: 'Paid (₹175)', status: 'Pending' },
-    { id: 'at2', name: 'Blue Tigers', manager: 'Marcus Vance', payment: 'Paid (₹175)', status: 'Approved' },
-    { id: 'at3', name: 'London United', manager: 'Rob Miller', payment: 'Pending', status: 'Changes Requested' },
-    { id: 'at4', name: 'Titans CC', manager: 'Sam Wilson', payment: 'Paid (₹175)', status: 'Pending' },
+    { 
+      id: 'at1', 
+      name: 'Red Devils FC', 
+      manager: 'John Doe', 
+      phone: '+44 7911 123456', 
+      email: 'john.doe@example.com', 
+      rosterCount: 8, 
+      payment: 'Paid (₹175)', 
+      paymentMethod: 'Card', 
+      status: 'Pending', 
+      requestDate: '10m ago', 
+      logo: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=120&q=80' 
+    },
+    { 
+      id: 'at2', 
+      name: 'Blue Tigers', 
+      manager: 'Marcus Vance', 
+      phone: '+44 7911 234567', 
+      email: 'marcus.vance@example.com', 
+      rosterCount: 7, 
+      payment: 'Paid (₹175)', 
+      paymentMethod: 'ApplePay', 
+      status: 'Approved', 
+      requestDate: '2h ago', 
+      logo: 'https://images.unsplash.com/photo-1531415080290-bc98545ab3ef?auto=format&fit=crop&w=120&q=80' 
+    },
+    { 
+      id: 'at3', 
+      name: 'London United', 
+      manager: 'Rob Miller', 
+      phone: '+44 7911 345678', 
+      email: 'rob.miller@example.com', 
+      rosterCount: 5, 
+      payment: 'Pending', 
+      paymentMethod: 'None', 
+      status: 'Changes Requested', 
+      requestDate: '1d ago', 
+      logo: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=120&q=80' 
+    },
+    { 
+      id: 'at4', 
+      name: 'Titans CC', 
+      manager: 'Sam Wilson', 
+      phone: '+44 7911 456789', 
+      email: 'sam.wilson@example.com', 
+      rosterCount: 11, 
+      payment: 'Paid (₹175)', 
+      paymentMethod: 'Transfer', 
+      status: 'Pending', 
+      requestDate: '3d ago', 
+      logo: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=120&q=80' 
+    },
   ]);
 
   // Custom Toast State
@@ -364,65 +419,168 @@ export default function TeamRegistrationScreen() {
           <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
             <ThemedText type="headlineSm" style={styles.sectionTitle}>Registered Teams Requests</ThemedText>
             
-            <View style={[styles.adminTable, { borderColor: theme.outlineVariant + '44' }]}>
-              {adminTeams.map((t) => (
-                <View key={t.id} style={[styles.adminCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }]}>
-                  <View style={styles.rowBetween}>
-                    <View>
-                      <ThemedText type="bodySm" style={{ fontWeight: 'bold', color: theme.text }}>{t.name}</ThemedText>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10 }}>Manager: {t.manager}</ThemedText>
+            <View style={styles.adminTable}>
+              {adminTeams.map((t) => {
+                // Determine left border color based on status
+                let leftBorderColor = '#feae2c'; // Pending - Gold
+                if (t.status === 'Approved') leftBorderColor = '#0f9f58'; // Green
+                if (t.status === 'Rejected') leftBorderColor = '#ba1a1a'; // Red
+                if (t.status === 'Changes Requested') leftBorderColor = '#2980b9'; // Blue
+
+                // Determine dynamic payment icon
+                let paymentIcon: any = 'card-outline';
+                const method = t.paymentMethod || 'Card';
+                if (method === 'ApplePay') paymentIcon = 'logo-apple';
+                else if (method === 'Transfer') paymentIcon = 'business-outline';
+                else if (method === 'None') paymentIcon = 'cash-outline';
+
+                return (
+                  <View 
+                    key={t.id} 
+                    style={[
+                      styles.adminCard, 
+                      { 
+                        backgroundColor: theme.surfaceLowest, 
+                        borderLeftColor: leftBorderColor,
+                        borderLeftWidth: 4,
+                      },
+                      Shadows.level1
+                    ]}
+                  >
+                    {/* Upper Section: Logo and Name / Status */}
+                    <View style={styles.adminCardHeaderRow}>
+                      <Image source={t.logo} style={styles.adminTeamLogo} contentFit="cover" />
+                      
+                      <View style={styles.adminCardDetails}>
+                        <View style={styles.rowBetween}>
+                          <ThemedText type="bodySm" style={{ fontWeight: 'bold', color: theme.text }}>
+                            {t.name}
+                          </ThemedText>
+                          
+                          <View style={[
+                            styles.statusLabel,
+                            t.status === 'Pending' && { backgroundColor: '#fff4e5' },
+                            t.status === 'Approved' && { backgroundColor: '#e2f9ec' },
+                            t.status === 'Rejected' && { backgroundColor: '#ffdad6' },
+                            t.status === 'Changes Requested' && { backgroundColor: '#e6f0fa' }
+                          ]}>
+                            <ThemedText type="labelSm" style={[
+                              { fontSize: 8, fontWeight: '800' },
+                              t.status === 'Pending' && { color: '#e67e22' },
+                              t.status === 'Approved' && { color: '#0f9f58' },
+                              t.status === 'Rejected' && { color: '#ba1a1a' },
+                              t.status === 'Changes Requested' && { color: '#2980b9' }
+                            ]}>
+                              {t.status.toUpperCase()}
+                            </ThemedText>
+                          </View>
+                        </View>
+
+                        {/* Request Date Row */}
+                        <View style={styles.adminTimeRow}>
+                          <Ionicons name="time-outline" size={11} color={theme.textSecondary} />
+                          <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 4, fontSize: 10 }}>
+                            {t.requestDate || '10m ago'}
+                          </ThemedText>
+                        </View>
+                      </View>
                     </View>
-                    
-                    <View style={[
-                      styles.statusLabel,
-                      t.status === 'Pending' && { backgroundColor: '#fff4e5' },
-                      t.status === 'Approved' && { backgroundColor: '#e2f9ec' },
-                      t.status === 'Rejected' && { backgroundColor: '#ffdad6' },
-                      t.status === 'Changes Requested' && { backgroundColor: '#e6f0fa' }
-                    ]}>
-                      <ThemedText type="labelSm" style={[
-                        { fontSize: 9, fontWeight: '700' },
-                        t.status === 'Pending' && { color: '#e67e22' },
-                        t.status === 'Approved' && { color: '#0f9f58' },
-                        t.status === 'Rejected' && { color: '#ba1a1a' },
-                        t.status === 'Changes Requested' && { color: '#2980b9' }
-                      ]}>
-                        {t.status}
-                      </ThemedText>
+
+                    {/* Divider Line */}
+                    <View style={[styles.adminDivider, { backgroundColor: theme.outlineVariant + '33' }]} />
+
+                    {/* Two-Column Grid Info */}
+                    <View style={styles.adminCardGrid}>
+                      {/* Left Column: Manager Info */}
+                      <View style={styles.adminCardColumn}>
+                        <View style={styles.adminInfoRow}>
+                          <Ionicons name="person-outline" size={13} color={theme.textSecondary} />
+                          <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
+                            {t.manager}
+                          </ThemedText>
+                        </View>
+                        <View style={styles.adminInfoRow}>
+                          <Ionicons name="call-outline" size={13} color={theme.textSecondary} />
+                          <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
+                            {t.phone || '+44 7911 123456'}
+                          </ThemedText>
+                        </View>
+                        <View style={styles.adminInfoRow}>
+                          <Ionicons name="mail-outline" size={13} color={theme.textSecondary} />
+                          <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
+                            {t.email || 'manager@example.com'}
+                          </ThemedText>
+                        </View>
+                      </View>
+
+                      {/* Right Column: Roster & Payment */}
+                      <View style={styles.adminCardColumn}>
+                        <View style={styles.adminInfoRow}>
+                          <Ionicons name="people-outline" size={13} color={theme.textSecondary} />
+                          <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
+                            {(t.rosterCount !== undefined ? t.rosterCount : 8)} Players
+                          </ThemedText>
+                        </View>
+                        <View style={styles.adminInfoRow}>
+                          <Ionicons name="wallet-outline" size={13} color={theme.textSecondary} />
+                          <ThemedText 
+                            type="bodySm" 
+                            style={[
+                              styles.adminGridText, 
+                              { 
+                                color: t.payment === 'Pending' ? theme.error : '#0f9f58', 
+                                fontWeight: 'bold' 
+                              }
+                            ]} 
+                            numberOfLines={1}
+                          >
+                            {t.payment}
+                          </ThemedText>
+                        </View>
+                        <View style={styles.adminInfoRow}>
+                          <Ionicons name={paymentIcon} size={13} color={theme.textSecondary} />
+                          <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
+                            Pay: {method}
+                          </ThemedText>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Divider Line */}
+                    <View style={[styles.adminDivider, { backgroundColor: theme.outlineVariant + '33' }]} />
+
+                    {/* Actions Row */}
+                    <View style={styles.adminActionsRow}>
+                      <View style={styles.adminSecondaryActions}>
+                        {/* Reject Button (Circular soft red) */}
+                        <Pressable 
+                          style={styles.adminCircleBtnReject}
+                          onPress={() => handleAdminAction(t.id, 'Reject')}
+                        >
+                          <Ionicons name="close" size={18} color="#ba1a1a" />
+                        </Pressable>
+
+                        {/* Request Info Button (Circular soft blue) */}
+                        <Pressable 
+                          style={styles.adminCircleBtnInfo}
+                          onPress={() => handleAdminAction(t.id, 'Request Changes')}
+                        >
+                          <Ionicons name="chatbubble-ellipses-outline" size={16} color="#2980b9" />
+                        </Pressable>
+                      </View>
+
+                      {/* Approve Button (Emerald Green Pill) */}
+                      <Pressable 
+                        style={styles.adminApprovePillBtn}
+                        onPress={() => handleAdminAction(t.id, 'Approve')}
+                      >
+                        <Ionicons name="checkmark-circle-outline" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                        <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: 'bold' }}>Approve Team</ThemedText>
+                      </Pressable>
                     </View>
                   </View>
-
-                  <View style={[styles.adminCardMeta, { borderTopColor: theme.outlineVariant + '11' }]}>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10 }}>Fees Status: {t.payment}</ThemedText>
-                  </View>
-
-                  <View style={styles.adminActionsRow}>
-                    <Pressable 
-                      style={[styles.adminBtn, { backgroundColor: '#e2f9ec' }]}
-                      onPress={() => handleAdminAction(t.id, 'Approve')}
-                    >
-                      <Ionicons name="checkmark" size={12} color="#0f9f58" style={{ marginRight: 2 }} />
-                      <ThemedText type="labelSm" style={{ color: '#0f9f58', fontSize: 10 }}>Approve</ThemedText>
-                    </Pressable>
-
-                    <Pressable 
-                      style={[styles.adminBtn, { backgroundColor: '#ffdad6' }]}
-                      onPress={() => handleAdminAction(t.id, 'Reject')}
-                    >
-                      <Ionicons name="close" size={12} color="#ba1a1a" style={{ marginRight: 2 }} />
-                      <ThemedText type="labelSm" style={{ color: '#ba1a1a', fontSize: 10 }}>Reject</ThemedText>
-                    </Pressable>
-
-                    <Pressable 
-                      style={[styles.adminBtn, { backgroundColor: '#e6f0fa' }]}
-                      onPress={() => handleAdminAction(t.id, 'Request Changes')}
-                    >
-                      <Ionicons name="refresh" size={12} color="#2980b9" style={{ marginRight: 2 }} />
-                      <ThemedText type="labelSm" style={{ color: '#2980b9', fontSize: 10 }}>Request Info</ThemedText>
-                    </Pressable>
-                  </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           </ScrollView>
         )}
@@ -593,6 +751,7 @@ const styles = StyleSheet.create({
   // Admin Styles
   adminTable: {
     gap: 12,
+    marginTop: Spacing.xs,
   },
   adminCard: {
     borderWidth: 1,
@@ -604,23 +763,92 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: BorderRadius.md,
   },
-  adminCardMeta: {
-    borderTopWidth: 1,
-    paddingTop: 8,
-    marginTop: 8,
+  adminCardHeaderRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  adminTeamLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: '#feae2c',
+  },
+  adminCardDetails: {
+    flex: 1,
+    gap: 2,
+  },
+  adminTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 1,
+  },
+  adminDivider: {
+    height: 1,
+    marginVertical: 12,
+  },
+  adminCardGrid: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  adminCardColumn: {
+    flex: 1,
+    gap: 8,
+  },
+  adminInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  adminGridText: {
+    color: '#111c2c',
+    fontSize: 11,
+    fontWeight: '500',
+    marginLeft: 6,
+    flex: 1,
   },
   adminActionsRow: {
     flexDirection: 'row',
-    gap: 6,
-    marginTop: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  adminBtn: {
-    flex: 1,
+  adminSecondaryActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  adminCircleBtnReject: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#ffdad6',
+    borderWidth: 1,
+    borderColor: '#ba1a1a22',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  adminCircleBtnInfo: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#e6f0fa',
+    borderWidth: 1,
+    borderColor: '#2980b922',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  adminApprovePillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
-    borderRadius: BorderRadius.md,
+    backgroundColor: '#0f9f58',
+    paddingHorizontal: 16,
+    height: 38,
+    borderRadius: 19,
+    shadowColor: '#0f9f58',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   toastContainer: {
     position: 'absolute',
