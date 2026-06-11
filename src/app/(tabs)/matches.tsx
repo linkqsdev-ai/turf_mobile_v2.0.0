@@ -96,7 +96,7 @@ export default function MatchesScreen() {
                     <View style={styles.liveIndicatorDot} />
                   )}
                   <ThemedText
-                    type="labelMd"
+                    type="labelSm"
                     style={{ color: isActive ? theme.onPrimary : theme.textSecondary }}
                   >
                     {filter}
@@ -193,10 +193,10 @@ export default function MatchesScreen() {
                     onPress={() => handleMatchCenterSelect('rcb-ipl')}
                     style={styles.matchCenterLink}
                   >
-                    <ThemedText type="labelMd" style={{ color: theme.text }}>
+                    <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
                       Match Center
                     </ThemedText>
-                    <Ionicons name="arrow-forward" size={14} color={theme.text} style={{ marginLeft: 2 }} />
+                    <Ionicons name="arrow-forward" size={12} color={theme.text} style={{ marginLeft: 2 }} />
                   </Pressable>
                 </View>
               </View>
@@ -275,10 +275,10 @@ export default function MatchesScreen() {
                     onPress={() => router.push({ pathname: '/scoring', params: { matchId: 'futsal-1', sport: 'football' } })}
                     style={styles.matchCenterLink}
                   >
-                    <ThemedText type="labelMd" style={{ color: theme.text }}>
+                    <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
                       Match Center
                     </ThemedText>
-                    <Ionicons name="arrow-forward" size={14} color={theme.text} style={{ marginLeft: 2 }} />
+                    <Ionicons name="arrow-forward" size={12} color={theme.text} style={{ marginLeft: 2 }} />
                   </Pressable>
                 </View>
               </View>
@@ -335,10 +335,10 @@ export default function MatchesScreen() {
                     </ThemedText>
                   </View>
                   <Pressable style={styles.matchCenterLink}>
-                    <ThemedText type="labelMd" style={{ color: theme.text }}>
+                    <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
                       Scorecard
                     </ThemedText>
-                    <Ionicons name="chevron-forward" size={16} color={theme.text} />
+                    <Ionicons name="chevron-forward" size={12} color={theme.text} />
                   </Pressable>
                 </View>
               </View>
