@@ -486,26 +486,33 @@ export default function TeamRegistrationScreen() {
                       </View>
                     </View>
 
-                    {/* Divider Line */}
-                    <View style={[styles.adminDivider, { backgroundColor: theme.outlineVariant + '33' }]} />
-
-                    {/* Two-Column Grid Info */}
-                    <View style={styles.adminCardGrid}>
-                      {/* Left Column: Manager Info */}
-                      <View style={styles.adminCardColumn}>
-                        <View style={styles.adminInfoRow}>
+                    {/* Tinted Box grouping details */}
+                    <View style={[styles.adminInfoBox, { backgroundColor: theme.surfaceLow }]}>
+                      {/* Row 1: Manager & Roster */}
+                      <View style={styles.adminInfoRowGroup}>
+                        <View style={styles.adminInfoRowHalf}>
                           <Ionicons name="person-outline" size={13} color={theme.textSecondary} />
                           <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
                             {t.manager}
                           </ThemedText>
                         </View>
-                        <View style={styles.adminInfoRow}>
+                        <View style={styles.adminInfoRowHalf}>
+                          <Ionicons name="people-outline" size={13} color={theme.textSecondary} />
+                          <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
+                            {(t.rosterCount !== undefined ? t.rosterCount : 8)} Players
+                          </ThemedText>
+                        </View>
+                      </View>
+
+                      {/* Row 2: Phone & Email */}
+                      <View style={styles.adminInfoRowGroup}>
+                        <View style={styles.adminInfoRowHalf}>
                           <Ionicons name="call-outline" size={13} color={theme.textSecondary} />
                           <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
                             {t.phone || '+44 7911 123456'}
                           </ThemedText>
                         </View>
-                        <View style={styles.adminInfoRow}>
+                        <View style={styles.adminInfoRowHalf}>
                           <Ionicons name="mail-outline" size={13} color={theme.textSecondary} />
                           <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
                             {t.email || 'manager@example.com'}
@@ -513,15 +520,9 @@ export default function TeamRegistrationScreen() {
                         </View>
                       </View>
 
-                      {/* Right Column: Roster & Payment */}
-                      <View style={styles.adminCardColumn}>
-                        <View style={styles.adminInfoRow}>
-                          <Ionicons name="people-outline" size={13} color={theme.textSecondary} />
-                          <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
-                            {(t.rosterCount !== undefined ? t.rosterCount : 8)} Players
-                          </ThemedText>
-                        </View>
-                        <View style={styles.adminInfoRow}>
+                      {/* Row 3: Fees & Method */}
+                      <View style={styles.adminInfoRowGroup}>
+                        <View style={styles.adminInfoRowHalf}>
                           <Ionicons name="wallet-outline" size={13} color={theme.textSecondary} />
                           <ThemedText 
                             type="bodySm" 
@@ -537,7 +538,7 @@ export default function TeamRegistrationScreen() {
                             {t.payment}
                           </ThemedText>
                         </View>
-                        <View style={styles.adminInfoRow}>
+                        <View style={styles.adminInfoRowHalf}>
                           <Ionicons name={paymentIcon} size={13} color={theme.textSecondary} />
                           <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
                             Pay: {method}
@@ -546,36 +547,33 @@ export default function TeamRegistrationScreen() {
                       </View>
                     </View>
 
-                    {/* Divider Line */}
-                    <View style={[styles.adminDivider, { backgroundColor: theme.outlineVariant + '33' }]} />
-
                     {/* Actions Row */}
                     <View style={styles.adminActionsRow}>
-                      <View style={styles.adminSecondaryActions}>
-                        {/* Reject Button (Circular soft red) */}
-                        <Pressable 
-                          style={styles.adminCircleBtnReject}
-                          onPress={() => handleAdminAction(t.id, 'Reject')}
-                        >
-                          <Ionicons name="close" size={18} color="#ba1a1a" />
-                        </Pressable>
-
-                        {/* Request Info Button (Circular soft blue) */}
-                        <Pressable 
-                          style={styles.adminCircleBtnInfo}
-                          onPress={() => handleAdminAction(t.id, 'Request Changes')}
-                        >
-                          <Ionicons name="chatbubble-ellipses-outline" size={16} color="#2980b9" />
-                        </Pressable>
-                      </View>
-
-                      {/* Approve Button (Emerald Green Pill) */}
+                      {/* Reject Button (Outline Red Pill) */}
                       <Pressable 
-                        style={styles.adminApprovePillBtn}
+                        style={styles.adminPillBtnReject}
+                        onPress={() => handleAdminAction(t.id, 'Reject')}
+                      >
+                        <Ionicons name="close" size={13} color="#ba1a1a" style={{ marginRight: 4 }} />
+                        <ThemedText type="labelSm" style={{ color: '#ba1a1a', fontWeight: 'bold' }}>Reject</ThemedText>
+                      </Pressable>
+
+                      {/* Request Info Button (Outline Blue Pill) */}
+                      <Pressable 
+                        style={styles.adminPillBtnInfo}
+                        onPress={() => handleAdminAction(t.id, 'Request Changes')}
+                      >
+                        <Ionicons name="chatbubble-ellipses-outline" size={13} color="#2980b9" style={{ marginRight: 4 }} />
+                        <ThemedText type="labelSm" style={{ color: '#2980b9', fontWeight: 'bold' }}>Info</ThemedText>
+                      </Pressable>
+
+                      {/* Approve Button (Solid Green Pill) */}
+                      <Pressable 
+                        style={styles.adminPillBtnApprove}
                         onPress={() => handleAdminAction(t.id, 'Approve')}
                       >
-                        <Ionicons name="checkmark-circle-outline" size={16} color="#ffffff" style={{ marginRight: 6 }} />
-                        <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: 'bold' }}>Approve Team</ThemedText>
+                        <Ionicons name="checkmark-circle-outline" size={13} color="#ffffff" style={{ marginRight: 4 }} />
+                        <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: 'bold' }}>Approve</ThemedText>
                       </Pressable>
                     </View>
                   </View>
@@ -784,17 +782,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 1,
   },
-  adminDivider: {
-    height: 1,
+  adminInfoBox: {
+    padding: 12,
+    borderRadius: BorderRadius.xl,
+    gap: 10,
     marginVertical: 12,
   },
-  adminCardGrid: {
+  adminInfoRowGroup: {
     flexDirection: 'row',
-    gap: 16,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  adminCardColumn: {
-    flex: 1,
-    gap: 8,
+  adminInfoRowHalf: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '48%',
   },
   adminInfoRow: {
     flexDirection: 'row',
@@ -809,46 +811,42 @@ const styles = StyleSheet.create({
   },
   adminActionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
   },
-  adminSecondaryActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  adminCircleBtnReject: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#ffdad6',
-    borderWidth: 1,
-    borderColor: '#ba1a1a22',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  adminCircleBtnInfo: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#e6f0fa',
-    borderWidth: 1,
-    borderColor: '#2980b922',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  adminApprovePillBtn: {
+  adminPillBtnApprove: {
+    flex: 1.2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#0f9f58',
-    paddingHorizontal: 16,
-    height: 38,
-    borderRadius: 19,
+    height: 36,
+    borderRadius: 18,
     shadowColor: '#0f9f58',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,
+  },
+  adminPillBtnReject: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ba1a1a',
+    height: 36,
+    borderRadius: 18,
+  },
+  adminPillBtnInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#2980b9',
+    height: 36,
+    borderRadius: 18,
   },
   toastContainer: {
     position: 'absolute',
