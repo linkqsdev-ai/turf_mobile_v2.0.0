@@ -67,17 +67,23 @@ export default function CreateTeamScreen() {
         {/* Header */}
         <View style={[styles.header, { backgroundColor: theme.background }]}>
           <View style={styles.headerLeft}>
-            <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Pressable
+              onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/matches')}
+              style={styles.backBtn}
+            >
               <Ionicons name="arrow-back" size={24} color={theme.text} />
             </Pressable>
-            <ThemedText type="headlineSm" style={{ fontFamily: 'HankenGrotesk_800ExtraBold', letterSpacing: -0.5 }}>
-              APEX VELOCITY
+            <ThemedText style={{ fontSize: 17, fontFamily: 'HankenGrotesk_700Bold', color: theme.text, letterSpacing: -0.3 }}>
+              Create Team
             </ThemedText>
           </View>
           <View style={styles.headerRight}>
-            <View style={styles.avatarMini}>
-              <Ionicons name="person" size={16} color="#ffffff" />
-            </View>
+            <Pressable style={styles.iconBtn}>
+              <Ionicons name="notifications-outline" size={20} color={theme.textSecondary} />
+            </Pressable>
+            <Pressable style={[styles.iconBtn, styles.avatarMini]}>
+              <Ionicons name="person" size={15} color="#ffffff" />
+            </Pressable>
           </View>
         </View>
 
@@ -92,11 +98,14 @@ export default function CreateTeamScreen() {
                     Foundation
                   </ThemedText>
                 </View>
-                <ThemedText style={{ color: '#ffffff', fontSize: 18, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 2, marginBottom: 2 }}>
+                <ThemedText style={{ color: '#ffffff', fontSize: 15, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 2, marginBottom: 2, lineHeight: 20 }}>
                   Build Your Legacy
                 </ThemedText>
-                <ThemedText style={{ color: '#75859d', fontSize: 12, fontFamily: 'HankenGrotesk_400Regular', lineHeight: 16 }}>
-                  Define the core identity of your squad to pursue peak performance.
+                <ThemedText style={{ color: '#75859d', fontSize: 11, fontFamily: 'HankenGrotesk_400Regular', lineHeight: 15 }}>
+                  Define your squad's core identity.
+                </ThemedText>
+                <ThemedText style={{ color: '#75859d', fontSize: 11, fontFamily: 'HankenGrotesk_400Regular', lineHeight: 15 }}>
+                  Set the name, logo, sport and home ground.
                 </ThemedText>
               </View>
               <View style={styles.proBadgeCompact}>
@@ -117,12 +126,12 @@ export default function CreateTeamScreen() {
               </View>
             </View>
 
-            {/* Compact Crest Upload Row */}
+            {/* Logo Upload Row */}
             <View style={styles.crestUploadContainer}>
               <View style={{ flex: 1, paddingRight: 12 }}>
-                <ThemedText style={styles.inputLabel}>Team Crest</ThemedText>
+                <ThemedText style={styles.inputLabel}>Team Logo</ThemedText>
                 <ThemedText style={{ fontSize: 11, fontFamily: 'HankenGrotesk_400Regular', color: theme.textSecondary }}>
-                  Upload a square JPEG or PNG logo for your squad.
+                  Upload a square JPEG or PNG image as your team logo.
                 </ThemedText>
               </View>
               <View style={[styles.crestUpload, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '60' }]}>
@@ -271,7 +280,12 @@ const styles = StyleSheet.create({
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   backBtn: { padding: 4 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  iconBtn: {
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   avatarMini: {
     width: 28, height: 28,
     borderRadius: 14,

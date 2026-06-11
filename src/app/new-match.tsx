@@ -63,19 +63,23 @@ export default function NewMatchScreen() {
         {/* Header */}
         <View style={[styles.header, { backgroundColor: theme.background }]}>
           <View style={styles.headerLeft}>
-            <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Pressable
+              onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/matches')}
+              style={styles.backBtn}
+            >
               <Ionicons name="arrow-back" size={24} color={theme.text} />
             </Pressable>
-            <ThemedText type="headlineSm" style={{ fontFamily: 'HankenGrotesk_800ExtraBold', letterSpacing: -0.5 }}>
-              APEX VELOCITY
+            <ThemedText style={{ fontSize: 17, fontFamily: 'HankenGrotesk_700Bold', color: theme.text, letterSpacing: -0.3 }}>
+              New Match
             </ThemedText>
           </View>
           <View style={styles.headerRight}>
-            <Ionicons name="notifications-outline" size={22} color={theme.textSecondary} />
-            <View style={{ width: 8 }} />
-            <View style={styles.avatarMini}>
-              <Ionicons name="person" size={14} color="#ffffff" />
-            </View>
+            <Pressable style={styles.iconBtn}>
+              <Ionicons name="notifications-outline" size={20} color={theme.textSecondary} />
+            </Pressable>
+            <Pressable style={[styles.iconBtn, styles.avatarMini]}>
+              <Ionicons name="person" size={15} color="#ffffff" />
+            </Pressable>
           </View>
         </View>
 
@@ -304,7 +308,12 @@ const styles = StyleSheet.create({
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   backBtn: { padding: 4 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  iconBtn: {
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   avatarMini: {
     width: 28, height: 28,
     borderRadius: 14,
