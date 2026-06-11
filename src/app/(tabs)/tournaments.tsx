@@ -792,12 +792,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   categoriesSection: {
-    marginTop: Spacing.md,
+    marginTop: 12,
   },
   categoriesRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
     paddingHorizontal: Spacing.containerMargin,
   },
   categoriesScroll: {
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.containerMargin,
-    marginTop: Spacing.md,
+    marginTop: 12,
     gap: 8,
   },
   statusScrollView: {
