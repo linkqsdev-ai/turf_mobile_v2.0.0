@@ -27,13 +27,13 @@ function TabIcon({
           <Ionicons 
             name={focused ? iconName as any : `${iconName}-outline` as any} 
             size={20} 
-            color={isBook && focused ? '#05151e' : color} 
+            color={isBook ? (focused ? '#5D68E8' : '#ffffff') : color} 
           />
         ) : (
           <MaterialCommunityIcons 
             name={iconName as any} 
             size={24} 
-            color={isBook ? (focused ? '#05151e' : '#5D68E8') : color} 
+            color={isBook ? (focused ? '#5D68E8' : '#ffffff') : color} 
           />
         )}
       </View>
@@ -46,12 +46,12 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#5D68E8', // Primary Blue
-        tabBarInactiveTintColor: '#81919c', // Muted Navy Gray
+        tabBarActiveTintColor: '#ffffff', // White
+        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)', // Muted White
         tabBarStyle: {
-          backgroundColor: '#05151e', // Dark Navy background (Technical OS contrast)
+          backgroundColor: '#5D68E8', // Primary Blue
           borderTopWidth: 1,
-          borderTopColor: 'rgba(93, 104, 232, 0.08)', // Premium subtle border
+          borderTopColor: 'rgba(255, 255, 255, 0.15)', // Premium subtle border
           height: Platform.OS === 'ios' ? 90 : 76,
           paddingBottom: Platform.OS === 'ios' ? 28 : 14,
           paddingTop: 8,
@@ -151,15 +151,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   iconWrapperActive: {
-    backgroundColor: 'rgba(93, 104, 232, 0.15)', // Premium soft blue glow backdrop
+    backgroundColor: 'rgba(255, 255, 255, 0.15)', // Premium soft white glow backdrop
   },
   iconWrapperBook: {
     height: 50,
     width: 50,
     borderRadius: 25,
-    backgroundColor: '#12202a',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)', // Semi-transparent white
     borderWidth: 1.5,
-    borderColor: 'rgba(93, 104, 232, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.4)',
     // Shadow for premium floating look
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 6 },
@@ -168,8 +168,8 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   iconWrapperBookActive: {
-    backgroundColor: '#5D68E8',
-    borderColor: '#5D68E8',
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
   },
   activeDot: {
     position: 'absolute',
@@ -177,6 +177,6 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#5D68E8', // Sleek blue active dot
+    backgroundColor: '#ffffff', // Sleek white active dot
   },
 });
