@@ -16,6 +16,7 @@ import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 // Mock Data lookup for the venues
 const VENUE_DETAILS: Record<string, {
@@ -160,170 +161,172 @@ export default function TurfDetailsScreen() {
           </Pressable>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {/* Hero Image Section */}
-          <View style={styles.heroContainer}>
-            <View style={[styles.heroCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}>
-              <Image source={details.image} style={styles.heroImage} contentFit="cover" />
-              
-              {/* Premium tag overlayed on top of the image */}
-              <View style={styles.heroOverlayTop}>
-                <View style={[styles.premiumTag, { backgroundColor: theme.secondaryContainer }]}>
-                  <Ionicons name="sparkles" size={10} color={theme.onSecondaryContainer} style={{ marginRight: 4 }} />
-                  <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontWeight: '800', fontSize: 9 }}>
-                    PREMIUM TURF
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Title & Metadata */}
-          <View style={styles.contentSection}>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-              <ThemedText type="headlineLg" style={{ color: theme.text, flex: 1, fontFamily: 'HankenGrotesk_700Bold' }}>
-                {details.name}
-              </ThemedText>
-              <View style={[styles.sportBadge, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
-                {details.sportLibrary === 'Ionicons' ? (
-                  <Ionicons name={details.sportIcon as any} size={16} color={theme.secondary} />
-                ) : (
-                  <MaterialCommunityIcons name={details.sportIcon as any} size={16} color={theme.secondary} />
-                )}
-              </View>
-            </View>
-
-            <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={14} color={theme.secondary} />
-              <ThemedText type="bodyMd" style={{ color: theme.textSecondary, marginLeft: 4 }}>
-                {details.location}
-              </ThemedText>
-              <View style={[styles.dot, { backgroundColor: theme.outlineVariant }]} />
-              
-              <Pressable onPress={() => setReviewsVisible(true)} style={styles.ratingRow}>
-                <Ionicons name="star" size={14} color="#5D68E8" />
-                <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4, fontWeight: '700' }}>
-                  {details.rating}
-                </ThemedText>
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, textDecorationLine: 'underline' }}>
-                  ({details.reviews.split(' ')[0]})
-                </ThemedText>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Bento Quick Stats Grid - Compact Icon-only design */}
-          <View style={styles.bentoGrid}>
-            <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-              <View style={[styles.bentoIcon, { backgroundColor: theme.surfaceLow }]}>
-                <Ionicons name="wallet-outline" size={18} color={theme.secondary} />
-              </View>
-              <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]}>
-                {details.price}
-              </ThemedText>
-            </View>
-
-            <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-              <View style={[styles.bentoIcon, { backgroundColor: theme.surfaceLow }]}>
-                <MaterialCommunityIcons name="grass" size={18} color={theme.secondary} />
-              </View>
-              <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]} numberOfLines={1}>
-                {details.pitch}
-              </ThemedText>
-            </View>
-
-            <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-              <View style={[styles.bentoIcon, { backgroundColor: theme.surfaceLow }]}>
-                <Ionicons name="time-outline" size={18} color={theme.secondary} />
-              </View>
-              <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]}>
-                {details.hours.replace(/\s+/g, '')}
-              </ThemedText>
-            </View>
-
-            <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-              <View style={[styles.bentoIcon, { backgroundColor: theme.surfaceLow }]}>
-                <Ionicons name="people-outline" size={18} color={theme.secondary} />
-              </View>
-              <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]} numberOfLines={1}>
-                {details.capacity.split(' ')[0]} Plrs
-              </ThemedText>
-            </View>
-          </View>
-
-          {/* About Section */}
-          <View style={styles.contentSection}>
-            <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-              <ThemedText type="headlineSm" style={styles.cardSectionHeader}>
-                About the Venue
-              </ThemedText>
-              <ThemedText type="bodyLg" style={{ color: theme.textSecondary, lineHeight: 24 }}>
-                {details.about}
-              </ThemedText>
-            </View>
-          </View>
-
-          {/* Amenities Section */}
-          <View style={styles.contentSection}>
-            <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-              <ThemedText type="headlineSm" style={styles.cardSectionHeader}>
-                Venue Amenities
-              </ThemedText>
-              <View style={styles.amenitiesGrid}>
-                {details.amenities.map((item, idx) => (
-                  <View key={idx} style={[styles.amenityRow, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '1a' }]}>
-                    <Ionicons name={item.icon as any} size={15} color={theme.secondary} />
-                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_600SemiBold', color: theme.text, fontSize: 12 }} numberOfLines={1}>
-                      {item.title}
+        <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            {/* Hero Image Section */}
+            <View style={styles.heroContainer}>
+              <View style={[styles.heroCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}>
+                <Image source={details.image} style={styles.heroImage} contentFit="cover" />
+                
+                {/* Premium tag overlayed on top of the image */}
+                <View style={styles.heroOverlayTop}>
+                  <View style={[styles.premiumTag, { backgroundColor: theme.secondaryContainer }]}>
+                    <Ionicons name="sparkles" size={10} color={theme.onSecondaryContainer} style={{ marginRight: 4 }} />
+                    <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontWeight: '800', fontSize: 9 }}>
+                      PREMIUM TURF
                     </ThemedText>
                   </View>
-                ))}
+                </View>
               </View>
             </View>
-          </View>
 
-          {/* Location Map Preview */}
-          <View style={[styles.contentSection, { paddingBottom: 120 }]}>
-            <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-              <ThemedText type="headlineSm" style={styles.cardSectionHeader}>
-                Location
-              </ThemedText>
-              
-              {/* Map Placeholder Card using grayscale theme */}
-              <View style={styles.mapContainer}>
-                {/* Grayscale map image */}
-                <Image
-                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAs7ZFxpDuTY0Y20RzzsmBGxAjht8U5AihgJyskprBmTPKVYrEOab08NWaF-4BFy3UjwPr46PMa9oRy0TqoklyqETyaI3T9xbHvBGj0vyYb99qgZn6w5StHhG9_NAMWkvZiyjhoW9QJ4TVDCuUjWD2x6xrp0HlAaAIVRu2xmLKg6V1CrRxUQiNFhiU_n_PBx9V6T9ZF5x3yGwizSIx_I4x5fTWBozUqBJ77o8N5RyeuxUvrf6uWewzXD86IF4X_G5brMzCocIakM-w' }}
-                  style={styles.mapImage}
-                  contentFit="cover"
-                />
-                <View style={styles.mapMarkerContainer}>
-                  <View style={[styles.mapMarker, { backgroundColor: theme.primaryContainer }]}>
-                    <Ionicons name="location" size={24} color="#ffffff" />
-                  </View>
+            {/* Title & Metadata */}
+            <View style={styles.contentSection}>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                <ThemedText type="headlineLg" style={{ color: theme.text, flex: 1, fontFamily: 'HankenGrotesk_700Bold' }}>
+                  {details.name}
+                </ThemedText>
+                <View style={[styles.sportBadge, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
+                  {details.sportLibrary === 'Ionicons' ? (
+                    <Ionicons name={details.sportIcon as any} size={16} color={theme.secondary} />
+                  ) : (
+                    <MaterialCommunityIcons name={details.sportIcon as any} size={16} color={theme.secondary} />
+                  )}
                 </View>
               </View>
 
-              <View style={styles.locationFooter}>
-                <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>
-                  {details.location.split(',')[0]}
+              <View style={styles.locationRow}>
+                <Ionicons name="location-outline" size={14} color={theme.secondary} />
+                <ThemedText type="bodyMd" style={{ color: theme.textSecondary, marginLeft: 4 }}>
+                  {details.location}
                 </ThemedText>
-                <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
-                  {details.location.split(',')[1]}
-                </ThemedText>
+                <View style={[styles.dot, { backgroundColor: theme.outlineVariant }]} />
                 
-                <Pressable style={styles.directionsLink}>
-                  <ThemedText type="labelMd" style={{ color: theme.secondary, fontWeight: '800' }}>
-                    Get Directions
+                <Pressable onPress={() => setReviewsVisible(true)} style={styles.ratingRow}>
+                  <Ionicons name="star" size={14} color="#5D68E8" />
+                  <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4, fontWeight: '700' }}>
+                    {details.rating}
                   </ThemedText>
-                  <Ionicons name="arrow-forward" size={14} color={theme.secondary} style={{ marginLeft: 4 }} />
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, textDecorationLine: 'underline' }}>
+                    ({details.reviews.split(' ')[0]})
+                  </ThemedText>
                 </Pressable>
               </View>
             </View>
-          </View>
 
-        </ScrollView>
+            {/* Bento Quick Stats Grid - Compact Icon-only design */}
+            <View style={styles.bentoGrid}>
+              <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+                <View style={[styles.bentoIcon, { backgroundColor: theme.surfaceLow }]}>
+                  <Ionicons name="wallet-outline" size={18} color={theme.secondary} />
+                </View>
+                <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]}>
+                  {details.price}
+                </ThemedText>
+              </View>
+
+              <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+                <View style={[styles.bentoIcon, { backgroundColor: theme.surfaceLow }]}>
+                  <MaterialCommunityIcons name="grass" size={18} color={theme.secondary} />
+                </View>
+                <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]} numberOfLines={1}>
+                  {details.pitch}
+                </ThemedText>
+              </View>
+
+              <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+                <View style={[styles.bentoIcon, { backgroundColor: theme.surfaceLow }]}>
+                  <Ionicons name="time-outline" size={18} color={theme.secondary} />
+                </View>
+                <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]}>
+                  {details.hours.replace(/\s+/g, '')}
+                </ThemedText>
+              </View>
+
+              <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+                <View style={[styles.bentoIcon, { backgroundColor: theme.surfaceLow }]}>
+                  <Ionicons name="people-outline" size={18} color={theme.secondary} />
+                </View>
+                <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]} numberOfLines={1}>
+                  {details.capacity.split(' ')[0]} Plrs
+                </ThemedText>
+              </View>
+            </View>
+
+            {/* About Section */}
+            <View style={styles.contentSection}>
+              <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+                <ThemedText type="headlineSm" style={styles.cardSectionHeader}>
+                  About the Venue
+                </ThemedText>
+                <ThemedText type="bodyLg" style={{ color: theme.textSecondary, lineHeight: 24 }}>
+                  {details.about}
+                </ThemedText>
+              </View>
+            </View>
+
+            {/* Amenities Section */}
+            <View style={styles.contentSection}>
+              <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+                <ThemedText type="headlineSm" style={styles.cardSectionHeader}>
+                  Venue Amenities
+                </ThemedText>
+                <View style={styles.amenitiesGrid}>
+                  {details.amenities.map((item, idx) => (
+                    <View key={idx} style={[styles.amenityRow, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '1a' }]}>
+                      <Ionicons name={item.icon as any} size={15} color={theme.secondary} />
+                      <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_600SemiBold', color: theme.text, fontSize: 12 }} numberOfLines={1}>
+                        {item.title}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {/* Location Map Preview */}
+            <View style={[styles.contentSection, { paddingBottom: 120 }]}>
+              <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+                <ThemedText type="headlineSm" style={styles.cardSectionHeader}>
+                  Location
+                </ThemedText>
+                
+                {/* Map Placeholder Card using grayscale theme */}
+                <View style={styles.mapContainer}>
+                  {/* Grayscale map image */}
+                  <Image
+                    source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAs7ZFxpDuTY0Y20RzzsmBGxAjht8U5AihgJyskprBmTPKVYrEOab08NWaF-4BFy3UjwPr46PMa9oRy0TqoklyqETyaI3T9xbHvBGj0vyYb99qgZn6w5StHhG9_NAMWkvZiyjhoW9QJ4TVDCuUjWD2x6xrp0HlAaAIVRu2xmLKg6V1CrRxUQiNFhiU_n_PBx9V6T9ZF5x3yGwizSIx_I4x5fTWBozUqBJ77o8N5RyeuxUvrf6uWewzXD86IF4X_G5brMzCocIakM-w' }}
+                    style={styles.mapImage}
+                    contentFit="cover"
+                  />
+                  <View style={styles.mapMarkerContainer}>
+                    <View style={[styles.mapMarker, { backgroundColor: theme.primaryContainer }]}>
+                      <Ionicons name="location" size={24} color="#ffffff" />
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.locationFooter}>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>
+                    {details.location.split(',')[0]}
+                  </ThemedText>
+                  <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
+                    {details.location.split(',')[1]}
+                  </ThemedText>
+                  
+                  <Pressable style={styles.directionsLink}>
+                    <ThemedText type="labelMd" style={{ color: theme.secondary, fontWeight: '800' }}>
+                      Get Directions
+                    </ThemedText>
+                    <Ionicons name="arrow-forward" size={14} color={theme.secondary} style={{ marginLeft: 4 }} />
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+
+          </ScrollView>
+        </Reanimated.View>
 
         {/* Sticky Action Footer */}
         <View style={[styles.footerActions, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '33' }]}>

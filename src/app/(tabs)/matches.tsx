@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { CoinTossModal } from '@/components/coin-toss-modal';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -93,10 +94,11 @@ export default function MatchesScreen() {
           </View>
         </View>
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+        <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
           {/* Filter Tabs */}
           <ScrollView
             horizontal
@@ -112,8 +114,8 @@ export default function MatchesScreen() {
                   style={[
                     styles.filterChip,
                     isActive
-                      ? { backgroundColor: theme.primary }
-                      : { backgroundColor: theme.surfaceHigh, borderColor: theme.outlineVariant + '1a' },
+                      ? { backgroundColor: 'transparent', borderColor: theme.primary, borderWidth: 1.5 }
+                      : { backgroundColor: 'transparent', borderColor: theme.outlineVariant + '33', borderWidth: 1.5 },
                   ]}
                 >
                   {filter === 'Live' && (
@@ -121,7 +123,10 @@ export default function MatchesScreen() {
                   )}
                   <ThemedText
                     type="labelSm"
-                    style={{ color: isActive ? theme.onPrimary : theme.textSecondary }}
+                    style={{ 
+                      color: isActive ? theme.primary : theme.textSecondary,
+                      fontFamily: isActive ? 'PlusJakartaSans_700Bold' : 'PlusJakartaSans_500Medium' 
+                    }}
                   >
                     {filter}
                   </ThemedText>
@@ -166,17 +171,17 @@ export default function MatchesScreen() {
 
                 {/* Match Teams & Live Score */}
                 <View style={styles.liveScoreRow}>
-                  {/* Left Column (RC) */}
+                  {/* Left Column (RCB) */}
                   <View style={styles.teamInfoCol}>
                     <View style={styles.teamLogoName}>
                       <View style={[styles.teamLetterLogo, { backgroundColor: theme.primaryContainer }]}>
-                        <ThemedText type="labelMd" style={{ color: '#ffffff' }}>RC</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>RCB</ThemedText>
                       </View>
-                      <ThemedText type="bodyMd" style={{ marginLeft: 6, fontWeight: '700', flex: 1, flexWrap: 'wrap' }}>
-                        Royal Challengers
+                      <ThemedText type="bodyMd" style={{ marginLeft: 8, fontWeight: '700', fontSize: 15 }}>
+                        RCB
                       </ThemedText>
                     </View>
-                    <ThemedText style={{ fontSize: 26, fontFamily: 'HankenGrotesk_800ExtraBold', color: theme.primary, marginTop: 4 }}>
+                    <ThemedText style={{ fontSize: 26, fontFamily: 'HankenGrotesk_800ExtraBold', color: theme.primary, marginTop: 8 }}>
                       172/4
                     </ThemedText>
                     <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 2 }}>
@@ -189,17 +194,17 @@ export default function MatchesScreen() {
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_500Medium' }}>vs</ThemedText>
                   </View>
 
-                  {/* Right Column (KK - Symmetrical Right Alignment) */}
+                  {/* Right Column (KXI - Symmetrical Right Alignment) */}
                   <View style={[styles.teamInfoCol, { alignItems: 'flex-end' }]}>
                     <View style={[styles.teamLogoName, { flexDirection: 'row-reverse' }]}>
                       <View style={[styles.teamLetterLogo, { backgroundColor: theme.outlineVariant, marginLeft: 6 }]}>
-                        <ThemedText type="labelMd" style={{ color: '#ffffff' }}>KK</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>KXI</ThemedText>
                       </View>
-                      <ThemedText type="bodyMd" style={{ color: theme.textSecondary, fontWeight: '700', textAlign: 'right', flex: 1, flexWrap: 'wrap' }}>
-                        Kings XI
+                      <ThemedText type="bodyMd" style={{ color: theme.text, fontWeight: '700', textAlign: 'right', marginRight: 8, fontSize: 15 }}>
+                        KXI
                       </ThemedText>
                     </View>
-                    <ThemedText style={{ fontSize: 18, color: theme.textSecondary, fontFamily: 'HankenGrotesk_600SemiBold', marginTop: 10, textAlign: 'right' }}>
+                    <ThemedText style={{ fontSize: 22, color: theme.textSecondary, fontFamily: 'HankenGrotesk_600SemiBold', marginTop: 8, textAlign: 'right' }}>
                       Yet to bat
                     </ThemedText>
                     <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 2, textAlign: 'right' }}>
@@ -506,6 +511,7 @@ export default function MatchesScreen() {
             </Pressable>
           </View>
         </ScrollView>
+      </Reanimated.View>
 
         {/* FAB Actions */}
         <View style={styles.fabGroup}>
@@ -680,8 +686,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   teamLetterLogo: {
-    width: 24, // reduced from 28
-    height: 24, // reduced from 28
+    paddingHorizontal: 6, // dynamic capsule size for 3-letter abbreviations
+    height: 24,
     borderRadius: BorderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',

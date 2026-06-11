@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { CoinTossModal } from '@/components/coin-toss-modal';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -255,7 +256,8 @@ export default function TournamentsTab() {
           </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {/* Header section with description */}
           <View style={styles.welcomeSection}>
             <View style={styles.rowBetween}>
@@ -335,14 +337,15 @@ export default function TournamentsTab() {
                     }}
                     style={[
                       styles.statusPill,
-                      { borderColor: theme.outlineVariant + '33', backgroundColor: theme.surfaceLowest },
-                      isSelected && { backgroundColor: theme.primary, borderColor: theme.primary }
+                      isSelected
+                        ? { backgroundColor: 'transparent', borderColor: theme.primary, borderWidth: 1.5 }
+                        : { backgroundColor: 'transparent', borderColor: theme.outlineVariant + '33', borderWidth: 1.5 }
                     ]}
                   >
                     <ThemedText
                       type="labelSm"
                       style={{
-                        color: isSelected ? '#ffffff' : theme.textSecondary,
+                        color: isSelected ? theme.primary : theme.textSecondary,
                         fontWeight: isSelected ? '700' : '500',
                       }}
                     >
@@ -685,6 +688,7 @@ export default function TournamentsTab() {
             )}
           </View>
         </ScrollView>
+      </Reanimated.View>
       </SafeAreaView>
 
       {/* Floating Toast Notification */}

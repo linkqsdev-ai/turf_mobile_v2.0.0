@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -123,10 +124,11 @@ export default function ExploreScreen() {
           </View>
         </View>
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+        <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
           {/* Calendar Picker Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -203,29 +205,29 @@ export default function ExploreScreen() {
                     style={[
                       styles.filterChip,
                       isActive
-                        ? { backgroundColor: '#5D68E8', borderColor: '#5D68E8' }
-                        : { backgroundColor: theme.surfaceLow, borderColor: 'transparent' },
+                        ? { backgroundColor: 'transparent', borderColor: theme.primary, borderWidth: 1.5 }
+                        : { backgroundColor: 'transparent', borderColor: theme.outlineVariant + '33', borderWidth: 1.5 },
                     ]}
                   >
                     {sport.library === 'Ionicons' ? (
                       <Ionicons
                         name={sport.icon as any}
                         size={14}
-                        color={isActive ? '#05151e' : theme.textSecondary}
+                        color={isActive ? theme.primary : theme.textSecondary}
                         style={{ marginRight: 4 }}
                       />
                     ) : (
                       <MaterialCommunityIcons
                         name={sport.icon as any}
                         size={15}
-                        color={isActive ? '#05151e' : theme.textSecondary}
+                        color={isActive ? theme.primary : theme.textSecondary}
                         style={{ marginRight: 4 }}
                       />
                     )}
                     <ThemedText
                       type="labelMd"
                       style={{ 
-                        color: isActive ? '#05151e' : theme.textSecondary,
+                        color: isActive ? theme.primary : theme.textSecondary,
                         fontFamily: 'HankenGrotesk_700Bold',
                         fontSize: 10.5,
                         letterSpacing: 0.2,
@@ -552,6 +554,7 @@ export default function ExploreScreen() {
 
           </View>
         </ScrollView>
+      </Reanimated.View>
       </SafeAreaView>
       {/* Floating Toast Notification */}
       {toastMsg && (

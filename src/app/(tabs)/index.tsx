@@ -10,6 +10,7 @@ import { Image } from 'expo-image';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { CoinTossModal } from '@/components/coin-toss-modal';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -64,10 +65,11 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+        <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
           {/* Welcome Header Section */}
           <View style={styles.welcomeSection}>
             <View style={styles.welcomeTextContainer}>
@@ -251,6 +253,7 @@ export default function HomeScreen() {
             </View>
           </View>
         </ScrollView>
+      </Reanimated.View>
       </SafeAreaView>
       <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
     </GradientContainer>

@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { CoinTossModal } from '@/components/coin-toss-modal';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -93,243 +94,245 @@ export default function TeamsTab() {
           </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {/* User Analytics / Personal Ranking Bento Grid */}
-          <View style={styles.section}>
-            <View style={styles.rankingGrid}>
-              
-              {/* Global Ranking Card */}
-              <View style={[styles.rankingCard, { backgroundColor: theme.primaryContainer }]}>
-                <View style={styles.rankingCardDecor} />
-                <View style={{ zIndex: 2 }}>
-                  <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                    Global Ranking
-                  </ThemedText>
-                  <ThemedText type="headlineMd" style={{ color: '#ffffff', marginTop: Spacing.half }}>
-                    Elite Division • #428
-                  </ThemedText>
-                  
-                  <View style={styles.badgeWrapper}>
-                    <View style={[styles.skillBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                      <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold' }}>
-                        Top 5% Skill Level
+        <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            {/* User Analytics / Personal Ranking Bento Grid */}
+            <View style={styles.section}>
+              <View style={styles.rankingGrid}>
+                
+                {/* Global Ranking Card */}
+                <View style={[styles.rankingCard, { backgroundColor: theme.primaryContainer }]}>
+                  <View style={styles.rankingCardDecor} />
+                  <View style={{ zIndex: 2 }}>
+                    <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                      Global Ranking
+                    </ThemedText>
+                    <ThemedText type="headlineMd" style={{ color: '#ffffff', marginTop: Spacing.half }}>
+                      Elite Division • #428
+                    </ThemedText>
+                    
+                    <View style={styles.badgeWrapper}>
+                      <View style={[styles.skillBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                        <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold' }}>
+                          Top 5% Skill Level
+                        </ThemedText>
+                      </View>
+                    </View>
+
+                    <View style={styles.statsRow}>
+                      <View>
+                        <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Win Rate</ThemedText>
+                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>78.4%</ThemedText>
+                      </View>
+                      <View>
+                        <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Avg Score</ThemedText>
+                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>24.5</ThemedText>
+                      </View>
+                      <View>
+                        <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Matches</ThemedText>
+                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>112</ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* AI Matcher Info Card */}
+                <View style={[styles.matcherCard, { backgroundColor: theme.surfaceHigh, borderColor: theme.outlineVariant + '33' }]}>
+                  <View style={styles.matcherAvatarContainer}>
+                    <View style={[styles.matcherAvatarRing, { borderColor: theme.secondaryContainer }]}>
+                      <Ionicons name="star" size={24} color={theme.primary} />
+                    </View>
+                    <View style={[styles.levelBadge, { backgroundColor: theme.secondary }]}>
+                      <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 9 }}>
+                        LVL 12
                       </ThemedText>
                     </View>
                   </View>
-
-                  <View style={styles.statsRow}>
-                    <View>
-                      <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Win Rate</ThemedText>
-                      <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>78.4%</ThemedText>
-                    </View>
-                    <View>
-                      <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Avg Score</ThemedText>
-                      <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>24.5</ThemedText>
-                    </View>
-                    <View>
-                      <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Matches</ThemedText>
-                      <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>112</ThemedText>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              {/* AI Matcher Info Card */}
-              <View style={[styles.matcherCard, { backgroundColor: theme.surfaceHigh, borderColor: theme.outlineVariant + '33' }]}>
-                <View style={styles.matcherAvatarContainer}>
-                  <View style={[styles.matcherAvatarRing, { borderColor: theme.secondaryContainer }]}>
-                    <Ionicons name="star" size={24} color={theme.primary} />
-                  </View>
-                  <View style={[styles.levelBadge, { backgroundColor: theme.secondary }]}>
-                    <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 9 }}>
-                      LVL 12
-                    </ThemedText>
-                  </View>
-                </View>
-                <ThemedText type="headlineSm" style={{ color: theme.text, marginTop: Spacing.sm }}>
-                  AI Matcher Active
-                </ThemedText>
-                <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: Spacing.half }}>
-                  Analyzing 48 teams in your local metro area.
-                </ThemedText>
-              </View>
-
-            </View>
-          </View>
-
-          {/* Top Matches for You */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <ThemedText type="headlineSm">Top Matches for You</ThemedText>
-                <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
-                  Recommended based on your Elite ranking
-                </ThemedText>
-              </View>
-              <Pressable>
-                <ThemedText type="labelMd" style={{ color: theme.secondary, letterSpacing: 0.5 }}>
-                  SEE ALL
-                </ThemedText>
-              </Pressable>
-            </View>
-
-            {/* Team Grid */}
-            <View style={styles.teamGrid}>
-                    {/* Team Card 1 */}
-              <View style={[styles.teamCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-                <View style={styles.teamCardHeader}>
-                  <Image source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC-rGNcjfTOqIbCc14x83aW-UxvfwQbFlcyDJxfiI8ZW54ZEnoJj_6XMl36rA1HACKrvZtNCIXvr2C0OqBv5ofBMDmbIsSGwIrg2aJM6DZx1zCnA069mfIswX4BSiH74irw7LbjrSEwBGaYOv0_fpov0HxNwPi1B5BdSEpnDqfWgU_xCKwSaiqALibZA8IOqlYOz9imbDWNkZmSV8pARy8d4yXq8r-UQfa53HcEMorKjJfPcj6rcEJfGV2ObHglEC_gDfnRZFIpxEo' }} style={styles.teamLogo} contentFit="cover" />
-                  <View style={[styles.matchPercentage, { backgroundColor: theme.secondaryContainer + '22' }]}>
-                    <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                      98% Match
-                    </ThemedText>
-                  </View>
-                </View>
-                <View style={{ marginTop: Spacing.md }}>
-                  <ThemedText type="headlineSm">Apex Strikers</ThemedText>
-                  <View style={styles.membersRow}>
-                    <Ionicons name="people-outline" size={14} color={theme.textSecondary} />
-                    <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 4 }}>
-                      11/15 Members
-                    </ThemedText>
-                  </View>
-                </View>
-                <View style={styles.teamCardActions}>
-                  <Pressable
-                    onPress={() => handleJoinClick('apex', 'Join Team')}
-                    style={[
-                      styles.joinBtn,
-                      joinStates['apex'] === 'Request Sent' ? { backgroundColor: theme.secondaryContainer } : { backgroundColor: theme.primary }
-                    ]}
-                  >
-                    <ThemedText type="labelMd" style={{ color: joinStates['apex'] === 'Request Sent' ? theme.onSecondaryContainer : '#ffffff' }}>
-                      {joinStates['apex']}
-                    </ThemedText>
-                  </Pressable>
-                  <Pressable style={[styles.optionsBtn, { borderColor: theme.outlineVariant }]}>
-                    <Ionicons name="ellipsis-horizontal" size={18} color={theme.textSecondary} />
-                  </Pressable>
-                </View>
-              </View>
- 
-              {/* Team Card 2 */}
-              <View style={[styles.teamCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-                <View style={styles.teamCardHeader}>
-                  <Image source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC27_sMupG-KKQYGExlCC6jh1Hz8MMwNB4ZLyAuvVT6GMSVNR8gR63WMVahWw2zVuH69vP6Xnmtd785xVgIpPIZhNp1FgG6oal0b6r7d3LRAjFIuSLJHC1J6wRU7zwYOOUIb7eWImHSqIQtNp7E1R5vzKBpYF3Jhu8-L6wUUpfi6gj6X3lqTzcfchjKo9PEhSxok_aJgpWJ6WPMVBuVPMy9OydQS16g3vXG9xyh3sCStFOe6od9nQNVfcMdy8sQnfE_24wh8FNOjZg' }} style={styles.teamLogo} contentFit="cover" />
-                  <View style={[styles.matchPercentage, { backgroundColor: theme.secondaryContainer + '22' }]}>
-                    <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                      92% Match
-                    </ThemedText>
-                  </View>
-                </View>
-                <View style={{ marginTop: Spacing.md }}>
-                  <ThemedText type="headlineSm">Vanguard FC</ThemedText>
-                  <View style={styles.membersRow}>
-                    <Ionicons name="people-outline" size={14} color={theme.textSecondary} />
-                    <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 4 }}>
-                      8/12 Members
-                    </ThemedText>
-                  </View>
-                </View>
-                <View style={styles.teamCardActions}>
-                  <Pressable
-                    onPress={() => handleJoinClick('vanguard', 'Join Team')}
-                    style={[
-                      styles.joinBtn,
-                      joinStates['vanguard'] === 'Request Sent' ? { backgroundColor: theme.secondaryContainer } : { backgroundColor: theme.primary }
-                    ]}
-                  >
-                    <ThemedText type="labelMd" style={{ color: joinStates['vanguard'] === 'Request Sent' ? theme.onSecondaryContainer : '#ffffff' }}>
-                      {joinStates['vanguard']}
-                    </ThemedText>
-                  </Pressable>
-                  <Pressable style={[styles.optionsBtn, { borderColor: theme.outlineVariant }]}>
-                    <Ionicons name="ellipsis-horizontal" size={18} color={theme.textSecondary} />
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* Team Card 3 (Featured Pro Recommended) */}
-              <View style={[styles.teamCard, { backgroundColor: theme.secondaryContainer, borderColor: theme.secondary }]}>
-                <View style={styles.teamCardHeader}>
-                  <View style={[styles.boltIconContainer, { backgroundColor: theme.primary }]}>
-                    <Ionicons name="flash" size={20} color="#ffffff" />
-                  </View>
-                  <View style={[styles.matchPercentage, { backgroundColor: theme.primary }]}>
-                    <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold' }}>
-                      Pro Recommended
-                    </ThemedText>
-                  </View>
-                </View>
-                <View style={{ marginTop: Spacing.md }}>
-                  <ThemedText type="headlineSm" style={{ color: theme.onSecondaryContainer }}>Volt Titans</ThemedText>
-                  <View style={styles.membersRow}>
-                    <Ionicons name="people-outline" size={14} color={theme.onSecondaryContainer + 'aa'} />
-                    <ThemedText type="bodySm" style={{ color: theme.onSecondaryContainer, marginLeft: 4 }}>
-                      14/15 Members (1 Slot!)
-                    </ThemedText>
-                  </View>
-                </View>
-                <View style={styles.teamCardActions}>
-                  <Pressable
-                    onPress={() => handleJoinClick('volt', 'Apply to Join')}
-                    style={[
-                      styles.joinBtn,
-                      { width: '100%' },
-                      joinStates['volt'] === 'Request Sent' ? { backgroundColor: theme.primaryContainer } : { backgroundColor: theme.primary }
-                    ]}
-                  >
-                    <ThemedText type="labelMd" style={{ color: '#ffffff' }}>
-                      {joinStates['volt']}
-                    </ThemedText>
-                  </Pressable>
-                </View>
-              </View>
-
-            </View>
-          </View>
-
-          {/* Nearby Players */}
-          <View style={[styles.section, { paddingBottom: 100 }]}>
-            <View style={styles.sectionHeader}>
-              <ThemedText type="headlineSm">Nearby Players</ThemedText>
-              <View style={[styles.nearbyBadge, { backgroundColor: theme.surfaceHigh }]}>
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Within 5 miles</ThemedText>
-              </View>
-            </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.playersScroll}>
-              {PLAYERS.map(player => (
-                <Pressable
-                  key={player.id}
-                  onPress={() => router.push({ pathname: '/player-profile', params: { id: player.id } })}
-                  style={[styles.playerCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
-                >
-                  <Image source={player.image} style={styles.playerAvatar} contentFit="cover" />
-                  <ThemedText type="labelMd" style={{ marginTop: Spacing.sm, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
-                    {player.name}
+                  <ThemedText type="headlineSm" style={{ color: theme.text, marginTop: Spacing.sm }}>
+                    AI Matcher Active
                   </ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10 }}>
-                    {player.role}
+                  <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: Spacing.half }}>
+                    Analyzing 48 teams in your local metro area.
                   </ThemedText>
-                  <Pressable
-                    onPress={() => handleInviteClick(player.id)}
-                    style={[
-                      styles.inviteBtn,
-                      { borderColor: theme.secondary },
-                      inviteStates[player.id] && { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
-                    ]}
-                  >
-                    <ThemedText type="labelSm" style={{ color: inviteStates[player.id] ? theme.onSecondaryContainer : theme.secondary, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                      {inviteStates[player.id] ? 'Invited!' : 'Invite'}
-                    </ThemedText>
-                  </Pressable>
+                </View>
+
+              </View>
+            </View>
+
+            {/* Top Matches for You */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View>
+                  <ThemedText type="headlineSm">Top Matches for You</ThemedText>
+                  <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
+                    Recommended based on your Elite ranking
+                  </ThemedText>
+                </View>
+                <Pressable>
+                  <ThemedText type="labelMd" style={{ color: theme.secondary, letterSpacing: 0.5 }}>
+                    SEE ALL
+                  </ThemedText>
                 </Pressable>
-              ))}
-            </ScrollView>
-          </View>
+              </View>
 
-        </ScrollView>
+              {/* Team Grid */}
+              <View style={styles.teamGrid}>
+                      {/* Team Card 1 */}
+                <View style={[styles.teamCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+                  <View style={styles.teamCardHeader}>
+                    <Image source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD-rGNcjfTOqIbCc14x83aW-UxvfwQbFlcyDJxfiI8ZW54ZEnoJj_6XMl36rA1HACKrvZtNCIXvr2C0OqBv5ofBMDmbIsSGwIrg2aJM6DZx1zCnA069mfIswX4BSiH74irw7LbjrSEwBGaYOv0_fpov0HxNwPi1B5BdSEpnDqfWgU_xCKwSaiqALibZA8IOqlYOz9imbDWNkZmSV8pARy8d4yXq8r-UQfa53HcEMorKjJfPcj6rcEJfGV2ObHglEC_gDfnRZFIpxEo' }} style={styles.teamLogo} contentFit="cover" />
+                    <View style={[styles.matchPercentage, { backgroundColor: theme.secondaryContainer + '22' }]}>
+                      <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                        98% Match
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={{ marginTop: Spacing.md }}>
+                    <ThemedText type="headlineSm">Apex Strikers</ThemedText>
+                    <View style={styles.membersRow}>
+                      <Ionicons name="people-outline" size={14} color={theme.textSecondary} />
+                      <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 4 }}>
+                        11/15 Members
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={styles.teamCardActions}>
+                    <Pressable
+                      onPress={() => handleJoinClick('apex', 'Join Team')}
+                      style={[
+                        styles.joinBtn,
+                        joinStates['apex'] === 'Request Sent' ? { backgroundColor: theme.secondaryContainer } : { backgroundColor: theme.primary }
+                      ]}
+                    >
+                      <ThemedText type="labelMd" style={{ color: joinStates['apex'] === 'Request Sent' ? theme.onSecondaryContainer : '#ffffff' }}>
+                        {joinStates['apex']}
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable style={[styles.optionsBtn, { borderColor: theme.outlineVariant }]}>
+                      <Ionicons name="ellipsis-horizontal" size={18} color={theme.textSecondary} />
+                    </Pressable>
+                  </View>
+                </View>
+   
+                {/* Team Card 2 */}
+                <View style={[styles.teamCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+                  <View style={styles.teamCardHeader}>
+                    <Image source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD27_sMupG-KKQYGExlCC6jh1Hz8MMwNB4ZLyAuvVT6GMSVNR8gR63WMVahWw2zVuH69vP6Xnmtd785xVgIpPIZhNp1FgG6oal0b6r7d3LRAjFIuSLJHC1J6wRU7zwYOOUIb7eWImHSqIQtNp7E1R5vzKBpYF3Jhu8-L6wUUpfi6gj6X3lqTzcfchjKo9PEhSxok_aJgpWJ6WPMVBuVPMy9OydQS16g3vXG9xyh3sCStFOe6od9nQNVfcMdy8sQnfE_24wh8FNOjZg' }} style={styles.teamLogo} contentFit="cover" />
+                    <View style={[styles.matchPercentage, { backgroundColor: theme.secondaryContainer + '22' }]}>
+                      <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                        92% Match
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={{ marginTop: Spacing.md }}>
+                    <ThemedText type="headlineSm">Vanguard FC</ThemedText>
+                    <View style={styles.membersRow}>
+                      <Ionicons name="people-outline" size={14} color={theme.textSecondary} />
+                      <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 4 }}>
+                        8/12 Members
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={styles.teamCardActions}>
+                    <Pressable
+                      onPress={() => handleJoinClick('vanguard', 'Join Team')}
+                      style={[
+                        styles.joinBtn,
+                        joinStates['vanguard'] === 'Request Sent' ? { backgroundColor: theme.secondaryContainer } : { backgroundColor: theme.primary }
+                      ]}
+                    >
+                      <ThemedText type="labelMd" style={{ color: joinStates['vanguard'] === 'Request Sent' ? theme.onSecondaryContainer : '#ffffff' }}>
+                        {joinStates['vanguard']}
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable style={[styles.optionsBtn, { borderColor: theme.outlineVariant }]}>
+                      <Ionicons name="ellipsis-horizontal" size={18} color={theme.textSecondary} />
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* Team Card 3 (Featured Pro Recommended) */}
+                <View style={[styles.teamCard, { backgroundColor: theme.secondaryContainer, borderColor: theme.secondary }]}>
+                  <View style={styles.teamCardHeader}>
+                    <View style={[styles.boltIconContainer, { backgroundColor: theme.primary }]}>
+                      <Ionicons name="flash" size={20} color="#ffffff" />
+                    </View>
+                    <View style={[styles.matchPercentage, { backgroundColor: theme.primary }]}>
+                      <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold' }}>
+                        Pro Recommended
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={{ marginTop: Spacing.md }}>
+                    <ThemedText type="headlineSm" style={{ color: theme.onSecondaryContainer }}>Volt Titans</ThemedText>
+                    <View style={styles.membersRow}>
+                      <Ionicons name="people-outline" size={14} color={theme.onSecondaryContainer + 'aa'} />
+                      <ThemedText type="bodySm" style={{ color: theme.onSecondaryContainer, marginLeft: 4 }}>
+                        14/15 Members (1 Slot!)
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={styles.teamCardActions}>
+                    <Pressable
+                      onPress={() => handleJoinClick('volt', 'Apply to Join')}
+                      style={[
+                        styles.joinBtn,
+                        { width: '100%' },
+                        joinStates['volt'] === 'Request Sent' ? { backgroundColor: theme.primaryContainer } : { backgroundColor: theme.primary }
+                      ]}
+                    >
+                      <ThemedText type="labelMd" style={{ color: '#ffffff' }}>
+                        {joinStates['volt']}
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+
+              </View>
+            </View>
+
+            {/* Nearby Players */}
+            <View style={[styles.section, { paddingBottom: 100 }]}>
+              <View style={styles.sectionHeader}>
+                <ThemedText type="headlineSm">Nearby Players</ThemedText>
+                <View style={[styles.nearbyBadge, { backgroundColor: theme.surfaceHigh }]}>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Within 5 miles</ThemedText>
+                </View>
+              </View>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.playersScroll}>
+                {PLAYERS.map(player => (
+                  <Pressable
+                    key={player.id}
+                    onPress={() => router.push({ pathname: '/player-profile', params: { id: player.id } })}
+                    style={[styles.playerCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
+                  >
+                    <Image source={player.image} style={styles.playerAvatar} contentFit="cover" />
+                    <ThemedText type="labelMd" style={{ marginTop: Spacing.sm, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                      {player.name}
+                    </ThemedText>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10 }}>
+                      {player.role}
+                    </ThemedText>
+                    <Pressable
+                      onPress={() => handleInviteClick(player.id)}
+                      style={[
+                        styles.inviteBtn,
+                        { borderColor: theme.secondary },
+                        inviteStates[player.id] && { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
+                      ]}
+                    >
+                      <ThemedText type="labelSm" style={{ color: inviteStates[player.id] ? theme.onSecondaryContainer : theme.secondary, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                        {inviteStates[player.id] ? 'Invited!' : 'Invite'}
+                      </ThemedText>
+                    </Pressable>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+
+          </ScrollView>
+        </Reanimated.View>
       </SafeAreaView>
       <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
     </GradientContainer>

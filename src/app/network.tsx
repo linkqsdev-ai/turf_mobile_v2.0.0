@@ -16,6 +16,7 @@ import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 const CHART_DATA = [
   { day: 'M', height: '40%', active: false },
@@ -77,7 +78,8 @@ export default function NetworkScreen() {
           </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           
           {/* Welcome Header */}
           <View style={styles.welcomeContainer}>
@@ -295,7 +297,8 @@ export default function NetworkScreen() {
 
           <View style={{ height: 40 }} />
         </ScrollView>
-      </SafeAreaView>
+      </Reanimated.View>
+    </SafeAreaView>
     </GradientContainer>
   );
 }
