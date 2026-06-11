@@ -99,7 +99,7 @@ export default function MatchesScreen() {
                     type="labelMd"
                     style={{ color: isActive ? theme.onPrimary : theme.textSecondary }}
                   >
-                    {filter.toUpperCase()}
+                    {filter}
                   </ThemedText>
                 </Pressable>
               );
@@ -110,7 +110,7 @@ export default function MatchesScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <ThemedText type="labelMd" style={{ color: theme.textSecondary }}>
-                LIVE NOW
+                Live Now
               </ThemedText>
               <View style={[styles.pulseDot, { backgroundColor: theme.error }]} />
             </View>
@@ -134,8 +134,9 @@ export default function MatchesScreen() {
                       IPL 2026
                     </ThemedText>
                   </View>
-                  <View style={[styles.meBadge, { backgroundColor: theme.secondaryContainer }]}>
-                    <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontWeight: '800' }}>ME</ThemedText>
+                  <View style={[styles.meBadge, { backgroundColor: theme.secondaryContainer + '22', borderColor: theme.secondaryContainer, borderWidth: 1, flexDirection: 'row', alignItems: 'center' }]}>
+                    <Ionicons name="person" size={9} color={theme.secondary} style={{ marginRight: 3 }} />
+                    <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '800', fontSize: 10 }}>Me</ThemedText>
                   </View>
                 </View>
 
@@ -150,11 +151,11 @@ export default function MatchesScreen() {
                         Royal Challengers
                       </ThemedText>
                     </View>
-                    <ThemedText style={{ fontSize: 24, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 4 }}>
+                    <ThemedText style={{ fontSize: 26, fontFamily: 'HankenGrotesk_800ExtraBold', color: theme.primary, marginTop: 4 }}>
                       172/4
                     </ThemedText>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 1 }}>
-                      18.2 OVERS
+                    <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 2 }}>
+                      18.2 overs
                     </ThemedText>
                   </View>
 
@@ -171,11 +172,11 @@ export default function MatchesScreen() {
                         Kings XI
                       </ThemedText>
                     </View>
-                    <ThemedText type="headlineSm" style={{ marginTop: 8, color: theme.textSecondary, fontFamily: 'HankenGrotesk_700Bold' }}>
+                    <ThemedText style={{ fontSize: 18, color: theme.textSecondary, fontFamily: 'HankenGrotesk_600SemiBold', marginTop: 10 }}>
                       Yet to bat
                     </ThemedText>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 1 }}>
-                      2ND INNINGS
+                    <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 2 }}>
+                      2nd innings
                     </ThemedText>
                   </View>
                 </View>
@@ -193,7 +194,7 @@ export default function MatchesScreen() {
                     style={styles.matchCenterLink}
                   >
                     <ThemedText type="labelMd" style={{ color: theme.text }}>
-                      MATCH CENTER
+                      Match Center
                     </ThemedText>
                     <Ionicons name="arrow-forward" size={14} color={theme.text} style={{ marginLeft: 2 }} />
                   </Pressable>
@@ -205,7 +206,7 @@ export default function MatchesScreen() {
           {/* TODAY Section */}
           <View style={styles.section}>
             <ThemedText type="labelMd" style={[styles.sectionHeader, { color: theme.textSecondary }]}>
-              TODAY
+              Today
             </ThemedText>
 
             <Pressable
@@ -222,14 +223,15 @@ export default function MatchesScreen() {
                 <View style={styles.cardHeader}>
                   <View style={styles.badgeRow}>
                     <View style={[styles.todayBadge, { backgroundColor: theme.primaryContainer }]}>
-                      <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '800' }}>TODAY</ThemedText>
+                      <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '800' }}>Today</ThemedText>
                     </View>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontWeight: '700', marginLeft: 6 }}>
-                      SUMMER FUTSAL LEAGUE
+                    <ThemedText type="bodyMd" style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_700Bold', marginLeft: 6 }}>
+                      Summer Futsal League
                     </ThemedText>
                   </View>
-                  <View style={[styles.meBadge, { backgroundColor: theme.secondaryContainer }]}>
-                    <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontWeight: '800' }}>ME</ThemedText>
+                  <View style={[styles.meBadge, { backgroundColor: theme.secondaryContainer + '22', borderColor: theme.secondaryContainer, borderWidth: 1, flexDirection: 'row', alignItems: 'center' }]}>
+                    <Ionicons name="person" size={9} color={theme.secondary} style={{ marginRight: 3 }} />
+                    <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '800', fontSize: 10 }}>Me</ThemedText>
                   </View>
                 </View>
 
@@ -274,7 +276,7 @@ export default function MatchesScreen() {
                     style={styles.matchCenterLink}
                   >
                     <ThemedText type="labelMd" style={{ color: theme.text }}>
-                      MATCH CENTER
+                      Match Center
                     </ThemedText>
                     <Ionicons name="arrow-forward" size={14} color={theme.text} style={{ marginLeft: 2 }} />
                   </Pressable>
@@ -286,15 +288,17 @@ export default function MatchesScreen() {
           {/* YESTERDAY Section */}
           <View style={[styles.section, { paddingBottom: 120 }]}>
             <ThemedText type="labelMd" style={[styles.sectionHeader, { color: theme.textSecondary }]}>
-              YESTERDAY
+              Yesterday
             </ThemedText>
 
             <View style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9 }]}>
               <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
                 <View style={styles.cardHeader}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontWeight: '700' }}>
-                    T20 BLAST
-                  </ThemedText>
+                  <View style={[styles.leagueTypeBadge, { backgroundColor: theme.secondary + '14', borderColor: theme.secondary + '33', borderWidth: 1 }]}>
+                    <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '700' }}>
+                      T20 Blast
+                    </ThemedText>
+                  </View>
                 </View>
 
                 {/* Finished Match Rows */}
@@ -327,12 +331,12 @@ export default function MatchesScreen() {
                 <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33', paddingTop: 10, marginTop: 10 }]}>
                   <View style={[styles.finishedBadge, { backgroundColor: theme.surfaceHigh }]}>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontWeight: '700' }}>
-                      FINISHED
+                      Finished
                     </ThemedText>
                   </View>
                   <Pressable style={styles.matchCenterLink}>
                     <ThemedText type="labelMd" style={{ color: theme.text }}>
-                      SCORECARD
+                      Scorecard
                     </ThemedText>
                     <Ionicons name="chevron-forward" size={16} color={theme.text} />
                   </Pressable>
@@ -486,6 +490,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: BorderRadius.full,
+  },
+  leagueTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.md,
   },
   liveScoreRow: {
     flexDirection: 'row',
