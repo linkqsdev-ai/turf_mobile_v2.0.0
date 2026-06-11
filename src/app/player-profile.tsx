@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows, Colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -35,10 +36,10 @@ export default function PlayerProfileScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <GradientContainer screenName="player-profile" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Navigation TopAppBar */}
-        <View style={[styles.header, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <Pressable 
             onPress={() => {
               if (router.canGoBack()) {
@@ -330,7 +331,7 @@ export default function PlayerProfileScreen() {
 
         </ScrollView>
       </SafeAreaView>
-    </ThemedView>
+    </GradientContainer>
   );
 }
 

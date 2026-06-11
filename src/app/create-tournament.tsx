@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -449,10 +450,10 @@ export default function CreateTournamentScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <GradientContainer screenName="create-tournament" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header Stack Bar */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <Pressable style={styles.backBtn} onPress={handleBack}>
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </Pressable>
@@ -539,7 +540,7 @@ export default function CreateTournamentScreen() {
           <ThemedText type="labelSm" style={{ color: '#ffffff' }}>{toastMsg}</ThemedText>
         </Animated.View>
       )}
-    </ThemedView>
+    </GradientContainer>
   );
 }
 

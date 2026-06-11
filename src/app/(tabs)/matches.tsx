@@ -15,6 +15,7 @@ import { CoinTossModal } from '@/components/coin-toss-modal';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -56,10 +57,10 @@ export default function MatchesScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <GradientContainer screenName="matches" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Top App Bar */}
-        <View style={[styles.header, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <View style={styles.headerLeft}>
             <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
               <Image
@@ -536,7 +537,7 @@ export default function MatchesScreen() {
 
       </SafeAreaView>
       <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
-    </ThemedView>
+    </GradientContainer>
   );
 }
 

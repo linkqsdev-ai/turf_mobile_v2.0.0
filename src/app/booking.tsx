@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -154,10 +155,10 @@ export default function BookingConfigurationScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <GradientContainer screenName="booking" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Top App Bar */}
-        <View style={[styles.header, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <Pressable 
             onPress={() => {
               if (router.canGoBack()) {
@@ -664,7 +665,7 @@ export default function BookingConfigurationScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
-    </ThemedView>
+    </GradientContainer>
   );
 }
 

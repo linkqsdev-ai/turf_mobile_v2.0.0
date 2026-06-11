@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -51,10 +52,10 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <GradientContainer screenName="profile" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header Bar */}
-        <View style={[styles.header, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <Pressable 
             onPress={() => {
               if (router.canGoBack()) {
@@ -550,6 +551,100 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
+              {/* Theme Settings Card */}
+              <View style={styles.section}>
+                <View style={styles.tabHeaderRow}>
+                  <Ionicons name="color-palette-outline" size={18} color={theme.secondary} />
+                  <ThemedText type="labelMd" style={[styles.tabHeaderTitle, { color: theme.text }]}>
+                    APPLICATION THEME
+                  </ThemedText>
+                </View>
+
+                <View style={[styles.themeCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+                  <ThemedText type="headlineSm">Theme Selector</ThemedText>
+                  <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
+                    Choose your preferred application visual style.
+                  </ThemedText>
+                  
+                  <View style={styles.themeSelectorRow}>
+                    <Pressable 
+                      onPress={() => updateProfile({ theme: 'light' })}
+                      style={[
+                        styles.themeOptionBtn, 
+                        profile.theme === 'light' 
+                          ? { backgroundColor: theme.primary, borderColor: theme.primary } 
+                          : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }
+                      ]}
+                    >
+                      <Ionicons 
+                        name="sunny-outline" 
+                        size={16} 
+                        color={profile.theme === 'light' ? theme.onPrimary : theme.text} 
+                      />
+                      <ThemedText 
+                        type="labelMd" 
+                        style={[
+                          styles.themeOptionText, 
+                          { color: profile.theme === 'light' ? theme.onPrimary : theme.text }
+                        ]}
+                      >
+                        Light
+                      </ThemedText>
+                    </Pressable>
+
+                    <Pressable 
+                      onPress={() => updateProfile({ theme: 'dark' })}
+                      style={[
+                        styles.themeOptionBtn, 
+                        profile.theme === 'dark' 
+                          ? { backgroundColor: theme.primary, borderColor: theme.primary } 
+                          : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }
+                      ]}
+                    >
+                      <Ionicons 
+                        name="moon-outline" 
+                        size={16} 
+                        color={profile.theme === 'dark' ? theme.onPrimary : theme.text} 
+                      />
+                      <ThemedText 
+                        type="labelMd" 
+                        style={[
+                          styles.themeOptionText, 
+                          { color: profile.theme === 'dark' ? theme.onPrimary : theme.text }
+                        ]}
+                      >
+                        Dark
+                      </ThemedText>
+                    </Pressable>
+
+                    <Pressable 
+                      onPress={() => updateProfile({ theme: 'blue' })}
+                      style={[
+                        styles.themeOptionBtn, 
+                        (profile.theme === 'blue' || !profile.theme)
+                          ? { backgroundColor: theme.primary, borderColor: theme.primary } 
+                          : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }
+                      ]}
+                    >
+                      <Ionicons 
+                        name="color-fill-outline" 
+                        size={16} 
+                        color={(profile.theme === 'blue' || !profile.theme) ? theme.onPrimary : theme.text} 
+                      />
+                      <ThemedText 
+                        type="labelMd" 
+                        style={[
+                          styles.themeOptionText, 
+                          { color: (profile.theme === 'blue' || !profile.theme) ? theme.onPrimary : theme.text }
+                        ]}
+                      >
+                        Blue
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+
               {/* Teams Section */}
               <View style={styles.section}>
                 <View style={styles.rowBetween}>
@@ -611,7 +706,7 @@ export default function ProfileScreen() {
           )}
 
       </SafeAreaView>
-    </ThemedView>
+    </GradientContainer>
   );
 }
 
@@ -1086,5 +1181,29 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  themeCard: {
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.md,
+    borderWidth: 1,
+  },
+  themeSelectorRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  themeOptionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+  },
+  themeOptionText: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
 });

@@ -1,35 +1,41 @@
 import { Stack, ThemeProvider, DarkTheme, DefaultTheme } from 'expo-router';
-import { useColorScheme, ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import {
   useFonts,
-  HankenGrotesk_400Regular,
-  HankenGrotesk_500Medium,
-  HankenGrotesk_600SemiBold,
-  HankenGrotesk_700Bold,
-  HankenGrotesk_800ExtraBold,
-} from '@expo-google-fonts/hanken-grotesk';
-import {
+  PlusJakartaSans_400Regular,
   PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const theme = useColorScheme();
 
   const [fontsLoaded] = useFonts({
-    HankenGrotesk_400Regular,
-    HankenGrotesk_500Medium,
-    HankenGrotesk_600SemiBold,
-    HankenGrotesk_700Bold,
-    HankenGrotesk_800ExtraBold,
+    PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+    // Alias all previous font names to Plus Jakarta Sans to automatically capture all hardcoded styles
+    HankenGrotesk_400Regular: PlusJakartaSans_400Regular,
+    HankenGrotesk_500Medium: PlusJakartaSans_500Medium,
+    HankenGrotesk_600SemiBold: PlusJakartaSans_600SemiBold,
+    HankenGrotesk_700Bold: PlusJakartaSans_700Bold,
+    HankenGrotesk_800ExtraBold: PlusJakartaSans_800ExtraBold,
+    Figtree_400Regular: PlusJakartaSans_400Regular,
+    Figtree_500Medium: PlusJakartaSans_500Medium,
+    Figtree_600SemiBold: PlusJakartaSans_600SemiBold,
+    Figtree_700Bold: PlusJakartaSans_700Bold,
+    Figtree_800ExtraBold: PlusJakartaSans_800ExtraBold,
   });
 
   if (!fontsLoaded) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#f4f4f7', justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#05151e" />
       </View>
     );
@@ -40,7 +46,7 @@ export default function RootLayout() {
     ...DefaultTheme,
     colors: {
       ...DefaultTheme.colors,
-      background: '#f4f4f7',
+      background: '#ffffff',
       card: '#ffffff',
       text: '#111c2c',
       border: '#c3c7cb',
@@ -58,9 +64,28 @@ export default function RootLayout() {
     },
   };
 
+  const customBlueTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: '#F5F6FA',
+      card: '#ffffff',
+      text: '#2D2D2D',
+      border: '#cbd5e1',
+    },
+  };
+
+  const activeNavigationTheme = theme === 'blue'
+    ? customBlueTheme
+    : theme === 'dark'
+      ? customDarkTheme
+      : customLightTheme;
+
+  const isDark = theme === 'dark';
+
   return (
-    <ThemeProvider value={customLightTheme}>
-      <StatusBar style="dark" />
+    <ThemeProvider value={activeNavigationTheme}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen 

@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -191,7 +192,7 @@ export default function TeamRegistrationScreen() {
   const tournamentName = (params.name as string) || 'London Cup 2026';
 
   return (
-    <ThemedView style={styles.container}>
+    <GradientContainer screenName="team-registration" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header Stack Bar */}
         <View style={styles.header}>
@@ -572,7 +573,7 @@ export default function TeamRegistrationScreen() {
                     </View>
 
                     {/* Invoice Box */}
-                    <View style={[styles.mockInvoiceBox, { borderColor: theme.outlineVariant + '33' }]}>
+                    <View style={[styles.mockInvoiceBox, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
                       {/* Top part: Manager contact info */}
                       <View style={[styles.mockInvoiceTop, { backgroundColor: theme.surfaceLow }]}>
                         <View style={styles.mockInvoiceDetailRow}>
@@ -655,7 +656,7 @@ export default function TeamRegistrationScreen() {
           <ThemedText type="labelSm" style={{ color: '#ffffff' }}>{toastMsg}</ThemedText>
         </Animated.View>
       )}
-    </ThemedView>
+    </GradientContainer>
   );
 }
 
@@ -697,7 +698,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.containerMargin,
   },
   sectionTitle: {
-    color: '#05151e',
     fontWeight: 'bold',
     marginBottom: Spacing.sm,
   },
@@ -872,7 +872,6 @@ const styles = StyleSheet.create({
   mockTitleText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#111c2c',
     marginLeft: 10,
     flex: 1,
   },
@@ -917,7 +916,6 @@ const styles = StyleSheet.create({
   mockMainLeftText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#111c2c',
   },
   mockMainRightText: {
     fontSize: 12,
@@ -947,7 +945,6 @@ const styles = StyleSheet.create({
   },
   mockInvoiceVal: {
     fontSize: 12,
-    color: '#111c2c',
     fontWeight: '500',
     flex: 1,
   },

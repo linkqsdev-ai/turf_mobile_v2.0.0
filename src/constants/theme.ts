@@ -2,60 +2,88 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    background: '#f4f4f7', // Premium Technical Light
-    text: '#111c2c', // on-surface
-    textSecondary: '#43474b', // on-surface-variant
+    background: '#FFFFFF', // App background
+    text: '#2D2D2D', // Primary text
+    textSecondary: '#64748b', // Secondary text
     
-    backgroundElement: '#f0f3ff', // Compatibility link to surfaceLow
-    backgroundSelected: '#e7eeff', // Compatibility link to surface
+    backgroundElement: '#FFFFFF',
+    backgroundSelected: '#EAEAFF', // Soft brand blue tint
     
-    primary: '#05151e', // Navy/Black anchor
+    primary: '#5D68E8', // Primary Blue
     onPrimary: '#ffffff',
-    primaryContainer: '#1a2a33', // Deep Navy
-    onPrimaryContainer: '#81919c',
+    primaryContainer: '#4552C4', // Primary Dark Blue
+    onPrimaryContainer: '#ffffff',
     
-    secondary: '#835500', // Gold/Bronze highlight
-    secondaryContainer: '#feae2c', // Vibrant Gold
-    onSecondaryContainer: '#6b4500',
+    secondary: '#5D68E8', // Primary Blue
+    secondaryContainer: '#5D68E8', // Primary Blue
+    onSecondaryContainer: '#ffffff',
     
-    surfaceLowest: '#ffffff', // Lowest container (cards)
-    surfaceLow: '#f0f3ff',
-    surface: '#e7eeff',
-    surfaceHigh: '#dee8ff',
-    surfaceHighest: '#d8e3fa',
+    surfaceLowest: '#FFFFFF', // Cards & components
+    surfaceLow: '#F5F6FA',
+    surface: '#FFFFFF',
+    surfaceHigh: '#e2e8f0',
+    surfaceHighest: '#cbd5e1',
     
-    outline: '#73787b',
-    outlineVariant: '#c3c7cb',
-    error: '#ba1a1a',
-    errorContainer: '#ffdad6',
+    outline: '#94a3b8',
+    outlineVariant: '#cbd5e1',
+    error: '#FF9500', // Accent Orange (Alerts/Status)
+    errorContainer: '#ffe6cc',
   },
   dark: {
-    background: '#f4f4f7', // Premium Technical Light
-    text: '#111c2c', // on-surface
-    textSecondary: '#43474b', // on-surface-variant
+    background: '#0d1d26', // Premium Technical Dark
+    text: '#f9f9ff', // on-surface dark
+    textSecondary: '#94a3b8', // on-surface-variant dark
     
-    backgroundElement: '#f0f3ff', // Compatibility link to surfaceLow
-    backgroundSelected: '#e7eeff', // Compatibility link to surface
+    backgroundElement: '#12202a', // Compatibility link to surfaceLow dark
+    backgroundSelected: '#1a2d3b', // Compatibility link to surface dark
     
-    primary: '#05151e', // Navy/Black anchor
-    onPrimary: '#ffffff',
-    primaryContainer: '#1a2a33', // Deep Navy
-    onPrimaryContainer: '#81919c',
+    primary: '#feae2c', // Gold anchor for dark theme
+    onPrimary: '#05151e',
+    primaryContainer: '#1a2a33', // Deep Navy container
+    onPrimaryContainer: '#cbd5e1',
     
-    secondary: '#835500', // Gold/Bronze highlight
-    secondaryContainer: '#feae2c', // Vibrant Gold
+    secondary: '#feae2c',
+    secondaryContainer: '#feae2c',
     onSecondaryContainer: '#6b4500',
     
-    surfaceLowest: '#ffffff', // Lowest container (cards)
-    surfaceLow: '#f0f3ff',
-    surface: '#e7eeff',
-    surfaceHigh: '#dee8ff',
-    surfaceHighest: '#d8e3fa',
+    surfaceLowest: '#12202a', // Darkest container card
+    surfaceLow: '#1a2d3b',
+    surface: '#223b4e',
+    surfaceHigh: '#2a4961',
+    surfaceHighest: '#325774',
     
-    outline: '#73787b',
-    outlineVariant: '#c3c7cb',
-    error: '#ba1a1a',
-    errorContainer: '#ffdad6',
+    outline: '#64748b',
+    outlineVariant: '#475569',
+    error: '#cf6679',
+    errorContainer: '#400009',
+  },
+  blue: {
+    background: '#F5F6FA', // App background
+    text: '#2D2D2D', // Primary text
+    textSecondary: '#64748b', // Secondary text
+    
+    backgroundElement: '#FFFFFF',
+    backgroundSelected: '#EAEAFF', // Soft brand blue tint
+    
+    primary: '#5D68E8', // Primary Blue
+    onPrimary: '#ffffff',
+    primaryContainer: '#4552C4', // Primary Dark Blue
+    onPrimaryContainer: '#ffffff',
+    
+    secondary: '#5D68E8', // Primary Blue
+    secondaryContainer: '#5D68E8', // Primary Blue
+    onSecondaryContainer: '#ffffff',
+    
+    surfaceLowest: '#FFFFFF', // Cards & components
+    surfaceLow: '#F5F6FA',
+    surface: '#FFFFFF',
+    surfaceHigh: '#e2e8f0',
+    surfaceHighest: '#cbd5e1',
+    
+    outline: '#94a3b8',
+    outlineVariant: '#cbd5e1',
+    error: '#FF9500', // Accent Orange (Alerts/Status)
+    errorContainer: '#ffe6cc',
   },
 } as const;
 
@@ -63,56 +91,56 @@ export type ThemeColor = keyof typeof Colors.light;
 
 export const Typography = {
   fontFamilies: {
-    hankenRegular: 'HankenGrotesk_400Regular',
-    hankenMedium: 'HankenGrotesk_500Medium',
-    hankenSemiBold: 'HankenGrotesk_600SemiBold',
-    hankenBold: 'HankenGrotesk_700Bold',
-    hankenExtraBold: 'HankenGrotesk_800ExtraBold',
+    hankenRegular: 'PlusJakartaSans_400Regular',
+    hankenMedium: 'PlusJakartaSans_500Medium',
+    hankenSemiBold: 'PlusJakartaSans_600SemiBold',
+    hankenBold: 'PlusJakartaSans_700Bold',
+    hankenExtraBold: 'PlusJakartaSans_800ExtraBold',
     jakartaMedium: 'PlusJakartaSans_500Medium',
     jakartaBold: 'PlusJakartaSans_700Bold',
   },
   // Scale styles mapped from DESIGN.md
   displayLg: {
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     fontSize: 32,
     lineHeight: 40,
     letterSpacing: -0.64, // -0.02em
   },
   displayLgMobile: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 26,
     lineHeight: 32,
     letterSpacing: -0.52,
   },
   headlineLg: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 28,
     lineHeight: 36,
     letterSpacing: -0.28, // -0.01em
   },
   headlineMd: {
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 20,
     lineHeight: 28,
     letterSpacing: -0.2,
   },
   headlineSm: {
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 18,
     lineHeight: 24,
   },
   bodyLg: {
-    fontFamily: 'HankenGrotesk_400Regular',
+    fontFamily: 'PlusJakartaSans_400Regular',
     fontSize: 16,
     lineHeight: 24,
   },
   bodyMd: {
-    fontFamily: 'HankenGrotesk_400Regular',
+    fontFamily: 'PlusJakartaSans_400Regular',
     fontSize: 14,
     lineHeight: 20,
   },
   bodySm: {
-    fontFamily: 'HankenGrotesk_400Regular',
+    fontFamily: 'PlusJakartaSans_400Regular',
     fontSize: 14,
     lineHeight: 20,
   },

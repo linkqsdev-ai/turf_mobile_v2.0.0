@@ -13,6 +13,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -135,10 +136,10 @@ export default function TurfDetailsScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <GradientContainer screenName="details" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Navigation TopAppBar */}
-        <View style={[styles.header, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <Pressable 
             onPress={() => {
               if (router.canGoBack()) {
@@ -487,7 +488,7 @@ export default function TurfDetailsScreen() {
           </View>
         </View>
       </Modal>
-    </ThemedView>
+    </GradientContainer>
   );
 }
 

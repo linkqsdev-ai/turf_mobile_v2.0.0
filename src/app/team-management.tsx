@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -151,7 +152,7 @@ export default function TeamManagementScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <GradientContainer screenName="team-management" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header Stack Bar */}
         <View style={styles.header}>
@@ -335,7 +336,7 @@ export default function TeamManagementScreen() {
           <ThemedText type="labelSm" style={{ color: '#ffffff' }}>{toastMsg}</ThemedText>
         </Animated.View>
       )}
-    </ThemedView>
+    </GradientContainer>
   );
 }
 
@@ -445,7 +446,6 @@ const styles = StyleSheet.create({
     bottom: height / 3,
   },
   modalTitle: {
-    color: '#05151e',
     fontWeight: 'bold',
   },
   inputGroup: {

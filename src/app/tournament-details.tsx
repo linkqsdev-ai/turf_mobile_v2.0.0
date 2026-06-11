@@ -13,6 +13,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -381,7 +382,7 @@ export default function TournamentDetailsScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <GradientContainer screenName="tournament-details" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Detail Header Navigation */}
         <View style={styles.header}>
@@ -436,12 +437,12 @@ export default function TournamentDetailsScreen() {
                 const isActive = activeTab === tab;
                 return (
                   <Pressable
-                    key={tab}
-                    onPress={() => setActiveTab(tab)}
-                    style={[
-                      styles.tabPill,
-                      isActive && { backgroundColor: theme.primary }
-                    ]}
+                     key={tab}
+                     onPress={() => setActiveTab(tab)}
+                     style={[
+                       styles.tabPill,
+                       isActive && { backgroundColor: theme.primary }
+                     ]}
                   >
                     <ThemedText
                       type="labelSm"
@@ -463,7 +464,7 @@ export default function TournamentDetailsScreen() {
         </ScrollView>
 
         {/* Floating Call to Action Register Button */}
-        <View style={[styles.ctaFooter, { borderTopColor: theme.outlineVariant + '33' }]}>
+        <View style={[styles.ctaFooter, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '33' }]}>
           <Pressable 
             style={[styles.registerCtaBtn, { backgroundColor: theme.secondaryContainer }]}
             onPress={() => router.push({
@@ -483,7 +484,7 @@ export default function TournamentDetailsScreen() {
           <ThemedText type="labelSm" style={{ color: '#ffffff' }}>{toastMsg}</ThemedText>
         </Animated.View>
       )}
-    </ThemedView>
+    </GradientContainer>
   );
 }
 
@@ -568,7 +569,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sectionHeader: {
-    color: '#05151e',
     fontWeight: 'bold',
     marginBottom: Spacing.sm,
   },
@@ -786,7 +786,6 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: Spacing.containerMargin,
     paddingVertical: Spacing.md,
-    backgroundColor: '#ffffff',
     borderTopWidth: 1,
   },
   registerCtaBtn: {

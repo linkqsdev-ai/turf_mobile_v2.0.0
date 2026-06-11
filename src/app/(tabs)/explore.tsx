@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -86,10 +87,10 @@ export default function ExploreScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <GradientContainer screenName="explore" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Top App Bar */}
-        <View style={[styles.header, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <View style={styles.headerLeft}>
             <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
               <Image
@@ -559,7 +560,7 @@ export default function ExploreScreen() {
         </Animated.View>
       )}
       <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
-    </ThemedView>
+    </GradientContainer>
   );
 }
 

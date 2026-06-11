@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -60,11 +61,11 @@ export default function LiveScoringScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <GradientContainer screenName="scoring" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         
         {/* Navigation TopAppBar */}
-        <View style={[styles.header, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <View style={styles.headerLeft}>
             <Pressable 
               onPress={() => {
@@ -141,7 +142,7 @@ export default function LiveScoringScreen() {
         </View>
 
       </SafeAreaView>
-    </ThemedView>
+    </GradientContainer>
   );
 }
 

@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/themed-text';
+import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -62,10 +63,10 @@ export default function CreateTeamScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <GradientContainer screenName="create-team" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <View style={styles.headerLeft}>
             <Pressable
               onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/matches')}
@@ -261,7 +262,7 @@ export default function CreateTeamScreen() {
 
         </ScrollView>
       </SafeAreaView>
-    </View>
+    </GradientContainer>
   );
 }
 
