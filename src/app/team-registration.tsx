@@ -311,7 +311,7 @@ export default function TeamRegistrationScreen() {
                 <ThemedText type="headlineSm" style={[styles.sectionTitle, { marginTop: Spacing.md }]}>3. Member Roster</ThemedText>
                 <View style={styles.rosterSection}>
                   {roster.map((player, idx) => (
-                    <View key={player.id} style={[styles.playerFormCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }]}>
+                    <View key={player.id} style={[styles.playerFormCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level1]}>
                       <View style={styles.rowBetween}>
                         <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: 'bold' }}>Player #{idx + 1}</ThemedText>
                         <Pressable onPress={() => handleRemovePlayer(player.id)}>
@@ -365,7 +365,7 @@ export default function TeamRegistrationScreen() {
                 </View>
 
                 <ThemedText type="headlineSm" style={[styles.sectionTitle, { marginTop: Spacing.md }]}>4. Fees & Payments</ThemedText>
-                <View style={[styles.paymentPortal, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant }]}>
+                <View style={[styles.paymentPortal, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }, Shadows.level1]}>
                   <View style={styles.rowBetween}>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Entry Fee</ThemedText>
                     <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹150.00</ThemedText>
@@ -483,54 +483,46 @@ export default function TeamRegistrationScreen() {
                       {/* Tinted Info Container */}
                       <View style={[styles.adminInfoBox, { backgroundColor: theme.surfaceLow }]}>
                         
-                        {/* Manager Section */}
-                        <View style={styles.adminDetailRow}>
-                          <Ionicons name="person-outline" size={14} color={theme.textSecondary} style={styles.detailIcon} />
-                          <ThemedText type="bodySm" style={styles.adminGridText}>
-                            Manager: <ThemedText type="bodySm" style={styles.boldText}>{t.manager}</ThemedText>
-                          </ThemedText>
+                        {/* Row 1: Manager & Roster */}
+                        <View style={[styles.adminDetailRowCombined, { borderTopWidth: 0, paddingTop: 0 }]}>
+                          <View style={styles.combinedItem}>
+                            <Ionicons name="person-outline" size={13} color={theme.textSecondary} style={styles.detailIcon} />
+                            <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
+                              {t.manager}
+                            </ThemedText>
+                          </View>
+                          <View style={styles.combinedSeparator} />
+                          <View style={styles.combinedItem}>
+                            <Ionicons name="people-outline" size={13} color={theme.textSecondary} style={styles.detailIcon} />
+                            <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
+                              {(t.rosterCount !== undefined ? t.rosterCount : 8)} Players
+                            </ThemedText>
+                          </View>
                         </View>
 
-                        {/* Contact info combined row */}
+                        {/* Row 2: Phone & Email */}
                         <View style={styles.adminDetailRowCombined}>
                           <View style={styles.combinedItem}>
-                            <Ionicons name="call-outline" size={14} color={theme.textSecondary} style={styles.detailIcon} />
+                            <Ionicons name="call-outline" size={13} color={theme.textSecondary} style={styles.detailIcon} />
                             <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
                               {t.phone || '+44 7911 123456'}
                             </ThemedText>
                           </View>
                           <View style={styles.combinedSeparator} />
                           <View style={styles.combinedItem}>
-                            <Ionicons name="mail-outline" size={14} color={theme.textSecondary} style={styles.detailIcon} />
+                            <Ionicons name="mail-outline" size={13} color={theme.textSecondary} style={{ marginRight: 6 }} />
                             <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
                               {t.email || 'manager@example.com'}
                             </ThemedText>
                           </View>
                         </View>
 
-                        {/* Roster and Payment combined row */}
+                        {/* Row 3: Payment Method */}
                         <View style={styles.adminDetailRowCombined}>
                           <View style={styles.combinedItem}>
-                            <Ionicons name="people-outline" size={14} color={theme.textSecondary} style={styles.detailIcon} />
-                            <ThemedText type="bodySm" style={styles.adminGridText}>
-                              {(t.rosterCount !== undefined ? t.rosterCount : 8)} Players
-                            </ThemedText>
-                          </View>
-                          <View style={styles.combinedSeparator} />
-                          <View style={styles.combinedItem}>
-                            <Ionicons name="wallet-outline" size={14} color={theme.textSecondary} style={styles.detailIcon} />
-                            <ThemedText 
-                              type="bodySm" 
-                              style={[
-                                styles.adminGridText, 
-                                { 
-                                  color: t.payment === 'Pending' ? theme.error : '#0f9f58', 
-                                  fontWeight: 'bold' 
-                                }
-                              ]} 
-                              numberOfLines={1}
-                            >
-                              {t.payment} ({method})
+                            <Ionicons name="card-outline" size={13} color={theme.textSecondary} style={styles.detailIcon} />
+                            <ThemedText type="bodySm" style={styles.adminGridText} numberOfLines={1}>
+                              Method: {method}
                             </ThemedText>
                           </View>
                         </View>
@@ -538,32 +530,50 @@ export default function TeamRegistrationScreen() {
 
                       {/* Actions Row */}
                       <View style={styles.adminActionsRow}>
-                        {/* Reject Button (Outline Red Pill) */}
-                        <Pressable 
-                          style={styles.adminPillBtnReject}
-                          onPress={() => handleAdminAction(t.id, 'Reject')}
-                        >
-                          <Ionicons name="close-circle-outline" size={14} color="#ba1a1a" style={{ marginRight: 4 }} />
-                          <ThemedText type="labelSm" style={{ color: '#ba1a1a', fontWeight: 'bold' }}>Reject</ThemedText>
-                        </Pressable>
+                        {/* Left: Fee Status */}
+                        <View style={styles.adminActionsLeft}>
+                          <Ionicons name="wallet-outline" size={14} color={theme.textSecondary} />
+                          <ThemedText 
+                            type="labelSm" 
+                            style={[
+                              styles.feeStatusText, 
+                              { 
+                                color: t.payment === 'Pending' ? theme.error : '#0f9f58', 
+                                fontWeight: 'bold',
+                                marginLeft: 4
+                              }
+                            ]}
+                          >
+                            {t.payment}
+                          </ThemedText>
+                        </View>
 
-                        {/* Request Info Button (Outline Blue Pill) */}
-                        <Pressable 
-                          style={styles.adminPillBtnInfo}
-                          onPress={() => handleAdminAction(t.id, 'Request Changes')}
-                        >
-                          <Ionicons name="chatbubble-ellipses-outline" size={14} color="#2980b9" style={{ marginRight: 4 }} />
-                          <ThemedText type="labelSm" style={{ color: '#2980b9', fontWeight: 'bold' }}>Info</ThemedText>
-                        </Pressable>
+                        {/* Right: Icon-only Action Buttons */}
+                        <View style={styles.adminActionsRight}>
+                          {/* Request Info Button */}
+                          <Pressable 
+                            style={styles.adminIconBtnInfo}
+                            onPress={() => handleAdminAction(t.id, 'Request Changes')}
+                          >
+                            <Ionicons name="chatbubble-ellipses-outline" size={14} color="#2980b9" />
+                          </Pressable>
 
-                        {/* Approve Button (Solid Green Pill) */}
-                        <Pressable 
-                          style={styles.adminPillBtnApprove}
-                          onPress={() => handleAdminAction(t.id, 'Approve')}
-                        >
-                          <Ionicons name="checkmark-circle-outline" size={14} color="#ffffff" style={{ marginRight: 4 }} />
-                          <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: 'bold' }}>Approve</ThemedText>
-                        </Pressable>
+                          {/* Reject Button */}
+                          <Pressable 
+                            style={styles.adminIconBtnReject}
+                            onPress={() => handleAdminAction(t.id, 'Reject')}
+                          >
+                            <Ionicons name="close" size={14} color="#ba1a1a" />
+                          </Pressable>
+
+                          {/* Approve Button */}
+                          <Pressable 
+                            style={styles.adminIconBtnApprove}
+                            onPress={() => handleAdminAction(t.id, 'Approve')}
+                          >
+                            <Ionicons name="checkmark" size={14} color="#ffffff" />
+                          </Pressable>
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -850,44 +860,54 @@ const styles = StyleSheet.create({
   },
   adminActionsRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  adminActionsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  feeStatusText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  adminActionsRight: {
+    flexDirection: 'row',
     gap: 8,
-    marginTop: 4,
   },
-  adminPillBtnApprove: {
-    flex: 1.2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  adminIconBtnApprove: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#0f9f58',
-    height: 36,
-    borderRadius: 18,
-    shadowColor: '#0f9f58',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  adminPillBtnReject: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#0f9f58',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  adminIconBtnReject: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#ba1a1a',
-    backgroundColor: '#ffdad622',
-    height: 36,
-    borderRadius: 18,
-  },
-  adminPillBtnInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: '#ffdad611',
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  adminIconBtnInfo: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#2980b9',
-    backgroundColor: '#e6f0fa22',
-    height: 36,
-    borderRadius: 18,
+    backgroundColor: '#e6f0fa11',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   toastContainer: {
     position: 'absolute',
