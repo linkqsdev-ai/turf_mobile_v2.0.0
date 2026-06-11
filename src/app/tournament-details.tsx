@@ -223,11 +223,11 @@ export default function TournamentDetailsScreen() {
         // Cricket Scoring Layout
         <View style={[styles.liveScoreCard, { backgroundColor: theme.primaryContainer }]}>
           <View style={styles.rowBetween}>
-            <View style={styles.liveBadge}>
-              <View style={styles.liveDot} />
-              <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 9, fontWeight: '800' }}>LIVE CRICKET</ThemedText>
-            </View>
             <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Pitch A • London</ThemedText>
+            <View style={styles.liveBadgeCompact}>
+              <View style={styles.liveDotRed} />
+              <ThemedText style={styles.liveText}>Live Cricket</ThemedText>
+            </View>
           </View>
 
           <View style={styles.cricketScores}>
@@ -245,12 +245,12 @@ export default function TournamentDetailsScreen() {
 
           <View style={[styles.liveFooterStats, { borderTopColor: '#ffffff1a' }]}>
             <View style={{ flex: 1 }}>
-              <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>BATSMEN</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Batsmen</ThemedText>
               <ThemedText type="bodySm" style={{ color: '#ffffff' }}>M. Vance: 45* (28)</ThemedText>
               <ThemedText type="bodySm" style={{ color: '#ffffff' }}>S. Wilson: 18 (14)</ThemedText>
             </View>
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>BOWLER</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Bowler</ThemedText>
               <ThemedText type="bodySm" style={{ color: '#ffffff' }}>J. Carter: 2/32 (3.4)</ThemedText>
             </View>
           </View>
@@ -259,11 +259,11 @@ export default function TournamentDetailsScreen() {
         // Football Scoring Layout
         <View style={[styles.liveScoreCard, { backgroundColor: theme.primaryContainer }]}>
           <View style={styles.rowBetween}>
-            <View style={styles.liveBadge}>
-              <View style={styles.liveDot} />
-              <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 9, fontWeight: '800' }}>LIVE FOOTBALL</ThemedText>
-            </View>
             <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>{"85' Second Half"}</ThemedText>
+            <View style={styles.liveBadgeCompact}>
+              <View style={styles.liveDotRed} />
+              <ThemedText style={styles.liveText}>Live Football</ThemedText>
+            </View>
           </View>
 
           <View style={styles.footballScores}>
@@ -283,7 +283,7 @@ export default function TournamentDetailsScreen() {
           </View>
 
           <View style={[styles.liveFooterStats, { borderTopColor: '#ffffff1a' }]}>
-            <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, width: '100%', textAlign: 'center', marginBottom: 4 }}>GOALS TIMELINE</ThemedText>
+            <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, width: '100%', textAlign: 'center', marginBottom: 4 }}>Goals Timeline</ThemedText>
             <ThemedText type="bodySm" style={{ color: '#ffffff', width: '100%', textAlign: 'center' }}>
               {"Red Devils: M. Rashford (24'), Bruno (56')  •  London Utd: H. Kane (72')"}
             </ThemedText>
@@ -408,7 +408,7 @@ export default function TournamentDetailsScreen() {
             <View style={styles.countdownBadge}>
               <Ionicons name="hourglass-outline" size={14} color="#ffffff" style={{ marginRight: 6 }} />
               <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: 'bold' }}>
-                REG ENDS IN: 02d : 14h : 45m
+                Reg Ends In: 02d : 14h : 45m
               </ThemedText>
             </View>
           </View>
@@ -416,15 +416,15 @@ export default function TournamentDetailsScreen() {
           {/* Quick Metrics Statistics Grid */}
           <View style={styles.metricsGrid}>
             <View style={[styles.metricCard, { backgroundColor: theme.surfaceLow }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>TEAMS</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Teams</ThemedText>
               <ThemedText type="headlineMd" style={{ color: theme.text }}>12/16</ThemedText>
             </View>
             <View style={[styles.metricCard, { backgroundColor: theme.surfaceLow }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>PRIZE</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Prize</ThemedText>
               <ThemedText type="headlineMd" style={{ color: theme.secondaryContainer }}>{tournamentPrize}</ThemedText>
             </View>
             <View style={[styles.metricCard, { backgroundColor: theme.surfaceLow }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>MATCHES</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Matches</ThemedText>
               <ThemedText type="headlineMd" style={{ color: theme.text }}>32</ThemedText>
             </View>
           </View>
@@ -472,7 +472,7 @@ export default function TournamentDetailsScreen() {
             })}
           >
             <Ionicons name="medal" size={20} color="#6b4500" style={{ marginRight: 8 }} />
-            <ThemedText type="labelMd" style={{ color: '#6b4500', fontWeight: 'bold' }}>REGISTER TEAM NOW</ThemedText>
+            <ThemedText type="labelMd" style={{ color: '#6b4500', fontWeight: 'bold' }}>Register Team Now</ThemedText>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -673,20 +673,21 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     marginTop: Spacing.sm,
   },
-  liveBadge: {
-    backgroundColor: '#ff1744',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.md,
+  liveBadgeCompact: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
-  liveDot: {
+  liveDotRed: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#ffffff',
-    marginRight: 4,
+    backgroundColor: '#ff1744',
+  },
+  liveText: {
+    color: '#ff1744',
+    fontSize: 10,
+    fontFamily: 'HankenGrotesk_700Bold',
   },
   cricketScores: {
     flexDirection: 'row',

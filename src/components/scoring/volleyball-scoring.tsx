@@ -133,8 +133,12 @@ export default function VolleyballScoring() {
       {/* Set Score Banner */}
       <View style={styles.bannerWrapper}>
         <View style={[styles.timerBanner, { backgroundColor: theme.primaryContainer }]}>
+          <View style={styles.liveBadgeAbsolute}>
+            <View style={styles.liveDotRed} />
+            <ThemedText style={styles.liveText}>Live</ThemedText>
+          </View>
           <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, letterSpacing: 1, marginBottom: 8 }}>
-            VOLLEYBALL MATCH SETS (BEST OF 5)
+            Volleyball Match Sets (Best of 5)
           </ThemedText>
           <View style={styles.setsTable}>
             <View style={styles.setsHeaderRow}>
@@ -185,7 +189,7 @@ export default function VolleyballScoring() {
       <View style={styles.section}>
         <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
           <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.md, letterSpacing: 0.5 }}>
-            POINT CONTROLLERS
+            Point Controllers
           </ThemedText>
           <View style={styles.pointsConsole}>
             {/* Player A Point Column */}
@@ -203,7 +207,7 @@ export default function VolleyballScoring() {
                 onPress={() => awardPoint('A')}
                 style={[styles.pointIncrementBtn, { backgroundColor: theme.secondaryContainer }]}
               >
-                <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer }}>+1 POINT</ThemedText>
+                <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer }}>+1 Point</ThemedText>
               </Pressable>
             </View>
 
@@ -224,7 +228,7 @@ export default function VolleyballScoring() {
                 onPress={() => awardPoint('B')}
                 style={[styles.pointIncrementBtn, { backgroundColor: theme.primaryContainer }]}
               >
-                <ThemedText type="labelMd" style={{ color: '#ffffff' }}>+1 POINT</ThemedText>
+                <ThemedText type="labelMd" style={{ color: '#ffffff' }}>+1 Point</ThemedText>
               </Pressable>
             </View>
           </View>
@@ -235,7 +239,7 @@ export default function VolleyballScoring() {
       <View style={styles.section}>
         <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
           <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.md, letterSpacing: 0.5 }}>
-            VOLLEYBALL STATS ADJUSTER
+            Volleyball Stats Adjuster
           </ThemedText>
 
           {/* Aces */}
@@ -305,7 +309,7 @@ export default function VolleyballScoring() {
           style={[styles.undoBtn, { backgroundColor: theme.primaryContainer }, history.length === 0 && { opacity: 0.5 }]}
         >
           <Ionicons name="arrow-undo" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>UNDO LAST POINT</ThemedText>
+          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Undo Last Point</ThemedText>
         </Pressable>
       </View>
     </ScrollView>
@@ -326,6 +330,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 4,
+    position: 'relative',
   },
   setsTable: {
     flexDirection: 'column',
@@ -405,5 +410,25 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  liveBadgeAbsolute: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 20,
+  },
+  liveDotRed: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ff1744',
+  },
+  liveText: {
+    color: '#ff1744',
+    fontSize: 10,
+    fontFamily: 'HankenGrotesk_700Bold',
   },
 });

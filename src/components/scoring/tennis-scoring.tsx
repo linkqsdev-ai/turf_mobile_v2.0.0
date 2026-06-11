@@ -173,8 +173,12 @@ export default function TennisScoring() {
       {/* Live Set Scoreboard Banner */}
       <View style={styles.bannerWrapper}>
         <View style={[styles.scoreboardBanner, { backgroundColor: theme.primaryContainer }]}>
+          <View style={styles.liveBadgeAbsolute}>
+            <View style={styles.liveDotRed} />
+            <ThemedText style={styles.liveText}>Live</ThemedText>
+          </View>
           <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, letterSpacing: 1, marginBottom: 8 }}>
-            TENNIS SETS MATCH SCORE
+            Tennis Sets Match Score
           </ThemedText>
 
           {/* Set Scores Display Table */}
@@ -227,7 +231,7 @@ export default function TennisScoring() {
       <View style={styles.section}>
         <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
           <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.md, letterSpacing: 0.5 }}>
-            CURRENT GAME POINTS
+            Current Game Points
           </ThemedText>
 
           <View style={styles.pointsConsole}>
@@ -275,7 +279,7 @@ export default function TennisScoring() {
           {/* Serve Toggle */}
           <Pressable onPress={toggleServer} style={[styles.serveToggleBtn, { backgroundColor: theme.surfaceLow, marginTop: Spacing.md }]}>
             <Ionicons name="swap-horizontal-outline" size={16} color={theme.text} />
-            <ThemedText type="labelMd" style={{ marginLeft: 6 }}>SWITCH SERVER</ThemedText>
+            <ThemedText type="labelMd" style={{ marginLeft: 6 }}>Switch Server</ThemedText>
           </Pressable>
         </View>
       </View>
@@ -284,7 +288,7 @@ export default function TennisScoring() {
       <View style={styles.section}>
         <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
           <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.md, letterSpacing: 0.5 }}>
-            TENNIS MATCH STATS
+            Tennis Match Stats
           </ThemedText>
 
           {/* Aces Adjuster */}
@@ -354,7 +358,7 @@ export default function TennisScoring() {
           style={[styles.undoBtn, { backgroundColor: theme.primaryContainer }, history.length === 0 && { opacity: 0.5 }]}
         >
           <Ionicons name="arrow-undo" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>UNDO LAST POINT</ThemedText>
+          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Undo Last Point</ThemedText>
         </Pressable>
       </View>
     </ScrollView>
@@ -375,6 +379,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 4,
+    position: 'relative',
   },
   setsTable: {
     flexDirection: 'column',
@@ -461,5 +466,25 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  liveBadgeAbsolute: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 20,
+  },
+  liveDotRed: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ff1744',
+  },
+  liveText: {
+    color: '#ff1744',
+    fontSize: 10,
+    fontFamily: 'HankenGrotesk_700Bold',
   },
 });

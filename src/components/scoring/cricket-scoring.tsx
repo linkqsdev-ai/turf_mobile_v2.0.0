@@ -200,11 +200,13 @@ export default function CricketScoring() {
 
           <View style={styles.bannerRow}>
             <View style={styles.bannerLeftCol}>
-              <View style={[styles.liveBadge, { backgroundColor: theme.secondaryContainer }]}>
-                <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontWeight: '800' }}>
-                  LIVE • 1ST INNINGS
-                </ThemedText>
+              <View style={styles.liveBadgeAbsolute}>
+                <View style={styles.liveDotRed} />
+                <ThemedText style={styles.liveText}>Live</ThemedText>
               </View>
+              <ThemedText type="labelMd" style={{ color: theme.secondaryContainer, fontWeight: '700', marginBottom: 4 }}>
+                1st Innings
+              </ThemedText>
               <ThemedText type="headlineLg" style={styles.teamTitle}>
                 London Lions
               </ThemedText>
@@ -244,7 +246,7 @@ export default function CricketScoring() {
       <View style={styles.section}>
         <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
           <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
-            CURRENT OVER LOG
+            Current Over Log
           </ThemedText>
           
           <View style={styles.logBallsRow}>
@@ -308,7 +310,7 @@ export default function CricketScoring() {
       <View style={styles.section}>
         <View style={[styles.tableCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
           <View style={[styles.tableHeader, { backgroundColor: theme.surfaceLow }]}>
-            <ThemedText type="labelMd" style={{ color: theme.text }}>CURRENT BATSMEN</ThemedText>
+            <ThemedText type="labelMd" style={{ color: theme.text }}>Current Batsmen</ThemedText>
             <Ionicons name="create-outline" size={16} color={theme.text} />
           </View>
 
@@ -360,7 +362,7 @@ export default function CricketScoring() {
 
         <View style={[styles.tableCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', marginTop: Spacing.md }]}>
           <View style={[styles.tableHeader, { backgroundColor: theme.surfaceLow }]}>
-            <ThemedText type="labelMd" style={{ color: theme.text }}>CURRENT BOWLER</ThemedText>
+            <ThemedText type="labelMd" style={{ color: theme.text }}>Current Bowler</ThemedText>
             <Ionicons name="swap-horizontal-outline" size={16} color={theme.text} />
           </View>
 
@@ -405,7 +407,7 @@ export default function CricketScoring() {
         <View style={[styles.consoleCard, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
           
           <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.md, letterSpacing: 0.5 }}>
-            RUNS SCORED
+            Runs Scored
           </ThemedText>
 
           <View style={styles.runsGrid}>
@@ -435,7 +437,7 @@ export default function CricketScoring() {
           </View>
 
           <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginTop: Spacing.lg, marginBottom: Spacing.sm, letterSpacing: 0.5 }}>
-            EXTRAS
+            Extras
           </ThemedText>
 
           <View style={styles.extrasRow}>
@@ -446,7 +448,7 @@ export default function CricketScoring() {
                 style={[styles.extraButton, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}
               >
                 <ThemedText type="labelMd" style={{ fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
-                  {extra === 'WD' ? 'WIDE' : extra === 'NB' ? 'NO BALL' : extra}
+                  {extra === 'WD' ? 'Wide' : extra === 'NB' ? 'No Ball' : extra}
                 </ThemedText>
               </Pressable>
             ))}
@@ -459,7 +461,7 @@ export default function CricketScoring() {
             >
               <Ionicons name="skull-outline" size={18} color="#ffffff" />
               <ThemedText type="headlineSm" style={{ color: '#ffffff', marginLeft: 6 }}>
-                WICKET
+                Wicket
               </ThemedText>
             </Pressable>
             
@@ -493,7 +495,7 @@ export default function CricketScoring() {
               style={[styles.completeOverBtn, { backgroundColor: theme.primary }]}
             >
               <ThemedText type="labelMd" style={{ color: theme.onPrimary }}>
-                COMPLETE OVER
+                Complete Over
               </ThemedText>
               <Ionicons name="arrow-forward" size={16} color={theme.onPrimary} style={{ marginLeft: 4 }} />
             </Pressable>
@@ -540,13 +542,25 @@ const styles = StyleSheet.create({
   bannerLeftCol: {
     width: '60%',
   },
-  liveBadge: {
-    backgroundColor: '#feae2c',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.full,
-    marginBottom: Spacing.xs,
+  liveBadgeAbsolute: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 20,
+  },
+  liveDotRed: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ff1744',
+  },
+  liveText: {
+    color: '#ff1744',
+    fontSize: 10,
+    fontFamily: 'HankenGrotesk_700Bold',
   },
   teamTitle: {
     color: '#ffffff',

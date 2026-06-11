@@ -188,7 +188,7 @@ export default function FootballScoring() {
           <View style={styles.timerRow}>
             <View style={styles.timerBlock}>
               <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, letterSpacing: 1 }}>
-                MATCH TIME
+                Match Time
               </ThemedText>
               <ThemedText type="displayLg" style={{ color: theme.secondaryContainer, fontSize: 40, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 4 }}>
                 {String(Math.floor(seconds / 60)).padStart(2, '0')}:{String(seconds % 60).padStart(2, '0')}
@@ -217,9 +217,13 @@ export default function FootballScoring() {
 
       {/* Main Scoring Console */}
       <View style={styles.section}>
-        <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+        <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', position: 'relative' }]}>
+          <View style={styles.liveBadgeAbsolute}>
+            <View style={styles.liveDotRed} />
+            <ThemedText style={styles.liveText}>Live</ThemedText>
+          </View>
           <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.md, letterSpacing: 0.5 }}>
-            LIVE SCORES & GOALS
+            Scores & Goals
           </ThemedText>
           <View style={styles.teamsRow}>
             {/* Team A Goal Button */}
@@ -269,7 +273,7 @@ export default function FootballScoring() {
       <View style={styles.section}>
         <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
           <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.md, letterSpacing: 0.5 }}>
-            MATCH STATS ADJUSTER
+            Match Stats Adjuster
           </ThemedText>
 
           {/* Possession Bar */}
@@ -301,7 +305,7 @@ export default function FootballScoring() {
           <View style={styles.counterGrid}>
             {/* Shots */}
             <View style={[styles.counterBox, { backgroundColor: theme.surfaceLow }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>SHOTS</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Shots</ThemedText>
               <View style={styles.boxActionRow}>
                 <Pressable onPress={() => setShotsA(prev => Math.max(0, prev - 1))} style={styles.iconBtn}>
                   <Ionicons name="remove-circle-outline" size={18} color={theme.text} />
@@ -312,13 +316,13 @@ export default function FootballScoring() {
                 </Pressable>
               </View>
               <Pressable onPress={() => setShotsA(prev => prev + 1)} style={styles.quickAddBtn}>
-                <ThemedText type="labelSm" style={{ color: theme.secondary }}>+ SHOT A</ThemedText>
+                <ThemedText type="labelSm" style={{ color: theme.secondary }}>+ Shot A</ThemedText>
               </Pressable>
             </View>
 
             {/* Corners */}
             <View style={[styles.counterBox, { backgroundColor: theme.surfaceLow }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>CORNERS</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Corners</ThemedText>
               <View style={styles.boxActionRow}>
                 <Pressable onPress={() => setCornersA(prev => Math.max(0, prev - 1))} style={styles.iconBtn}>
                   <Ionicons name="remove-circle-outline" size={18} color={theme.text} />
@@ -329,13 +333,13 @@ export default function FootballScoring() {
                 </Pressable>
               </View>
               <Pressable onPress={() => setCornersA(prev => prev + 1)} style={styles.quickAddBtn}>
-                <ThemedText type="labelSm" style={{ color: theme.secondary }}>+ CORNER A</ThemedText>
+                <ThemedText type="labelSm" style={{ color: theme.secondary }}>+ Corner A</ThemedText>
               </Pressable>
             </View>
 
             {/* Fouls */}
             <View style={[styles.counterBox, { backgroundColor: theme.surfaceLow }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>FOULS</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Fouls</ThemedText>
               <View style={styles.boxActionRow}>
                 <Pressable onPress={() => setFoulsA(prev => Math.max(0, prev - 1))} style={styles.iconBtn}>
                   <Ionicons name="remove-circle-outline" size={18} color={theme.text} />
@@ -346,7 +350,7 @@ export default function FootballScoring() {
                 </Pressable>
               </View>
               <Pressable onPress={() => setFoulsA(prev => prev + 1)} style={styles.quickAddBtn}>
-                <ThemedText type="labelSm" style={{ color: theme.secondary }}>+ FOUL A</ThemedText>
+                <ThemedText type="labelSm" style={{ color: theme.secondary }}>+ Foul A</ThemedText>
               </Pressable>
             </View>
           </View>
@@ -402,7 +406,7 @@ export default function FootballScoring() {
           style={[styles.undoButton, { backgroundColor: theme.primaryContainer }, history.length === 0 && { opacity: 0.5 }]}
         >
           <Ionicons name="arrow-undo" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>UNDO LAST ACTION</ThemedText>
+          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Undo Last Action</ThemedText>
         </Pressable>
       </View>
 
@@ -410,7 +414,7 @@ export default function FootballScoring() {
       <View style={[styles.section, { paddingBottom: 120 }]}>
         <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
           <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.md, letterSpacing: 0.5 }}>
-            MATCH TIMELINE
+            Match Timeline
           </ThemedText>
           
           <View style={styles.timelineList}>
@@ -630,5 +634,25 @@ const styles = StyleSheet.create({
   },
   timelineDescCol: {
     flex: 1,
+  },
+  liveBadgeAbsolute: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 20,
+  },
+  liveDotRed: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ff1744',
+  },
+  liveText: {
+    color: '#ff1744',
+    fontSize: 10,
+    fontFamily: 'HankenGrotesk_700Bold',
   },
 });

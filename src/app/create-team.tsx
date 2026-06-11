@@ -102,7 +102,7 @@ export default function CreateTeamScreen() {
                   Build Your Legacy
                 </ThemedText>
                 <ThemedText style={{ color: '#75859d', fontSize: 11, fontFamily: 'HankenGrotesk_400Regular', lineHeight: 15 }}>
-                  Define your squad's core identity.
+                  Define your squad&apos;s core identity.
                 </ThemedText>
                 <ThemedText style={{ color: '#75859d', fontSize: 11, fontFamily: 'HankenGrotesk_400Regular', lineHeight: 15 }}>
                   Set the name, logo, sport and home ground.

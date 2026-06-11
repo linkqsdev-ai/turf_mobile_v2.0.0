@@ -127,8 +127,12 @@ export default function BasketballScoring() {
         <View style={[styles.timerBanner, { backgroundColor: theme.primaryContainer }]}>
           <View style={styles.timerRow}>
             <View style={styles.timerBlock}>
+              <View style={styles.liveBadgeAbsolute}>
+                <View style={styles.liveDotRed} />
+                <ThemedText style={styles.liveText}>Live</ThemedText>
+              </View>
               <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, letterSpacing: 1 }}>
-                QUARTER {quarter} TIMER
+                Quarter {quarter} Timer
               </ThemedText>
               <ThemedText type="displayLg" style={{ color: theme.secondaryContainer, fontSize: 38, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 4 }}>
                 {formatTimer()}
@@ -207,7 +211,7 @@ export default function BasketballScoring() {
         <View style={styles.statsRow}>
           {/* Team A stats */}
           <View style={[styles.statBox, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>LIONS FOULS</ThemedText>
+            <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Lions Fouls</ThemedText>
             <View style={styles.counterRow}>
               <Pressable onPress={() => setFoulsA(prev => Math.max(0, prev - 1))} style={styles.smallIconBtn}>
                 <Ionicons name="remove-circle-outline" size={20} color={theme.text} />
@@ -217,7 +221,7 @@ export default function BasketballScoring() {
                 <Ionicons name="add-circle-outline" size={20} color={theme.text} />
               </Pressable>
             </View>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>TIMEOUTS LEFT</ThemedText>
+            <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>Timeouts Left</ThemedText>
             <View style={styles.counterRow}>
               <Pressable onPress={() => setTimeoutsA(prev => Math.max(0, prev - 1))} style={styles.smallIconBtn}>
                 <Ionicons name="remove-circle-outline" size={20} color={theme.text} />
@@ -231,7 +235,7 @@ export default function BasketballScoring() {
 
           {/* Team B stats */}
           <View style={[styles.statBox, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>TITANS FOULS</ThemedText>
+            <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Titans Fouls</ThemedText>
             <View style={styles.counterRow}>
               <Pressable onPress={() => setFoulsB(prev => Math.max(0, prev - 1))} style={styles.smallIconBtn}>
                 <Ionicons name="remove-circle-outline" size={20} color={theme.text} />
@@ -241,7 +245,7 @@ export default function BasketballScoring() {
                 <Ionicons name="add-circle-outline" size={20} color={theme.text} />
               </Pressable>
             </View>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>TIMEOUTS LEFT</ThemedText>
+            <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>Timeouts Left</ThemedText>
             <View style={styles.counterRow}>
               <Pressable onPress={() => setTimeoutsB(prev => Math.max(0, prev - 1))} style={styles.smallIconBtn}>
                 <Ionicons name="remove-circle-outline" size={20} color={theme.text} />
@@ -263,7 +267,7 @@ export default function BasketballScoring() {
           style={[styles.undoBtn, { backgroundColor: theme.primaryContainer }, history.length === 0 && { opacity: 0.5 }]}
         >
           <Ionicons name="arrow-undo" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>UNDO SCORE RECORD</ThemedText>
+          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Undo Score Record</ThemedText>
         </Pressable>
       </View>
 
@@ -271,7 +275,7 @@ export default function BasketballScoring() {
       <View style={[styles.section, { paddingBottom: 120 }]}>
         <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
           <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.md, letterSpacing: 0.5 }}>
-            MATCH PLAY LOG
+            Match Play Log
           </ThemedText>
           <View style={styles.logContainer}>
             {events.map((event, idx) => (
@@ -310,6 +314,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 4,
+    position: 'relative',
   },
   timerRow: {
     flexDirection: 'row',
@@ -407,5 +412,25 @@ const styles = StyleSheet.create({
   },
   logDescCol: {
     flex: 1,
+  },
+  liveBadgeAbsolute: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 20,
+  },
+  liveDotRed: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ff1744',
+  },
+  liveText: {
+    color: '#ff1744',
+    fontSize: 10,
+    fontFamily: 'HankenGrotesk_700Bold',
   },
 });

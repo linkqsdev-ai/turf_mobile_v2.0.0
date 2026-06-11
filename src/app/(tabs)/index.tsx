@@ -96,7 +96,7 @@ export default function HomeScreen() {
                 </ThemedText>
                 <Pressable style={[styles.viewTasksButton, { backgroundColor: theme.secondaryContainer }]}>
                   <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontFamily: 'HankenGrotesk_700Bold' }}>
-                    VIEW TASKS
+                    View Tasks
                   </ThemedText>
                 </Pressable>
               </View>
@@ -118,7 +118,7 @@ export default function HomeScreen() {
               <ThemedText type="headlineSm">{"Today's Schedule"}</ThemedText>
               <Pressable>
                 <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_700Bold' }}>
-                  VIEW CALENDAR
+                  View Calendar
                 </ThemedText>
               </Pressable>
             </View>
@@ -143,10 +143,9 @@ export default function HomeScreen() {
                     </ThemedText>
                   </View>
                 </View>
-                <View style={[styles.liveBadge, { backgroundColor: theme.secondaryContainer }]}>
-                  <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 10 }}>
-                    LIVE
-                  </ThemedText>
+                <View style={styles.liveBadge}>
+                  <View style={styles.liveDot} />
+                  <ThemedText style={styles.liveText}>Live</ThemedText>
                 </View>
               </View>
 
@@ -184,7 +183,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.bentoTextWrap}>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5 }}>
-                    TOP SPEED
+                    Top Speed
                   </ThemedText>
                   <ThemedText type="headlineSm" style={{ marginTop: 2 }}>
                     34.2 <ThemedText type="labelSm" style={{ fontWeight: 'normal' }}>km/h</ThemedText>
@@ -199,7 +198,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.bentoTextWrap}>
                   <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, opacity: 0.6, letterSpacing: 0.5 }}>
-                    AVG. POWER
+                    Avg. Power
                   </ThemedText>
                   <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer, marginTop: 2 }}>
                     280 <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, fontWeight: 'normal' }}>W</ThemedText>
@@ -214,7 +213,7 @@ export default function HomeScreen() {
             <View style={[styles.graphCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}>
               <View style={styles.graphHeader}>
                 <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', letterSpacing: 0.5 }}>
-                  WEEKLY PERFORMANCE
+                  Weekly Performance
                 </ThemedText>
                 <Ionicons name="ellipsis-horizontal" size={20} color={theme.textSecondary} />
               </View>
@@ -387,6 +386,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderWidth: 1,
     borderColor: '#c3c7cb33',
+    position: 'relative',
   },
   scheduleIconWrap: {
     width: 44,
@@ -419,9 +419,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   liveBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.md,
+    position: 'absolute',
+    top: 8,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ff1744',
+  },
+  liveText: {
+    color: '#ff1744',
+    fontSize: 10,
+    fontFamily: 'HankenGrotesk_700Bold',
   },
   bentoRow: {
     flexDirection: 'row',

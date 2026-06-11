@@ -113,7 +113,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.labelMd.fontSize,
     lineHeight: Typography.labelMd.lineHeight,
     letterSpacing: Typography.labelMd.letterSpacing,
-    textTransform: 'uppercase', // Often stylized in small caps
   },
   labelSm: {
     fontFamily: Typography.fontFamilies.jakartaMedium,

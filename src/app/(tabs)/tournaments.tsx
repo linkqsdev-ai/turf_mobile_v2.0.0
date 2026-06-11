@@ -432,6 +432,12 @@ export default function TournamentsTab() {
 
                         {/* Left Section (Details) */}
                         <View style={styles.ticketLeft}>
+                          {t.isLive && (
+                            <View style={styles.statusBadgeAbsolute}>
+                              <View style={styles.liveDot} />
+                              <ThemedText style={styles.liveText}>Live</ThemedText>
+                            </View>
+                          )}
                           <View style={styles.sportAndStatus}>
                             <View style={styles.sportBadgeRow}>
                               {t.sport === 'Football' && <MaterialCommunityIcons name="soccer" size={12} color={theme.secondary} />}
@@ -442,12 +448,7 @@ export default function TournamentsTab() {
                               </ThemedText>
                             </View>
 
-                            {/* Live or Status badge */}
-                            {t.isLive ? (
-                              <View style={[styles.statusBadgeInline, { backgroundColor: '#ff1744' }]}>
-                                <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 8, fontWeight: '800' }}>LIVE</ThemedText>
-                              </View>
-                            ) : (
+                            {!t.isLive && (
                               <View style={[
                                 styles.statusBadgeInline,
                                 t.registrationStatus === 'Registering' && { backgroundColor: '#e2f9ec' },
@@ -494,7 +495,7 @@ export default function TournamentsTab() {
                           <View style={styles.progressSection}>
                             <View style={styles.progressTextRow}>
                               <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9 }}>
-                                REGISTRATION PROGRESS
+                                Registration Progress
                               </ThemedText>
                               <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '700', fontSize: 10 }}>
                                 {t.teamsCount}/{t.maxTeams} Teams
@@ -522,7 +523,7 @@ export default function TournamentsTab() {
                           </View>
 
                           <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
-                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8, textAlign: 'center' }}>PRIZE POOL</ThemedText>
+                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8, textAlign: 'center' }}>Prize Pool</ThemedText>
                             <ThemedText type="bodyLg" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold', marginVertical: 2, textAlign: 'center' }}>
                               {t.prizePool}
                             </ThemedText>
@@ -562,14 +563,9 @@ export default function TournamentsTab() {
                         {/* Top Image banner */}
                         <View style={styles.gridCardHeader}>
                           <Image source={t.banner} style={styles.gridCardImage} contentFit="cover" />
-                          {t.isLive && (
-                            <View style={styles.gridLiveBadge}>
-                              <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 8, fontWeight: '800' }}>LIVE</ThemedText>
-                            </View>
-                          )}
                           {t.isSponsored && (
                             <View style={styles.gridSponsoredBadge}>
-                              <ThemedText type="labelSm" style={{ color: '#feae2c', fontSize: 8, fontWeight: '800' }}>SPONSORED</ThemedText>
+                              <ThemedText type="labelSm" style={{ color: '#feae2c', fontSize: 8, fontWeight: '800' }}>Sponsored</ThemedText>
                             </View>
                           )}
                           
@@ -596,23 +592,30 @@ export default function TournamentsTab() {
                               </ThemedText>
                             </View>
                             
-                            <View style={[
-                              styles.statusBadgeInline,
-                              t.registrationStatus === 'Registering' && { backgroundColor: '#e2f9ec' },
-                              t.registrationStatus === 'Filling Fast' && { backgroundColor: '#fff4e5' },
-                              t.registrationStatus === 'Upcoming' && { backgroundColor: '#e6f0fa' },
-                              t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2' }
-                            ]}>
-                              <ThemedText type="labelSm" style={[
-                                { fontSize: 8, fontWeight: '700' },
-                                t.registrationStatus === 'Registering' && { color: '#0f9f58' },
-                                t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
-                                t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
-                                t.registrationStatus === 'Closed' && { color: '#7f8c8d' }
+                            {t.isLive ? (
+                              <View style={styles.statusBadgeInlineNoBg}>
+                                <View style={styles.liveDot} />
+                                <ThemedText style={styles.liveText}>Live</ThemedText>
+                              </View>
+                            ) : (
+                              <View style={[
+                                styles.statusBadgeInline,
+                                t.registrationStatus === 'Registering' && { backgroundColor: '#e2f9ec' },
+                                t.registrationStatus === 'Filling Fast' && { backgroundColor: '#fff4e5' },
+                                t.registrationStatus === 'Upcoming' && { backgroundColor: '#e6f0fa' },
+                                t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2' }
                               ]}>
-                                {t.registrationStatus}
-                              </ThemedText>
-                            </View>
+                                <ThemedText type="labelSm" style={[
+                                  { fontSize: 8, fontWeight: '700' },
+                                  t.registrationStatus === 'Registering' && { color: '#0f9f58' },
+                                  t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
+                                  t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
+                                  t.registrationStatus === 'Closed' && { color: '#7f8c8d' }
+                                ]}>
+                                  {t.registrationStatus}
+                                </ThemedText>
+                              </View>
+                            )}
                           </View>
 
                           <ThemedText 
@@ -640,7 +643,7 @@ export default function TournamentsTab() {
                           {/* Progress Bar */}
                           <View style={{ marginTop: 6 }}>
                             <View style={styles.progressTextRow}>
-                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8 }}>PROGRESS</ThemedText>
+                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8 }}>Progress</ThemedText>
                               <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '700', fontSize: 9 }}>
                                 {t.teamsCount}/{t.maxTeams}
                               </ThemedText>
@@ -657,7 +660,7 @@ export default function TournamentsTab() {
                         {/* Footer / Stub section */}
                         <View style={styles.gridCardFooter}>
                           <View>
-                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8 }}>PRIZE</ThemedText>
+                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8 }}>Prize</ThemedText>
                             <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold' }}>
                               {t.prizePool}
                             </ThemedText>
@@ -1054,14 +1057,30 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  gridLiveBadge: {
+  statusBadgeAbsolute: {
     position: 'absolute',
-    top: 6,
-    left: 6,
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 20,
+  },
+  statusBadgeInlineNoBg: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#ff1744',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.default,
+  },
+  liveText: {
+    color: '#ff1744',
+    fontSize: 10,
+    fontFamily: 'HankenGrotesk_700Bold',
   },
   gridSponsoredBadge: {
     position: 'absolute',
