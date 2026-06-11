@@ -109,7 +109,7 @@ export default function MatchesScreen() {
           {/* LIVE NOW Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <ThemedText type="labelMd" style={{ color: theme.textSecondary }}>
+              <ThemedText type="labelMd" style={{ color: theme.textSecondary, textTransform: 'none' }}>
                 Live Now
               </ThemedText>
               <View style={[styles.pulseDot, { backgroundColor: theme.error }]} />
@@ -142,6 +142,7 @@ export default function MatchesScreen() {
 
                 {/* Match Teams & Live Score */}
                 <View style={styles.liveScoreRow}>
+                  {/* Left Column (RC) */}
                   <View style={styles.teamInfoCol}>
                     <View style={styles.teamLogoName}>
                       <View style={[styles.teamLetterLogo, { backgroundColor: theme.primaryContainer }]}>
@@ -159,23 +160,25 @@ export default function MatchesScreen() {
                     </ThemedText>
                   </View>
 
+                  {/* Center vs Container */}
                   <View style={styles.vsContainer}>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_500Medium' }}>vs</ThemedText>
                   </View>
 
-                  <View style={styles.teamInfoCol}>
-                    <View style={styles.teamLogoName}>
-                      <View style={[styles.teamLetterLogo, { backgroundColor: theme.outlineVariant }]}>
+                  {/* Right Column (KK - Symmetrical Right Alignment) */}
+                  <View style={[styles.teamInfoCol, { alignItems: 'flex-end' }]}>
+                    <View style={[styles.teamLogoName, { flexDirection: 'row-reverse' }]}>
+                      <View style={[styles.teamLetterLogo, { backgroundColor: theme.outlineVariant, marginLeft: 6 }]}>
                         <ThemedText type="labelMd" style={{ color: '#ffffff' }}>KK</ThemedText>
                       </View>
-                      <ThemedText type="bodyMd" style={{ marginLeft: 6, color: theme.textSecondary, fontWeight: '700', flex: 1, flexWrap: 'wrap' }}>
+                      <ThemedText type="bodyMd" style={{ color: theme.textSecondary, fontWeight: '700', textAlign: 'right', flex: 1, flexWrap: 'wrap' }}>
                         Kings XI
                       </ThemedText>
                     </View>
-                    <ThemedText style={{ fontSize: 18, color: theme.textSecondary, fontFamily: 'HankenGrotesk_600SemiBold', marginTop: 10 }}>
+                    <ThemedText style={{ fontSize: 18, color: theme.textSecondary, fontFamily: 'HankenGrotesk_600SemiBold', marginTop: 10, textAlign: 'right' }}>
                       Yet to bat
                     </ThemedText>
-                    <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 2 }}>
+                    <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 2, textAlign: 'right' }}>
                       2nd innings
                     </ThemedText>
                   </View>
@@ -205,10 +208,11 @@ export default function MatchesScreen() {
 
           {/* TODAY Section */}
           <View style={styles.section}>
-            <ThemedText type="labelMd" style={[styles.sectionHeader, { color: theme.textSecondary }]}>
+            <ThemedText type="labelMd" style={[styles.sectionHeader, { color: theme.textSecondary, textTransform: 'none' }]}>
               Today
             </ThemedText>
 
+            {/* Futsal Match Card */}
             <Pressable
               onPress={() => router.push({ pathname: '/scoring', params: { matchId: 'futsal-1', sport: 'football' } })}
               style={[styles.matchCardShadowWrapper, Shadows.level2]}
@@ -222,10 +226,7 @@ export default function MatchesScreen() {
 
                 <View style={styles.cardHeader}>
                   <View style={styles.badgeRow}>
-                    <View style={[styles.todayBadge, { backgroundColor: theme.primaryContainer }]}>
-                      <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '800' }}>Today</ThemedText>
-                    </View>
-                    <ThemedText type="bodyMd" style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_700Bold', marginLeft: 6 }}>
+                    <ThemedText type="bodyMd" style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_700Bold' }}>
                       Summer Futsal League
                     </ThemedText>
                   </View>
@@ -283,14 +284,84 @@ export default function MatchesScreen() {
                 </View>
               </View>
             </Pressable>
+
+            {/* Expanded Match: Premier League (Arsenal vs Chelsea) */}
+            <Pressable
+              onPress={() => router.push({ pathname: '/scoring', params: { matchId: 'pl-1', sport: 'football' } })}
+              style={[styles.matchCardShadowWrapper, Shadows.level2, { marginTop: 12 }]}
+            >
+              <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
+                <Image
+                  source={require('@/assets/images/illustrations/football_player.png')}
+                  style={styles.cardWatermark}
+                  contentFit="contain"
+                />
+
+                <View style={styles.cardHeader}>
+                  <View style={styles.badgeRow}>
+                    <ThemedText type="bodyMd" style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_700Bold' }}>
+                      Premier League
+                    </ThemedText>
+                  </View>
+                </View>
+
+                {/* Match Teams & Time */}
+                <View style={styles.scheduledMatchRow}>
+                  {/* Left Team */}
+                  <View style={styles.scheduledTeamLeft}>
+                    <View style={styles.crestContainerSmall}>
+                      <Ionicons name="shield-half" size={18} color="#ef0107" />
+                    </View>
+                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold', flex: 1 }} numberOfLines={1}>
+                      Arsenal
+                    </ThemedText>
+                  </View>
+
+                  {/* Center Time Pill */}
+                  <View style={[styles.timeBadgeSmall, { backgroundColor: theme.surfaceHigh }]}>
+                    <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_800ExtraBold', color: theme.text }}>21:00</ThemedText>
+                  </View>
+
+                  {/* Right Team */}
+                  <View style={styles.scheduledTeamRight}>
+                    <ThemedText type="bodyMd" style={{ marginRight: 8, fontFamily: 'HankenGrotesk_700Bold', flex: 1, textAlign: 'right' }} numberOfLines={1}>
+                      Chelsea
+                    </ThemedText>
+                    <View style={styles.crestContainerSmall}>
+                      <Ionicons name="shield-half" size={18} color="#034694" />
+                    </View>
+                  </View>
+                </View>
+
+                {/* Card Footer */}
+                <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33' }]}>
+                  <View style={styles.footerVenue}>
+                    <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
+                    <ThemedText type="bodyMd" style={styles.footerVenueText}>
+                      Emirates Stadium
+                    </ThemedText>
+                  </View>
+                  <Pressable
+                    onPress={() => router.push({ pathname: '/scoring', params: { matchId: 'pl-1', sport: 'football' } })}
+                    style={styles.matchCenterLink}
+                  >
+                    <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                      Match Center
+                    </ThemedText>
+                    <Ionicons name="arrow-forward" size={12} color={theme.text} style={{ marginLeft: 2 }} />
+                  </Pressable>
+                </View>
+              </View>
+            </Pressable>
           </View>
 
           {/* YESTERDAY Section */}
           <View style={[styles.section, { paddingBottom: 120 }]}>
-            <ThemedText type="labelMd" style={[styles.sectionHeader, { color: theme.textSecondary }]}>
+            <ThemedText type="labelMd" style={[styles.sectionHeader, { color: theme.textSecondary, textTransform: 'none' }]}>
               Yesterday
             </ThemedText>
 
+            {/* Match 1: T20 Blast */}
             <View style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9 }]}>
               <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
                 <View style={styles.cardHeader}>
@@ -323,6 +394,60 @@ export default function MatchesScreen() {
                     </ThemedText>
                     <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
                       142/9
+                    </ThemedText>
+                  </View>
+                </View>
+
+                {/* Card Footer */}
+                <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33', paddingTop: 10, marginTop: 10 }]}>
+                  <View style={[styles.finishedBadge, { backgroundColor: theme.surfaceHigh }]}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontWeight: '700' }}>
+                      Finished
+                    </ThemedText>
+                  </View>
+                  <Pressable style={styles.matchCenterLink}>
+                    <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                      Scorecard
+                    </ThemedText>
+                    <Ionicons name="chevron-forward" size={12} color={theme.text} />
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+
+            {/* Match 2: Champions League */}
+            <View style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9, marginTop: 12 }]}>
+              <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
+                <View style={styles.cardHeader}>
+                  <View style={[styles.leagueTypeBadge, { backgroundColor: '#e8f0fe', borderColor: '#d2e3fc', borderWidth: 1 }]}>
+                    <ThemedText type="labelSm" style={{ color: '#1a73e8', fontWeight: '700' }}>
+                      Champions League
+                    </ThemedText>
+                  </View>
+                </View>
+
+                {/* Finished Match Rows */}
+                <View style={{ marginVertical: 6, gap: 6 }}>
+                  <View style={styles.finishedMatchTeamRow}>
+                    <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                      <ThemedText type="labelSm" style={{ color: theme.text }}>RM</ThemedText>
+                    </View>
+                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_600SemiBold' }}>
+                      Real Madrid
+                    </ThemedText>
+                    <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
+                      3
+                    </ThemedText>
+                  </View>
+                  <View style={styles.finishedMatchTeamRow}>
+                    <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                      <ThemedText type="labelSm" style={{ color: theme.text }}>MC</ThemedText>
+                    </View>
+                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_600SemiBold' }}>
+                      Manchester City
+                    </ThemedText>
+                    <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
+                      2
                     </ThemedText>
                   </View>
                 </View>
