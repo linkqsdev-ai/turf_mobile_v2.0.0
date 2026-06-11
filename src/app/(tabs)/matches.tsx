@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: '#feae2c', // Gold ring around avatar
+    borderColor: '#5D68E8', // Gold ring around avatar
   },
   headerTextGroup: {
     flexDirection: 'column',
@@ -777,7 +777,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 100,
     // Gold Glow Shadow
-    shadowColor: '#feae2c',
+    shadowColor: '#5D68E8',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 12,

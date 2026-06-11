@@ -230,7 +230,7 @@ export default function NewMatchScreen() {
                   onPress={handleStartToss}
                 >
                   <LinearGradient
-                    colors={['#feae2c', '#ff8c00']}
+                    colors={['#5D68E8', '#ff8c00']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.startTossBtnGradient}
@@ -278,7 +278,7 @@ export default function NewMatchScreen() {
           </View>
 
           {/* Pro Tip */}
-          <View style={[styles.proTipCard, { backgroundColor: 'rgba(254, 174, 44, 0.08)', borderColor: 'rgba(254, 174, 44, 0.2)' }]}>
+          <View style={[styles.proTipCard, { backgroundColor: 'rgba(93, 104, 232, 0.08)', borderColor: 'rgba(93, 104, 232, 0.2)' }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
               <Ionicons name="bulb" size={16} color="#835500" />
               <ThemedText style={{ fontFamily: 'HankenGrotesk_700Bold', color: '#6b4500', fontSize: 11, marginLeft: 6 }}>PRO TIP</ThemedText>
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     // Premium soft gold shadow glow
-    shadowColor: '#feae2c',
+    shadowColor: '#5D68E8',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 8,

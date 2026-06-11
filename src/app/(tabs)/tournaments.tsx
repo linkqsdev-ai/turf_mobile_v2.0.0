@@ -516,7 +516,7 @@ export default function TournamentsTab() {
                           {/* Quick Action Overlay (Bookmark & Share) */}
                           <View style={styles.stubActions}>
                             <Pressable style={styles.ticketActionBtn} onPress={() => toggleBookmark(t.id)}>
-                              <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={15} color={isBookmarked ? '#feae2c' : theme.textSecondary} />
+                              <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={15} color={isBookmarked ? '#5D68E8' : theme.textSecondary} />
                             </Pressable>
                             <Pressable style={styles.ticketActionBtn} onPress={() => handleShare(t.name)}>
                               <Ionicons name="share-social-outline" size={15} color={theme.textSecondary} />
@@ -566,14 +566,14 @@ export default function TournamentsTab() {
                           <Image source={t.banner} style={styles.gridCardImage} contentFit="cover" />
                           {t.isSponsored && (
                             <View style={styles.gridSponsoredBadge}>
-                              <ThemedText type="labelSm" style={{ color: '#feae2c', fontSize: 8, fontWeight: '800' }}>Sponsored</ThemedText>
+                              <ThemedText type="labelSm" style={{ color: '#5D68E8', fontSize: 8, fontWeight: '800' }}>Sponsored</ThemedText>
                             </View>
                           )}
                           
                           {/* Quick Actions (Bookmark & Share) */}
                           <View style={{ position: 'absolute', top: 6, right: 6, flexDirection: 'row', gap: 4 }}>
                             <Pressable style={styles.ticketActionBtnCircle} onPress={() => toggleBookmark(t.id)}>
-                              <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={12} color={isBookmarked ? '#feae2c' : '#ffffff'} />
+                              <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={12} color={isBookmarked ? '#5D68E8' : '#ffffff'} />
                             </Pressable>
                             <Pressable style={styles.ticketActionBtnCircle} onPress={() => handleShare(t.name)}>
                               <Ionicons name="share-social-outline" size={12} color="#ffffff" />
@@ -725,7 +725,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: '#feae2c',
+    borderColor: '#5D68E8',
   },
   headerTextGroup: {
     flexDirection: 'column',
@@ -1092,7 +1092,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: BorderRadius.default,
     borderWidth: 1,
-    borderColor: '#feae2c33',
+    borderColor: '#5D68E833',
   },
   ticketActionBtnCircle: {
     width: 22,

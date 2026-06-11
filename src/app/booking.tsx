@@ -411,15 +411,15 @@ export default function BookingConfigurationScreen() {
             <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
               <View style={styles.advanceHeader}>
                 <View style={styles.advanceHeaderLeft}>
-                  <View style={[styles.advanceIconWrap, { backgroundColor: '#feae2c22' }]}>
-                    <Ionicons name="cash" size={18} color="#feae2c" />
+                  <View style={[styles.advanceIconWrap, { backgroundColor: '#5D68E822' }]}>
+                    <Ionicons name="cash" size={18} color="#5D68E8" />
                   </View>
                   <View style={{ marginLeft: Spacing.sm }}>
                     <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>Pay in Advance</ThemedText>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Remaining due at venue</ThemedText>
                   </View>
                 </View>
-                <ThemedText type="headlineSm" style={{ color: '#feae2c', fontFamily: 'HankenGrotesk_800ExtraBold' }}>
+                <ThemedText type="headlineSm" style={{ color: '#5D68E8', fontFamily: 'HankenGrotesk_800ExtraBold' }}>
                   ₹{advanceAmount}
                 </ThemedText>
               </View>
@@ -435,7 +435,7 @@ export default function BookingConfigurationScreen() {
                       style={[
                         styles.advanceOptBtn,
                         isActive
-                          ? { backgroundColor: '#feae2c', borderColor: '#feae2c' }
+                          ? { backgroundColor: '#5D68E8', borderColor: '#5D68E8' }
                           : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
                       ]}
                     >
@@ -623,7 +623,7 @@ export default function BookingConfigurationScreen() {
                 {advancePct < 100 && (
                   <View style={[styles.priceRow, { marginTop: 4 }]}>
                     <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Pay Now ({advancePct}%)</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#feae2c', fontFamily: 'HankenGrotesk_700Bold' }}>₹{advanceAmount}</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: '#5D68E8', fontFamily: 'HankenGrotesk_700Bold' }}>₹{advanceAmount}</ThemedText>
                   </View>
                 )}
               </View>
@@ -639,7 +639,7 @@ export default function BookingConfigurationScreen() {
               >
                 {/* Left icon block */}
                 <View style={styles.confirmBtnIconWrap}>
-                  <Ionicons name="shield-checkmark" size={20} color={'#feae2c'} />
+                  <Ionicons name="shield-checkmark" size={20} color={'#5D68E8'} />
                 </View>
 
                 {/* Center label */}
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
   },
   badgeContainer: {
-    backgroundColor: '#feae2c',
+    backgroundColor: '#5D68E8',
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
     paddingHorizontal: Spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(254, 174, 44, 0.3)',
+    borderColor: 'rgba(93, 104, 232, 0.3)',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
@@ -910,12 +910,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(254, 174, 44, 0.15)',
+    backgroundColor: 'rgba(93, 104, 232, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(254, 174, 44, 0.3)',
+    borderColor: 'rgba(93, 104, 232, 0.3)',
   },
   confirmBtnLabelWrap: {
     flex: 1,
@@ -927,7 +927,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   confirmBtnSub: {
-    color: '#feae2c',
+    color: '#5D68E8',
     fontFamily: 'HankenGrotesk_600SemiBold',
     fontSize: 11,
     marginTop: 2,

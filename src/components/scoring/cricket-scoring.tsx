@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   scoreText: {
-    color: '#feae2c',
+    color: '#5D68E8',
     fontFamily: 'HankenGrotesk_800ExtraBold',
     fontSize: 32,
     lineHeight: 36,

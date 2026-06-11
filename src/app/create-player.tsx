@@ -64,7 +64,7 @@ export default function CreatePlayerScreen() {
           {/* Hero Card */}
           <View style={[styles.heroCard, { backgroundColor: '#001b3d' }, Shadows.level3]}>
             <View style={styles.heroBadge}>
-              <ThemedText style={{ color: '#feae2c', fontSize: 10, fontFamily: 'HankenGrotesk_700Bold', letterSpacing: 0.5 }}>
+              <ThemedText style={{ color: '#5D68E8', fontSize: 10, fontFamily: 'HankenGrotesk_700Bold', letterSpacing: 0.5 }}>
                 NEW REGISTRATION
               </ThemedText>
             </View>
@@ -79,25 +79,25 @@ export default function CreatePlayerScreen() {
           {/* Checklist */}
           <View style={[styles.checklistCard, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '30' }]}>
             <View style={styles.checklistHeader}>
-              <Ionicons name="information-circle-outline" size={20} color="#feae2c" />
+              <Ionicons name="information-circle-outline" size={20} color="#5D68E8" />
               <ThemedText type="headlineSm" style={{ color: theme.text, marginLeft: 8 }}>
                 Requirement Checklist
               </ThemedText>
             </View>
             <View style={styles.checkItem}>
-              <Ionicons name="checkmark-circle" size={18} color="#feae2c" />
+              <Ionicons name="checkmark-circle" size={18} color="#5D68E8" />
               <ThemedText style={{ color: theme.textSecondary, marginLeft: 8, fontSize: 14 }}>Legal full name for official records</ThemedText>
             </View>
             <View style={styles.checkItem}>
-              <Ionicons name="checkmark-circle" size={18} color="#feae2c" />
+              <Ionicons name="checkmark-circle" size={18} color="#5D68E8" />
               <ThemedText style={{ color: theme.textSecondary, marginLeft: 8, fontSize: 14 }}>Verified primary playing role</ThemedText>
             </View>
             <View style={styles.checkItem}>
-              <Ionicons name="checkmark-circle" size={18} color="#feae2c" />
+              <Ionicons name="checkmark-circle" size={18} color="#5D68E8" />
               <ThemedText style={{ color: theme.textSecondary, marginLeft: 8, fontSize: 14 }}>Technical style specifications</ThemedText>
             </View>
             <View style={styles.checkItem}>
-              <Ionicons name="checkmark-circle" size={18} color="#feae2c" />
+              <Ionicons name="checkmark-circle" size={18} color="#5D68E8" />
               <ThemedText style={{ color: theme.textSecondary, marginLeft: 8, fontSize: 14 }}>High-resolution profile imagery</ThemedText>
             </View>
           </View>
@@ -109,7 +109,7 @@ export default function CreatePlayerScreen() {
             <View style={styles.portraitSection}>
               <View style={[styles.portraitUpload, { backgroundColor: theme.surface, borderColor: theme.outlineVariant }]}>
                 <MaterialCommunityIcons name="camera-plus-outline" size={32} color={theme.textSecondary} />
-                <View style={[styles.editBadge, { backgroundColor: '#feae2c' }]}>
+                <View style={[styles.editBadge, { backgroundColor: '#5D68E8' }]}>
                   <Ionicons name="pencil" size={12} color="#6b4500" />
                 </View>
               </View>
@@ -123,7 +123,7 @@ export default function CreatePlayerScreen() {
 
             {/* Identity Info */}
             <View style={styles.sectionHeader}>
-              <Ionicons name="person" size={16} color="#feae2c" />
+              <Ionicons name="person" size={16} color="#5D68E8" />
               <ThemedText style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', letterSpacing: 1, fontSize: 12, marginLeft: 8, textTransform: 'uppercase' }}>
                 Identity Information
               </ThemedText>
@@ -141,7 +141,7 @@ export default function CreatePlayerScreen() {
 
             {/* Performance Profile */}
             <View style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>
-              <MaterialCommunityIcons name="cricket" size={16} color="#feae2c" />
+              <MaterialCommunityIcons name="cricket" size={16} color="#5D68E8" />
               <ThemedText style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', letterSpacing: 1, fontSize: 12, marginLeft: 8, textTransform: 'uppercase' }}>
                 Performance Profile
               </ThemedText>
@@ -158,8 +158,8 @@ export default function CreatePlayerScreen() {
                       onPress={() => setPlayingRole(role)}
                       style={[
                         styles.roleBtn,
-                        { borderColor: isActive ? '#feae2c' : theme.outlineVariant + '60' },
-                        isActive && { backgroundColor: '#feae2c15' }
+                        { borderColor: isActive ? '#5D68E8' : theme.outlineVariant + '60' },
+                        isActive && { backgroundColor: '#5D68E815' }
                       ]}
                     >
                       <ThemedText style={{
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   },
   heroBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#feae2c20',
+    backgroundColor: '#5D68E820',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: BorderRadius.full,

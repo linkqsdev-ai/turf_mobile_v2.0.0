@@ -97,7 +97,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
           </Pressable>
 
           <View style={styles.header}>
-            <FontAwesome5 name="coins" size={24} color="#feae2c" style={{ marginBottom: Spacing.sm }} />
+            <FontAwesome5 name="coins" size={24} color="#5D68E8" style={{ marginBottom: Spacing.sm }} />
             <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold' }}>
               Kickoff Coin Toss
             </ThemedText>
@@ -132,13 +132,13 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
           {/* Result Area */}
           <View style={styles.resultContainer}>
             {isFlipping && (
-              <ThemedText type="bodyMd" style={{ color: '#feae2c', fontFamily: 'HankenGrotesk_700Bold' }}>
+              <ThemedText type="bodyMd" style={{ color: '#5D68E8', fontFamily: 'HankenGrotesk_700Bold' }}>
                 Flipping...
               </ThemedText>
             )}
             {!isFlipping && result && (
               <View style={{ alignItems: 'center' }}>
-                <ThemedText type="headlineSm" style={{ color: '#feae2c', fontFamily: 'HankenGrotesk_700Bold', fontSize: 22 }}>
+                <ThemedText type="headlineSm" style={{ color: '#5D68E8', fontFamily: 'HankenGrotesk_700Bold', fontSize: 22 }}>
                   {result}
                 </ThemedText>
                 <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 4 }}>
@@ -222,12 +222,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 42,
-    backgroundColor: '#feae2c',
+    backgroundColor: '#5D68E8',
     borderWidth: 4,
     borderColor: '#d28f1e',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#feae2c',
+    shadowColor: '#5D68E8',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -255,21 +255,21 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   tossButton: {
-    backgroundColor: '#feae2c',
+    backgroundColor: '#5D68E8',
     height: 44,
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.xl,
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    shadowColor: '#feae2c',
+    shadowColor: '#5D68E8',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
   },
   tossButtonDisabled: {
-    backgroundColor: 'rgba(254, 174, 44, 0.5)',
+    backgroundColor: 'rgba(93, 104, 232, 0.5)',
   },
   tossButtonText: {
     color: '#05151e',

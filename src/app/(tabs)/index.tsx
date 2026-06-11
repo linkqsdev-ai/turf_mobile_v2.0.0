@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: '#feae2c', // Gold ring around avatar
+    borderColor: '#5D68E8', // Gold ring around avatar
   },
   headerTextGroup: {
     flexDirection: 'column',

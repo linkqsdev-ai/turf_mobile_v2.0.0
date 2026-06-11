@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: '#feae2c', // Gold ring around avatar
+    borderColor: '#5D68E8', // Gold ring around avatar
   },
   headerTextGroup: {
     flexDirection: 'column',
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: '#feae2c',
+    backgroundColor: '#5D68E8',
     opacity: 0.15,
   },
   badgeWrapper: {

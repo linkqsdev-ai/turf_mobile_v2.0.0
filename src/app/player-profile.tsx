@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     height: 90,
     borderRadius: 45,
     borderWidth: 6,
-    borderColor: '#feae2c',
+    borderColor: '#5D68E8',
     borderBottomColor: 'transparent',
     borderLeftColor: 'transparent',
     position: 'absolute',

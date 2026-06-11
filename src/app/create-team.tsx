@@ -95,7 +95,7 @@ export default function CreateTeamScreen() {
             <View style={styles.heroRow}>
               <View style={{ flex: 1 }}>
                 <View style={styles.heroBadge}>
-                  <ThemedText style={{ color: '#feae2c', fontSize: 9, fontFamily: 'HankenGrotesk_800ExtraBold', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                  <ThemedText style={{ color: '#5D68E8', fontSize: 9, fontFamily: 'HankenGrotesk_800ExtraBold', letterSpacing: 0.5, textTransform: 'uppercase' }}>
                     Foundation
                   </ThemedText>
                 </View>
@@ -110,7 +110,7 @@ export default function CreateTeamScreen() {
                 </ThemedText>
               </View>
               <View style={styles.proBadgeCompact}>
-                <Ionicons name="shield-checkmark" size={18} color="#feae2c" />
+                <Ionicons name="shield-checkmark" size={18} color="#5D68E8" />
               </View>
             </View>
           </View>
@@ -248,7 +248,7 @@ export default function CreateTeamScreen() {
                   onPress={handleCreateTeam}
                 >
                   <LinearGradient
-                    colors={['#feae2c', '#ff8c00']}
+                    colors={['#5D68E8', '#ff8c00']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.createBtnGradient}
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   },
   heroBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(254, 174, 44, 0.15)',
+    backgroundColor: 'rgba(93, 104, 232, 0.15)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     // Premium soft gold shadow
-    shadowColor: '#feae2c',
+    shadowColor: '#5D68E8',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,

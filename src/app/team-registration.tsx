@@ -234,7 +234,7 @@ export default function TeamRegistrationScreen() {
                   <View style={styles.trophyOuterRing} />
                   <View style={styles.trophyMidRing} />
                   <LinearGradient
-                    colors={['#feae2c', '#ff8c00']}
+                    colors={['#5D68E8', '#ff8c00']}
                     style={styles.trophyInnerCircle}
                   >
                     <Ionicons name="trophy" size={36} color="#ffffff" />
@@ -242,10 +242,10 @@ export default function TeamRegistrationScreen() {
                   
                   {/* Decorative Sparkles */}
                   <View style={[styles.sparkle, { top: 10, left: 15 }]}>
-                    <Ionicons name="star" size={12} color="#feae2c" />
+                    <Ionicons name="star" size={12} color="#5D68E8" />
                   </View>
                   <View style={[styles.sparkle, { bottom: 15, right: 10 }]}>
-                    <Ionicons name="star" size={10} color="#feae2c" />
+                    <Ionicons name="star" size={10} color="#5D68E8" />
                   </View>
                   <View style={[styles.sparkle, { top: 25, right: 20 }]}>
                     <Ionicons name="checkmark-circle" size={14} color="#0f9f58" />
@@ -307,11 +307,11 @@ export default function TeamRegistrationScreen() {
                     <ThemedText style={styles.heroTitle}>{tournamentName}</ThemedText>
                     <View style={styles.heroRow}>
                       <View style={styles.heroMetaItem}>
-                        <Ionicons name="calendar-outline" size={12} color="#feae2c" style={{ marginRight: 4 }} />
+                        <Ionicons name="calendar-outline" size={12} color="#5D68E8" style={{ marginRight: 4 }} />
                         <ThemedText style={styles.heroMetaText}>Starts July 15, 2026</ThemedText>
                       </View>
                       <View style={styles.heroMetaItem}>
-                        <Ionicons name="location-outline" size={12} color="#feae2c" style={{ marginRight: 4 }} />
+                        <Ionicons name="location-outline" size={12} color="#5D68E8" style={{ marginRight: 4 }} />
                         <ThemedText style={styles.heroMetaText}>London Arena</ThemedText>
                       </View>
                     </View>
@@ -461,7 +461,7 @@ export default function TeamRegistrationScreen() {
                   ) : (
                     <Pressable onPress={handlePayment} style={Shadows.level2}>
                       <LinearGradient
-                        colors={['#feae2c', '#ff8c00']}
+                        colors={['#5D68E8', '#ff8c00']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.paySubmitBtnGradient}
@@ -495,7 +495,7 @@ export default function TeamRegistrationScreen() {
                 <ThemedText style={styles.heroTitle}>{tournamentName}</ThemedText>
                 <View style={styles.heroRow}>
                   <View style={styles.heroMetaItem}>
-                    <Ionicons name="shield-checkmark-outline" size={12} color="#feae2c" style={{ marginRight: 4 }} />
+                    <Ionicons name="shield-checkmark-outline" size={12} color="#5D68E8" style={{ marginRight: 4 }} />
                     <ThemedText style={styles.heroMetaText}>Requests Management</ThemedText>
                   </View>
                 </View>
@@ -549,7 +549,7 @@ export default function TeamRegistrationScreen() {
                         REGISTRATION INFO
                       </ThemedText>
                       <View style={styles.mockSubheaderRightBtn}>
-                        <Ionicons name="time-outline" size={11} color="#feae2c" style={{ marginRight: 4 }} />
+                        <Ionicons name="time-outline" size={11} color="#5D68E8" style={{ marginRight: 4 }} />
                         <ThemedText style={styles.mockSubheaderRight}>
                           Requested {t.requestDate || '10m ago'}
                         </ThemedText>
@@ -633,7 +633,7 @@ export default function TeamRegistrationScreen() {
                       onPress={() => handleAdminAction(t.id, 'Approve')}
                     >
                       <LinearGradient
-                        colors={['#feae2c', '#ff8c00']}
+                        colors={['#5D68E8', '#ff8c00']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.mockFullWidthBtnGradient}
@@ -859,7 +859,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 1.5,
-    borderColor: '#feae2c',
+    borderColor: '#5D68E8',
   },
   mockHeaderRow: {
     flexDirection: 'row',
@@ -891,7 +891,7 @@ const styles = StyleSheet.create({
   mockSubheaderRightBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#feae2c15',
+    backgroundColor: '#5D68E815',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: BorderRadius.md,
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
   mockSubheaderRight: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#feae2c',
+    color: '#5D68E8',
   },
   mockSeparator: {
     height: 1,
@@ -1052,7 +1052,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   heroBadge: {
-    backgroundColor: '#feae2c',
+    backgroundColor: '#5D68E8',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: BorderRadius.sm,
@@ -1102,9 +1102,9 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#feae2c12',
+    backgroundColor: '#5D68E812',
     borderWidth: 1,
-    borderColor: '#feae2c33',
+    borderColor: '#5D68E833',
     borderStyle: 'dashed',
   },
   trophyMidRing: {
@@ -1112,7 +1112,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#feae2c18',
+    backgroundColor: '#5D68E818',
   },
   trophyInnerCircle: {
     width: 72,

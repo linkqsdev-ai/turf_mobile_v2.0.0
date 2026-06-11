@@ -203,7 +203,7 @@ export default function ExploreScreen() {
                     style={[
                       styles.filterChip,
                       isActive
-                        ? { backgroundColor: '#feae2c', borderColor: '#feae2c' }
+                        ? { backgroundColor: '#5D68E8', borderColor: '#5D68E8' }
                         : { backgroundColor: theme.surfaceLow, borderColor: 'transparent' },
                     ]}
                   >
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: '#feae2c', // Gold ring around avatar
+    borderColor: '#5D68E8', // Gold ring around avatar
   },
   headerTextGroup: {
     flexDirection: 'column',
@@ -700,7 +700,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   bannerBadge: {
-    backgroundColor: '#feae2c',
+    backgroundColor: '#5D68E8',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: BorderRadius.default,
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
   },
   bannerButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#feae2c',
+    backgroundColor: '#5D68E8',
     paddingHorizontal: Spacing.lg,
     paddingVertical: 8,
     borderRadius: BorderRadius.full,
@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     zIndex: 5,
-    backgroundColor: 'rgba(254, 174, 44, 0.95)',
+    backgroundColor: 'rgba(93, 104, 232, 0.95)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderTopLeftRadius: 16,
@@ -805,7 +805,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#feae2c',
+    shadowColor: '#5D68E8',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,

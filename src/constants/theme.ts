@@ -37,14 +37,14 @@ export const Colors = {
     backgroundElement: '#12202a', // Compatibility link to surfaceLow dark
     backgroundSelected: '#1a2d3b', // Compatibility link to surface dark
     
-    primary: '#feae2c', // Gold anchor for dark theme
-    onPrimary: '#05151e',
+    primary: '#5D68E8', // Primary Blue
+    onPrimary: '#ffffff',
     primaryContainer: '#1a2a33', // Deep Navy container
     onPrimaryContainer: '#cbd5e1',
     
-    secondary: '#feae2c',
-    secondaryContainer: '#feae2c',
-    onSecondaryContainer: '#6b4500',
+    secondary: '#5D68E8', // Primary Blue
+    secondaryContainer: '#5D68E8', // Primary Blue
+    onSecondaryContainer: '#ffffff',
     
     surfaceLowest: '#12202a', // Darkest container card
     surfaceLow: '#1a2d3b',

@@ -202,7 +202,7 @@ export default function TurfDetailsScreen() {
               <View style={[styles.dot, { backgroundColor: theme.outlineVariant }]} />
               
               <Pressable onPress={() => setReviewsVisible(true)} style={styles.ratingRow}>
-                <Ionicons name="star" size={14} color="#feae2c" />
+                <Ionicons name="star" size={14} color="#5D68E8" />
                 <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4, fontWeight: '700' }}>
                   {details.rating}
                 </ThemedText>
@@ -371,7 +371,7 @@ export default function TurfDetailsScreen() {
                 <ThemedText style={{ fontSize: 36, fontFamily: 'HankenGrotesk_800ExtraBold', color: theme.text }}>{details.rating}</ThemedText>
                 <View style={{ flexDirection: 'row', gap: 2, marginTop: 4 }}>
                   {[1, 2, 3, 4, 5].map((s) => (
-                    <Ionicons key={s} name="star" size={12} color="#feae2c" />
+                    <Ionicons key={s} name="star" size={12} color="#5D68E8" />
                   ))}
                 </View>
                 <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 4 }}>{details.reviews}</ThemedText>
@@ -388,7 +388,7 @@ export default function TurfDetailsScreen() {
                   <View key={row.stars} style={styles.breakdownRow}>
                     <ThemedText style={styles.breakdownLabel}>{row.stars}★</ThemedText>
                     <View style={styles.progressBarBg}>
-                      <View style={[styles.progressBarFill, { width: `${row.val * 100}%`, backgroundColor: '#feae2c' }]} />
+                      <View style={[styles.progressBarFill, { width: `${row.val * 100}%`, backgroundColor: '#5D68E8' }]} />
                     </View>
                     <ThemedText style={styles.breakdownPct}>{row.pct}</ThemedText>
                   </View>
@@ -411,7 +411,7 @@ export default function TurfDetailsScreen() {
                       <ThemedText style={styles.reviewUser}>{rev.user}</ThemedText>
                       <View style={{ flexDirection: 'row', gap: 2, marginTop: 2 }}>
                         {[1, 2, 3, 4, 5].map((s) => (
-                          <Ionicons key={s} name="star" size={10} color={s <= rev.stars ? '#feae2c' : '#c3c7cb'} />
+                          <Ionicons key={s} name="star" size={10} color={s <= rev.stars ? '#5D68E8' : '#c3c7cb'} />
                         ))}
                       </View>
                     </View>
