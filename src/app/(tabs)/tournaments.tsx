@@ -299,9 +299,9 @@ export default function TournamentsTab() {
             </View>
           </View>
 
-          {/* Sport Categories Horizontal Scroller */}
+          {/* Sport Categories Row */}
           <View style={styles.categoriesSection}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScroll}>
+            <View style={styles.categoriesRow}>
               {[
                 { id: 'All', icon: 'grid-outline', library: 'Ionicons' },
                 { id: 'Football', icon: 'soccer', library: 'MaterialCommunityIcons' },
@@ -327,7 +327,7 @@ export default function TournamentsTab() {
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </View>
           </View>
 
           {/* Status Filters & Sort Toggle Row */}
@@ -539,9 +539,9 @@ export default function TournamentsTab() {
                             </Pressable>
                           </View>
 
-                          <View style={{ alignItems: 'center', marginTop: 12 }}>
-                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8 }}>PRIZE POOL</ThemedText>
-                            <ThemedText type="bodyLg" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold', marginVertical: 2 }}>
+                          <View style={styles.prizeContainer}>
+                            <ThemedText type="labelSm" style={[styles.prizeLabel, { color: theme.textSecondary }]}>PRIZE POOL</ThemedText>
+                            <ThemedText type="bodyLg" style={[styles.prizeValue, { color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold' }]}>
                               {t.prizePool}
                             </ThemedText>
                           </View>
@@ -794,9 +794,10 @@ const styles = StyleSheet.create({
   categoriesSection: {
     marginTop: Spacing.md,
   },
-  categoriesScroll: {
+  categoriesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: Spacing.containerMargin,
-    gap: Spacing.sm,
   },
   sportIconCircle: {
     width: 48,
@@ -810,6 +811,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    flexShrink: 0,
   },
   filtersRow: {
     flexDirection: 'row',
@@ -831,6 +833,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
+    flexShrink: 0,
   },
   sortToggleButton: {
     flexDirection: 'row',
@@ -840,6 +843,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     alignSelf: 'center',
+    flexShrink: 0,
   },
   listSection: {
     marginTop: Spacing.md,
@@ -1026,6 +1030,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 6,
     right: 8,
+  },
+  prizeContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    width: '100%',
+    marginTop: 12,
+  },
+  prizeLabel: {
+    fontSize: 8,
+    textAlign: 'center',
+  },
+  prizeValue: {
+    marginVertical: 2,
+    textAlign: 'center',
   },
 
   // Premium Grid Ticket Styles (Grid View)
