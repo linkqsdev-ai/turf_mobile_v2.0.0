@@ -504,25 +504,14 @@ export default function TeamRegistrationScreen() {
             <ThemedText type="headlineSm" style={styles.sectionTitle}>Registered Teams Requests</ThemedText>
             <View style={styles.adminTable}>
               {adminTeams.map((t) => {
-                // Determine left border color based on status
-                let leftBorderColor = '#feae2c'; // Pending - Gold
-                if (t.status === 'Approved') leftBorderColor = '#0f9f58'; // Green
-                if (t.status === 'Rejected') leftBorderColor = '#ba1a1a'; // Red
-                if (t.status === 'Changes Requested') leftBorderColor = '#2980b9'; // Blue
-
                 const method = t.paymentMethod || 'Card';
 
                 return (
                   <View 
                     key={t.id} 
                     style={[
-                      styles.adminCard, 
-                      { 
-                        backgroundColor: theme.surfaceLowest, 
-                        borderLeftColor: leftBorderColor,
-                        borderLeftWidth: 4,
-                      },
-                      Shadows.level2
+                      styles.adminCard,
+                      { backgroundColor: theme.surfaceLowest }
                     ]}
                   >
                     {/* Header: Team name left, status label right */}
@@ -621,7 +610,7 @@ export default function TeamRegistrationScreen() {
                     {/* Row 1: Secondary Reject and Request Info */}
                     <View style={styles.mockBtnRow}>
                       <Pressable 
-                        style={[styles.adminBtnSecondary, { borderColor: '#ba1a1a' }]}
+                        style={[styles.adminBtnSecondary, { borderColor: '#ffb4ab', backgroundColor: '#ffdad633' }]}
                         onPress={() => handleAdminAction(t.id, 'Reject')}
                       >
                         <Ionicons name="close-circle-outline" size={14} color="#ba1a1a" style={{ marginRight: 4 }} />
@@ -629,7 +618,7 @@ export default function TeamRegistrationScreen() {
                       </Pressable>
 
                       <Pressable 
-                        style={[styles.adminBtnSecondary, { borderColor: '#2980b9' }]}
+                        style={[styles.adminBtnSecondary, { borderColor: '#adc6ff', backgroundColor: '#e6f0fa66' }]}
                         onPress={() => handleAdminAction(t.id, 'Request Changes')}
                       >
                         <Ionicons name="chatbubble-ellipses-outline" size={14} color="#2980b9" style={{ marginRight: 4 }} />
@@ -736,8 +725,15 @@ const styles = StyleSheet.create({
   },
   playerFormCard: {
     borderWidth: 1,
-    borderRadius: BorderRadius.xl,
+    borderColor: '#e2e8f0',
+    borderRadius: 24,
     padding: Spacing.md,
+    backgroundColor: '#ffffff',
+    shadowColor: '#1e293b',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
   playerInputRow: {
     flexDirection: 'row',
@@ -773,9 +769,16 @@ const styles = StyleSheet.create({
   },
   paymentPortal: {
     borderWidth: 1,
-    borderRadius: BorderRadius.xl,
+    borderColor: '#e2e8f0',
+    borderRadius: 24,
     padding: Spacing.md,
     marginTop: Spacing.xs,
+    backgroundColor: '#ffffff',
+    shadowColor: '#1e293b',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
   },
   paymentMethodsRow: {
     flexDirection: 'row',
@@ -836,8 +839,15 @@ const styles = StyleSheet.create({
   },
   adminCard: {
     borderWidth: 1,
-    borderRadius: BorderRadius.xl,
-    overflow: 'hidden',
+    borderColor: '#e2e8f0',
+    borderRadius: 24,
+    shadowColor: '#1a2a33',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 5,
+    backgroundColor: '#ffffff',
+    marginBottom: 16,
   },
   statusLabel: {
     paddingHorizontal: 8,
@@ -915,13 +925,16 @@ const styles = StyleSheet.create({
   },
   mockInvoiceBox: {
     marginHorizontal: 16,
-    borderRadius: BorderRadius.lg,
+    borderRadius: 16,
     borderWidth: 1,
+    borderColor: '#e2e8f0',
     overflow: 'hidden',
+    backgroundColor: '#ffffff',
     marginBottom: 16,
   },
   mockInvoiceTop: {
     padding: 12,
+    backgroundColor: '#f8fafc',
   },
   mockInvoiceDetailRow: {
     flexDirection: 'row',
@@ -949,6 +962,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
   },
   mockTotalLabel: {
     fontSize: 12,
@@ -992,8 +1007,13 @@ const styles = StyleSheet.create({
   mockFullWidthBtnContainer: {
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: BorderRadius.xl,
+    borderRadius: 14,
     overflow: 'hidden',
+    shadowColor: '#ff8c00',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   mockFullWidthBtnGradient: {
     flexDirection: 'row',
@@ -1017,12 +1037,12 @@ const styles = StyleSheet.create({
   },
   heroBannerContainer: {
     height: 150,
-    borderRadius: BorderRadius['2xl'],
+    borderRadius: 24,
     overflow: 'hidden',
     marginBottom: 20,
     position: 'relative',
     borderWidth: 1,
-    borderColor: '#c3c7cb22',
+    borderColor: '#e2e8f0',
   },
   heroBannerImage: {
     width: '100%',
