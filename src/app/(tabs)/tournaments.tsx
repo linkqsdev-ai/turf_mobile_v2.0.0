@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   Platform,
-  TextInput,
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -280,24 +279,7 @@ export default function TournamentsTab() {
             </ThemedText>
           </View>
 
-          {/* Search Bar */}
-          <View style={styles.searchBarSection}>
-            <View style={[styles.searchBar, { backgroundColor: theme.surfaceLow }]}>
-              <Ionicons name="search" size={20} color={theme.textSecondary} style={{ marginRight: 8 }} />
-              <TextInput
-                placeholder="Search tournaments or venues..."
-                placeholderTextColor={theme.textSecondary}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                style={[styles.searchInput, { color: theme.text }]}
-              />
-              {searchQuery.length > 0 && (
-                <Pressable onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
-                </Pressable>
-              )}
-            </View>
-          </View>
+
 
           {/* Sport Categories Row (Aligned Evenly) */}
           <View style={styles.categoriesSection}>
