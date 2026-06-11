@@ -234,7 +234,7 @@ export default function TournamentDetailsScreen() {
           <View style={styles.cricketScores}>
             <View style={{ flex: 1 }}>
               <ThemedText type="bodyLg" style={{ color: '#ffffff', fontWeight: 'bold' }}>Apex Warriors</ThemedText>
-              <ThemedText type="displayLgMobile" style={{ color: '#5D68E8', marginVertical: 4 }}>164/4</ThemedText>
+              <ThemedText type="displayLgMobile" style={{ color: '#ffffff', marginVertical: 4 }}>164/4</ThemedText>
               <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Overs: 17.4</ThemedText>
             </View>
             <View style={styles.versusDivider} />
@@ -273,9 +273,9 @@ export default function TournamentDetailsScreen() {
               <ThemedText type="headlineSm" style={{ color: '#ffffff', marginTop: 4 }}>Red Devils</ThemedText>
             </View>
             <View style={styles.scoreNumberContainer}>
-              <ThemedText type="displayLg" style={{ color: '#5D68E8' }}>2</ThemedText>
+              <ThemedText type="displayLg" style={{ color: '#ffffff' }}>2</ThemedText>
               <ThemedText type="headlineSm" style={{ color: '#ffffff', marginHorizontal: 8 }}>-</ThemedText>
-              <ThemedText type="displayLg" style={{ color: '#5D68E8' }}>1</ThemedText>
+              <ThemedText type="displayLg" style={{ color: '#ffffff' }}>1</ThemedText>
             </View>
             <View style={[styles.footballScoreTeam, { alignItems: 'flex-end' }]}>
               <ThemedText style={{ fontSize: 24 }}>🦁</ThemedText>

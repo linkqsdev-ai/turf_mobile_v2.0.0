@@ -207,19 +207,19 @@ export default function TeamRegistrationScreen() {
         {/* User / Admin View Swapper HUD */}
         <View style={[styles.modeSwapper, { backgroundColor: theme.primaryContainer }]}>
           <Pressable 
-            style={[styles.modeBtn, viewMode === 'user' && { backgroundColor: theme.secondaryContainer }]}
+            style={[styles.modeBtn, viewMode === 'user' && { backgroundColor: '#ffffff' }]}
             onPress={() => setViewMode('user')}
           >
-            <Ionicons name="create-outline" size={16} color={viewMode === 'user' ? '#6b4500' : '#ffffff'} style={{ marginRight: 6 }} />
-            <ThemedText type="labelSm" style={{ color: viewMode === 'user' ? '#6b4500' : '#ffffff', fontWeight: 'bold' }}>Register Team</ThemedText>
+            <Ionicons name="create-outline" size={16} color={viewMode === 'user' ? theme.primary : '#ffffff'} style={{ marginRight: 6 }} />
+            <ThemedText type="labelSm" style={{ color: viewMode === 'user' ? theme.primary : '#ffffff', fontWeight: 'bold' }}>Register Team</ThemedText>
           </Pressable>
 
           <Pressable 
-            style={[styles.modeBtn, viewMode === 'admin' && { backgroundColor: theme.secondaryContainer }]}
+            style={[styles.modeBtn, viewMode === 'admin' && { backgroundColor: '#ffffff' }]}
             onPress={() => setViewMode('admin')}
           >
-            <Ionicons name="shield-checkmark-outline" size={16} color={viewMode === 'admin' ? '#6b4500' : '#ffffff'} style={{ marginRight: 6 }} />
-            <ThemedText type="labelSm" style={{ color: viewMode === 'admin' ? '#6b4500' : '#ffffff', fontWeight: 'bold' }}>Admin Console</ThemedText>
+            <Ionicons name="shield-checkmark-outline" size={16} color={viewMode === 'admin' ? theme.primary : '#ffffff'} style={{ marginRight: 6 }} />
+            <ThemedText type="labelSm" style={{ color: viewMode === 'admin' ? theme.primary : '#ffffff', fontWeight: 'bold' }}>Admin Console</ThemedText>
           </Pressable>
         </View>
 

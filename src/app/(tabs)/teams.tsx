@@ -110,8 +110,8 @@ export default function TeamsTab() {
                   </ThemedText>
                   
                   <View style={styles.badgeWrapper}>
-                    <View style={[styles.skillBadge, { backgroundColor: theme.secondaryContainer }]}>
-                      <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                    <View style={[styles.skillBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                      <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold' }}>
                         Top 5% Skill Level
                       </ThemedText>
                     </View>

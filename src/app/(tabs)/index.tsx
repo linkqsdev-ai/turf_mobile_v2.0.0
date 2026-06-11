@@ -89,23 +89,23 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <View style={[styles.dailyPlanCard, { backgroundColor: theme.primaryContainer }, Shadows.level3]}>
               <View style={styles.planInfo}>
-                <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer }}>
+                <ThemedText type="headlineSm" style={{ color: '#ffffff' }}>
                   Daily Plan
                 </ThemedText>
-                <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer, marginTop: 4 }}>
+                <ThemedText type="bodyMd" style={{ color: 'rgba(255, 255, 255, 0.85)', marginTop: 4 }}>
                   4 of 5 targets reached
                 </ThemedText>
-                <Pressable style={[styles.viewTasksButton, { backgroundColor: theme.secondaryContainer }]}>
-                  <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontFamily: 'HankenGrotesk_700Bold' }}>
+                <Pressable style={[styles.viewTasksButton, { backgroundColor: '#ffffff' }]}>
+                  <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'HankenGrotesk_700Bold' }}>
                     View Tasks
                   </ThemedText>
                 </Pressable>
               </View>
               
               {/* Custom Circular Progress */}
-              <View style={[styles.progressRing, { borderColor: 'rgba(255, 255, 255, 0.1)' }]}>
-                <View style={[styles.progressRingInner, { borderColor: theme.secondaryContainer }]}>
-                  <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer, fontFamily: 'HankenGrotesk_700Bold' }}>
+              <View style={[styles.progressRing, { borderColor: 'rgba(255, 255, 255, 0.15)' }]}>
+                <View style={[styles.progressRingInner, { borderColor: '#ffffff' }]}>
+                  <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>
                     80%
                   </ThemedText>
                 </View>
@@ -194,15 +194,15 @@ export default function HomeScreen() {
 
               {/* Avg Power Card */}
               <View style={[styles.bentoCell, { backgroundColor: theme.primaryContainer }, Shadows.level3]}>
-                <View style={[styles.bentoIconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}>
-                  <Ionicons name="flash" size={20} color={theme.secondaryContainer} />
+                <View style={[styles.bentoIconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
+                  <Ionicons name="flash" size={20} color="#ffffff" />
                 </View>
                 <View style={styles.bentoTextWrap}>
-                  <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, opacity: 0.6, letterSpacing: 0.5 }}>
+                  <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.85)', letterSpacing: 0.5 }}>
                     Avg. Power
                   </ThemedText>
-                  <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer, marginTop: 2 }}>
-                    280 <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, fontWeight: 'normal' }}>W</ThemedText>
+                  <ThemedText type="headlineSm" style={{ color: '#ffffff', marginTop: 2 }}>
+                    280 <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.85)', fontWeight: 'normal' }}>W</ThemedText>
                   </ThemedText>
                 </View>
               </View>

@@ -183,8 +183,8 @@ export default function BookingConfigurationScreen() {
             <View style={[styles.heroCard, { backgroundColor: theme.primaryContainer }]}>
               <Image source={venue.image} style={styles.heroImage} contentFit="cover" />
               <View style={styles.heroOverlay}>
-                <View style={[styles.badgeContainer, { backgroundColor: theme.secondaryContainer }]}>
-                  <ThemedText type="labelSm" style={[styles.badgeText, { color: theme.onSecondaryContainer }]}>PREMIUM VENUE</ThemedText>
+                <View style={[styles.badgeContainer, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                  <ThemedText type="labelSm" style={[styles.badgeText, { color: '#ffffff' }]}>PREMIUM VENUE</ThemedText>
                 </View>
                 <ThemedText type="headlineLg" style={styles.heroTitle}>
                   {venue.name}
@@ -197,7 +197,7 @@ export default function BookingConfigurationScreen() {
                     </ThemedText>
                   </View>
                   <View style={[styles.heroSubItem, { borderLeftWidth: 1, borderLeftColor: '#ffffff22', paddingLeft: 12, marginLeft: 12 }]}>
-                    <Ionicons name="star" size={14} color={theme.secondaryContainer} />
+                    <Ionicons name="star" size={14} color="#ffffff" />
                     <ThemedText type="bodySm" style={[styles.heroSubText, { color: '#ffffff', fontWeight: 'bold' }]}>
                       {venue.rating} <ThemedText type="labelSm" style={{ color: '#ffffffaa' }}>({venue.reviews.split(' ')[0]})</ThemedText>
                     </ThemedText>
@@ -553,10 +553,10 @@ export default function BookingConfigurationScreen() {
               {/* Date details */}
               <View style={styles.summaryItemRow}>
                 <View style={styles.summaryItemIcon}>
-                  <Ionicons name="calendar" size={18} color={theme.secondaryContainer} />
+                  <Ionicons name="calendar" size={18} color="#ffffff" />
                 </View>
                 <View style={{ marginLeft: Spacing.md }}>
-                  <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>DATE</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>DATE</ThemedText>
                   <ThemedText type="bodyMd" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>
                     {selectedDayOfWeek}, Feb {selectedDayOfMonth}, 2024
                   </ThemedText>
@@ -566,14 +566,14 @@ export default function BookingConfigurationScreen() {
               {/* Time slot details */}
               <View style={styles.summaryItemRow}>
                 <View style={styles.summaryItemIcon}>
-                  <Ionicons name="time" size={18} color={theme.secondaryContainer} />
+                  <Ionicons name="time" size={18} color="#ffffff" />
                 </View>
                 <View style={{ marginLeft: Spacing.md }}>
-                  <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>TIME SLOT</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>TIME SLOT</ThemedText>
                   <ThemedText type="bodyMd" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>
                     {selectedSlots.length > 0 ? `${selectedSlots[0]} - ${selectedSlots[selectedSlots.length - 1]}` : 'No slots selected'}
                   </ThemedText>
-                  <ThemedText type="bodySm" style={{ color: theme.onPrimaryContainer }}>
+                  <ThemedText type="bodySm" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
                     {selectedSlots.length} Hours Session
                   </ThemedText>
                 </View>
@@ -582,10 +582,10 @@ export default function BookingConfigurationScreen() {
               {/* Area details */}
               <View style={styles.summaryItemRow}>
                 <View style={styles.summaryItemIcon}>
-                  <Ionicons name="football" size={18} color={theme.secondaryContainer} />
+                  <Ionicons name="football" size={18} color="#ffffff" />
                 </View>
                 <View style={{ marginLeft: Spacing.md }}>
-                  <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>COURT / AREA</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>COURT / AREA</ThemedText>
                   <ThemedText type="bodyMd" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>
                     Pavillion Main Wing
                   </ThemedText>
@@ -595,35 +595,35 @@ export default function BookingConfigurationScreen() {
               {/* Pricing tally */}
               <View style={styles.priceBreakdown}>
                 <View style={styles.priceRow}>
-                  <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer }}>Court Hire Fee</ThemedText>
+                  <ThemedText type="bodyMd" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Court Hire Fee</ThemedText>
                   <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>₹{courtFee.toFixed(2)}</ThemedText>
                 </View>
                 {coachAdded && (
                   <View style={styles.priceRow}>
-                    <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer }}>Pro Net Coach</ThemedText>
+                    <ThemedText type="bodyMd" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Pro Net Coach</ThemedText>
                     <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>₹{coachFee.toFixed(2)}</ThemedText>
                   </View>
                 )}
                 {recordingAdded && (
                   <View style={styles.priceRow}>
-                    <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer }}>HD Match Recording</ThemedText>
+                    <ThemedText type="bodyMd" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>HD Match Recording</ThemedText>
                     <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>₹{recordingFee.toFixed(2)}</ThemedText>
                   </View>
                 )}
                 <View style={styles.priceRow}>
-                  <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer }}>Service Charge</ThemedText>
+                  <ThemedText type="bodyMd" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Service Charge</ThemedText>
                   <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>₹{serviceCharge.toFixed(2)}</ThemedText>
                 </View>
-                <View style={[styles.priceRow, { borderTopWidth: 1, borderTopColor: '#ffffff1a', paddingTop: Spacing.md, marginTop: Spacing.sm }]}>
+                <View style={[styles.priceRow, { borderTopWidth: 1, borderTopColor: '#ffffff22', paddingTop: Spacing.md, marginTop: Spacing.sm }]}>
                   <ThemedText type="headlineSm" style={{ color: '#ffffff' }}>Total</ThemedText>
-                  <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer, fontFamily: 'HankenGrotesk_800ExtraBold' }}>
+                  <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_800ExtraBold' }}>
                     ₹{total.toFixed(2)}
                   </ThemedText>
                 </View>
                 {advancePct < 100 && (
                   <View style={[styles.priceRow, { marginTop: 4 }]}>
-                    <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Pay Now ({advancePct}%)</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#5D68E8', fontFamily: 'HankenGrotesk_700Bold' }}>₹{advanceAmount}</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Pay Now ({advancePct}%)</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>₹{advanceAmount}</ThemedText>
                   </View>
                 )}
               </View>

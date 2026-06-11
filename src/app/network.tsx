@@ -98,9 +98,9 @@ export default function NetworkScreen() {
             />
             
             <View style={styles.milestoneContent}>
-              <View style={[styles.milestoneBadge, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}>
-                <Ionicons name="star" size={12} color={theme.secondaryContainer} />
-                <ThemedText type="labelSm" style={{ color: theme.secondaryContainer, fontWeight: '800', marginLeft: 4, letterSpacing: 1.5 }}>
+              <View style={[styles.milestoneBadge, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
+                <Ionicons name="star" size={12} color="#ffffff" />
+                <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '800', marginLeft: 4, letterSpacing: 1.5 }}>
                   GLOBAL MILESTONE
                 </ThemedText>
               </View>
@@ -111,22 +111,22 @@ export default function NetworkScreen() {
 
               <View style={styles.rankContainer}>
                 <View>
-                  <ThemedText type="labelSm" style={{ color: 'rgba(255,255,255,0.6)' }}>PREVIOUS</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: 'rgba(255,255,255,0.65)' }}>PREVIOUS</ThemedText>
                   <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 2 }}>#7</ThemedText>
                 </View>
                 <View style={[styles.divider, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]} />
                 <View>
-                  <ThemedText type="labelSm" style={{ color: theme.secondaryContainer }}>CURRENT</ThemedText>
-                  <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 2 }}>#3</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: '#ffffff' }}>CURRENT</ThemedText>
+                  <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 2 }}>#3</ThemedText>
                 </View>
               </View>
 
               <View style={styles.milestoneActions}>
                 <Pressable 
-                  style={[styles.milestoneBtn, { backgroundColor: theme.secondaryContainer }]}
+                  style={[styles.milestoneBtn, { backgroundColor: '#ffffff' }]}
                   onPress={() => router.push('/player-profile')}
                 >
-                  <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                  <ThemedText type="labelSm" style={{ color: theme.primary, fontFamily: 'PlusJakartaSans_700Bold' }}>
                     VIEW PROFILE
                   </ThemedText>
                 </Pressable>
@@ -134,7 +134,7 @@ export default function NetworkScreen() {
                   style={[styles.milestoneBtnSec, { borderColor: 'rgba(255,255,255,0.2)' }]}
                   onPress={() => setCongratulated(!congratulated)}
                 >
-                  <ThemedText type="labelSm" style={{ color: congratulated ? theme.secondaryContainer : '#ffffff', fontFamily: 'PlusJakartaSans_700Bold' }}>
+                  <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold' }}>
                     {congratulated ? 'CONGRATULATED! ✓' : 'CONGRATULATE'}
                   </ThemedText>
                 </Pressable>

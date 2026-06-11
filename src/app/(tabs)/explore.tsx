@@ -251,10 +251,10 @@ export default function ExploreScreen() {
               
               <View style={styles.bannerContent}>
                 <View style={styles.bannerBadgeContainer}>
-                  <View style={[styles.bannerBadge, { backgroundColor: theme.secondaryContainer }]}>
-                    <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontWeight: '800' }}>MAJOR</ThemedText>
+                  <View style={[styles.bannerBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                    <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '800' }}>MAJOR</ThemedText>
                   </View>
-                  <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, marginLeft: 8 }}>
+                  <ThemedText type="labelSm" style={{ color: '#ffffff', marginLeft: 8 }}>
                     Ends in 2 days
                   </ThemedText>
                 </View>
@@ -268,9 +268,9 @@ export default function ExploreScreen() {
 
                 <Pressable 
                   onPress={() => router.push('/(tabs)/tournaments')}
-                  style={[styles.bannerButton, { backgroundColor: theme.secondaryContainer }]}
+                  style={[styles.bannerButton, { backgroundColor: '#ffffff' }]}
                 >
-                  <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer }}>Join Now</ThemedText>
+                  <ThemedText type="labelMd" style={{ color: theme.primary }}>Join Now</ThemedText>
                 </Pressable>
               </View>
             </View>
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   bannerSub: {
-    color: '#81919c',
+    color: 'rgba(255, 255, 255, 0.85)',
     fontSize: 13,
     marginBottom: Spacing.md,
     lineHeight: 18,

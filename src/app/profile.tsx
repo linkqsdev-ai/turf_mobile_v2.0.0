@@ -256,14 +256,14 @@ export default function ProfileScreen() {
                 {/* Skill Rating Card */}
                 <View style={[styles.skillCard, { backgroundColor: theme.primaryContainer }]}>
                   <Ionicons name="medal" size={80} color="rgba(255,255,255,0.03)" style={styles.skillCardDecor} />
-                  <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, letterSpacing: 0.5 }}>SKILL RATING</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: '#ffffff', letterSpacing: 0.5 }}>SKILL RATING</ThemedText>
                   <View style={styles.skillValRow}>
                     <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>2,840</ThemedText>
-                    <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer, marginLeft: Spacing.sm }}>PLATINUM</ThemedText>
+                    <ThemedText type="headlineSm" style={{ color: '#ffffff', marginLeft: Spacing.sm }}>PLATINUM</ThemedText>
                   </View>
                   <View style={styles.progressContainer}>
-                    <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
-                      <View style={[styles.progressBar, { backgroundColor: theme.secondaryContainer, width: '85%' }]} />
+                    <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+                      <View style={[styles.progressBar, { backgroundColor: '#ffffff', width: '85%' }]} />
                     </View>
                   </View>
                 </View>
@@ -678,8 +678,8 @@ export default function ProfileScreen() {
               {/* Upcoming Matches */}
               <View style={[styles.section, { paddingBottom: 60 }]}>
                 <View style={[styles.upcomingCard, { backgroundColor: theme.primaryContainer }]}>
-                  <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>UPCOMING MATCH</ThemedText>
-                  <ThemedText type="labelMd" style={{ color: theme.secondaryContainer, marginTop: Spacing.half, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                  <ThemedText type="labelSm" style={{ color: '#ffffff' }}>UPCOMING MATCH</ThemedText>
+                  <ThemedText type="labelMd" style={{ color: '#ffffff', marginTop: Spacing.half, fontFamily: 'PlusJakartaSans_700Bold' }}>
                     SATURDAY, 18:30 GMT
                   </ThemedText>
                   
@@ -688,15 +688,15 @@ export default function ProfileScreen() {
                       <View style={styles.teamBadgeText}><ThemedText type="bodySm" style={{ color: '#ffffff', fontWeight: '800' }}>BF</ThemedText></View>
                       <ThemedText type="labelSm" style={{ color: '#ffffff', marginTop: 4 }}>Falcons</ThemedText>
                     </View>
-                    <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer }}>VS</ThemedText>
+                    <ThemedText type="headlineSm" style={{ color: '#ffffff' }}>VS</ThemedText>
                     <View style={styles.versusTeam}>
                       <View style={styles.teamBadgeText}><ThemedText type="bodySm" style={{ color: '#ffffff', fontWeight: '800' }}>WS</ThemedText></View>
                       <ThemedText type="labelSm" style={{ color: '#ffffff', marginTop: 4 }}>Wolves</ThemedText>
                     </View>
                   </View>
 
-                  <Pressable style={[styles.briefBtn, { backgroundColor: theme.secondaryContainer }]}>
-                    <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontWeight: '700' }}>
+                  <Pressable style={[styles.briefBtn, { backgroundColor: '#ffffff' }]}>
+                    <ThemedText type="labelMd" style={{ color: theme.primary, fontWeight: '700' }}>
                       VIEW PRE-MATCH BRIEF
                     </ThemedText>
                   </Pressable>
