@@ -290,30 +290,35 @@ export default function ExploreScreen() {
                   <ThemedText type="labelSm" style={[styles.aiBadgeText, { color: theme.onSecondaryContainer }]}>AI</ThemedText>
                 </View>
                 <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80' }}
+                  source={{ uri: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=600&q=80' }}
                   style={styles.turfImage}
                   contentFit="cover"
                 />
               </View>
 
               <View style={styles.cardInfo}>
-                <View style={styles.cardHeaderRow}>
-                  <MaterialCommunityIcons name="soccer" size={14} color={theme.secondary} />
-                  <View style={styles.ratingBadge}>
-                    <Ionicons name="star" size={10} color={theme.secondaryContainer} />
-                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.9</ThemedText>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text, marginBottom: 4 }]} numberOfLines={1}>
+                      Skyline Arena Elite
+                    </ThemedText>
+                    <View style={styles.locationRow}>
+                      <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                      <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
+                        Canary Wharf, East London
+                      </ThemedText>
+                    </View>
                   </View>
-                </View>
-
-                <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text }]} numberOfLines={1}>
-                  Skyline Arena Elite
-                </ThemedText>
-
-                <View style={styles.locationRow}>
-                  <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
-                  <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
-                    Canary Wharf, East London
-                  </ThemedText>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <View style={styles.ratingBadge}>
+                      <Ionicons name="star" size={10} color={theme.secondaryContainer} />
+                      <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.9</ThemedText>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
+                      <MaterialCommunityIcons name="soccer" size={12} color={theme.secondary} />
+                      <MaterialCommunityIcons name="cricket" size={12} color={theme.secondary} />
+                    </View>
+                  </View>
                 </View>
 
                 <View style={styles.cardActions}>
@@ -330,13 +335,14 @@ export default function ExploreScreen() {
                     </Pressable>
                     <Pressable 
                       onPress={() => toggleFavorite('skyline')}
-                      style={[styles.favButton, { borderColor: theme.outlineVariant }]}
+                      style={styles.favButton}
                     >
-                      <Ionicons 
-                        name={favorites['skyline'] ? 'heart' : 'heart-outline'} 
-                        size={14} 
+                      <MaterialCommunityIcons 
+                        name={favorites['skyline'] ? 'cards-heart' : 'cards-heart-outline'} 
+                        size={16} 
                         color={favorites['skyline'] ? theme.error : theme.textSecondary} 
                       />
+                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 4 }}>124</ThemedText>
                     </Pressable>
                   </View>
                 </View>
@@ -357,23 +363,31 @@ export default function ExploreScreen() {
               </View>
 
               <View style={styles.cardInfo}>
-                <View style={styles.cardHeaderRow}>
-                  <Ionicons name="grid" size={14} color={theme.secondary} />
-                  <View style={styles.ratingBadge}>
-                    <Ionicons name="star" size={10} color={theme.secondaryContainer} />
-                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.7</ThemedText>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text, marginBottom: 4 }]} numberOfLines={1}>
+                      The Grid Multisport
+                    </ThemedText>
+                    <View style={styles.locationRow}>
+                      <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                      <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
+                        Stratford Central
+                      </ThemedText>
+                    </View>
                   </View>
-                </View>
-
-                <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text }]} numberOfLines={1}>
-                  The Grid Multisport
-                </ThemedText>
-
-                <View style={styles.locationRow}>
-                  <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
-                  <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
-                    Stratford Central
-                  </ThemedText>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <View style={styles.ratingBadge}>
+                      <Ionicons name="star" size={10} color={theme.secondaryContainer} />
+                      <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.7</ThemedText>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
+                      <MaterialCommunityIcons name="grid" size={12} color={theme.secondary} />
+                      <MaterialCommunityIcons name="soccer" size={12} color={theme.secondary} />
+                      <MaterialCommunityIcons name="cricket" size={12} color={theme.secondary} />
+                      <MaterialCommunityIcons name="tennis" size={12} color={theme.secondary} />
+                      <MaterialCommunityIcons name="basketball" size={12} color={theme.secondary} />
+                    </View>
+                  </View>
                 </View>
 
                 <View style={styles.cardActions}>
@@ -390,13 +404,14 @@ export default function ExploreScreen() {
                     </Pressable>
                     <Pressable 
                       onPress={() => toggleFavorite('the-grid')}
-                      style={[styles.favButton, { borderColor: theme.outlineVariant }]}
+                      style={styles.favButton}
                     >
-                      <Ionicons 
-                        name={favorites['the-grid'] ? 'heart' : 'heart-outline'} 
-                        size={14} 
+                      <MaterialCommunityIcons 
+                        name={favorites['the-grid'] ? 'cards-heart' : 'cards-heart-outline'} 
+                        size={16} 
                         color={favorites['the-grid'] ? theme.error : theme.textSecondary} 
                       />
+                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 4 }}>89</ThemedText>
                     </Pressable>
                   </View>
                 </View>
@@ -410,30 +425,35 @@ export default function ExploreScreen() {
             >
               <View style={styles.imageContainer}>
                 <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1531415080290-bc98545ab3ef?auto=format&fit=crop&w=600&q=80' }}
+                  source={{ uri: 'https://images.unsplash.com/photo-1518605368461-1e1e38ce7161?auto=format&fit=crop&w=600&q=80' }}
                   style={styles.turfImage}
                   contentFit="cover"
                 />
               </View>
 
               <View style={styles.cardInfo}>
-                <View style={styles.cardHeaderRow}>
-                  <MaterialCommunityIcons name="cricket" size={14} color={theme.secondary} />
-                  <View style={styles.ratingBadge}>
-                    <Ionicons name="star" size={10} color={theme.secondaryContainer} />
-                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.8</ThemedText>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text, marginBottom: 4 }]} numberOfLines={1}>
+                      {"Lord's View Pavillion"}
+                    </ThemedText>
+                    <View style={styles.locationRow}>
+                      <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                      <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {"St John's Wood"}
+                      </ThemedText>
+                    </View>
                   </View>
-                </View>
-
-                <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text }]} numberOfLines={1}>
-                  {"Lord's View Pavillion"}
-                </ThemedText>
-
-                <View style={styles.locationRow}>
-                  <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
-                  <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
-                    {"St John's Wood"}
-                  </ThemedText>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <View style={styles.ratingBadge}>
+                      <Ionicons name="star" size={10} color={theme.secondaryContainer} />
+                      <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.8</ThemedText>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
+                      <MaterialCommunityIcons name="cricket" size={12} color={theme.secondary} />
+                      <MaterialCommunityIcons name="tennis" size={12} color={theme.secondary} />
+                    </View>
+                  </View>
                 </View>
 
                 <View style={styles.cardActions}>
@@ -450,13 +470,14 @@ export default function ExploreScreen() {
                     </Pressable>
                     <Pressable 
                       onPress={() => toggleFavorite('lords')}
-                      style={[styles.favButton, { borderColor: theme.outlineVariant }]}
+                      style={styles.favButton}
                     >
-                      <Ionicons 
-                        name={favorites['lords'] ? 'heart' : 'heart-outline'} 
-                        size={14} 
+                      <MaterialCommunityIcons 
+                        name={favorites['lords'] ? 'cards-heart' : 'cards-heart-outline'} 
+                        size={16} 
                         color={favorites['lords'] ? theme.error : theme.textSecondary} 
                       />
+                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 4 }}>210</ThemedText>
                     </Pressable>
                   </View>
                 </View>
@@ -477,23 +498,27 @@ export default function ExploreScreen() {
               </View>
 
               <View style={styles.cardInfo}>
-                <View style={styles.cardHeaderRow}>
-                  <MaterialCommunityIcons name="soccer" size={14} color={theme.secondary} />
-                  <View style={styles.ratingBadge}>
-                    <Ionicons name="star" size={10} color={theme.secondaryContainer} />
-                    <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.6</ThemedText>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text, marginBottom: 4 }]} numberOfLines={1}>
+                      Wembley Turf Hub
+                    </ThemedText>
+                    <View style={styles.locationRow}>
+                      <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                      <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
+                        Wembley Park, London
+                      </ThemedText>
+                    </View>
                   </View>
-                </View>
-
-                <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text }]} numberOfLines={1}>
-                  Wembley Turf Hub
-                </ThemedText>
-
-                <View style={styles.locationRow}>
-                  <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
-                  <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
-                    Wembley Park, London
-                  </ThemedText>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <View style={styles.ratingBadge}>
+                      <Ionicons name="star" size={10} color={theme.secondaryContainer} />
+                      <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.6</ThemedText>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
+                      <MaterialCommunityIcons name="soccer" size={12} color={theme.secondary} />
+                    </View>
+                  </View>
                 </View>
 
                 <View style={styles.cardActions}>
@@ -510,13 +535,14 @@ export default function ExploreScreen() {
                     </Pressable>
                     <Pressable 
                       onPress={() => toggleFavorite('wembley')}
-                      style={[styles.favButton, { borderColor: theme.outlineVariant }]}
+                      style={styles.favButton}
                     >
-                      <Ionicons 
-                        name={favorites['wembley'] ? 'heart' : 'heart-outline'} 
-                        size={14} 
+                      <MaterialCommunityIcons 
+                        name={favorites['wembley'] ? 'cards-heart' : 'cards-heart-outline'} 
+                        size={16} 
                         color={favorites['wembley'] ? theme.error : theme.textSecondary} 
                       />
+                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 4 }}>342</ThemedText>
                     </Pressable>
                   </View>
                 </View>
@@ -700,12 +726,12 @@ const styles = StyleSheet.create({
   },
   turfCard: {
     flexDirection: 'row',
-    borderRadius: BorderRadius.premium,
+    borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#c3c7cb33',
+    borderColor: '#e5e7eb',
     height: 116,
-    marginBottom: 12,
+    marginBottom: 0,
   },
   imageContainer: {
     width: 110,
@@ -718,13 +744,14 @@ const styles = StyleSheet.create({
   },
   aiBadge: {
     position: 'absolute',
-    top: 4,
-    left: 4,
+    top: 0,
+    left: 0,
     zIndex: 5,
     backgroundColor: 'rgba(254, 174, 44, 0.95)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderTopLeftRadius: 16,
+    borderBottomRightRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -784,13 +811,14 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   favButton: {
-    width: 28,
     height: 28,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 6,
+    flexDirection: 'row',
+    marginLeft: 8,
   },
   toastContainer: {
     position: 'absolute',

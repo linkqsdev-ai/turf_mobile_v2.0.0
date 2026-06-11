@@ -260,7 +260,10 @@ export default function MatchesScreen() {
                     O2 Arena Turf
                   </ThemedText>
                 </View>
-                <Pressable style={styles.matchCenterLink}>
+                <Pressable
+                  onPress={() => router.push({ pathname: '/scoring', params: { matchId: 'futsal-1', sport: 'football' } })}
+                  style={styles.matchCenterLink}
+                >
                   <ThemedText type="labelMd" style={{ color: theme.text }}>
                     MATCH CENTER
                   </ThemedText>
@@ -327,13 +330,24 @@ export default function MatchesScreen() {
           </View>
         </ScrollView>
 
-        {/* Floating Action Button (FAB) */}
-        <Pressable
-          style={[styles.fab, { backgroundColor: theme.secondaryContainer }, Shadows.level3]}
-          onPress={() => handleMatchCenterSelect('new')}
-        >
-          <Ionicons name="add" size={28} color={theme.onSecondaryContainer} />
-        </Pressable>
+        {/* FAB Actions */}
+        <View style={styles.fabGroup}>
+          <Pressable
+            style={[styles.fabSecondary, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}
+            onPress={() => router.push('/create-team')}
+          >
+            <Ionicons name="shield-outline" size={20} color={theme.secondary} />
+            <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_700Bold', marginLeft: 6, fontSize: 11 }}>
+              Team
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            style={[styles.fab, { backgroundColor: theme.secondaryContainer }, Shadows.level3]}
+            onPress={() => router.push('/new-match')}
+          >
+            <Ionicons name="add" size={28} color={theme.onSecondaryContainer} />
+          </Pressable>
+        </View>
 
       </SafeAreaView>
       <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
@@ -547,14 +561,28 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.default,
   },
   fab: {
-    position: 'absolute',
-    right: Spacing.gutter,
-    bottom: Platform.OS === 'ios' ? 104 : 88,
     width: 56,
     height: 56,
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 100,
+  },
+  fabGroup: {
+    position: 'absolute',
+    right: Spacing.gutter,
+    bottom: Platform.OS === 'ios' ? 104 : 88,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    zIndex: 100,
+  },
+  fabSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
   },
 });

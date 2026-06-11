@@ -5,10 +5,11 @@ import {
   ScrollView,
   Pressable,
   Alert,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
@@ -32,7 +33,29 @@ const TIME_SLOTS = [
   { time: '19:00', icon: 'moon', disabled: true },
 ];
 
-const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAYS_OF_WEEK = [
+  { short: 'Mon', full: 'Monday' },
+  { short: 'Tue', full: 'Tuesday' },
+  { short: 'Wed', full: 'Wednesday' },
+  { short: 'Thu', full: 'Thursday' },
+  { short: 'Fri', full: 'Friday' },
+  { short: 'Sat', full: 'Saturday' },
+  { short: 'Sun', full: 'Sunday' },
+];
+
+const PAYMENT_METHODS = [
+  { id: 'apple',  label: 'Apple Pay',   icon: 'logo-apple',   family: 'Ionicons', color: '#000000' },
+  { id: 'paypal', label: 'PayPal',      icon: 'paypal',       family: 'FontAwesome5', color: '#003087' },
+  { id: 'gpay',   label: 'Google Pay',  icon: 'logo-google',  family: 'Ionicons', color: '#ea4335' },
+  { id: 'credit', label: 'Credit Card', icon: 'card',         family: 'Ionicons', color: '#ff5722' },
+  { id: 'debit',  label: 'Debit Card',  icon: 'card-outline', family: 'Ionicons', color: '#0f9d58' },
+];
+
+const ADVANCE_OPTIONS = [
+  { pct: 25, label: '25%' },
+  { pct: 50, label: '50%' },
+  { pct: 100, label: 'Full' },
+];
 
 const VENUE_LOOKUP: Record<string, {
   name: string;
@@ -83,6 +106,8 @@ export default function BookingConfigurationScreen() {
   const [selectedSlots, setSelectedSlots] = useState<string[]>(['12:00', '13:00']);
   const [coachAdded, setCoachAdded] = useState(false);
   const [recordingAdded, setRecordingAdded] = useState(false);
+  const [advancePct, setAdvancePct] = useState<number>(100); // 25 | 50 | 100
+  const [paymentMethod, setPaymentMethod] = useState<string>('apple');
 
   // Constants
   const courtFee = venue.basePrice * selectedSlots.length;
@@ -90,6 +115,8 @@ export default function BookingConfigurationScreen() {
   const coachFee = coachAdded ? 45.00 : 0.00;
   const recordingFee = recordingAdded ? 25.00 : 0.00;
   const total = courtFee + serviceCharge + coachFee + recordingFee;
+  const advanceAmount = Math.round((total * advancePct) / 100);
+  const remainingAmount = total - advanceAmount;
 
   const toggleSlot = (time: string) => {
     if (selectedSlots.includes(time)) {
@@ -243,34 +270,36 @@ export default function BookingConfigurationScreen() {
           {/* Time & Duration Config */}
           <View style={styles.section}>
             <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
-              {/* Day Selector */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daySelectorScroll}>
+              {/* Day Selector — Short names (Mon-Sun) in one row, no scroll */}
+              <View style={styles.daySelectorGrid}>
                 {DAYS_OF_WEEK.map((d) => {
-                  const isActive = d === selectedDayOfWeek;
+                  const isActive = d.full === selectedDayOfWeek;
                   return (
                     <Pressable
-                      key={d}
-                      onPress={() => setSelectedDayOfWeek(d)}
+                      key={d.full}
+                      onPress={() => setSelectedDayOfWeek(d.full)}
                       style={[
                         styles.daySelectorTab,
                         isActive
-                          ? [styles.daySelectorTabActive, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]
-                          : null,
+                          ? [styles.daySelectorTabActive, { backgroundColor: theme.secondaryContainer, borderColor: theme.secondary + '44' }]
+                          : { backgroundColor: theme.surfaceLow, borderColor: 'transparent' },
                       ]}
                     >
                       <ThemedText
                         type="labelMd"
                         style={{
-                          color: isActive ? theme.text : theme.textSecondary,
-                          fontFamily: isActive ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_400Regular',
+                          color: isActive ? theme.onSecondaryContainer : theme.textSecondary,
+                          fontFamily: isActive ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_600SemiBold',
+                          fontSize: 11.5,
+                          letterSpacing: 0.1,
                         }}
                       >
-                        {d}
+                        {d.short}
                       </ThemedText>
                     </Pressable>
                   );
                 })}
-              </ScrollView>
+              </View>
 
               {/* Time Slots Grid */}
               <View style={styles.slotsGrid}>
@@ -373,6 +402,143 @@ export default function BookingConfigurationScreen() {
             </View>
           </View>
 
+          {/* ── Advance Pay Option ── */}
+          <View style={styles.section}>
+            <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.sm, letterSpacing: 0.5 }}>
+              ADVANCE PAYMENT
+            </ThemedText>
+            <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
+              <View style={styles.advanceHeader}>
+                <View style={styles.advanceHeaderLeft}>
+                  <View style={[styles.advanceIconWrap, { backgroundColor: '#feae2c22' }]}>
+                    <Ionicons name="cash" size={18} color="#feae2c" />
+                  </View>
+                  <View style={{ marginLeft: Spacing.sm }}>
+                    <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>Pay in Advance</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Remaining due at venue</ThemedText>
+                  </View>
+                </View>
+                <ThemedText type="headlineSm" style={{ color: '#feae2c', fontFamily: 'HankenGrotesk_800ExtraBold' }}>
+                  ₹{advanceAmount}
+                </ThemedText>
+              </View>
+
+              {/* Advance % toggle row */}
+              <View style={styles.advanceOptions}>
+                {ADVANCE_OPTIONS.map((opt) => {
+                  const isActive = opt.pct === advancePct;
+                  return (
+                    <Pressable
+                      key={opt.pct}
+                      onPress={() => setAdvancePct(opt.pct)}
+                      style={[
+                        styles.advanceOptBtn,
+                        isActive
+                          ? { backgroundColor: '#feae2c', borderColor: '#feae2c' }
+                          : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
+                      ]}
+                    >
+                      <ThemedText style={{
+                        color: isActive ? '#05151e' : theme.textSecondary,
+                        fontFamily: 'HankenGrotesk_700Bold',
+                        fontSize: 12,
+                      }}>{opt.label}</ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {advancePct < 100 && (
+                <View style={[styles.advanceRemainder, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}>
+                  <Ionicons name="information-circle-outline" size={14} color={theme.textSecondary} />
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 6, flex: 1 }}>
+                    ₹{remainingAmount.toFixed(2)} remaining to be paid at the venue before your session.
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* ── Payment Method ── */}
+          <View style={styles.section}>
+            <View style={{ marginBottom: Spacing.md }}>
+              <ThemedText type="headlineSm" style={{ color: theme.text, marginBottom: 4 }}>
+                Payment Methods
+              </ThemedText>
+              <ThemedText type="bodyMd" style={{ color: theme.textSecondary }}>
+                Confirm your booking details
+              </ThemedText>
+            </View>
+
+            <View style={{ gap: Spacing.sm }}>
+              {PAYMENT_METHODS.map(pm => {
+                const isSelected = paymentMethod === pm.id;
+                return (
+                  <Pressable
+                    key={pm.id}
+                    onPress={() => setPaymentMethod(pm.id)}
+                    style={[{ flexDirection: 'column', padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: theme.outlineVariant + '40', backgroundColor: theme.surfaceLowest }, isSelected && { borderColor: theme.primary, backgroundColor: theme.primaryContainer }]}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {pm.id === 'gpay' ? (
+                          <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={{ width: 24, height: 24, marginHorizontal: 4 }} />
+                        ) : pm.family === 'Ionicons' ? (
+                          <Ionicons name={pm.icon as any} size={24} color={isSelected ? theme.surfaceLowest : (pm.color === '#000000' ? theme.text : pm.color)} style={{ width: 32, textAlign: 'center' }} />
+                        ) : (
+                          <FontAwesome5 name={pm.icon as any} size={24} color={isSelected ? theme.surfaceLowest : (pm.color === '#000000' ? theme.text : pm.color)} style={{ width: 32, textAlign: 'center' }} />
+                        )}
+                        <ThemedText type="bodyMd" style={{ marginLeft: 12, color: isSelected ? theme.surfaceLowest : theme.text }}>{pm.label}</ThemedText>
+                      </View>
+                      <View style={[{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: theme.outlineVariant, justifyContent: 'center', alignItems: 'center' }, isSelected && { borderColor: theme.surfaceLowest }]}>
+                        {isSelected && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.surfaceLowest }} />}
+                      </View>
+                    </View>
+
+                    {/* Expanded Payment Details */}
+                    {isSelected && (pm.id === 'credit' || pm.id === 'debit') && (
+                      <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignSelf: 'stretch' }}>
+                        <TextInput 
+                          placeholder="Card Number" 
+                          placeholderTextColor={theme.onPrimaryContainer}
+                          style={{ backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, marginBottom: Spacing.sm, alignSelf: 'stretch' }} 
+                        />
+                        <View style={{ flexDirection: 'row', gap: Spacing.sm, alignSelf: 'stretch' }}>
+                          <TextInput 
+                            placeholder="MM/YY" 
+                            placeholderTextColor={theme.onPrimaryContainer}
+                            style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }} 
+                          />
+                          <TextInput 
+                            placeholder="CVV" 
+                            placeholderTextColor={theme.onPrimaryContainer}
+                            style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }} 
+                            secureTextEntry
+                          />
+                        </View>
+                      </View>
+                    )}
+                    {isSelected && pm.id === 'gpay' && (
+                      <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignItems: 'center' }}>
+                        <ThemedText type="bodySm" style={{ color: theme.surfaceLowest, marginBottom: Spacing.sm, textAlign: 'center' }}>You will be redirected to Google Pay to complete the transaction securely.</ThemedText>
+                      </View>
+                    )}
+                    {isSelected && pm.id === 'paypal' && (
+                      <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignItems: 'center' }}>
+                        <ThemedText type="bodySm" style={{ color: theme.surfaceLowest, marginBottom: Spacing.sm, textAlign: 'center' }}>You will be redirected to PayPal to complete the transaction securely.</ThemedText>
+                      </View>
+                    )}
+                    {isSelected && pm.id === 'apple' && (
+                      <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignItems: 'center' }}>
+                        <ThemedText type="bodySm" style={{ color: theme.surfaceLowest, marginBottom: Spacing.sm, textAlign: 'center' }}>Pay securely with Apple Pay.</ThemedText>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
           {/* Booking Summary Card */}
           <View style={[styles.section, { paddingBottom: 60 }]}>
             <View style={[styles.summaryCard, { backgroundColor: theme.primaryContainer }, Shadows.level3]}>
@@ -453,26 +619,46 @@ export default function BookingConfigurationScreen() {
                     ₹{total.toFixed(2)}
                   </ThemedText>
                 </View>
+                {advancePct < 100 && (
+                  <View style={[styles.priceRow, { marginTop: 4 }]}>
+                    <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Pay Now ({advancePct}%)</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: '#feae2c', fontFamily: 'HankenGrotesk_700Bold' }}>₹{advanceAmount}</ThemedText>
+                  </View>
+                )}
               </View>
 
-              {/* Action Button */}
+              {/* Action Button — Premium redesigned */}
               <Pressable
                 onPress={handleConfirmBooking}
                 disabled={selectedSlots.length === 0}
                 style={[
                   styles.confirmBtn,
-                  { backgroundColor: theme.secondaryContainer },
-                  selectedSlots.length === 0 && { opacity: 0.5 }
+                  selectedSlots.length === 0 && { opacity: 0.45 }
                 ]}
               >
-                <ThemedText type="headlineSm" style={{ color: theme.onSecondaryContainer, fontFamily: 'HankenGrotesk_700Bold' }}>
-                  CONFIRM BOOKING
-                </ThemedText>
-                <Ionicons name="arrow-forward" size={18} color={theme.onSecondaryContainer} style={{ marginLeft: Spacing.xs }} />
+                {/* Left icon block */}
+                <View style={styles.confirmBtnIconWrap}>
+                  <Ionicons name="shield-checkmark" size={20} color={'#feae2c'} />
+                </View>
+
+                {/* Center label */}
+                <View style={styles.confirmBtnLabelWrap}>
+                  <ThemedText style={styles.confirmBtnTitle}>
+                    CONFIRM BOOKING
+                  </ThemedText>
+                  <ThemedText style={styles.confirmBtnSub}>
+                    ₹{advanceAmount} via {PAYMENT_METHODS.find(p => p.id === paymentMethod)?.label ?? 'UPI'}
+                  </ThemedText>
+                </View>
+
+                {/* Right arrow */}
+                <View style={styles.confirmBtnArrow}>
+                  <Ionicons name="chevron-forward" size={20} color={'#ffffff'} />
+                </View>
               </Pressable>
 
               <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, textAlign: 'center', marginTop: Spacing.sm }}>
-                Cancellation policy applies. 24h notice required.
+                🔒 Secure payment · Free cancellation 24h before
               </ThemedText>
             </View>
           </View>
@@ -593,35 +779,36 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   dayLabelText: {
-    width: '13%',
+    width: `${100 / 7}%`,
     textAlign: 'center',
     fontWeight: '700',
   },
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
   },
   calendarDayCell: {
-    width: '13%',
+    width: `${100 / 7}%`,
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
     marginVertical: 2,
   },
-  daySelectorScroll: {
-    gap: Spacing.sm,
+  daySelectorGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingBottom: Spacing.xs,
   },
   daySelectorTab: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
+    flex: 1,
+    paddingVertical: 7,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   daySelectorTabActive: {
-    backgroundColor: '#ffffff',
     borderWidth: 1,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
@@ -703,12 +890,127 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   confirmBtn: {
-    backgroundColor: '#feae2c',
-    height: 52,
-    borderRadius: BorderRadius.xl,
+    backgroundColor: '#0a1929',
+    height: 68,
+    borderRadius: BorderRadius.premium,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(254, 174, 44, 0.3)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  confirmBtnIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(254, 174, 44, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(254, 174, 44, 0.3)',
+  },
+  confirmBtnLabelWrap: {
+    flex: 1,
+  },
+  confirmBtnTitle: {
+    color: '#ffffff',
+    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontSize: 15,
+    letterSpacing: 0.8,
+  },
+  confirmBtnSub: {
+    color: '#feae2c',
+    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontSize: 11,
+    marginTop: 2,
+    letterSpacing: 0.2,
+  },
+  confirmBtnArrow: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: Spacing.sm,
+  },
+  // Advance Pay styles
+  advanceHeader: {
     flexDirection: 'row',
-    marginTop: Spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  advanceHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  advanceIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  advanceOptions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  advanceOptBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  advanceRemainder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.default,
+    borderWidth: 1,
+  },
+  // Payment Method styles
+  paymentGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  paymentItem: {
+    width: '13%',
+    flex: 1,
+    minWidth: 68,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  paymentIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  paymentCheck: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
