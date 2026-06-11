@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -227,8 +228,30 @@ export default function TeamRegistrationScreen() {
             {paySuccess ? (
               // Success Screen
               <View style={styles.successContainer}>
-                <Ionicons name="checkmark-circle" size={80} color="#0f9f58" />
-                <ThemedText type="headlineLg" style={{ color: theme.text, marginTop: 16, textAlign: 'center' }}>
+                {/* Layered Trophy Illustration */}
+                <View style={styles.trophyIllustrationContainer}>
+                  <View style={styles.trophyOuterRing} />
+                  <View style={styles.trophyMidRing} />
+                  <LinearGradient
+                    colors={['#feae2c', '#ff8c00']}
+                    style={styles.trophyInnerCircle}
+                  >
+                    <Ionicons name="trophy" size={36} color="#ffffff" />
+                  </LinearGradient>
+                  
+                  {/* Decorative Sparkles */}
+                  <View style={[styles.sparkle, { top: 10, left: 15 }]}>
+                    <Ionicons name="star" size={12} color="#feae2c" />
+                  </View>
+                  <View style={[styles.sparkle, { bottom: 15, right: 10 }]}>
+                    <Ionicons name="star" size={10} color="#feae2c" />
+                  </View>
+                  <View style={[styles.sparkle, { top: 25, right: 20 }]}>
+                    <Ionicons name="checkmark-circle" size={14} color="#0f9f58" />
+                  </View>
+                </View>
+
+                <ThemedText type="headlineLg" style={{ color: theme.text, marginTop: 24, textAlign: 'center', fontWeight: 'bold' }}>
                   Registration Confirmed!
                 </ThemedText>
                 <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 8, paddingHorizontal: 20 }}>
@@ -265,6 +288,35 @@ export default function TeamRegistrationScreen() {
             ) : (
               // Registration Fields Form
               <View>
+                {/* HERO BANNER */}
+                <View style={styles.heroBannerContainer}>
+                  <Image 
+                    source="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80" 
+                    style={styles.heroBannerImage}
+                    contentFit="cover"
+                  />
+                  <LinearGradient
+                    colors={['rgba(5, 21, 30, 0.1)', 'rgba(5, 21, 30, 0.85)']}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                  <View style={styles.heroContent}>
+                    <View style={styles.heroBadge}>
+                      <ThemedText style={styles.heroBadgeText}>TOURNAMENT REGISTRATION</ThemedText>
+                    </View>
+                    <ThemedText style={styles.heroTitle}>{tournamentName}</ThemedText>
+                    <View style={styles.heroRow}>
+                      <View style={styles.heroMetaItem}>
+                        <Ionicons name="calendar-outline" size={12} color="#feae2c" style={{ marginRight: 4 }} />
+                        <ThemedText style={styles.heroMetaText}>Starts July 15, 2026</ThemedText>
+                      </View>
+                      <View style={styles.heroMetaItem}>
+                        <Ionicons name="location-outline" size={12} color="#feae2c" style={{ marginRight: 4 }} />
+                        <ThemedText style={styles.heroMetaText}>London Arena</ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
                 <ThemedText type="headlineSm" style={styles.sectionTitle}>1. Team Details</ThemedText>
                 <View style={styles.inputGroup}>
                   <ThemedText type="labelSm" style={styles.inputLabel}>Team Name *</ThemedText>
@@ -406,8 +458,15 @@ export default function TeamRegistrationScreen() {
                   {isPaying ? (
                     <ActivityIndicator size="small" color={theme.secondaryContainer} style={{ marginTop: 20 }} />
                   ) : (
-                    <Pressable style={[styles.paySubmitBtn, { backgroundColor: theme.secondaryContainer }]} onPress={handlePayment}>
-                      <ThemedText type="labelMd" style={{ color: '#6b4500', fontWeight: 'bold' }}>PAY & SUBMIT REGISTRATION</ThemedText>
+                    <Pressable onPress={handlePayment} style={Shadows.level2}>
+                      <LinearGradient
+                        colors={['#feae2c', '#ff8c00']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.paySubmitBtnGradient}
+                      >
+                        <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: 'bold' }}>PAY & SUBMIT REGISTRATION</ThemedText>
+                      </LinearGradient>
                     </Pressable>
                   )}
                 </View>
@@ -417,6 +476,31 @@ export default function TeamRegistrationScreen() {
         ) : (
           // ADMIN CONTROL PANEL
           <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
+            {/* HERO BANNER */}
+            <View style={styles.heroBannerContainer}>
+              <Image 
+                source="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80" 
+                style={styles.heroBannerImage}
+                contentFit="cover"
+              />
+              <LinearGradient
+                colors={['rgba(5, 21, 30, 0.1)', 'rgba(5, 21, 30, 0.85)']}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <View style={styles.heroContent}>
+                <View style={styles.heroBadge}>
+                  <ThemedText style={styles.heroBadgeText}>ADMIN CONTROL PANEL</ThemedText>
+                </View>
+                <ThemedText style={styles.heroTitle}>{tournamentName}</ThemedText>
+                <View style={styles.heroRow}>
+                  <View style={styles.heroMetaItem}>
+                    <Ionicons name="shield-checkmark-outline" size={12} color="#feae2c" style={{ marginRight: 4 }} />
+                    <ThemedText style={styles.heroMetaText}>Requests Management</ThemedText>
+                  </View>
+                </View>
+              </View>
+            </View>
+
             <ThemedText type="headlineSm" style={styles.sectionTitle}>Registered Teams Requests</ThemedText>
             <View style={styles.adminTable}>
               {adminTeams.map((t) => {
@@ -475,8 +559,9 @@ export default function TeamRegistrationScreen() {
                         REGISTRATION INFO
                       </ThemedText>
                       <View style={styles.mockSubheaderRightBtn}>
+                        <Ionicons name="time-outline" size={11} color="#feae2c" style={{ marginRight: 4 }} />
                         <ThemedText style={styles.mockSubheaderRight}>
-                          + Requested {t.requestDate || '10m ago'}
+                          Requested {t.requestDate || '10m ago'}
                         </ThemedText>
                       </View>
                     </View>
@@ -513,8 +598,13 @@ export default function TeamRegistrationScreen() {
                         </View>
                       </View>
 
-                      {/* Bottom part: sky blue invoice total bar */}
-                      <View style={[styles.mockInvoiceBottom, { backgroundColor: '#e7eeff' }]}>
+                      {/* Bottom part: sky blue invoice total bar with gradient */}
+                      <LinearGradient
+                        colors={['#e7eeff', '#cce0ff']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.mockInvoiceBottomGradient}
+                      >
                         <ThemedText style={styles.mockTotalLabel}>Fees Status ({method})</ThemedText>
                         <ThemedText 
                           style={[
@@ -524,7 +614,7 @@ export default function TeamRegistrationScreen() {
                         >
                           {t.payment}
                         </ThemedText>
-                      </View>
+                      </LinearGradient>
                     </View>
 
                     {/* Buttons Section */}
@@ -547,13 +637,20 @@ export default function TeamRegistrationScreen() {
                       </Pressable>
                     </View>
 
-                    {/* Row 2: Full-width Gold Primary Button */}
+                    {/* Row 2: Full-width Gold Primary Button with LinearGradient */}
                     <Pressable 
-                      style={[styles.mockFullWidthBtn, { backgroundColor: theme.secondaryContainer }]}
+                      style={styles.mockFullWidthBtnContainer}
                       onPress={() => handleAdminAction(t.id, 'Approve')}
                     >
-                      <Ionicons name="checkmark-circle-outline" size={16} color="#6b4500" style={{ marginRight: 6 }} />
-                      <ThemedText style={styles.mockFullWidthBtnText}>Approve Registration</ThemedText>
+                      <LinearGradient
+                        colors={['#feae2c', '#ff8c00']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.mockFullWidthBtnGradient}
+                      >
+                        <Ionicons name="checkmark-circle-outline" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                        <ThemedText style={styles.mockFullWidthBtnTextGradient}>Approve Registration</ThemedText>
+                      </LinearGradient>
                     </Pressable>
                   </View>
                 );
@@ -699,6 +796,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
   },
+  paySubmitBtnGradient: {
+    height: 48,
+    borderRadius: BorderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
   successContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -776,10 +880,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   mockSubheaderRightBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#feae2c15',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.default,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.md,
   },
   mockSubheaderRight: {
     fontSize: 10,
@@ -838,6 +944,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  mockInvoiceBottomGradient: {
+    padding: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   mockTotalLabel: {
     fontSize: 12,
     fontWeight: '600',
@@ -877,6 +989,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#6b4500',
   },
+  mockFullWidthBtnContainer: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+  },
+  mockFullWidthBtnGradient: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 44,
+  },
+  mockFullWidthBtnTextGradient: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
   toastContainer: {
     position: 'absolute',
     bottom: 50,
@@ -885,5 +1014,102 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: BorderRadius.premium,
     zIndex: 999,
+  },
+  heroBannerContainer: {
+    height: 150,
+    borderRadius: BorderRadius['2xl'],
+    overflow: 'hidden',
+    marginBottom: 20,
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: '#c3c7cb22',
+  },
+  heroBannerImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  heroContent: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  heroBadge: {
+    backgroundColor: '#feae2c',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.sm,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
+  heroBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#6b4500',
+    letterSpacing: 0.5,
+  },
+  heroTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    fontFamily: 'HankenGrotesk_700Bold',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  heroMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  heroMetaText: {
+    fontSize: 11,
+    color: '#dee8ff',
+    fontWeight: '500',
+  },
+  trophyIllustrationContainer: {
+    width: 120,
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    marginBottom: 12,
+  },
+  trophyOuterRing: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#feae2c12',
+    borderWidth: 1,
+    borderColor: '#feae2c33',
+    borderStyle: 'dashed',
+  },
+  trophyMidRing: {
+    position: 'absolute',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#feae2c18',
+  },
+  trophyInnerCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#ff8c00',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  sparkle: {
+    position: 'absolute',
   },
 });
