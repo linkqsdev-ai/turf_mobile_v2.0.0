@@ -10,7 +10,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -18,6 +18,7 @@ import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { CoinTossModal } from '@/components/coin-toss-modal';
 
 export default function CreateTeamScreen() {
   const theme = useTheme();
@@ -27,6 +28,7 @@ export default function CreateTeamScreen() {
   const [shortName, setShortName] = useState('');
   const [selectedSport] = useState('Football');
   const [homeGround, setHomeGround] = useState('');
+  const [coinTossVisible, setCoinTossVisible] = useState(false);
 
   // Spring scale animations for buttons
   const [scaleCreateAnim] = useState(new Animated.Value(1));
@@ -79,11 +81,14 @@ export default function CreateTeamScreen() {
             </ThemedText>
           </View>
           <View style={styles.headerRight}>
-            <Pressable style={styles.iconBtn}>
-              <Ionicons name="notifications-outline" size={20} color={theme.textSecondary} />
+            <Pressable style={styles.iconBtn} onPress={() => router.push('/network')}>
+              <Ionicons name="pulse" size={20} color={theme.secondary} />
             </Pressable>
-            <Pressable style={[styles.iconBtn, styles.avatarMini]}>
-              <Ionicons name="person" size={15} color="#ffffff" />
+            <Pressable style={styles.iconBtn}>
+              <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
+            </Pressable>
+            <Pressable style={styles.iconBtn} onPress={() => setCoinTossVisible(true)}>
+              <FontAwesome5 name="coins" size={16} color={theme.secondary} />
             </Pressable>
           </View>
         </View>
@@ -262,6 +267,7 @@ export default function CreateTeamScreen() {
 
         </ScrollView>
       </SafeAreaView>
+      <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
     </GradientContainer>
   );
 }

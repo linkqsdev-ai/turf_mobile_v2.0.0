@@ -298,7 +298,7 @@ export default function TeamRegistrationScreen() {
                   />
                   <LinearGradient
                     colors={['rgba(5, 21, 30, 0.1)', 'rgba(5, 21, 30, 0.85)']}
-                    style={StyleSheet.absoluteFillObject}
+                    style={StyleSheet.absoluteFill}
                   />
                   <View style={styles.heroContent}>
                     <View style={styles.heroBadge}>
@@ -486,7 +486,7 @@ export default function TeamRegistrationScreen() {
               />
               <LinearGradient
                 colors={['rgba(5, 21, 30, 0.1)', 'rgba(5, 21, 30, 0.85)']}
-                style={StyleSheet.absoluteFillObject}
+                style={StyleSheet.absoluteFill}
               />
               <View style={styles.heroContent}>
                 <View style={styles.heroBadge}>

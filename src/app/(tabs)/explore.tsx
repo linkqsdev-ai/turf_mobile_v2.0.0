@@ -20,6 +20,7 @@ import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { CoinTossModal } from '@/components/coin-toss-modal';
+import { PromoBanner, AutoScrollingHorizontalBanners } from '@/components/promo-banner';
 
 // Mock Data for Dates
 const DATES = [
@@ -241,41 +242,47 @@ export default function ExploreScreen() {
             </ScrollView>
           </View>
 
-          {/* Tournaments Section */}
-          <View style={styles.section}>
-            <View style={[styles.bannerContainer, { backgroundColor: theme.primaryContainer }]}>
-              {/* Illustration Accent background */}
-              <Image
-                source={require('@/assets/images/illustrations/trophy.png')}
-                style={styles.bannerIllustration}
-                contentFit="contain"
-              />
-              
-              <View style={styles.bannerContent}>
-                <View style={styles.bannerBadgeContainer}>
-                  <View style={[styles.bannerBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                    <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '800' }}>MAJOR</ThemedText>
-                  </View>
-                  <ThemedText type="labelSm" style={{ color: '#ffffff', marginLeft: 8 }}>
-                    Ends in 2 days
-                  </ThemedText>
-                </View>
-
-                <ThemedText type="headlineSm" style={styles.bannerTitle}>
-                  London Community Cup 2024
-                </ThemedText>
-                <ThemedText type="bodyMd" style={styles.bannerSub}>
-                  Compete with the best local teams and win the championship trophy.
-                </ThemedText>
-
-                <Pressable 
-                  onPress={() => router.push('/(tabs)/tournaments')}
-                  style={[styles.bannerButton, { backgroundColor: '#ffffff' }]}
-                >
-                  <ThemedText type="labelMd" style={{ color: theme.primary }}>Join Now</ThemedText>
-                </Pressable>
-              </View>
-            </View>
+          {/* Offers & Gift Vouchers (Horizontal Card, Auto Scroll, Reduced Width & Gap) */}
+          <View style={[styles.section, { paddingHorizontal: 0 }]}>
+            <ThemedText type="labelSm" style={{ color: theme.textSecondary, paddingHorizontal: Spacing.containerMargin, marginBottom: 4, letterSpacing: 0.5 }}>
+              SPECIAL DEALS & VOUCHERS
+            </ThemedText>
+            <AutoScrollingHorizontalBanners 
+              cardWidth={270}
+              gap={12}
+              banners={[
+                {
+                  title: "Gift a Game to Your Loved Ones",
+                  subtitle: "The easiest way to nail a gift for a sports lover",
+                  buttonText: "Buy Gift Card",
+                  badgeText: "GIFT VOUCHER",
+                  backgroundImage: "https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=600&q=80",
+                  buttonBackgroundColor: "#ffffff",
+                  buttonTextColor: "#1e3a8a",
+                  onPress: () => router.push('/booking'),
+                },
+                {
+                  title: "Summer Turf Festival Offer",
+                  subtitle: "Play under the stars. Special discounts after 9PM.",
+                  buttonText: "Explore Offers",
+                  badgeText: "SPECIAL OFFER",
+                  backgroundImage: "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?auto=format&fit=crop&w=600&q=80",
+                  buttonBackgroundColor: "#a3e635",
+                  buttonTextColor: "#064e3b",
+                  onPress: () => router.push('/(tabs)/explore'),
+                },
+                {
+                  title: "YAWAH Turf Special Offer",
+                  subtitle: "Get flat 30% OFF on all bookings. Code: YAWAHTURF",
+                  buttonText: "Book Now",
+                  badgeText: "SPECIAL OFFER",
+                  backgroundImage: "https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=600&q=80",
+                  buttonBackgroundColor: "#5D68E8",
+                  buttonTextColor: "#ffffff",
+                  onPress: () => router.push('/(tabs)/explore'),
+                }
+              ]}
+            />
           </View>
 
           {/* Turf List */}
@@ -288,9 +295,9 @@ export default function ExploreScreen() {
             >
               <View style={styles.imageContainer}>
                 {/* AI Recommended Badge */}
-                <View style={[styles.aiBadge, { backgroundColor: theme.secondaryContainer }]}>
+                <View style={[styles.aiBadge, { backgroundColor: theme.secondaryContainer + 'E6', borderColor: theme.onSecondaryContainer + '33' }]}>
                   <Ionicons name="sparkles" size={8} color={theme.onSecondaryContainer} />
-                  <ThemedText type="labelSm" style={[styles.aiBadgeText, { color: theme.onSecondaryContainer }]}>AI</ThemedText>
+                  <ThemedText style={[styles.aiBadgeText, { color: theme.onSecondaryContainer }]}>AI</ThemedText>
                 </View>
                 <Image
                   source={{ uri: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=600&q=80' }}
@@ -748,22 +755,22 @@ const styles = StyleSheet.create({
   },
   aiBadge: {
     position: 'absolute',
-    top: 0,
-    left: 0,
+    top: 6,
+    left: 6,
     zIndex: 5,
-    backgroundColor: 'rgba(93, 104, 232, 0.95)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderTopLeftRadius: 16,
-    borderBottomRightRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
   aiBadgeText: {
-    color: '#6b4500',
     fontSize: 8,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    letterSpacing: 0.5,
     marginLeft: 2,
+    textTransform: 'uppercase',
   },
   cardInfo: {
     flex: 1,

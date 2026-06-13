@@ -173,20 +173,22 @@ export default function TennisScoring() {
       {/* Live Set Scoreboard Banner */}
       <View style={styles.bannerWrapper}>
         <View style={[styles.scoreboardBanner, { backgroundColor: theme.primaryContainer }]}>
-          <View style={styles.liveBadgeAbsolute}>
-            <View style={styles.liveDotRed} />
-            <ThemedText style={styles.liveText}>Live</ThemedText>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <ThemedText type="labelSm" style={{ color: '#ffffffaa', letterSpacing: 1 }}>
+              Tennis Sets Match Score
+            </ThemedText>
+            <View style={styles.liveBadgeAbsolute}>
+              <View style={styles.liveDotRed} />
+              <ThemedText style={styles.liveText}>Live</ThemedText>
+            </View>
           </View>
-          <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, letterSpacing: 1, marginBottom: 8 }}>
-            Tennis Sets Match Score
-          </ThemedText>
 
           {/* Set Scores Display Table */}
           <View style={styles.setsTable}>
             <View style={styles.setsHeaderRow}>
               <View style={{ flex: 2 }} />
               {setsA.map((_, idx) => (
-                <ThemedText key={idx} type="labelSm" style={{ flex: 1, textAlign: 'center', color: theme.onPrimaryContainer }}>
+                <ThemedText key={idx} type="labelSm" style={{ flex: 1, textAlign: 'center', color: '#ffffffaa' }}>
                   S{idx + 1}
                 </ThemedText>
               ))}
@@ -200,7 +202,7 @@ export default function TennisScoring() {
                   <ThemedText
                     key={idx}
                     type="headlineSm"
-                    style={{ flex: 1, textAlign: 'center', color: isCurrent ? theme.secondaryContainer : '#ffffffaa', fontFamily: isCurrent ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_400Regular' }}
+                    style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_400Regular' }}
                   >
                     {isCurrent ? gamesA : val}
                   </ThemedText>
@@ -374,12 +376,10 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   scoreboardBanner: {
-    borderRadius: BorderRadius.premium,
-    padding: Spacing.lg,
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
+    borderRadius: BorderRadius.xl,
+    padding: 12,
     position: 'relative',
+    ...Shadows.level2,
   },
   setsTable: {
     flexDirection: 'column',
@@ -395,13 +395,14 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   section: {
-    marginTop: Spacing.lg,
+    marginTop: 14,
     paddingHorizontal: Spacing.containerMargin,
   },
   card: {
-    borderRadius: BorderRadius.premium,
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    padding: Spacing.md,
+    padding: 12,
+    ...Shadows.level2,
   },
   pointsConsole: {
     flexDirection: 'row',
@@ -462,29 +463,32 @@ const styles = StyleSheet.create({
   },
   undoBtn: {
     flexDirection: 'row',
-    height: 48,
+    height: 40,
     borderRadius: BorderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Shadows.level2,
   },
   liveBadgeAbsolute: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#ff1744',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
     gap: 4,
-    zIndex: 20,
   },
   liveDotRed: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#ff1744',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#ffffff',
   },
   liveText: {
-    color: '#ff1744',
-    fontSize: 10,
-    fontFamily: 'HankenGrotesk_700Bold',
+    color: '#ffffff',
+    fontSize: 8,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });

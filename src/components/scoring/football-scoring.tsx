@@ -56,7 +56,7 @@ export default function FootballScoring() {
   const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: any;
     if (isRunning) {
       interval = setInterval(() => {
         setSeconds(prev => prev + 1);
@@ -120,7 +120,7 @@ export default function FootballScoring() {
         },
         {
           text: 'OK',
-          onPress: (scorer) => {
+          onPress: (scorer?: string) => {
             const scorerName = scorer || 'Player';
             if (team === 'A') {
               setScoreA(prev => prev + 1);
@@ -155,7 +155,7 @@ export default function FootballScoring() {
         },
         {
           text: 'OK',
-          onPress: (player) => {
+          onPress: (player?: string) => {
             const playerName = player || 'Player';
             if (cardType === 'yellow') {
               if (team === 'A') setYellowA(prev => prev + 1);
@@ -187,10 +187,10 @@ export default function FootballScoring() {
         <View style={[styles.timerBanner, { backgroundColor: theme.primaryContainer }]}>
           <View style={styles.timerRow}>
             <View style={styles.timerBlock}>
-              <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, letterSpacing: 1 }}>
+              <ThemedText type="labelSm" style={{ color: '#ffffffaa', letterSpacing: 1 }}>
                 Match Time
               </ThemedText>
-              <ThemedText type="displayLg" style={{ color: theme.secondaryContainer, fontSize: 40, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 4 }}>
+              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 40, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 4 }}>
                 {String(Math.floor(seconds / 60)).padStart(2, '0')}:{String(seconds % 60).padStart(2, '0')}
               </ThemedText>
             </View>
@@ -217,14 +217,16 @@ export default function FootballScoring() {
 
       {/* Main Scoring Console */}
       <View style={styles.section}>
-        <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', position: 'relative' }]}>
-          <View style={styles.liveBadgeAbsolute}>
-            <View style={styles.liveDotRed} />
-            <ThemedText style={styles.liveText}>Live</ThemedText>
+        <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
+            <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5 }}>
+              Scores & Goals
+            </ThemedText>
+            <View style={styles.liveBadgeAbsolute}>
+              <View style={styles.liveDotRed} />
+              <ThemedText style={styles.liveText}>Live</ThemedText>
+            </View>
           </View>
-          <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.md, letterSpacing: 0.5 }}>
-            Scores & Goals
-          </ThemedText>
           <View style={styles.teamsRow}>
             {/* Team A Goal Button */}
             <View style={styles.teamCol}>
@@ -466,13 +468,9 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   timerBanner: {
-    borderRadius: BorderRadius.premium,
-    padding: Spacing.lg,
-    shadowColor: '#001b3d',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 6,
+    borderRadius: BorderRadius.xl,
+    padding: 12,
+    ...Shadows.level2,
   },
   timerRow: {
     flexDirection: 'row',
@@ -494,13 +492,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   section: {
-    marginTop: Spacing.lg,
+    marginTop: 14,
     paddingHorizontal: Spacing.containerMargin,
   },
   card: {
-    borderRadius: BorderRadius.premium,
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    padding: Spacing.md,
+    padding: 12,
+    ...Shadows.level2,
   },
   teamsRow: {
     flexDirection: 'row',
@@ -570,10 +569,11 @@ const styles = StyleSheet.create({
   counterBox: {
     flex: 1,
     borderRadius: BorderRadius.xl,
-    padding: Spacing.sm,
+    padding: 10,
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: 110,
+    ...Shadows.level2,
   },
   boxActionRow: {
     flexDirection: 'row',
@@ -597,22 +597,19 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.md,
+    padding: 10,
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
     borderColor: '#c3c7cb33',
+    ...Shadows.level2,
   },
   undoButton: {
     flexDirection: 'row',
-    height: 48,
+    height: 40,
     borderRadius: BorderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#001b3d',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
+    ...Shadows.level2,
   },
   timelineList: {
     gap: Spacing.md,
@@ -636,23 +633,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   liveBadgeAbsolute: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#ff1744',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
     gap: 4,
-    zIndex: 20,
   },
   liveDotRed: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#ff1744',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#ffffff',
   },
   liveText: {
-    color: '#ff1744',
-    fontSize: 10,
-    fontFamily: 'HankenGrotesk_700Bold',
+    color: '#ffffff',
+    fontSize: 8,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });

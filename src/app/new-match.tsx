@@ -6,17 +6,16 @@ import {
   Pressable,
   TextInput,
   Alert,
-  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { CoinTossModal } from '@/components/coin-toss-modal';
 
 export default function NewMatchScreen() {
   const theme = useTheme();
@@ -26,37 +25,9 @@ export default function NewMatchScreen() {
   const [venue, setVenue] = useState('');
   const [matchDate, setMatchDate] = useState('');
   const [tossTime, setTossTime] = useState('');
+  const [coinTossVisible, setCoinTossVisible] = useState(false);
 
-  const FORMATS = ['T20', 'ODI', 'Test'];
-
-  // Spring scale animation for the start toss button
-  const [scaleTossAnim] = useState(new Animated.Value(1));
-
-  const handlePressIn = (anim: Animated.Value) => {
-    Animated.spring(anim, {
-      toValue: 0.95,
-      useNativeDriver: true,
-      tension: 100,
-      friction: 5,
-    }).start();
-  };
-
-  const handlePressOut = (anim: Animated.Value) => {
-    Animated.spring(anim, {
-      toValue: 1.0,
-      useNativeDriver: true,
-      tension: 100,
-      friction: 5,
-    }).start();
-  };
-
-  const handleStartToss = () => {
-    Alert.alert(
-      'Ready to start?',
-      'This will lock the team selections and initiate the toss sequence.',
-      [{ text: 'Start Toss', onPress: () => router.push('/(tabs)/matches') }]
-    );
-  };
+  const FORMATS = ['T20', 'ODI', 'Test', 'Custom'];
 
   return (
     <GradientContainer screenName="booking" style={styles.container}>
@@ -75,11 +46,14 @@ export default function NewMatchScreen() {
             </ThemedText>
           </View>
           <View style={styles.headerRight}>
-            <Pressable style={styles.iconBtn}>
-              <Ionicons name="notifications-outline" size={20} color={theme.textSecondary} />
+            <Pressable style={styles.iconBtn} onPress={() => router.push('/network')}>
+              <Ionicons name="pulse" size={20} color={theme.secondary} />
             </Pressable>
-            <Pressable style={[styles.iconBtn, styles.avatarMini]}>
-              <Ionicons name="person" size={15} color="#ffffff" />
+            <Pressable style={styles.iconBtn}>
+              <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
+            </Pressable>
+            <Pressable style={styles.iconBtn} onPress={() => setCoinTossVisible(true)}>
+              <FontAwesome5 name="coins" size={16} color={theme.secondary} />
             </Pressable>
           </View>
         </View>
@@ -100,7 +74,9 @@ export default function NewMatchScreen() {
           {/* Side-by-Side Team Selection Cards */}
           <View style={styles.teamSelectionRow}>
             {/* Team A */}
-            <Pressable style={[styles.teamCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40', ...styles.navyShadow }]}>
+            <Pressable 
+              onPress={() => router.push('/create-team')}
+              style={[styles.teamCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40', ...styles.navyShadow }]}>
               <View style={styles.teamCardHeader}>
                 <View style={[styles.shieldIconContainer, { backgroundColor: theme.surfaceLow }]}>
                   <Ionicons name="shield" size={16} color={theme.primary} />
@@ -118,7 +94,9 @@ export default function NewMatchScreen() {
             </Pressable>
 
             {/* Team B */}
-            <Pressable style={[styles.teamCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40', ...styles.navyShadow }]}>
+            <Pressable 
+              onPress={() => router.push('/create-team')}
+              style={[styles.teamCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40', ...styles.navyShadow }]}>
               <View style={styles.teamCardHeader}>
                 <View style={[styles.shieldIconContainer, { backgroundColor: theme.surfaceLow }]}>
                   <Ionicons name="shield" size={16} color={theme.primary} />
@@ -172,21 +150,6 @@ export default function NewMatchScreen() {
             </View>
 
             <View style={styles.settingsColumn}>
-              {/* Venue Selection */}
-              <View style={[styles.bentoCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40', ...styles.navyShadow }]}>
-                <ThemedText style={styles.bentoLabel}>VENUE SELECTION</ThemedText>
-                <View style={[styles.searchInputContainer, { borderColor: theme.outlineVariant + '40' }]}>
-                  <Ionicons name="location-outline" size={16} color={theme.outline} style={{ marginLeft: 10 }} />
-                  <TextInput
-                    style={[styles.searchInput, { color: theme.text }]}
-                    placeholder="Search Stadium or Ground..."
-                    placeholderTextColor={theme.outline}
-                    value={venue}
-                    onChangeText={setVenue}
-                  />
-                </View>
-              </View>
-
               {/* Date & Time Row */}
               <View style={styles.dateTimeRow}>
                 <View style={[styles.bentoCard, { flex: 1, backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40', ...styles.navyShadow }]}>
@@ -211,43 +174,24 @@ export default function NewMatchScreen() {
                   />
                 </View>
               </View>
+
+              {/* Venue Selection */}
+              <View style={[styles.bentoCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40', ...styles.navyShadow }]}>
+                <ThemedText style={styles.bentoLabel}>VENUE SELECTION</ThemedText>
+                <View style={[styles.searchInputContainer, { borderColor: theme.outlineVariant + '40' }]}>
+                  <Ionicons name="location-outline" size={16} color={theme.outline} style={{ marginLeft: 10 }} />
+                  <TextInput
+                    style={[styles.searchInput, { color: theme.text }]}
+                    placeholder="Search Stadium or Ground..."
+                    placeholderTextColor={theme.outline}
+                    value={venue}
+                    onChangeText={setVenue}
+                  />
+                </View>
+              </View>
             </View>
           </View>
 
-          {/* Match Finalization Card */}
-          <View style={[styles.finalizationCard, { backgroundColor: '#001b3d' }, Shadows.level3]}>
-            <View style={styles.finalizationContent}>
-              <ThemedText style={{ color: '#ffffff', fontSize: 18, fontFamily: 'HankenGrotesk_800ExtraBold', marginBottom: 4 }}>Match Finalization</ThemedText>
-              <ThemedText style={{ color: '#75859d', fontFamily: 'HankenGrotesk_400Regular', fontSize: 12, lineHeight: 16, marginBottom: 12 }}>
-                Ready to start the match? This will lock the team selections and initiate the toss sequence.
-              </ThemedText>
-              
-              <Animated.View style={{ transform: [{ scale: scaleTossAnim }] }}>
-                <Pressable
-                  onPressIn={() => handlePressIn(scaleTossAnim)}
-                  onPressOut={() => handlePressOut(scaleTossAnim)}
-                  style={styles.startTossBtnContainer}
-                  onPress={handleStartToss}
-                >
-                  <LinearGradient
-                    colors={['#5D68E8', '#ff8c00']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.startTossBtnGradient}
-                  >
-                    <Ionicons name="cash-outline" size={18} color="#ffffff" />
-                    <ThemedText style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold', fontSize: 15, marginLeft: 6 }}>
-                      Start Toss
-                    </ThemedText>
-                  </LinearGradient>
-                </Pressable>
-              </Animated.View>
-            </View>
-            {/* Background Icon/Image placeholder */}
-            <View style={styles.finalizationBgIcon}>
-              <MaterialCommunityIcons name="cricket" size={110} color="rgba(255,255,255,0.04)" />
-            </View>
-          </View>
 
           {/* Requirements Checklist */}
           <View style={[styles.requirementsCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40', ...styles.navyShadow }]}>
@@ -290,6 +234,7 @@ export default function NewMatchScreen() {
 
         </ScrollView>
       </SafeAreaView>
+      <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
     </GradientContainer>
   );
 }

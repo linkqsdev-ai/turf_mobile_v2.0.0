@@ -6,6 +6,7 @@ import {
   Pressable,
   Platform,
   Animated,
+  DimensionValue,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -19,6 +20,7 @@ import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { PromoBanner, AutoScrollingHorizontalBanners } from '@/components/promo-banner';
 
 // Mock Tournaments Data
 const INITIAL_TOURNAMENTS = [
@@ -282,7 +284,48 @@ export default function TournamentsTab() {
             </ThemedText>
           </View>
 
-
+          {/* Offers & Gift Vouchers (Horizontal Card, Auto Scroll, Reduced Width & Gap) */}
+          <View style={{ paddingHorizontal: 0, marginTop: Spacing.sm }}>
+            <ThemedText type="labelSm" style={{ color: theme.textSecondary, paddingHorizontal: Spacing.containerMargin, marginBottom: 4, letterSpacing: 0.5 }}>
+              SPECIAL DEALS & VOUCHERS
+            </ThemedText>
+            <AutoScrollingHorizontalBanners 
+              cardWidth={270}
+              gap={12}
+              banners={[
+                {
+                  title: "YAWAH Turf Special Offer",
+                  subtitle: "Get flat 30% OFF on all bookings. Code: YAWAHTURF",
+                  buttonText: "Book Now",
+                  badgeText: "SPECIAL OFFER",
+                  backgroundImage: "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?auto=format&fit=crop&w=600&q=80",
+                  buttonBackgroundColor: "#a3e635",
+                  buttonTextColor: "#064e3b",
+                  onPress: () => router.push('/(tabs)/explore'),
+                },
+                {
+                  title: "Gift a Game to Your Loved Ones",
+                  subtitle: "The easiest way to nail a gift for a sports lover",
+                  buttonText: "Buy Gift Card",
+                  badgeText: "GIFT VOUCHER",
+                  backgroundImage: "https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=600&q=80",
+                  buttonBackgroundColor: "#ffffff",
+                  buttonTextColor: "#1e3a8a",
+                  onPress: () => router.push('/booking'),
+                },
+                {
+                  title: "Happy Hour Booking Deals",
+                  subtitle: "Play for just ₹15/hr between 6 AM - 9 AM!",
+                  buttonText: "Claim Deal",
+                  badgeText: "PROMO OFFER",
+                  backgroundImage: "https://images.unsplash.com/photo-1549451371-64aa98a6f660?auto=format&fit=crop&w=600&q=80",
+                  buttonBackgroundColor: "#ffffff",
+                  buttonTextColor: "#ff8c00",
+                  onPress: () => router.push('/(tabs)/explore'),
+                }
+              ]}
+            />
+          </View>
 
           {/* Sport Categories Row (Aligned Evenly) */}
           <View style={styles.categoriesSection}>
@@ -411,7 +454,7 @@ export default function TournamentsTab() {
                 {filteredTournaments.map((t) => {
                   const isBookmarked = bookmarkedIds.includes(t.id);
                   const progress = t.maxTeams > 0 ? (t.teamsCount / t.maxTeams) : 0;
-                  const progressPercent = `${Math.min(progress * 100, 100)}%`;
+                  const progressPercent = `${Math.min(progress * 100, 100)}%` as DimensionValue;
 
                   if (viewMode === 'list') {
                     return (
@@ -455,13 +498,14 @@ export default function TournamentsTab() {
                             {!t.isLive && (
                               <View style={[
                                 styles.statusBadgeInline,
-                                t.registrationStatus === 'Registering' && { backgroundColor: '#e2f9ec' },
-                                t.registrationStatus === 'Filling Fast' && { backgroundColor: '#fff4e5' },
-                                t.registrationStatus === 'Upcoming' && { backgroundColor: '#e6f0fa' },
-                                t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2' }
+                                { borderWidth: 1 },
+                                t.registrationStatus === 'Registering' && { backgroundColor: '#e2f9ec', borderColor: '#0f9f5833' },
+                                t.registrationStatus === 'Filling Fast' && { backgroundColor: '#fff4e5', borderColor: '#e67e2233' },
+                                t.registrationStatus === 'Upcoming' && { backgroundColor: '#e6f0fa', borderColor: '#2980b933' },
+                                t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2', borderColor: '#7f8c8d33' }
                               ]}>
-                                <ThemedText type="labelSm" style={[
-                                  { fontSize: 8, fontWeight: '700' },
+                                <ThemedText style={[
+                                  { fontSize: 8, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.5 },
                                   t.registrationStatus === 'Registering' && { color: '#0f9f58' },
                                   t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
                                   t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
@@ -604,13 +648,14 @@ export default function TournamentsTab() {
                             ) : (
                               <View style={[
                                 styles.statusBadgeInline,
-                                t.registrationStatus === 'Registering' && { backgroundColor: '#e2f9ec' },
-                                t.registrationStatus === 'Filling Fast' && { backgroundColor: '#fff4e5' },
-                                t.registrationStatus === 'Upcoming' && { backgroundColor: '#e6f0fa' },
-                                t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2' }
+                                { borderWidth: 1 },
+                                t.registrationStatus === 'Registering' && { backgroundColor: '#e2f9ec', borderColor: '#0f9f5833' },
+                                t.registrationStatus === 'Filling Fast' && { backgroundColor: '#fff4e5', borderColor: '#e67e2233' },
+                                t.registrationStatus === 'Upcoming' && { backgroundColor: '#e6f0fa', borderColor: '#2980b933' },
+                                t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2', borderColor: '#7f8c8d33' }
                               ]}>
-                                <ThemedText type="labelSm" style={[
-                                  { fontSize: 8, fontWeight: '700' },
+                                <ThemedText style={[
+                                  { fontSize: 8, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.5 },
                                   t.registrationStatus === 'Registering' && { color: '#0f9f58' },
                                   t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
                                   t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
@@ -967,7 +1012,7 @@ const styles = StyleSheet.create({
   statusBadgeInline: {
     paddingHorizontal: 6,
     paddingVertical: 1.5,
-    borderRadius: BorderRadius.default,
+    borderRadius: 4,
   },
   ticketMetaRow: {
     flexDirection: 'row',
@@ -1064,10 +1109,16 @@ const styles = StyleSheet.create({
   },
   statusBadgeAbsolute: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 6,
+    left: 6,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#ff174414',
+    borderColor: '#ff174433',
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 4,
     gap: 4,
     zIndex: 20,
   },
@@ -1077,15 +1128,17 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: '#ff1744',
   },
   liveText: {
     color: '#ff1744',
-    fontSize: 10,
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 8,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   gridSponsoredBadge: {
     position: 'absolute',

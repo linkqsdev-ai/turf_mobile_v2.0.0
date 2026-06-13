@@ -18,6 +18,7 @@ import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { PromoBanner, AutoScrollingHorizontalBanners } from '@/components/promo-banner';
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -113,6 +114,64 @@ export default function HomeScreen() {
                 </View>
               </View>
             </View>
+          </View>
+
+          {/* Tournament Announcement Banner (Vertical, Single Banner) */}
+          <View style={styles.section}>
+            <PromoBanner 
+              title="Grand Summer Tournament!"
+              subtitle="Join the Weekend League and win amazing prizes up to ₹50,000!"
+              buttonText="Register Now"
+              badgeText="ANNOUNCEMENT"
+              backgroundImage="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80"
+              buttonBackgroundColor="#ff8c00"
+              buttonTextColor="#ffffff"
+              onPress={() => router.push('/(tabs)/tournaments')}
+              variant="vertical"
+            />
+          </View>
+
+          {/* Offers & Gift Vouchers (Horizontal Card, Auto Scroll, Reduced Width & Gap) */}
+          <View style={[styles.section, { paddingHorizontal: 0 }]}>
+            <ThemedText type="labelSm" style={{ color: theme.textSecondary, paddingHorizontal: Spacing.containerMargin, marginBottom: 4, letterSpacing: 0.5 }}>
+              SPECIAL DEALS & VOUCHERS
+            </ThemedText>
+            <AutoScrollingHorizontalBanners 
+              cardWidth={270}
+              gap={12}
+              banners={[
+                {
+                  title: "YAWAH Turf Special Offer",
+                  subtitle: "Get flat 30% OFF on all bookings. Code: YAWAHTURF",
+                  buttonText: "Book Now",
+                  badgeText: "PROMO OFFER",
+                  backgroundImage: "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?auto=format&fit=crop&w=600&q=80",
+                  buttonBackgroundColor: "#a3e635",
+                  buttonTextColor: "#064e3b",
+                  onPress: () => router.push('/(tabs)/explore'),
+                },
+                {
+                  title: "Gift a Game to Your Loved Ones",
+                  subtitle: "The easiest way to nail a gift for a sports lover",
+                  buttonText: "Buy Gift Card",
+                  badgeText: "GIFT VOUCHER",
+                  backgroundImage: "https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=600&q=80",
+                  buttonBackgroundColor: "#ffffff",
+                  buttonTextColor: "#1e3a8a",
+                  onPress: () => router.push('/booking'),
+                },
+                {
+                  title: "Happy Hour Turf Booking",
+                  subtitle: "Book morning slots for ₹15/hr only!",
+                  buttonText: "Book Turf",
+                  badgeText: "PROMO OFFER",
+                  backgroundImage: "https://images.unsplash.com/photo-1549451371-64aa98a6f660?auto=format&fit=crop&w=600&q=80",
+                  buttonBackgroundColor: "#ffffff",
+                  buttonTextColor: "#ff8c00",
+                  onPress: () => router.push('/(tabs)/explore'),
+                }
+              ]}
+            />
           </View>
 
           {/* Today's Schedule */}
@@ -428,18 +487,25 @@ const styles = StyleSheet.create({
     right: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#ff174414',
+    borderColor: '#ff174433',
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 4,
     gap: 4,
   },
   liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: '#ff1744',
   },
   liveText: {
     color: '#ff1744',
-    fontSize: 10,
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 8,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    letterSpacing: 0.5,
   },
   bentoRow: {
     flexDirection: 'row',

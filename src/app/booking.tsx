@@ -17,6 +17,7 @@ import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { PromoBanner } from '@/components/promo-banner';
 
 // Slots details
 const TIME_SLOTS = [
@@ -205,6 +206,20 @@ export default function BookingConfigurationScreen() {
                 </View>
               </View>
             </View>
+          </View>
+
+          {/* Gift Card Promo Banner */}
+          <View style={styles.section}>
+            <PromoBanner 
+              title="Gift a Game"
+              subtitle="Know someone who loves playing here? Get them a gift card!"
+              buttonText="Buy Gift Card"
+              badgeText="GIFT CARDS"
+              backgroundColor="#0b4d24"
+              buttonBackgroundColor="#a3e635"
+              buttonTextColor="#064e3b"
+              backgroundImage="https://images.unsplash.com/photo-1549451371-64aa98a6f660?auto=format&fit=crop&w=600&q=80"
+            />
           </View>
 
           {/* Date Picker Grid */}
