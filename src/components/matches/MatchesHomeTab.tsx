@@ -578,34 +578,6 @@ export function MatchesHomeTab() {
         </ScrollView>
       </Reanimated.View>
 
-        {/* FAB Actions */}
-        <View style={styles.fabGroup}>
-          <Animated.View style={{ transform: [{ scale: scaleAnimTeam }] }}>
-            <Pressable
-              onPressIn={() => handlePressIn(scaleAnimTeam)}
-              onPressOut={() => handlePressOut(scaleAnimTeam)}
-              style={[styles.fabSecondary, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
-              onPress={() => router.push('/(tabs)/matches')}
-            >
-              <Ionicons name="shield-outline" size={20} color={theme.secondary} />
-              <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_700Bold', marginLeft: 6, fontSize: 11 }}>
-                Team
-              </ThemedText>
-            </Pressable>
-          </Animated.View>
-
-          <Animated.View style={{ transform: [{ scale: scaleAnimMatch }] }}>
-            <Pressable
-              onPressIn={() => handlePressIn(scaleAnimMatch)}
-              onPressOut={() => handlePressOut(scaleAnimMatch)}
-              style={[styles.fab, { backgroundColor: theme.secondaryContainer }]}
-              onPress={() => router.push('/new-match')}
-            >
-              <Ionicons name="add" size={28} color={theme.onSecondaryContainer} />
-            </Pressable>
-          </Animated.View>
-        </View>
-
     </View>
   );
 }
@@ -660,7 +632,7 @@ const styles = StyleSheet.create({
   filtersContainer: {
     gap: Spacing.xs - 2, // 6px gap
     paddingHorizontal: Spacing.containerMargin,
-    paddingVertical: Spacing.xs, // compacted from Spacing.md
+    paddingVertical: 12,
   },
   filterChip: {
     flexDirection: 'row',

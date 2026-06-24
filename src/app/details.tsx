@@ -177,6 +177,11 @@ export default function TurfDetailsScreen() {
                     </ThemedText>
                   </View>
                 </View>
+
+                {/* Fav Button top right */}
+                <Pressable style={[styles.favFab, Shadows.level2]}>
+                  <Ionicons name="heart" size={20} color="#ff4757" />
+                </Pressable>
               </View>
             </View>
 
@@ -842,5 +847,17 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_700Bold',
     textDecorationLine: 'underline',
     marginTop: 2,
+  },
+  favFab: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
 });

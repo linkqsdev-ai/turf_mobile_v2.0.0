@@ -24,39 +24,34 @@ import TennisScoring from '@/components/scoring/tennis-scoring';
 import BadmintonScoring from '@/components/scoring/badminton-scoring';
 import VolleyballScoring from '@/components/scoring/volleyball-scoring';
 
-const SPORTS_CONSOLE = [
-  { id: 'cricket', name: 'Cricket', icon: 'cricket', library: 'MaterialCommunityIcons' },
-  { id: 'football', name: 'Football', icon: 'soccer', library: 'MaterialCommunityIcons' },
-  { id: 'basketball', name: 'Basketball', icon: 'basketball', library: 'MaterialCommunityIcons' },
-  { id: 'tennis', name: 'Tennis', icon: 'tennis', library: 'MaterialCommunityIcons' },
-  { id: 'badminton', name: 'Badminton', icon: 'badminton', library: 'MaterialCommunityIcons' },
-  { id: 'volleyball', name: 'Volleyball', icon: 'volleyball', library: 'MaterialCommunityIcons' },
-];
+import { SPORTS_LIST } from '@/constants/sports';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function LiveScoringScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ matchId: string; sport: string }>();
+  const params = useLocalSearchParams<{ matchId: string; sport: string; teamA?: string; teamB?: string }>();
 
-  // Determine initial sport from route params (defaults to cricket)
-  const initialSport = params.sport || 'cricket';
+  // Determine initial sport from route params (defaults to Cricket)
+  const paramSport = params.sport || 'cricket';
+  const initialSport = paramSport.charAt(0).toUpperCase() + paramSport.slice(1);
   const [selectedSport, setSelectedSport] = useState<string>(initialSport);
 
   const renderScoringConsole = () => {
-    switch (selectedSport) {
+    switch (selectedSport.toLowerCase()) {
       case 'football':
-        return <FootballScoring />;
+        return <FootballScoring teamA={params.teamA} teamB={params.teamB} />;
       case 'basketball':
-        return <BasketballScoring />;
+        return <BasketballScoring teamA={params.teamA} teamB={params.teamB} />;
       case 'tennis':
-        return <TennisScoring />;
+        return <TennisScoring teamA={params.teamA} teamB={params.teamB} />;
       case 'badminton':
-        return <BadmintonScoring />;
+        return <BadmintonScoring teamA={params.teamA} teamB={params.teamB} />;
       case 'volleyball':
-        return <VolleyballScoring />;
+        return <VolleyballScoring teamA={params.teamA} teamB={params.teamB} />;
       case 'cricket':
       default:
-        return <CricketScoring />;
+        return <CricketScoring teamA={params.teamA} teamB={params.teamB} />;
     }
   };
 
@@ -102,29 +97,28 @@ export default function LiveScoringScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.switcherScroll}
           >
-            {SPORTS_CONSOLE.map((sport) => {
-              const isActive = sport.id === selectedSport;
+            {SPORTS_LIST.map((sport) => {
+              const isActive = sport.name === selectedSport;
               return (
                 <Pressable
-                  key={sport.id}
-                  onPress={() => setSelectedSport(sport.id)}
+                  key={sport.name}
+                  onPress={() => setSelectedSport(sport.name)}
                   style={[
                     styles.switcherChip,
-                    isActive
-                      ? { backgroundColor: theme.secondaryContainer, borderColor: theme.secondary }
-                      : { backgroundColor: theme.surfaceLow, borderColor: 'transparent' },
+                    { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+                    isActive && { backgroundColor: theme.primary, borderColor: theme.primary },
                   ]}
                 >
-                  <MaterialCommunityIcons
+                  <MaterialIcons
                     name={sport.icon as any}
                     size={15}
-                    color={isActive ? theme.onSecondaryContainer : theme.textSecondary}
+                    color={isActive ? '#ffffff' : theme.textSecondary}
                     style={{ marginRight: 4 }}
                   />
                   <ThemedText
                     type="labelMd"
                     style={{
-                      color: isActive ? theme.onSecondaryContainer : theme.textSecondary,
+                      color: isActive ? '#ffffff' : theme.textSecondary,
                       fontFamily: 'HankenGrotesk_700Bold',
                     }}
                   >
@@ -201,8 +195,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.xl,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
     borderWidth: 1,
   },
   consoleBody: {

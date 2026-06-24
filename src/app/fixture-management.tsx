@@ -435,7 +435,7 @@ export default function FixtureManagementScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <ThemedText type="labelSm" style={styles.inputLabel}>Selected Pitch</ThemedText>
+                <ThemedText type="labelSm" style={styles.inputLabel}>Selected pitch</ThemedText>
                 <TextInput
                   style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                   value={editPitch}
@@ -444,7 +444,7 @@ export default function FixtureManagementScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <ThemedText type="labelSm" style={styles.inputLabel}>Scheduled Time</ThemedText>
+                <ThemedText type="labelSm" style={styles.inputLabel}>Scheduled time</ThemedText>
                 <TextInput
                   style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                   value={editTime}

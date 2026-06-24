@@ -1,8 +1,8 @@
 import { ThemedText } from '@/components/themed-text';
-import { Shadows, Spacing } from '@/constants/theme';
+import { Shadows, Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import {
   Alert,
@@ -12,401 +12,479 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 
-const SPORTS = [
-  { name: 'Football', icon: 'sports-soccer' },
-  { name: 'Basketball', icon: 'sports-basketball' },
-  { name: 'Cricket', icon: 'sports-cricket' },
-  { name: 'Rugby', icon: 'sports-rugby' },
-];
+import { SPORTS_LIST } from '@/constants/sports';
 
-export function CreateTeamTab() {
+export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   const theme = useTheme();
+
   const [teamName, setTeamName] = useState('');
   const [shortName, setShortName] = useState('');
   const [selectedSport, setSelectedSport] = useState('Football');
   const [homeGround, setHomeGround] = useState('');
-  const [crestImage, setCrestImage] = useState<string | null>(null);
+  const [captainPhone, setCaptainPhone] = useState('');
+  const [crestImage, setCrestImage] = useState<any>(require('@/assets/images/mascots/lion.png'));
 
   const [isNameFocused, setIsNameFocused] = useState(false);
   const [isShortFocused, setIsShortFocused] = useState(false);
   const [isGroundFocused, setIsGroundFocused] = useState(false);
+  const [isPhoneFocused, setIsPhoneFocused] = useState(false);
 
-  const pickImage = () => {
-    Alert.alert(
-      'Upload Crest',
-      'Choose logo/crest source:',
-      [
-        {
-          text: 'Upload Custom Crest Logo',
-          onPress: () => {
-            setCrestImage('https://lh3.googleusercontent.com/aida-public/AB6AXuBBw-4P6Sarj_JWrpBQTQN1qPB7_qfFBuMUHMn-KCC2wKP9Geo1TQktr-gYmylaiuxwiQdZlcRL2It_FwPlayback');
-          }
-        },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setCrestImage(result.assets[0].uri);
+    }
+  };
+
+  const handleCreateTeam = () => {
+    if (!teamName || !shortName || !captainPhone) {
+      Alert.alert('Missing Fields', 'Please fill in all required fields.');
+      return;
+    }
+    Alert.alert('Success', `Team "${teamName}" created successfully!`);
+    onNavigate?.('Quick Match');
   };
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      style={{ backgroundColor: '#f7f9fb' }}
-      contentContainerStyle={styles.scroll}
-    >
-      {/* ── Top Hero Card ────────────────────────────── */}
-      <View style={[styles.heroCard, Shadows.level2]}>
-        <View style={styles.heroContent}>
-          <View style={styles.badge}>
-            <ThemedText style={styles.badgeText}>FOUNDATION</ThemedText>
-          </View>
-          <ThemedText style={styles.heroTitle}>Build Your Legacy</ThemedText>
-          <ThemedText style={styles.heroDescription}>
-            Define the core identity of your squad. From home grounds to visual branding, every detail counts in the pursuit of peak performance.
-          </ThemedText>
-          
-          <View style={styles.heroActionBtn}>
-            <MaterialIcons name="security" size={14} color="#ffc703" />
-            <ThemedText style={styles.heroActionText}>Apex Professional Standards</ThemedText>
-          </View>
+    <View style={[styles.container, { paddingBottom: 85 }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+        style={styles.scrollArea}
+        bounces={false}
+      >
+      {/* ── Banner ─────────────────────────────── */}
+      <View style={[styles.bannerCard, { backgroundColor: theme.primary }]}>
+        <View style={[styles.badgeWrap, { backgroundColor: '#ffffff22' }]}>
+          <ThemedText style={styles.badgeText}>TEAM BRANDING</ThemedText>
         </View>
-        
-        {/* Background Graphic Illustration - Abstract overlay */}
-        <View style={styles.heroGraphicOverlay}>
-            <Ionicons name="people-circle" size={120} color="rgba(255,255,255,0.05)" />
+        <ThemedText style={styles.bannerTitle}>Create your team identity</ThemedText>
+        <ThemedText style={styles.bannerSubtitle}>
+          Use one consistent identity for your squad. Upload a logo, add your name, and pick the sport your team plays.
+        </ThemedText>
+        <View style={[styles.featureRow, { backgroundColor: '#ffffff1a' }]}>
+          <Ionicons name="shield-checkmark" size={14} color="#ffffff" />
+          <ThemedText style={styles.featureText}>Designed for fast team setup</ThemedText>
         </View>
+
+        <Ionicons name="people" size={100} color="#00000015" style={styles.bannerBgIcon} />
       </View>
 
-      {/* ── Identity & Branding Card ───────────────────── */}
-      <View style={[styles.bentoCard, Shadows.level2]}>
+      {/* ── Form Body Bento Card ────────────────────────── */}
+      <View style={[styles.bentoCard, Shadows.level2, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }]}>
+        
+        {/* Header */}
         <View style={styles.cardHeader}>
-          <View style={styles.cardIconWrap}>
-            <MaterialIcons name="branding-watermark" size={18} color="#1c1c1e" />
+          <View style={[styles.cardIconWrap, { backgroundColor: theme.primary + '11' }]}>
+            <Ionicons name="id-card" size={16} color={theme.primary} />
           </View>
           <View>
             <ThemedText style={styles.cardTitle}>Identity & Branding</ThemedText>
-            <ThemedText style={styles.cardSubtitle}>How the world recognizes your team.</ThemedText>
+            <ThemedText style={[styles.cardSubtitle, { color: theme.textSecondary }]}>Set the foundation for your team.</ThemedText>
           </View>
         </View>
 
-        <View style={styles.compactRow}>
-          {/* Crest Upload */}
-          <View style={styles.crestUploadWrapper}>
-            <Pressable style={styles.crestBox} onPress={pickImage}>
-              {crestImage ? (
-                <Image source={{ uri: crestImage }} style={styles.crestImage} />
-              ) : (
-                <>
-                  <Ionicons name="cloud-upload-outline" size={24} color="#74777f" />
-                  <ThemedText style={styles.crestLabelText}>CREST</ThemedText>
-                </>
-              )}
-              <View style={styles.editBadge}>
-                <MaterialIcons name="edit" size={10} color="#594400" />
-              </View>
-            </Pressable>
-          </View>
-          
-          <View style={styles.crestTextWrapper}>
-            <ThemedText style={styles.fieldLabelBlack}>Team crest / logo</ThemedText>
-            <ThemedText style={styles.cardSubtitle}>Upload PNG/JPG crest (min 200x200px)</ThemedText>
-          </View>
+        {/* Sport selection */}
+        <View style={[styles.inputGroup, { marginBottom: 20 }]}>
+          <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Sport</ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sportList}>
+            {SPORTS_LIST.map((sport) => {
+              const isActive = selectedSport === sport.name;
+              return (
+                <Pressable
+                  key={sport.name}
+                  onPress={() => setSelectedSport(sport.name)}
+                  style={[
+                    styles.sportChip,
+                    { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+                    isActive && { backgroundColor: theme.primary, borderColor: theme.primary },
+                  ]}
+                >
+                  <MaterialIcons
+                    name={sport.icon as any}
+                    size={12}
+                    color={isActive ? '#ffffff' : theme.textSecondary}
+                  />
+                  <ThemedText
+                    style={[
+                      styles.sportChipText,
+                      { color: theme.textSecondary },
+                      isActive && { color: '#ffffff' }
+                    ]}
+                  >
+                    {sport.name}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
 
-        <View style={styles.formDivider} />
+        {/* Branding top row: Logo + Names */}
+        <View style={styles.brandingTopRow}>
+          <Pressable style={[styles.logoDropZone, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]} onPress={pickImage}>
+            {crestImage ? (
+              <Image source={typeof crestImage === 'string' ? { uri: crestImage } : crestImage} style={styles.logoImage} />
+            ) : (
+              <>
+                <Ionicons name="cloud-upload-outline" size={24} color={theme.textSecondary} />
+                <ThemedText style={[styles.logoUploadTitle, { color: theme.text }]}>Team Logo</ThemedText>
+                <ThemedText style={[styles.logoUploadHint, { color: theme.textSecondary }]}>Tap to upload</ThemedText>
+              </>
+            )}
+          </Pressable>
 
-        {/* Inputs */}
-        <View style={styles.inputGroup}>
-          <ThemedText style={styles.fieldLabel}>Team Name</ThemedText>
-          <TextInput
-            style={[styles.underlinedInput, isNameFocused && styles.underlinedInputFocused]}
-            placeholder="e.g. London Strikers"
-            placeholderTextColor="#8e8e93"
-            value={teamName}
-            onChangeText={setTeamName}
-            onFocus={() => setIsNameFocused(true)}
-            onBlur={() => setIsNameFocused(false)}
-          />
-        </View>
-
-        <View style={styles.twoColumnInputs}>
-          <View style={styles.halfInput}>
-            <ThemedText style={styles.fieldLabel}>Short Name</ThemedText>
+          <View style={styles.nameRow}>
+            <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+              Team name <ThemedText style={{ color: '#ef4444' }}>*</ThemedText>
+            </ThemedText>
             <TextInput
-              style={[styles.underlinedInput, isShortFocused && styles.underlinedInputFocused]}
-              placeholder="e.g. LSR"
-              placeholderTextColor="#8e8e93"
+              style={[
+                styles.input,
+                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isNameFocused ? theme.primary : theme.outlineVariant + '44' }
+              ]}
+              placeholder="London Strikers"
+              placeholderTextColor={theme.textSecondary + '80'}
+              value={teamName}
+              onChangeText={setTeamName}
+              onFocus={() => setIsNameFocused(true)}
+              onBlur={() => setIsNameFocused(false)}
+            />
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+          <View style={{ flex: 3 }}>
+            <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+              Short name <ThemedText style={{ color: '#ef4444' }}>*</ThemedText>
+            </ThemedText>
+            <TextInput
+              style={[
+                styles.input,
+                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isShortFocused ? theme.primary : theme.outlineVariant + '44' }
+              ]}
+              placeholder="LSR"
+              placeholderTextColor={theme.textSecondary + '80'}
+              maxLength={4}
               value={shortName}
               onChangeText={setShortName}
-              maxLength={4}
-              autoCapitalize="characters"
               onFocus={() => setIsShortFocused(true)}
               onBlur={() => setIsShortFocused(false)}
             />
           </View>
-          
-          <View style={styles.halfInput}>
-            <ThemedText style={styles.fieldLabel}>Sport</ThemedText>
-            <View style={styles.sportIconRow}>
-              {SPORTS.map((sport) => {
-                const isActive = selectedSport === sport.name;
-                return (
-                  <Pressable 
-                    key={sport.name} 
-                    onPress={() => setSelectedSport(sport.name)}
-                    style={[styles.sportIconButton, isActive && styles.sportIconActive]}
-                  >
-                    <MaterialIcons 
-                      name={sport.icon as any} 
-                      size={20} 
-                      color={isActive ? '#ffffff' : '#74777f'} 
-                    />
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        </View>
-      </View>
-
-      {/* ── Venue Card ─────────────────────────────────── */}
-      <View style={[styles.bentoCard, Shadows.level2]}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardIconWrap}>
-            <MaterialIcons name="stadium" size={18} color="#1c1c1e" />
-          </View>
-          <View>
-            <ThemedText style={styles.cardTitle}>Venue</ThemedText>
-            <ThemedText style={styles.cardSubtitle}>Where you defend your pride.</ThemedText>
+          <View style={{ flex: 7 }}>
+            <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+              Phone <ThemedText style={{ color: '#ef4444' }}>*</ThemedText>
+            </ThemedText>
+            <TextInput
+              style={[
+                styles.input,
+                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isPhoneFocused ? theme.primary : theme.outlineVariant + '44' }
+              ]}
+              placeholder="+44 7000"
+              placeholderTextColor={theme.textSecondary + '80'}
+              keyboardType="phone-pad"
+              value={captainPhone}
+              onChangeText={setCaptainPhone}
+              onFocus={() => setIsPhoneFocused(true)}
+              onBlur={() => setIsPhoneFocused(false)}
+            />
           </View>
         </View>
 
-        <View style={styles.inputGroup}>
-          <ThemedText style={styles.fieldLabel}>Home Ground Name</ThemedText>
+        <View style={styles.defaultLogosSection}>
+          <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 6 }]}>Or pick a default mascot</ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 4 }}>
+            {[
+              require('@/assets/images/mascots/lion.png'),
+              require('@/assets/images/mascots/warrior.png'),
+              require('@/assets/images/mascots/wolf.png'),
+              require('@/assets/images/mascots/eagle.png'),
+              require('@/assets/images/mascots/panther.png'),
+              require('@/assets/images/mascots/shark.png'),
+              require('@/assets/images/mascots/bear.png'),
+              require('@/assets/images/mascots/rhino.png'),
+              require('@/assets/images/mascots/dragon.png'),
+              require('@/assets/images/mascots/cobra.png'),
+              require('@/assets/images/mascots/tiger.png'),
+              require('@/assets/images/mascots/leopard.png'),
+              require('@/assets/images/mascots/gorilla.png'),
+              require('@/assets/images/mascots/falcon.png'),
+              require('@/assets/images/mascots/stallion.png'),
+              require('@/assets/images/mascots/bull.png'),
+              require('@/assets/images/mascots/crocodile.png')
+            ].map((img, i) => (
+              <Pressable 
+                key={i} 
+                onPress={() => setCrestImage(img)} 
+                style={[
+                  styles.defaultLogoBtn, 
+                  { borderColor: crestImage === img ? theme.primary : theme.outlineVariant + '44', backgroundColor: theme.surfaceLow }
+                ]}
+              >
+                <Image source={img} style={styles.defaultLogoImg} contentFit="cover" />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={[styles.inputGroup, { marginTop: 12 }]}>
+          <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Home ground</ThemedText>
           <TextInput
-            style={[styles.underlinedInput, isGroundFocused && styles.underlinedInputFocused]}
-            placeholder="e.g. Apex Central Arena"
-            placeholderTextColor="#8e8e93"
+            style={[
+              styles.input,
+              { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isGroundFocused ? theme.primary : theme.outlineVariant + '44' }
+            ]}
+            placeholder="Apex Arena"
+            placeholderTextColor={theme.textSecondary + '80'}
             value={homeGround}
             onChangeText={setHomeGround}
             onFocus={() => setIsGroundFocused(true)}
             onBlur={() => setIsGroundFocused(false)}
           />
         </View>
+
       </View>
-    </ScrollView>
+      </ScrollView>
+
+      {/* ── Actions Row (Primary CTA) ────────────────────── */}
+      <View style={[styles.actionsContainer, { backgroundColor: theme.surfaceLowest }]}>
+        <Pressable
+          onPress={handleCreateTeam}
+          style={[styles.primaryButton, { backgroundColor: theme.primary, opacity: teamName && shortName && captainPhone ? 1 : 0.5 }]}
+          disabled={!(teamName && shortName && captainPhone)}
+        >
+          <View style={styles.btnContent}>
+            <ThemedText style={styles.primaryButtonText}>Create Team</ThemedText>
+            <Ionicons name="arrow-forward" size={16} color="#ffffff" />
+          </View>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    padding: 16,
-    paddingBottom: 48,
+  container: {
+    flex: 1,
   },
-  /* Hero Card */
-  heroCard: {
-    backgroundColor: '#001b3d',
-    borderRadius: 16,
+  scrollArea: {
+    flex: 1,
+  },
+  scroll: {
+    padding: Spacing.md,
+    paddingBottom: Spacing.xl,
+  },
+
+  /* Banner Card */
+  bannerCard: {
+    borderRadius: BorderRadius.xl,
     padding: 20,
     marginBottom: 16,
-    position: 'relative',
     overflow: 'hidden',
+    position: 'relative',
+    shadowColor: '#1a2a33',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  heroGraphicOverlay: {
+  bannerBgIcon: {
     position: 'absolute',
     right: -20,
     bottom: -20,
-    opacity: 0.8,
+    transform: [{ rotate: '-15deg' }],
   },
-  heroContent: {
-    position: 'relative',
-    zIndex: 2,
-  },
-  badge: {
+  badgeWrap: {
     alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#ffc703',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: BorderRadius.sm,
     marginBottom: 12,
   },
   badgeText: {
-    color: '#ffc703',
     fontFamily: 'HankenGrotesk_700Bold',
     fontSize: 10,
-    textTransform: 'uppercase',
-  },
-  heroTitle: {
-    // Top card font style should be same as dashboard
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 22,
     color: '#ffffff',
-    marginBottom: 8,
+    letterSpacing: 0.5,
   },
-  heroDescription: {
-    fontFamily: 'HankenGrotesk_400Regular',
-    fontSize: 12,
-    color: '#cbd5e1',
+  bannerTitle: {
+    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontSize: 24,
+    color: '#ffffff',
+    marginBottom: 6,
+  },
+  bannerSubtitle: {
+    fontFamily: 'HankenGrotesk_500Medium',
+    fontSize: 13,
+    color: '#ffffffe0',
     lineHeight: 18,
     marginBottom: 16,
     maxWidth: '85%',
   },
-  heroActionBtn: {
-    alignSelf: 'flex-start',
+  featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignSelf: 'flex-start',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.md,
     gap: 6,
   },
-  heroActionText: {
-    fontFamily: 'HankenGrotesk_600SemiBold',
-    fontSize: 11,
+  featureText: {
+    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 12,
     color: '#ffffff',
   },
 
-  /* Bento Cards */
+  /* Bento Card Container */
   bentoCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    padding: 16,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   cardIconWrap: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f2f4f6',
+    borderRadius: BorderRadius.sm,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cardTitle: {
     fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 15,
-    color: '#1c1c1e',
-    marginBottom: 2,
+    fontSize: 16,
   },
   cardSubtitle: {
     fontFamily: 'HankenGrotesk_400Regular',
     fontSize: 12,
-    color: '#74777f',
-  },
-
-  /* Compact Forms */
-  compactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 12,
-  },
-  crestUploadWrapper: {
-    position: 'relative',
-  },
-  crestBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#c4c6cf',
-    backgroundColor: '#fafafa',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  crestImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
-  },
-  crestLabelText: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 9,
-    color: '#74777f',
     marginTop: 2,
   },
-  editBadge: {
-    position: 'absolute',
-    bottom: -4,
-    right: -4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#ffc703',
+
+  brandingTopRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  logoDropZone: {
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#ffffff',
   },
-  crestTextWrapper: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  fieldLabelBlack: {
+  logoUploadTitle: {
     fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 13,
-    color: '#1c1c1e',
-    marginBottom: 2,
+    fontSize: 10,
+    marginTop: 4,
   },
-  formDivider: {
-    height: 1,
-    backgroundColor: '#f2f4f6',
-    marginVertical: 12,
+  logoUploadHint: {
+    fontFamily: 'HankenGrotesk_500Medium',
+    fontSize: 9,
+    marginTop: 2,
   },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: BorderRadius.md,
+  },
+  defaultLogosSection: {
+    marginTop: 16,
+    marginBottom: 4,
+  },
+  defaultLogoBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  defaultLogoImg: {
+    width: '100%',
+    height: '100%',
+  },
+  nameRow: {
+    flex: 1,
+  },
+
+  /* Inputs & Selectors */
   inputGroup: {
-    marginBottom: 16,
+    flexDirection: 'column',
   },
   fieldLabel: {
     fontFamily: 'HankenGrotesk_700Bold',
     fontSize: 11,
-    color: '#44474e',
     marginBottom: 6,
   },
-  underlinedInput: {
+  input: {
+    height: 44,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    paddingHorizontal: 12,
     fontFamily: 'HankenGrotesk_500Medium',
-    fontSize: 14,
-    color: '#1c1c1e',
-    borderBottomWidth: 1,
-    borderBottomColor: '#c4c6cf',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    fontSize: 13,
   },
-  underlinedInputFocused: {
-    borderBottomColor: '#001b3d',
-  },
-  twoColumnInputs: {
+  sportList: {
     flexDirection: 'row',
-    gap: 16,
-    alignItems: 'flex-start',
-  },
-  halfInput: {
-    flex: 1,
-  },
-  sportIconRow: {
-    flexDirection: 'row',
-    gap: 8,
     alignItems: 'center',
-    marginTop: 4,
+    paddingVertical: 4,
   },
-  sportIconButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#f2f4f6',
+  sportChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginRight: 6,
+    justifyContent: 'center',
+  },
+  sportChipText: {
+    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontSize: 10,
+    marginLeft: 4,
+  },
+
+  /* Actions container */
+  actionsContainer: {
+    flexDirection: 'column',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#0000000a',
+  },
+  primaryButton: {
+    height: 44,
+    borderRadius: BorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Shadows.level2,
   },
-  sportIconActive: {
-    backgroundColor: '#001b3d',
+  btnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  primaryButtonText: {
+    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontSize: 13,
+    color: '#ffffff',
   },
 });

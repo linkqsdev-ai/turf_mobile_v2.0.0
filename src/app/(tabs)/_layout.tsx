@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Platform, View, StyleSheet } from 'react-native';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 function TabIcon({ 
   focused, 
@@ -43,6 +44,9 @@ function TabIcon({
 }
 
 export default function TabLayout() {
+  const { profile } = useUserProfile();
+  const role = profile.role || 'Player';
+
   return (
     <Tabs
       screenOptions={{
@@ -120,11 +124,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="teams"
+        name="coach"
         options={{
-          title: 'Teams',
+          title: role === 'Owner' ? 'Turf Book' : 'Coach',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} iconName="people" />
+            <TabIcon
+              focused={focused}
+              color={color}
+              iconName={role === 'Owner' ? 'stadium' : 'account-tie'}
+              library="MaterialCommunityIcons"
+            />
           ),
         }}
       />

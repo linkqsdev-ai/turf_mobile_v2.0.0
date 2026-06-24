@@ -11,7 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-export default function BadmintonScoring() {
+export default function BadmintonScoring({ teamA = 'Player A', teamB = 'Player B' }: { teamA?: string; teamB?: string }) {
   const theme = useTheme();
 
   // Set scores (Best of 3)
@@ -147,7 +147,7 @@ export default function BadmintonScoring() {
             </View>
 
             <View style={styles.setsRow}>
-              <ThemedText type="headlineSm" style={{ flex: 2, color: '#ffffff' }}>Lions FC</ThemedText>
+              <ThemedText type="headlineSm" style={{ flex: 2, color: '#ffffff' }}>{teamA}</ThemedText>
               {setsA.map((val, idx) => {
                 const isCurrent = idx === setsA.length - 1;
                 return (
@@ -163,7 +163,7 @@ export default function BadmintonScoring() {
             </View>
 
             <View style={styles.setsRow}>
-              <ThemedText type="headlineSm" style={{ flex: 2, color: '#ffffff' }}>Titans Utd</ThemedText>
+              <ThemedText type="headlineSm" style={{ flex: 2, color: '#ffffff' }}>{teamB}</ThemedText>
               {setsB.map((val, idx) => {
                 const isCurrent = idx === setsB.length - 1;
                 return (
@@ -191,7 +191,7 @@ export default function BadmintonScoring() {
             {/* Player A Point Column */}
             <View style={styles.pointCol}>
               <View style={styles.headerWithServe}>
-                <ThemedText type="headlineSm">Lions FC</ThemedText>
+                <ThemedText type="headlineSm">{teamA}</ThemedText>
                 {server === 'A' && (
                   <MaterialCommunityIcons name="badminton" size={14} color="#ffdd33" style={{ marginLeft: 4 }} />
                 )}
@@ -212,7 +212,7 @@ export default function BadmintonScoring() {
             {/* Player B Point Column */}
             <View style={styles.pointCol}>
               <View style={styles.headerWithServe}>
-                <ThemedText type="headlineSm">Titans Utd</ThemedText>
+                <ThemedText type="headlineSm">{teamB}</ThemedText>
                 {server === 'B' && (
                   <MaterialCommunityIcons name="badminton" size={14} color="#ffdd33" style={{ marginLeft: 4 }} />
                 )}
@@ -240,12 +240,12 @@ export default function BadmintonScoring() {
 
           {/* Smash Winners */}
           <View style={styles.statLine}>
-            <ThemedText type="bodyMd" style={{ width: 100 }}>Smash Winners</ThemedText>
+            <ThemedText type="bodyMd" style={{ flex: 1 }} numberOfLines={1}>Smash Winners</ThemedText>
             <View style={styles.adjustRow}>
               <Pressable onPress={() => setSmashWinnersA(prev => Math.max(0, prev - 1))} style={styles.adjustBtn}>
                 <Ionicons name="remove" size={14} color={theme.text} />
               </Pressable>
-              <ThemedText type="bodyLg" style={{ minWidth: 40, textAlign: 'center', fontFamily: 'HankenGrotesk_700Bold' }}>
+              <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'HankenGrotesk_700Bold', flex: 1 }}>
                 {smashWinnersA} | {smashWinnersB}
               </ThemedText>
               <Pressable onPress={() => setSmashWinnersB(prev => prev + 1)} style={styles.adjustBtn}>
@@ -253,18 +253,18 @@ export default function BadmintonScoring() {
               </Pressable>
             </View>
             <Pressable onPress={() => setSmashWinnersA(prev => prev + 1)} style={styles.quickAddLink}>
-              <ThemedText type="labelSm" style={{ color: theme.secondary }}>+ Lions Smash</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.secondary }} numberOfLines={1} ellipsizeMode="tail">+ {teamA} Smash</ThemedText>
             </Pressable>
           </View>
 
           {/* Service Errors */}
           <View style={[styles.statLine, { marginTop: Spacing.sm }]}>
-            <ThemedText type="bodyMd" style={{ width: 100 }}>Service Errors</ThemedText>
+            <ThemedText type="bodyMd" style={{ flex: 1 }} numberOfLines={1}>Service Errors</ThemedText>
             <View style={styles.adjustRow}>
               <Pressable onPress={() => setServiceErrorsA(prev => Math.max(0, prev - 1))} style={styles.adjustBtn}>
                 <Ionicons name="remove" size={14} color={theme.text} />
               </Pressable>
-              <ThemedText type="bodyLg" style={{ minWidth: 40, textAlign: 'center', fontFamily: 'HankenGrotesk_700Bold' }}>
+              <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'HankenGrotesk_700Bold', flex: 1 }}>
                 {serviceErrorsA} | {serviceErrorsB}
               </ThemedText>
               <Pressable onPress={() => setServiceErrorsB(prev => prev + 1)} style={styles.adjustBtn}>
@@ -272,7 +272,7 @@ export default function BadmintonScoring() {
               </Pressable>
             </View>
             <Pressable onPress={() => setServiceErrorsA(prev => prev + 1)} style={styles.quickAddLink}>
-              <ThemedText type="labelSm" style={{ color: theme.secondary }}>+ Lions Err</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.secondary }} numberOfLines={1} ellipsizeMode="tail">+ {teamA} Err</ThemedText>
             </Pressable>
           </View>
         </View>
@@ -367,7 +367,9 @@ const styles = StyleSheet.create({
   adjustRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+    width: 90,
+    justifyContent: 'center',
   },
   adjustBtn: {
     width: 26,
@@ -379,6 +381,8 @@ const styles = StyleSheet.create({
   },
   quickAddLink: {
     paddingVertical: 4,
+    width: 110,
+    alignItems: 'flex-end',
   },
   undoBtn: {
     flexDirection: 'row',

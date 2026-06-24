@@ -11,6 +11,13 @@ export interface UserProfile {
   avatarUrl: string;
   bannerImage?: string;
   theme?: 'light' | 'dark' | 'blue';
+  role: 'Player' | 'Coach' | 'Owner' | 'Organizer';
+  pushNotifications?: boolean;
+  emailAlerts?: boolean;
+  geminiApiKey?: string;
+  claudeApiKey?: string;
+  aiSuggestionsEnabled?: boolean;
+  aiGenerationEnabled?: boolean;
 }
 
 let globalProfile: UserProfile = {
@@ -21,9 +28,16 @@ let globalProfile: UserProfile = {
   preferredFoot: 'Right',
   playingStyle: 'Target Man / Poacher',
   memberSince: 'January 2024',
-  avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI',
+  avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
   bannerImage: 'football',
   theme: 'blue',
+  role: 'Coach',
+  pushNotifications: true,
+  emailAlerts: false,
+  geminiApiKey: '',
+  claudeApiKey: '',
+  aiSuggestionsEnabled: true,
+  aiGenerationEnabled: true,
 };
 
 const listeners = new Set<(profile: UserProfile) => void>();

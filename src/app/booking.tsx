@@ -183,6 +183,12 @@ export default function BookingConfigurationScreen() {
           <View style={styles.heroWrapper}>
             <View style={[styles.heroCard, { backgroundColor: theme.primaryContainer }]}>
               <Image source={venue.image} style={styles.heroImage} contentFit="cover" />
+              
+              {/* Fav Button top right */}
+              <Pressable style={[styles.favFab, { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8 }]}>
+                <Ionicons name="heart" size={20} color="#ff4757" />
+              </Pressable>
+
               <View style={styles.heroOverlay}>
                 <View style={[styles.badgeContainer, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
                   <ThemedText type="labelSm" style={[styles.badgeText, { color: '#ffffff' }]}>PREMIUM VENUE</ThemedText>
@@ -555,127 +561,192 @@ export default function BookingConfigurationScreen() {
             </View>
           </View>
 
-          {/* Booking Summary Card */}
+          {/* Booking Summary Ticket Card */}
           <View style={[styles.section, { paddingBottom: 60 }]}>
-            <View style={[styles.summaryCard, { backgroundColor: theme.primaryContainer }, Shadows.level3]}>
-              <View style={{ marginBottom: Spacing.md }}>
-                <ThemedText type="headlineSm" style={{ color: '#ffffff' }}>Booking Summary</ThemedText>
-                <ThemedText type="bodySm" style={{ color: theme.onPrimaryContainer }}>
-                  Review your session details before final confirmation.
+            <View style={[styles.ticketContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }, Shadows.level3]}>
+              
+              {/* Top part: Rounded banner/hero image */}
+              <View style={styles.ticketTopSection}>
+                <Image source={venue.image} style={styles.ticketHeroImage} contentFit="cover" />
+                <View style={styles.ticketHeroOverlay}>
+                  <ThemedText type="headlineLg" style={styles.ticketHeroTitle}>
+                    {venue.name}
+                  </ThemedText>
+                </View>
+              </View>
+
+              {/* Dotted line with left & right notches */}
+              <View style={styles.ticketDottedLineContainer}>
+                <View style={[styles.ticketNotchLeft, { backgroundColor: theme.background, borderColor: theme.outlineVariant + '44' }]} />
+                <View style={[styles.ticketDottedLine, { borderColor: theme.outlineVariant + '66' }]} />
+                <View style={[styles.ticketNotchRight, { backgroundColor: theme.background, borderColor: theme.outlineVariant + '44' }]} />
+              </View>
+
+              {/* Middle Section: Details grid */}
+              <View style={styles.ticketMiddleSection}>
+                {/* Chip & Bookmark icon */}
+                <View style={styles.ticketChipAndActionRow}>
+                  <View style={[styles.ticketChip, { backgroundColor: theme.primary + '15' }]}>
+                    <ThemedText type="labelSm" style={{ color: theme.primary, fontWeight: '700', fontSize: 10, textTransform: 'uppercase' }}>
+                      Court Booking
+                    </ThemedText>
+                  </View>
+                  <Pressable style={[styles.ticketBookmarkBtn, { borderColor: theme.outlineVariant + '33' }]}>
+                    <Ionicons name="bookmark-outline" size={14} color={theme.textSecondary} />
+                  </Pressable>
+                </View>
+
+                {/* Bold title & location */}
+                <ThemedText type="bodyLg" style={{ color: theme.text, marginTop: 10, fontFamily: 'HankenGrotesk_700Bold' }}>
+                  {venue.name}
+                </ThemedText>
+                <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 2 }}>
+                  {venue.location}
+                </ThemedText>
+
+                {/* Flat separator line */}
+                <View style={[styles.ticketSeparator, { backgroundColor: theme.outlineVariant + '33' }]} />
+
+                {/* Details Grid (3 rows, 2 columns) */}
+                <View style={styles.ticketDetailsGrid}>
+                  <View style={styles.ticketGridRow}>
+                    <View style={styles.ticketGridCol}>
+                      <ThemedText style={styles.ticketGridLabel}>Date</ThemedText>
+                      <ThemedText style={[styles.ticketGridValue, { color: theme.text }]}>
+                        {selectedDayOfMonth} Feb. 2024
+                      </ThemedText>
+                    </View>
+                    <View style={styles.ticketGridCol}>
+                      <ThemedText style={styles.ticketGridLabel}>Time</ThemedText>
+                      <ThemedText style={[styles.ticketGridValue, { color: theme.text }]}>
+                        {selectedSlots.length > 0 ? `${selectedSlots[0]} - ${selectedSlots[selectedSlots.length - 1]}` : 'TBD'}
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  <View style={styles.ticketGridRow}>
+                    <View style={styles.ticketGridCol}>
+                      <ThemedText style={styles.ticketGridLabel}>Location</ThemedText>
+                      <ThemedText numberOfLines={1} style={[styles.ticketGridValue, { color: theme.text }]}>
+                        {venue.location.split(',')[0]}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.ticketGridCol}>
+                      <ThemedText style={styles.ticketGridLabel}>Services</ThemedText>
+                      <ThemedText numberOfLines={1} style={[styles.ticketGridValue, { color: theme.text }]}>
+                        {coachAdded ? 'Coach' : ''}{coachAdded && recordingAdded ? ' & ' : ''}{recordingAdded ? 'HD Video' : ''}{!coachAdded && !recordingAdded ? 'None Added' : ''}
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  <View style={styles.ticketGridRow}>
+                    <View style={styles.ticketGridCol}>
+                      <ThemedText style={styles.ticketGridLabel}>Ticket holder</ThemedText>
+                      <ThemedText numberOfLines={1} style={[styles.ticketGridValue, { color: theme.text }]}>
+                        Azarudeen
+                      </ThemedText>
+                    </View>
+                    <View style={styles.ticketGridCol}>
+                      <ThemedText style={styles.ticketGridLabel}>Issued to</ThemedText>
+                      <ThemedText numberOfLines={1} style={[styles.ticketGridValue, { color: theme.text }]}>
+                        ID: TXN-{1000 + selectedDayOfMonth}
+                      </ThemedText>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Second dotted line with notches */}
+              <View style={styles.ticketDottedLineContainer}>
+                <View style={[styles.ticketNotchLeft, { backgroundColor: theme.background, borderColor: theme.outlineVariant + '44' }]} />
+                <View style={[styles.ticketDottedLine, { borderColor: theme.outlineVariant + '66' }]} />
+                <View style={[styles.ticketNotchRight, { backgroundColor: theme.background, borderColor: theme.outlineVariant + '44' }]} />
+              </View>
+
+              {/* Bottom part: Pricing, Barcode & Action Button */}
+              <View style={styles.ticketBottomSection}>
+                {/* Pricing Tally inside a clean breakdown container */}
+                <View style={[styles.ticketPriceBreakdown, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}>
+                  <View style={styles.ticketPriceRow}>
+                    <ThemedText style={styles.ticketPriceLabel}>Court Hire ({selectedSlots.length} hrs)</ThemedText>
+                    <ThemedText style={[styles.ticketPriceValue, { color: theme.text }]}>₹{courtFee.toFixed(2)}</ThemedText>
+                  </View>
+                  {coachAdded && (
+                    <View style={styles.ticketPriceRow}>
+                      <ThemedText style={styles.ticketPriceLabel}>Pro Net Coach</ThemedText>
+                      <ThemedText style={[styles.ticketPriceValue, { color: theme.text }]}>₹{coachFee.toFixed(2)}</ThemedText>
+                    </View>
+                  )}
+                  {recordingAdded && (
+                    <View style={styles.ticketPriceRow}>
+                      <ThemedText style={styles.ticketPriceLabel}>HD Match Recording</ThemedText>
+                      <ThemedText style={[styles.ticketPriceValue, { color: theme.text }]}>₹{recordingFee.toFixed(2)}</ThemedText>
+                    </View>
+                  )}
+                  <View style={styles.ticketPriceRow}>
+                    <ThemedText style={styles.ticketPriceLabel}>Service Charge</ThemedText>
+                    <ThemedText style={[styles.ticketPriceValue, { color: theme.text }]}>₹{serviceCharge.toFixed(2)}</ThemedText>
+                  </View>
+                  
+                  <View style={styles.ticketPriceTotalRow}>
+                    <ThemedText style={[styles.ticketPriceTotalLabel, { color: theme.text }]}>Total Due</ThemedText>
+                    <ThemedText style={[styles.ticketPriceTotalVal, { color: theme.secondary }]}>₹{total.toFixed(2)}</ThemedText>
+                  </View>
+                  {advancePct < 100 && (
+                    <View style={[styles.ticketPriceRow, { marginTop: 4 }]}>
+                      <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontWeight: 'bold' }}>Pay Now ({advancePct}%)</ThemedText>
+                      <ThemedText style={{ color: theme.primary, fontSize: 12, fontWeight: 'bold' }}>₹{advanceAmount.toFixed(2)}</ThemedText>
+                    </View>
+                  )}
+                </View>
+
+                {/* Mock Barcode Element */}
+                <View style={styles.barcodeWrapper}>
+                  <View style={styles.barcodeLines}>
+                    {[2, 1, 3, 1, 4, 2, 1, 2, 3, 1, 2, 4, 1, 3, 2, 1, 1, 3, 2, 4, 1, 2, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2, 4, 2, 1, 3, 1, 1, 2].map((w, idx) => (
+                      <View
+                        key={idx}
+                        style={{
+                          width: w,
+                          height: 40,
+                          backgroundColor: theme.text,
+                          marginRight: idx % 2 === 0 ? 1 : 2,
+                        }}
+                      />
+                    ))}
+                  </View>
+                  <ThemedText style={[styles.barcodeSubText, { color: theme.textSecondary }]}>
+                    BK-{(venueId + selectedDayOfMonth).toUpperCase()}-2024
+                  </ThemedText>
+                </View>
+
+                {/* Secure Confirm Booking Button */}
+                <Pressable
+                  onPress={handleConfirmBooking}
+                  disabled={selectedSlots.length === 0}
+                  style={[
+                    styles.ticketConfirmBtn,
+                    { backgroundColor: theme.primary },
+                    selectedSlots.length === 0 && { opacity: 0.45 }
+                  ]}
+                >
+                  <View style={styles.ticketConfirmBtnIconWrap}>
+                    <Ionicons name="shield-checkmark" size={18} color={theme.primary} />
+                  </View>
+                  <View style={{ flex: 1, paddingLeft: 8 }}>
+                    <ThemedText style={styles.ticketConfirmBtnTitle}>CONFIRM BOOKING</ThemedText>
+                    <ThemedText style={styles.ticketConfirmBtnSub}>
+                      ₹{advanceAmount} via {PAYMENT_METHODS.find(p => p.id === paymentMethod)?.label ?? 'Apple Pay'}
+                    </ThemedText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#ffffff" />
+                </Pressable>
+
+                <ThemedText type="labelSm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 10 }}>
+                  🔒 Secure payment · Free cancellation 24h before
                 </ThemedText>
               </View>
 
-              {/* Date details */}
-              <View style={styles.summaryItemRow}>
-                <View style={styles.summaryItemIcon}>
-                  <Ionicons name="calendar" size={18} color="#ffffff" />
-                </View>
-                <View style={{ marginLeft: Spacing.md }}>
-                  <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>DATE</ThemedText>
-                  <ThemedText type="bodyMd" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>
-                    {selectedDayOfWeek}, Feb {selectedDayOfMonth}, 2024
-                  </ThemedText>
-                </View>
-              </View>
-
-              {/* Time slot details */}
-              <View style={styles.summaryItemRow}>
-                <View style={styles.summaryItemIcon}>
-                  <Ionicons name="time" size={18} color="#ffffff" />
-                </View>
-                <View style={{ marginLeft: Spacing.md }}>
-                  <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>TIME SLOT</ThemedText>
-                  <ThemedText type="bodyMd" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>
-                    {selectedSlots.length > 0 ? `${selectedSlots[0]} - ${selectedSlots[selectedSlots.length - 1]}` : 'No slots selected'}
-                  </ThemedText>
-                  <ThemedText type="bodySm" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                    {selectedSlots.length} Hours Session
-                  </ThemedText>
-                </View>
-              </View>
-
-              {/* Area details */}
-              <View style={styles.summaryItemRow}>
-                <View style={styles.summaryItemIcon}>
-                  <Ionicons name="football" size={18} color="#ffffff" />
-                </View>
-                <View style={{ marginLeft: Spacing.md }}>
-                  <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>COURT / AREA</ThemedText>
-                  <ThemedText type="bodyMd" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>
-                    Pavillion Main Wing
-                  </ThemedText>
-                </View>
-              </View>
-
-              {/* Pricing tally */}
-              <View style={styles.priceBreakdown}>
-                <View style={styles.priceRow}>
-                  <ThemedText type="bodyMd" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Court Hire Fee</ThemedText>
-                  <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>₹{courtFee.toFixed(2)}</ThemedText>
-                </View>
-                {coachAdded && (
-                  <View style={styles.priceRow}>
-                    <ThemedText type="bodyMd" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Pro Net Coach</ThemedText>
-                    <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>₹{coachFee.toFixed(2)}</ThemedText>
-                  </View>
-                )}
-                {recordingAdded && (
-                  <View style={styles.priceRow}>
-                    <ThemedText type="bodyMd" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>HD Match Recording</ThemedText>
-                    <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>₹{recordingFee.toFixed(2)}</ThemedText>
-                  </View>
-                )}
-                <View style={styles.priceRow}>
-                  <ThemedText type="bodyMd" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Service Charge</ThemedText>
-                  <ThemedText type="bodyMd" style={{ color: '#ffffff' }}>₹{serviceCharge.toFixed(2)}</ThemedText>
-                </View>
-                <View style={[styles.priceRow, { borderTopWidth: 1, borderTopColor: '#ffffff22', paddingTop: Spacing.md, marginTop: Spacing.sm }]}>
-                  <ThemedText type="headlineSm" style={{ color: '#ffffff' }}>Total</ThemedText>
-                  <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_800ExtraBold' }}>
-                    ₹{total.toFixed(2)}
-                  </ThemedText>
-                </View>
-                {advancePct < 100 && (
-                  <View style={[styles.priceRow, { marginTop: 4 }]}>
-                    <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Pay Now ({advancePct}%)</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>₹{advanceAmount}</ThemedText>
-                  </View>
-                )}
-              </View>
-
-              {/* Action Button — Premium redesigned */}
-              <Pressable
-                onPress={handleConfirmBooking}
-                disabled={selectedSlots.length === 0}
-                style={[
-                  styles.confirmBtn,
-                  selectedSlots.length === 0 && { opacity: 0.45 }
-                ]}
-              >
-                {/* Left icon block */}
-                <View style={styles.confirmBtnIconWrap}>
-                  <Ionicons name="shield-checkmark" size={20} color={'#5D68E8'} />
-                </View>
-
-                {/* Center label */}
-                <View style={styles.confirmBtnLabelWrap}>
-                  <ThemedText style={styles.confirmBtnTitle}>
-                    CONFIRM BOOKING
-                  </ThemedText>
-                  <ThemedText style={styles.confirmBtnSub}>
-                    ₹{advanceAmount} via {PAYMENT_METHODS.find(p => p.id === paymentMethod)?.label ?? 'UPI'}
-                  </ThemedText>
-                </View>
-
-                {/* Right arrow */}
-                <View style={styles.confirmBtnArrow}>
-                  <Ionicons name="chevron-forward" size={20} color={'#ffffff'} />
-                </View>
-              </Pressable>
-
-              <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, textAlign: 'center', marginTop: Spacing.sm }}>
-                🔒 Secure payment · Free cancellation 24h before
-              </ThemedText>
             </View>
           </View>
         </ScrollView>
@@ -875,87 +946,204 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: BorderRadius.default,
   },
-  summaryCard: {
+  ticketContainer: {
     borderRadius: BorderRadius.premium,
-    padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 0,
   },
-  summaryItemRow: {
+  ticketTopSection: {
+    height: 140,
+    width: '100%',
+    position: 'relative',
+  },
+  ticketHeroImage: {
+    width: '100%',
+    height: '100%',
+    borderTopLeftRadius: BorderRadius.premium - 1,
+    borderTopRightRadius: BorderRadius.premium - 1,
+  },
+  ticketHeroOverlay: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(5, 21, 30, 0.45)',
+    justifyContent: 'flex-end',
+    padding: Spacing.md,
+  },
+  ticketHeroTitle: {
+    color: '#ffffff',
+    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontSize: 20,
+  },
+  ticketDottedLineContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    justifyContent: 'space-between',
+    position: 'relative',
+    height: 20,
+    width: '100%',
   },
-  summaryItemIcon: {
-    width: 36,
-    height: 36,
+  ticketNotchLeft: {
+    width: 16,
+    height: 16,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginLeft: -8,
+    borderWidth: 1,
+    zIndex: 10,
+  },
+  ticketNotchRight: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginRight: -8,
+    borderWidth: 1,
+    zIndex: 10,
+  },
+  ticketDottedLine: {
+    flex: 1,
+    height: 1,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+  },
+  ticketMiddleSection: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.sm,
+  },
+  ticketChipAndActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ticketChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.sm,
+  },
+  ticketBookmarkBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  priceBreakdown: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    paddingTop: Spacing.md,
-    marginTop: Spacing.md,
-    gap: Spacing.xs,
+  ticketSeparator: {
+    height: 1,
+    marginVertical: 12,
+    alignSelf: 'stretch',
   },
-  priceRow: {
+  ticketDetailsGrid: {
+    gap: 12,
+  },
+  ticketGridRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  confirmBtn: {
-    backgroundColor: '#0a1929',
-    height: 68,
-    borderRadius: BorderRadius.premium,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: Spacing.lg,
-    paddingHorizontal: Spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(93, 104, 232, 0.3)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  confirmBtnIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(93, 104, 232, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(93, 104, 232, 0.3)',
-  },
-  confirmBtnLabelWrap: {
+  ticketGridCol: {
     flex: 1,
   },
-  confirmBtnTitle: {
-    color: '#ffffff',
-    fontFamily: 'HankenGrotesk_800ExtraBold',
-    fontSize: 15,
-    letterSpacing: 0.8,
-  },
-  confirmBtnSub: {
-    color: '#5D68E8',
+  ticketGridLabel: {
+    color: 'rgba(128, 128, 128, 0.6)',
+    fontSize: 10,
     fontFamily: 'HankenGrotesk_600SemiBold',
-    fontSize: 11,
-    marginTop: 2,
-    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  confirmBtnArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+  ticketGridValue: {
+    fontSize: 12.5,
+    fontFamily: 'HankenGrotesk_700Bold',
+    marginTop: 2,
+  },
+  ticketBottomSection: {
+    padding: Spacing.md,
+  },
+  ticketPriceBreakdown: {
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 6,
+  },
+  ticketPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ticketPriceLabel: {
+    color: 'rgba(128, 128, 128, 0.7)',
+    fontSize: 12,
+    fontFamily: 'HankenGrotesk_600SemiBold',
+  },
+  ticketPriceValue: {
+    fontSize: 12,
+    fontFamily: 'HankenGrotesk_700Bold',
+  },
+  ticketPriceTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.08)',
+    paddingTop: 8,
+    marginTop: 4,
+  },
+  ticketPriceTotalLabel: {
+    fontSize: 14,
+    fontFamily: 'HankenGrotesk_700Bold',
+  },
+  ticketPriceTotalVal: {
+    fontSize: 16,
+    fontFamily: 'HankenGrotesk_800ExtraBold',
+  },
+  barcodeWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 12,
+  },
+  barcodeLines: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 40,
+  },
+  barcodeSubText: {
+    fontSize: 10,
+    fontFamily: 'HankenGrotesk_600SemiBold',
+    marginTop: 4,
+    letterSpacing: 1.5,
+  },
+  ticketConfirmBtn: {
+    height: 56,
+    borderRadius: BorderRadius.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+    marginTop: 8,
+  },
+  ticketConfirmBtnIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: Spacing.sm,
+  },
+  ticketConfirmBtnTitle: {
+    color: '#ffffff',
+    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontSize: 13,
+    letterSpacing: 0.5,
+  },
+  ticketConfirmBtnSub: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontSize: 10,
+    marginTop: 1,
   },
   // Advance Pay styles
   advanceHeader: {
@@ -1028,5 +1216,17 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  favFab: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
 });

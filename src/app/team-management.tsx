@@ -243,7 +243,7 @@ export default function TeamManagementScreen() {
               <ThemedText type="headlineSm" style={styles.modalTitle}>Edit Team</ThemedText>
               
               <View style={styles.inputGroup}>
-                <ThemedText type="labelSm" style={styles.inputLabel}>Team Name</ThemedText>
+                <ThemedText type="labelSm" style={styles.inputLabel}>Team name</ThemedText>
                 <TextInput
                   style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                   value={editName}
@@ -252,7 +252,7 @@ export default function TeamManagementScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <ThemedText type="labelSm" style={styles.inputLabel}>Manager Name</ThemedText>
+                <ThemedText type="labelSm" style={styles.inputLabel}>Manager name</ThemedText>
                 <TextInput
                   style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                   value={editManager}

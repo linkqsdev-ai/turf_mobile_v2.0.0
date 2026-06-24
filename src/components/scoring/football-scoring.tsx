@@ -20,7 +20,7 @@ interface MatchEvent {
   assistName?: string;
 }
 
-export default function FootballScoring() {
+export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Utd' }: { teamA?: string; teamB?: string }) {
   const theme = useTheme();
 
   // Timer state
@@ -109,7 +109,7 @@ export default function FootballScoring() {
 
   const addGoal = (team: 'A' | 'B') => {
     saveHistory();
-    const promptTitle = team === 'A' ? 'Lions FC Goal' : 'Titans Utd Goal';
+    const promptTitle = team === 'A' ? `${teamA} Goal` : `${teamB} Goal`;
     Alert.prompt(
       promptTitle,
       'Enter Scorer Name:',
@@ -231,7 +231,7 @@ export default function FootballScoring() {
             {/* Team A Goal Button */}
             <View style={styles.teamCol}>
               <ThemedText type="headlineSm" style={{ textAlign: 'center', marginBottom: Spacing.sm }}>
-                Lions FC
+                {teamA}
               </ThemedText>
               <Pressable
                 onPress={() => addGoal('A')}
@@ -253,7 +253,7 @@ export default function FootballScoring() {
             {/* Team B Goal Button */}
             <View style={styles.teamCol}>
               <ThemedText type="headlineSm" style={{ textAlign: 'center', marginBottom: Spacing.sm }}>
-                Titans Utd
+                {teamB}
               </ThemedText>
               <Pressable
                 onPress={() => addGoal('B')}
@@ -308,13 +308,13 @@ export default function FootballScoring() {
             {/* Shots */}
             <View style={[styles.counterBox, { backgroundColor: theme.surfaceLow }]}>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Shots</ThemedText>
-              <View style={styles.boxActionRow}>
+              <View style={[styles.boxActionRow, { gap: 4, justifyContent: 'center', width: '100%' }]}>
                 <Pressable onPress={() => setShotsA(prev => Math.max(0, prev - 1))} style={styles.iconBtn}>
-                  <Ionicons name="remove-circle-outline" size={18} color={theme.text} />
+                  <Ionicons name="remove-circle-outline" size={16} color={theme.text} />
                 </Pressable>
-                <ThemedText type="headlineSm" style={{ marginHorizontal: 8 }}>{shotsA} | {shotsB}</ThemedText>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold' }}>{shotsA}|{shotsB}</ThemedText>
                 <Pressable onPress={() => setShotsB(prev => prev + 1)} style={styles.iconBtn}>
-                  <Ionicons name="add-circle-outline" size={18} color={theme.text} />
+                  <Ionicons name="add-circle-outline" size={16} color={theme.text} />
                 </Pressable>
               </View>
               <Pressable onPress={() => setShotsA(prev => prev + 1)} style={styles.quickAddBtn}>
@@ -325,13 +325,13 @@ export default function FootballScoring() {
             {/* Corners */}
             <View style={[styles.counterBox, { backgroundColor: theme.surfaceLow }]}>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Corners</ThemedText>
-              <View style={styles.boxActionRow}>
+              <View style={[styles.boxActionRow, { gap: 4, justifyContent: 'center', width: '100%' }]}>
                 <Pressable onPress={() => setCornersA(prev => Math.max(0, prev - 1))} style={styles.iconBtn}>
-                  <Ionicons name="remove-circle-outline" size={18} color={theme.text} />
+                  <Ionicons name="remove-circle-outline" size={16} color={theme.text} />
                 </Pressable>
-                <ThemedText type="headlineSm" style={{ marginHorizontal: 8 }}>{cornersA} | {cornersB}</ThemedText>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold' }}>{cornersA}|{cornersB}</ThemedText>
                 <Pressable onPress={() => setCornersB(prev => prev + 1)} style={styles.iconBtn}>
-                  <Ionicons name="add-circle-outline" size={18} color={theme.text} />
+                  <Ionicons name="add-circle-outline" size={16} color={theme.text} />
                 </Pressable>
               </View>
               <Pressable onPress={() => setCornersA(prev => prev + 1)} style={styles.quickAddBtn}>
@@ -342,13 +342,13 @@ export default function FootballScoring() {
             {/* Fouls */}
             <View style={[styles.counterBox, { backgroundColor: theme.surfaceLow }]}>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Fouls</ThemedText>
-              <View style={styles.boxActionRow}>
+              <View style={[styles.boxActionRow, { gap: 4, justifyContent: 'center', width: '100%' }]}>
                 <Pressable onPress={() => setFoulsA(prev => Math.max(0, prev - 1))} style={styles.iconBtn}>
-                  <Ionicons name="remove-circle-outline" size={18} color={theme.text} />
+                  <Ionicons name="remove-circle-outline" size={16} color={theme.text} />
                 </Pressable>
-                <ThemedText type="headlineSm" style={{ marginHorizontal: 8 }}>{foulsA} | {foulsB}</ThemedText>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold' }}>{foulsA}|{foulsB}</ThemedText>
                 <Pressable onPress={() => setFoulsB(prev => prev + 1)} style={styles.iconBtn}>
-                  <Ionicons name="add-circle-outline" size={18} color={theme.text} />
+                  <Ionicons name="add-circle-outline" size={16} color={theme.text} />
                 </Pressable>
               </View>
               <Pressable onPress={() => setFoulsA(prev => prev + 1)} style={styles.quickAddBtn}>
@@ -368,7 +368,7 @@ export default function FootballScoring() {
             style={[styles.disciplineBtn, { borderLeftColor: '#f1c40f', borderLeftWidth: 4, backgroundColor: theme.surfaceLowest }]}
           >
             <MaterialCommunityIcons name="cards-playing-outline" size={20} color="#f1c40f" />
-            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 8 }}>+ Lions Yellow</ThemedText>
+            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 8 }}>+ {teamA} Yellow</ThemedText>
           </Pressable>
 
           <Pressable
@@ -376,7 +376,7 @@ export default function FootballScoring() {
             style={[styles.disciplineBtn, { borderLeftColor: '#f1c40f', borderLeftWidth: 4, backgroundColor: theme.surfaceLowest }]}
           >
             <MaterialCommunityIcons name="cards-playing-outline" size={20} color="#f1c40f" />
-            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 8 }}>+ Titans Yellow</ThemedText>
+            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 8 }}>+ {teamB} Yellow</ThemedText>
           </Pressable>
         </View>
 
@@ -387,7 +387,7 @@ export default function FootballScoring() {
             style={[styles.disciplineBtn, { borderLeftColor: theme.error, borderLeftWidth: 4, backgroundColor: theme.surfaceLowest }]}
           >
             <MaterialCommunityIcons name="cards-playing-outline" size={20} color={theme.error} />
-            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 8 }}>+ Lions Red</ThemedText>
+            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 8 }}>+ {teamA} Red</ThemedText>
           </Pressable>
 
           <Pressable
@@ -395,7 +395,7 @@ export default function FootballScoring() {
             style={[styles.disciplineBtn, { borderLeftColor: theme.error, borderLeftWidth: 4, backgroundColor: theme.surfaceLowest }]}
           >
             <MaterialCommunityIcons name="cards-playing-outline" size={20} color={theme.error} />
-            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 8 }}>+ Titans Red</ThemedText>
+            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 8 }}>+ {teamB} Red</ThemedText>
           </Pressable>
         </View>
       </View>
@@ -440,7 +440,7 @@ export default function FootballScoring() {
                       {isGoal ? 'GOAL!' : event.type === 'yellow' ? 'Yellow Card' : 'Red Card'}
                     </ThemedText>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
-                      {event.playerName} ({event.team === 'A' ? 'Lions FC' : 'Titans Utd'})
+                      {event.playerName} ({event.team === 'A' ? teamA : teamB})
                       {event.assistName ? ` · Assist: ${event.assistName}` : ''}
                     </ThemedText>
                   </View>
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   counterBox: {
     flex: 1,
     borderRadius: BorderRadius.xl,
-    padding: 10,
+    padding: 6,
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: 110,
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
   },
   quickAddBtn: {
     paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     borderRadius: BorderRadius.sm,
     backgroundColor: '#ffffff80',
   },

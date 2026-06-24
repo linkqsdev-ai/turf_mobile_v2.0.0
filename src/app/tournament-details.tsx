@@ -35,6 +35,7 @@ export default function TournamentDetailsScreen() {
 
   // Selected Tab State
   const [activeTab, setActiveTab] = useState('Overview');
+  const [bannerFailed, setBannerFailed] = useState(false);
 
   // Custom Toast State
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -401,9 +402,10 @@ export default function TournamentDetailsScreen() {
           {/* Banner with Registration Countdown */}
           <View style={styles.bannerContainer}>
             <Image 
-              source="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80" 
+              source={bannerFailed ? require('@/assets/images/illustrations/stadium.png') : "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80"} 
               style={styles.bannerImage} 
               contentFit="cover" 
+              onError={() => setBannerFailed(true)}
             />
             <View style={styles.gradientOverlay} />
             <View style={styles.countdownBadge}>

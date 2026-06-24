@@ -6,6 +6,7 @@ import {
   Pressable,
   Modal,
   Alert,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -32,12 +33,13 @@ interface Bowler {
   wickets: number;
 }
 
-export default function CricketScoring() {
+export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent Kings' }: { teamA?: string; teamB?: string }) {
   const theme = useTheme();
 
   const [showScoringModal, setShowScoringModal] = useState(false);
   const [showBatsmenModal, setShowBatsmenModal] = useState(false);
   const [showBowlersModal, setShowBowlersModal] = useState(false);
+  const [showEditPlayersModal, setShowEditPlayersModal] = useState(false);
 
   // Scoreboard State
   const [runs, setRuns] = useState(142);
@@ -56,6 +58,49 @@ export default function CricketScoring() {
   const [bowler, setBowler] = useState<Bowler>(
     { name: 'Rashid Khan', overs: 3, ballsInOver: 2, maidens: 0, runs: 24, wickets: 1 }
   );
+
+  // Squad Lists State
+  const [dismissedBatsmen, setDismissedBatsmen] = useState<any[]>([
+    { name: 'Zak Crawley', status: 'c & b Rashid Khan', runs: 28, balls: 18, fours: 4, sixes: 1, active: false },
+    { name: 'Ben Duckett', status: 'lbw b Rashid Khan', runs: 15, balls: 11, fours: 2, sixes: 0, active: false },
+    { name: 'Harry Brook', status: 'c Smith b Starc', runs: 34, balls: 22, fours: 3, sixes: 2, active: false },
+  ]);
+
+  const [yetToBatBatsmen, setYetToBatBatsmen] = useState<any[]>([
+    { name: 'Ben Stokes', status: 'yet to bat', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
+    { name: 'Jos Buttler', status: 'yet to bat', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
+    { name: 'Moeen Ali', status: 'yet to bat', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
+    { name: 'Chris Woakes', status: 'yet to bat', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
+  ]);
+
+  const [otherBowlers, setOtherBowlers] = useState<any[]>([
+    { name: 'Mitchell Starc', overs: 4, ballsInOver: 0, maidens: 0, runs: 35, wickets: 1 },
+    { name: 'Jofra Archer', overs: 4, ballsInOver: 0, maidens: 1, runs: 22, wickets: 2 },
+    { name: 'Adil Rashid', overs: 3, ballsInOver: 0, maidens: 0, runs: 28, wickets: 0 },
+  ]);
+
+  // Form edit states
+  const [b1Name, setB1Name] = useState('');
+  const [b1Runs, setB1Runs] = useState('');
+  const [b1Balls, setB1Balls] = useState('');
+  const [b1Fours, setB1Fours] = useState('');
+  const [b1Sixes, setB1Sixes] = useState('');
+
+  const [b2Name, setB2Name] = useState('');
+  const [b2Runs, setB2Runs] = useState('');
+  const [b2Balls, setB2Balls] = useState('');
+  const [b2Fours, setB2Fours] = useState('');
+  const [b2Sixes, setB2Sixes] = useState('');
+
+  const [bowlName, setBowlName] = useState('');
+  const [bowlOvers, setBowlOvers] = useState('');
+  const [bowlRuns, setBowlRuns] = useState('');
+  const [bowlWickets, setBowlWickets] = useState('');
+  const [bowlMaidens, setBowlMaidens] = useState('');
+
+  // Replacement/Retire sub-state inside edit modal
+  const [actionTarget, setActionTarget] = useState<{ type: 'retire' | 'replace' | 'bowler'; batsmanIndex?: number } | null>(null);
+  const [customNewName, setCustomNewName] = useState('');
 
   const handleSwapStrike = () => {
     // Save history for undo support
@@ -80,25 +125,294 @@ export default function CricketScoring() {
 
   const getFullBatsmenScorecard = () => {
     return [
-      { name: 'Zak Crawley', status: 'c & b Rashid Khan', runs: 28, balls: 18, fours: 4, sixes: 1, active: false },
-      { name: 'Ben Duckett', status: 'lbw b Rashid Khan', runs: 15, balls: 11, fours: 2, sixes: 0, active: false },
-      { name: 'Harry Brook', status: 'c Smith b Starc', runs: 34, balls: 22, fours: 3, sixes: 2, active: false },
+      ...dismissedBatsmen,
       { ...batsmen[0], status: 'not out' },
       { ...batsmen[1], status: 'not out' },
-      { name: 'Ben Stokes', status: 'yet to bat', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
-      { name: 'Jos Buttler', status: 'yet to bat', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
-      { name: 'Moeen Ali', status: 'yet to bat', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
-      { name: 'Chris Woakes', status: 'yet to bat', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
+      ...yetToBatBatsmen,
     ];
   };
 
   const getFullBowlerScorecard = () => {
     return [
       { ...bowler, active: true },
-      { name: 'Mitchell Starc', overs: 4, ballsInOver: 0, maidens: 0, runs: 35, wickets: 1, active: false },
-      { name: 'Jofra Archer', overs: 4, ballsInOver: 0, maidens: 1, runs: 22, wickets: 2, active: false },
-      { name: 'Adil Rashid', overs: 3, ballsInOver: 0, maidens: 0, runs: 28, wickets: 0, active: false },
+      ...otherBowlers.map(b => ({ ...b, active: false })),
     ];
+  };
+
+  // Helper Player Management Handlers
+  const openEditPlayersModal = () => {
+    setB1Name(batsmen[0]?.name || '');
+    setB1Runs(String(batsmen[0]?.runs || 0));
+    setB1Balls(String(batsmen[0]?.balls || 0));
+    setB1Fours(String(batsmen[0]?.fours || 0));
+    setB1Sixes(String(batsmen[0]?.sixes || 0));
+
+    setB2Name(batsmen[1]?.name || '');
+    setB2Runs(String(batsmen[1]?.runs || 0));
+    setB2Balls(String(batsmen[1]?.balls || 0));
+    setB2Fours(String(batsmen[1]?.fours || 0));
+    setB2Sixes(String(batsmen[1]?.sixes || 0));
+
+    setBowlName(bowler.name || '');
+    setBowlOvers(String(bowler.overs || 0));
+    setBowlRuns(String(bowler.runs || 0));
+    setBowlWickets(String(bowler.wickets || 0));
+    setBowlMaidens(String(bowler.maidens || 0));
+
+    setActionTarget(null);
+    setCustomNewName('');
+    setShowEditPlayersModal(true);
+  };
+
+  const savePlayersEdit = () => {
+    const oldState = {
+      runs,
+      wickets,
+      overs,
+      ballsInCurrentOver,
+      overLog: [...overLog],
+      batsmen: batsmen.map(b => ({ ...b })),
+      bowler: { ...bowler },
+    };
+    setHistory(prev => [...prev, oldState]);
+
+    setBatsmen([
+      {
+        name: b1Name,
+        runs: parseInt(b1Runs) || 0,
+        balls: parseInt(b1Balls) || 0,
+        fours: parseInt(b1Fours) || 0,
+        sixes: parseInt(b1Sixes) || 0,
+        active: batsmen[0]?.active ?? true,
+      },
+      {
+        name: b2Name,
+        runs: parseInt(b2Runs) || 0,
+        balls: parseInt(b2Balls) || 0,
+        fours: parseInt(b2Fours) || 0,
+        sixes: parseInt(b2Sixes) || 0,
+        active: batsmen[1]?.active ?? false,
+      },
+    ]);
+
+    setBowler(prev => ({
+      ...prev,
+      name: bowlName,
+      overs: parseInt(bowlOvers) || 0,
+      maidens: parseInt(bowlMaidens) || 0,
+      runs: parseInt(bowlRuns) || 0,
+      wickets: parseInt(bowlWickets) || 0,
+    }));
+
+    setShowEditPlayersModal(false);
+  };
+
+  const executeRetire = (type: 'Retired Hurt' | 'Retired Out', replacementName: string) => {
+    if (!replacementName.trim()) {
+      Alert.alert('Error', 'Please select or enter a replacement name.');
+      return;
+    }
+    const idx = actionTarget?.batsmanIndex;
+    if (idx === undefined) return;
+
+    const oldState = {
+      runs,
+      wickets,
+      overs,
+      ballsInCurrentOver,
+      overLog: [...overLog],
+      batsmen: batsmen.map(b => ({ ...b })),
+      bowler: { ...bowler },
+      dismissedBatsmen: dismissedBatsmen.map(db => ({ ...db })),
+      yetToBatBatsmen: yetToBatBatsmen.map(y => ({ ...y })),
+    };
+    setHistory(prev => [...prev, oldState]);
+
+    const retiringPlayer = batsmen[idx];
+
+    setDismissedBatsmen(prev => [
+      ...prev,
+      {
+        name: retiringPlayer.name,
+        status: type,
+        runs: retiringPlayer.runs,
+        balls: retiringPlayer.balls,
+        fours: retiringPlayer.fours,
+        sixes: retiringPlayer.sixes,
+      }
+    ]);
+
+    const isFromSquad = yetToBatBatsmen.find(p => p.name.toLowerCase() === replacementName.toLowerCase());
+    if (isFromSquad) {
+      setYetToBatBatsmen(prev => prev.filter(p => p.name.toLowerCase() !== replacementName.toLowerCase()));
+    }
+
+    setBatsmen(prev => {
+      const next = [...prev];
+      next[idx] = {
+        name: replacementName.trim(),
+        runs: 0,
+        balls: 0,
+        fours: 0,
+        sixes: 0,
+        active: retiringPlayer.active,
+      };
+      return next;
+    });
+
+    if (idx === 0) {
+      setB1Name(replacementName.trim());
+      setB1Runs('0');
+      setB1Balls('0');
+      setB1Fours('0');
+      setB1Sixes('0');
+    } else {
+      setB2Name(replacementName.trim());
+      setB2Runs('0');
+      setB2Balls('0');
+      setB2Fours('0');
+      setB2Sixes('0');
+    }
+
+    setActionTarget(null);
+    setCustomNewName('');
+  };
+
+  const executeReplaceBatsman = (replacementName: string) => {
+    if (!replacementName.trim()) {
+      Alert.alert('Error', 'Please select or enter a replacement name.');
+      return;
+    }
+    const idx = actionTarget?.batsmanIndex;
+    if (idx === undefined) return;
+
+    const oldState = {
+      runs,
+      wickets,
+      overs,
+      ballsInCurrentOver,
+      overLog: [...overLog],
+      batsmen: batsmen.map(b => ({ ...b })),
+      bowler: { ...bowler },
+      yetToBatBatsmen: yetToBatBatsmen.map(y => ({ ...y })),
+    };
+    setHistory(prev => [...prev, oldState]);
+
+    const swappedPlayer = batsmen[idx];
+
+    setYetToBatBatsmen(prev => [
+      ...prev,
+      {
+        name: swappedPlayer.name,
+        status: 'yet to bat',
+        runs: swappedPlayer.runs,
+        balls: swappedPlayer.balls,
+        fours: swappedPlayer.fours,
+        sixes: swappedPlayer.sixes,
+      }
+    ]);
+
+    const isFromSquad = yetToBatBatsmen.find(p => p.name.toLowerCase() === replacementName.toLowerCase());
+    if (isFromSquad) {
+      setYetToBatBatsmen(prev => prev.filter(p => p.name.toLowerCase() !== replacementName.toLowerCase()));
+    }
+
+    setBatsmen(prev => {
+      const next = [...prev];
+      next[idx] = {
+        name: replacementName.trim(),
+        runs: 0,
+        balls: 0,
+        fours: 0,
+        sixes: 0,
+        active: swappedPlayer.active,
+      };
+      return next;
+    });
+
+    if (idx === 0) {
+      setB1Name(replacementName.trim());
+      setB1Runs('0');
+      setB1Balls('0');
+      setB1Fours('0');
+      setB1Sixes('0');
+    } else {
+      setB2Name(replacementName.trim());
+      setB2Runs('0');
+      setB2Balls('0');
+      setB2Fours('0');
+      setB2Sixes('0');
+    }
+
+    setActionTarget(null);
+    setCustomNewName('');
+  };
+
+  const executeReplaceBowler = (replacementName: string) => {
+    if (!replacementName.trim()) {
+      Alert.alert('Error', 'Please select or enter a bowler name.');
+      return;
+    }
+
+    const oldState = {
+      runs,
+      wickets,
+      overs,
+      ballsInCurrentOver,
+      overLog: [...overLog],
+      batsmen: batsmen.map(b => ({ ...b })),
+      bowler: { ...bowler },
+      otherBowlers: otherBowlers.map(ob => ({ ...ob })),
+    };
+    setHistory(prev => [...prev, oldState]);
+
+    const oldBowler = bowler;
+
+    setOtherBowlers(prev => [
+      ...prev,
+      {
+        name: oldBowler.name,
+        overs: oldBowler.overs,
+        ballsInOver: oldBowler.ballsInOver,
+        maidens: oldBowler.maidens,
+        runs: oldBowler.runs,
+        wickets: oldBowler.wickets,
+      }
+    ]);
+
+    const isFromBench = otherBowlers.find(p => p.name.toLowerCase() === replacementName.toLowerCase());
+    let newBowlerObj: Bowler;
+    if (isFromBench) {
+      setOtherBowlers(prev => prev.filter(p => p.name.toLowerCase() !== replacementName.toLowerCase()));
+      newBowlerObj = {
+        name: isFromBench.name,
+        overs: isFromBench.overs,
+        ballsInOver: isFromBench.ballsInOver || 0,
+        maidens: isFromBench.maidens || 0,
+        runs: isFromBench.runs || 0,
+        wickets: isFromBench.wickets || 0,
+      };
+    } else {
+      newBowlerObj = {
+        name: replacementName.trim(),
+        overs: 0,
+        ballsInOver: 0,
+        maidens: 0,
+        runs: 0,
+        wickets: 0,
+      };
+    }
+
+    setBowler(newBowlerObj);
+
+    setBowlName(newBowlerObj.name);
+    setBowlOvers(String(newBowlerObj.overs));
+    setBowlRuns(String(newBowlerObj.runs));
+    setBowlWickets(String(newBowlerObj.wickets));
+    setBowlMaidens(String(newBowlerObj.maidens));
+
+    setActionTarget(null);
+    setCustomNewName('');
   };
 
   // Helper Stats Calcs
@@ -313,10 +627,10 @@ export default function CricketScoring() {
           <View style={styles.bannerRow}>
             <View style={styles.bannerLeftCol}>
               <ThemedText type="headlineLg" style={styles.teamTitle}>
-                London Lions
+                {teamA}
               </ThemedText>
               <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer }}>
-                vs Kent Kings
+                vs {teamB}
               </ThemedText>
             </View>
 
@@ -434,7 +748,9 @@ export default function CricketScoring() {
               <Pressable onPress={() => setShowBatsmenModal(true)}>
                 <Ionicons name="list-outline" size={16} color={theme.text} />
               </Pressable>
-              <Ionicons name="create-outline" size={16} color={theme.text} />
+              <Pressable onPress={openEditPlayersModal}>
+                <Ionicons name="create-outline" size={16} color={theme.text} />
+              </Pressable>
             </View>
           </View>
 
@@ -505,9 +821,14 @@ export default function CricketScoring() {
           <View style={[styles.tableHeader, { backgroundColor: theme.surfaceLow }]}>
             <ThemedText type="labelMd" style={{ color: theme.text }}>Current Bowler</ThemedText>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Ionicons name="swap-horizontal-outline" size={16} color={theme.text} />
+              <Pressable onPress={() => { openEditPlayersModal(); setActionTarget({ type: 'bowler' }); }}>
+                <Ionicons name="swap-horizontal-outline" size={16} color={theme.text} />
+              </Pressable>
               <Pressable onPress={() => setShowBowlersModal(true)}>
                 <Ionicons name="list-outline" size={16} color={theme.text} />
+              </Pressable>
+              <Pressable onPress={openEditPlayersModal}>
+                <Ionicons name="create-outline" size={16} color={theme.text} />
               </Pressable>
             </View>
           </View>
@@ -963,6 +1284,354 @@ export default function CricketScoring() {
           </View>
         </View>
       </Modal>
+
+      {/* Edit Players Modal */}
+      <Modal
+        visible={showEditPlayersModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowEditPlayersModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowEditPlayersModal(false)} />
+          <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText type="headlineSm" style={{ color: theme.text }}>Manage Match Players</ThemedText>
+              <Pressable onPress={() => setShowEditPlayersModal(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={20} color={theme.text} />
+              </Pressable>
+            </View>
+
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScrollContent}>
+              
+              {/* Inline replacement options */}
+              {actionTarget !== null && (
+                <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outline, borderWidth: 1.5, marginBottom: 16, padding: 12 }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                      {actionTarget.type === 'retire' ? 'RETIRE & REPLACE BATSMAN' : actionTarget.type === 'replace' ? 'SUBSTITUTE BATSMAN' : 'CHANGE BOWLER'}
+                    </ThemedText>
+                    <Pressable onPress={() => setActionTarget(null)}>
+                      <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+                    </Pressable>
+                  </View>
+
+                  {actionTarget.type === 'retire' && (
+                    <View style={{ marginBottom: 12 }}>
+                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 4 }}>Select Dismissal Type:</ThemedText>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        {['Retired Hurt', 'Retired Out'].map((type) => (
+                          <Pressable
+                            key={type}
+                            onPress={() => executeRetire(type as any, customNewName || 'New Batsman')}
+                            style={[styles.subOptionBtn, { backgroundColor: theme.surfaceLow }]}
+                          >
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>{type}</ThemedText>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Selection lists (Chips) */}
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 6 }}>
+                    Select from squad bench:
+                  </ThemedText>
+                  
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
+                    {actionTarget.type === 'bowler' ? (
+                      otherBowlers.map((b) => (
+                        <Pressable
+                          key={b.name}
+                          onPress={() => {
+                            executeReplaceBowler(b.name);
+                          }}
+                          style={[styles.squadChip, { backgroundColor: theme.surfaceLow }]}
+                        >
+                          <ThemedText style={{ fontSize: 11, color: theme.text }}>{b.name}</ThemedText>
+                        </Pressable>
+                      ))
+                    ) : (
+                      yetToBatBatsmen.map((b) => (
+                        <Pressable
+                          key={b.name}
+                          onPress={() => {
+                            if (actionTarget.type === 'retire') {
+                              executeRetire('Retired Hurt', b.name);
+                            } else {
+                              executeReplaceBatsman(b.name);
+                            }
+                          }}
+                          style={[styles.squadChip, { backgroundColor: theme.surfaceLow }]}
+                        >
+                          <ThemedText style={{ fontSize: 11, color: theme.text }}>{b.name}</ThemedText>
+                        </Pressable>
+                      ))
+                    )}
+                    {((actionTarget.type === 'bowler' ? otherBowlers : yetToBatBatsmen).length === 0) && (
+                      <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontStyle: 'italic', paddingVertical: 4 }}>No players available on bench.</ThemedText>
+                    )}
+                  </ScrollView>
+
+                  {/* Direct Custom Type-in Input */}
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 6 }}>
+                    Or enter custom name (without list):
+                  </ThemedText>
+                  
+                  <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                    <TextInput
+                      style={[styles.modalInput, { flex: 1, color: theme.text, borderColor: theme.outlineVariant, marginBottom: 0 }]}
+                      value={customNewName}
+                      onChangeText={setCustomNewName}
+                      placeholder="E.g. Virat Kohli"
+                      placeholderTextColor={theme.textSecondary + '70'}
+                    />
+                    <Pressable
+                      onPress={() => {
+                        if (!customNewName.trim()) {
+                          Alert.alert('Error', 'Please enter a name.');
+                          return;
+                        }
+                        if (actionTarget.type === 'bowler') {
+                          executeReplaceBowler(customNewName);
+                        } else if (actionTarget.type === 'retire') {
+                          executeRetire('Retired Hurt', customNewName);
+                        } else {
+                          executeReplaceBatsman(customNewName);
+                        }
+                      }}
+                      style={[styles.addBtn, { backgroundColor: theme.primary }]}
+                    >
+                      <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Add & Set</ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+
+              {/* BATSMEN MANAGEMENT SECTION */}
+              <ThemedText type="labelMd" style={{ color: theme.primary, marginBottom: 10, letterSpacing: 0.5 }}>
+                ACTIVE BATSMEN
+              </ThemedText>
+
+              {/* Batsman 1 */}
+              <View style={[styles.card, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33', marginBottom: 12 }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <ThemedText type="labelMd" style={{ color: theme.text }}>
+                    Batsman 1 {batsmen[0]?.active ? '🏏 (On Strike)' : '(Non-Strike)'}
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <Pressable
+                      onPress={() => setActionTarget({ type: 'replace', batsmanIndex: 0 })}
+                      style={[styles.smallActionChip, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}
+                    >
+                      <ThemedText style={{ fontSize: 10, color: theme.text }}>Swap/Sub</ThemedText>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setActionTarget({ type: 'retire', batsmanIndex: 0 })}
+                      style={[styles.smallActionChip, { backgroundColor: theme.error + '22', borderColor: theme.error + '44' }]}
+                    >
+                      <ThemedText style={{ fontSize: 10, color: theme.error }}>Retire</ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+                <TextInput
+                  style={[styles.modalInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                  value={b1Name}
+                  onChangeText={setB1Name}
+                  placeholder="Player Name"
+                  placeholderTextColor={theme.textSecondary + '70'}
+                />
+                <View style={styles.statsEditRow}>
+                  <View style={styles.statEditCol}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Runs</ThemedText>
+                    <TextInput
+                      style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                      value={b1Runs}
+                      onChangeText={setB1Runs}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.statEditCol}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Balls</ThemedText>
+                    <TextInput
+                      style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                      value={b1Balls}
+                      onChangeText={setB1Balls}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.statEditCol}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4s</ThemedText>
+                    <TextInput
+                      style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                      value={b1Fours}
+                      onChangeText={setB1Fours}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.statEditCol}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>6s</ThemedText>
+                    <TextInput
+                      style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                      value={b1Sixes}
+                      onChangeText={setB1Sixes}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* Batsman 2 */}
+              <View style={[styles.card, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33', marginBottom: 12 }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <ThemedText type="labelMd" style={{ color: theme.text }}>
+                    Batsman 2 {batsmen[1]?.active ? '🏏 (On Strike)' : '(Non-Strike)'}
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <Pressable
+                      onPress={() => setActionTarget({ type: 'replace', batsmanIndex: 1 })}
+                      style={[styles.smallActionChip, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}
+                    >
+                      <ThemedText style={{ fontSize: 10, color: theme.text }}>Swap/Sub</ThemedText>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setActionTarget({ type: 'retire', batsmanIndex: 1 })}
+                      style={[styles.smallActionChip, { backgroundColor: theme.error + '22', borderColor: theme.error + '44' }]}
+                    >
+                      <ThemedText style={{ fontSize: 10, color: theme.error }}>Retire</ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+                <TextInput
+                  style={[styles.modalInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                  value={b2Name}
+                  onChangeText={setB2Name}
+                  placeholder="Player Name"
+                  placeholderTextColor={theme.textSecondary + '70'}
+                />
+                <View style={styles.statsEditRow}>
+                  <View style={styles.statEditCol}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Runs</ThemedText>
+                    <TextInput
+                      style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                      value={b2Runs}
+                      onChangeText={setB2Runs}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.statEditCol}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Balls</ThemedText>
+                    <TextInput
+                      style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                      value={b2Balls}
+                      onChangeText={setB2Balls}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.statEditCol}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4s</ThemedText>
+                    <TextInput
+                      style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                      value={b2Fours}
+                      onChangeText={setB2Fours}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.statEditCol}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>6s</ThemedText>
+                    <TextInput
+                      style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                      value={b2Sixes}
+                      onChangeText={setB2Sixes}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* BOWLER MANAGEMENT SECTION */}
+              <ThemedText type="labelMd" style={{ color: theme.primary, marginTop: 8, marginBottom: 10, letterSpacing: 0.5 }}>
+                CURRENT BOWLER
+              </ThemedText>
+
+              <View style={[styles.card, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33', marginBottom: 16 }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <ThemedText type="labelMd" style={{ color: theme.text }}>
+                    Active Bowler
+                  </ThemedText>
+                  <Pressable
+                    onPress={() => setActionTarget({ type: 'bowler' })}
+                    style={[styles.smallActionChip, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}
+                  >
+                    <ThemedText style={{ fontSize: 10, color: theme.text }}>Change Bowler</ThemedText>
+                  </Pressable>
+                </View>
+                <TextInput
+                  style={[styles.modalInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                  value={bowlName}
+                  onChangeText={setBowlName}
+                  placeholder="Bowler Name"
+                  placeholderTextColor={theme.textSecondary + '70'}
+                />
+                <View style={styles.statsEditRow}>
+                  <View style={styles.statEditCol}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Overs</ThemedText>
+                    <TextInput
+                      style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                      value={bowlOvers}
+                      onChangeText={setBowlOvers}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.statEditCol}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Maidens</ThemedText>
+                    <TextInput
+                      style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                      value={bowlMaidens}
+                      onChangeText={setBowlMaidens}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.statEditCol}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Runs</ThemedText>
+                    <TextInput
+                      style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                      value={bowlRuns}
+                      onChangeText={setBowlRuns}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={styles.statEditCol}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Wickets</ThemedText>
+                    <TextInput
+                      style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
+                      value={bowlWickets}
+                      onChangeText={setBowlWickets}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* SAVE / CANCEL ACTION BUTTONS */}
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
+                <Pressable
+                  onPress={() => setShowEditPlayersModal(false)}
+                  style={[styles.cancelBtn, { borderColor: theme.outlineVariant }]}
+                >
+                  <ThemedText type="labelMd" style={{ color: theme.textSecondary }}>Cancel</ThemedText>
+                </Pressable>
+                <Pressable
+                  onPress={savePlayersEdit}
+                  style={[styles.saveBtn, { backgroundColor: theme.primary }]}
+                >
+                  <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Save Changes</ThemedText>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -1263,5 +1932,73 @@ const styles = StyleSheet.create({
   },
   modalScrollContent: {
     paddingBottom: 80,
+  },
+  modalInput: {
+    height: 38,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: 10,
+    fontSize: 13,
+    marginBottom: 10,
+    fontFamily: 'PlusJakartaSans_500Medium',
+  },
+  statsEditRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  statEditCol: {
+    flex: 1,
+  },
+  statInput: {
+    height: 32,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    textAlign: 'center',
+    fontSize: 12,
+    marginTop: 4,
+    fontFamily: 'PlusJakartaSans_500Medium',
+  },
+  smallActionChip: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  cancelBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: BorderRadius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  squadChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  subOptionBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addBtn: {
+    paddingHorizontal: 14,
+    height: 38,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

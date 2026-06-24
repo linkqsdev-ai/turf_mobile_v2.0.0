@@ -1,10 +1,11 @@
 import { ThemedText } from '@/components/themed-text';
-import { Shadows, Spacing } from '@/constants/theme';
+import { Shadows, Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,20 +13,21 @@ import {
   View,
 } from 'react-native';
 
-const SPORTS = ['Football', 'Cricket', 'Tennis'];
+import { SPORTS_LIST } from '@/constants/sports';
+
 const BID_AMOUNTS = [50, 100, 200, 500];
 
 const TEAMS = [
-  { id: '1', name: 'Weekend Warriors', short: 'WW', winRate: 82, rating: 4.8, matches: 45 },
-  { id: '2', name: 'FC Thunder', short: 'FCT', winRate: 68, rating: 4.5, matches: 32 },
-  { id: '3', name: 'Neon Knights', short: 'NNK', winRate: 91, rating: 4.9, matches: 128 },
-  { id: '4', name: 'Urban Legends', short: 'URL', winRate: 54, rating: 4.2, matches: 15 },
+  { id: '1', name: 'Weekend Warriors', short: 'WW', image: require('@/assets/images/mascots/warrior.png'), winRate: 82, rating: 4.8, matches: 45 },
+  { id: '2', name: 'FC Thunder', short: 'FCT', image: require('@/assets/images/mascots/eagle.png'), winRate: 68, rating: 4.5, matches: 32 },
+  { id: '3', name: 'Neon Knights', short: 'NNK', image: require('@/assets/images/mascots/panther.png'), winRate: 91, rating: 4.9, matches: 128 },
+  { id: '4', name: 'Urban Legends', short: 'URL', image: require('@/assets/images/mascots/tiger.png'), winRate: 54, rating: 4.2, matches: 15 },
 ];
 
 export function BidMatchTab() {
   const theme = useTheme();
-  const [matchType, setMatchType] = useState<'open' | 'friend'>('open');
   const [bidAmount, setBidAmount] = useState(100);
+  const [customBid, setCustomBid] = useState('');
   const [selectedSport, setSelectedSport] = useState('Football');
   const [searchText, setSearchText] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
@@ -37,39 +39,41 @@ export function BidMatchTab() {
     t.name.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const handleAction = () => {
-    if (matchType === 'friend' && !selectedTeam) {
+  const handleAction = (type: 'open' | 'friend') => {
+    if (type === 'friend' && !selectedTeam) {
       return Alert.alert('Required', 'Please select an opponent team to challenge.');
     }
-    const teamName = matchType === 'friend' ? TEAMS.find(t => t.id === selectedTeam)?.name : '';
+    const amount = bidAmount || parseInt(customBid, 10) || 0;
+    if (amount <= 0) {
+      return Alert.alert('Required', 'Please enter a valid bid amount.');
+    }
+
+    const teamName = type === 'friend' ? TEAMS.find(t => t.id === selectedTeam)?.name : '';
     Alert.alert(
       'Success',
-      matchType === 'open'
-        ? `Broadcast Bid for ${selectedSport} with ${bidAmount} coins has been published!`
-        : `Challenge sent to ${teamName} for ${selectedSport} with ${bidAmount} coins!`
+      type === 'open'
+        ? `Broadcast Bid for ${selectedSport} with ₹${amount} has been published!`
+        : `Challenge sent to ${teamName} for ${selectedSport} with ₹${amount}!`
     );
   };
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.scroll}
-      style={{ backgroundColor: '#f7f9fb' }}
-      bounces={false}
-    >
-      {/* ── Stakes Header (Technical Navy) ─────────────── */}
-      <View style={styles.stakeHeader}>
+    <View style={[styles.container, { paddingBottom: 85 }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+        style={styles.scrollArea}
+        bounces={false}
+      >
+      {/* ── Stakes Header (Primary Container) ─────────────── */}
+      <View style={[styles.stakeHeader, { backgroundColor: theme.primaryContainer }]}>
         <View style={styles.stakeTop}>
           <View>
-            <ThemedText style={styles.stakeLabel}>STAKE</ThemedText>
+            <ThemedText style={[styles.stakeLabel, { color: theme.onPrimaryContainer + 'b0' }]}>BID</ThemedText>
             <View style={styles.amountRow}>
-              <ThemedText style={styles.stakeAmount}>{bidAmount}</ThemedText>
-              <ThemedText style={styles.stakeUnit}>coins</ThemedText>
+              <ThemedText style={[styles.stakeAmount, { color: theme.onPrimaryContainer }]}>{bidAmount || customBid || 0}</ThemedText>
+              <ThemedText style={[styles.stakeUnit, { color: theme.primary }]}>Rupees</ThemedText>
             </View>
-          </View>
-          <View style={styles.balanceWrap}>
-            <FontAwesome5 name="coins" size={10} color="#ffc703" />
-            <ThemedText style={styles.balanceText}>Balance: 850</ThemedText>
           </View>
         </View>
 
@@ -80,19 +84,22 @@ export function BidMatchTab() {
             return (
               <Pressable
                 key={amt}
-                onPress={() => setBidAmount(amt)}
+                onPress={() => {
+                  setBidAmount(amt);
+                  setCustomBid('');
+                }}
                 style={[
                   styles.bidChip,
                   isActive
-                    ? { backgroundColor: '#ffc703', borderColor: '#ffc703' }
-                    : { backgroundColor: 'rgba(255, 255, 255, 0.08)', borderColor: 'rgba(255, 255, 255, 0.15)' }
+                    ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                    : { backgroundColor: theme.onPrimaryContainer + '11', borderColor: theme.onPrimaryContainer + '22' }
                 ]}
               >
                 <ThemedText
                   style={{
                     fontSize: 12,
                     fontFamily: isActive ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_500Medium',
-                    color: isActive ? '#594400' : '#cbd5e1',
+                    color: isActive ? '#ffffff' : theme.onPrimaryContainer,
                   }}
                 >
                   {amt}
@@ -100,210 +107,184 @@ export function BidMatchTab() {
               </Pressable>
             );
           })}
+          <TextInput
+            style={[styles.bidChip, { color: theme.onPrimaryContainer, borderColor: theme.onPrimaryContainer + '22', fontFamily: 'HankenGrotesk_500Medium', fontSize: 12, textAlign: 'center' }]}
+            placeholder="Custom"
+            placeholderTextColor={theme.onPrimaryContainer + '60'}
+            keyboardType="number-pad"
+            value={customBid}
+            onChangeText={(val) => {
+              setCustomBid(val);
+              setBidAmount(0); // Clear preset selection when custom is typed
+            }}
+            onFocus={() => { setBidAmount(0); }}
+          />
         </View>
       </View>
 
       {/* ── Form Body Bento Card ────────────────────────── */}
-      <View style={[styles.bentoCard, Shadows.level2]}>
-
-        {/* Match type toggle */}
-        <View style={styles.inputGroup}>
-          <ThemedText style={styles.fieldLabel}>CHALLENGE TYPE</ThemedText>
-          <View style={styles.toggleContainer}>
-            {(['open', 'friend'] as const).map((t) => {
-              const isActive = matchType === t;
-              const label = t === 'open' ? 'Open Bid' : 'Friend Match';
-              const icon = t === 'open' ? 'public' : 'group';
-              return (
-                <Pressable
-                  key={t}
-                  onPress={() => setMatchType(t)}
-                  style={[
-                    styles.toggleBtn,
-                    isActive
-                      ? { backgroundColor: '#001b3d' }
-                      : { backgroundColor: 'transparent' }
-                  ]}
-                >
-                  <MaterialIcons
-                    name={icon as any}
-                    size={14}
-                    color={isActive ? '#ffffff' : '#74777f'}
-                  />
-                  <ThemedText
-                    style={[
-                      styles.toggleBtnText,
-                      { color: isActive ? '#ffffff' : '#74777f' }
-                    ]}
-                  >
-                    {label}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={styles.formDivider} />
+      <View style={[styles.bentoCard, Shadows.level2, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }]}>
 
         {/* Sport selection */}
         <View style={styles.inputGroup}>
-          <ThemedText style={styles.fieldLabel}>SPORT</ThemedText>
-          <View style={styles.sportList}>
-            {SPORTS.map((s) => {
-              const isActive = selectedSport === s;
+          <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Sport</ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sportList}>
+            {SPORTS_LIST.map((sport) => {
+              const isActive = selectedSport === sport.name;
               return (
                 <Pressable
-                  key={s}
-                  onPress={() => setSelectedSport(s)}
+                  key={sport.name}
+                  onPress={() => setSelectedSport(sport.name)}
                   style={[
-                    styles.sportPill,
-                    isActive
-                      ? { backgroundColor: '#001b3d', borderColor: '#001b3d' }
-                      : { backgroundColor: '#ffffff', borderColor: '#c4c6cf' }
+                    styles.sportChip,
+                    { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+                    isActive && { backgroundColor: theme.primary, borderColor: theme.primary },
                   ]}
                 >
+                  <MaterialIcons
+                    name={sport.icon as any}
+                    size={12}
+                    color={isActive ? '#ffffff' : theme.textSecondary}
+                  />
                   <ThemedText
                     style={[
-                      styles.sportPillText,
-                      { color: isActive ? '#ffffff' : '#44474e' }
+                      styles.sportChipText,
+                      { color: theme.textSecondary },
+                      isActive && { color: '#ffffff' }
                     ]}
                   >
-                    {s}
+                    {sport.name}
                   </ThemedText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        <View style={[styles.formDivider, { backgroundColor: theme.outlineVariant + '44' }]} />
+
+        {/* Team list */}
+        <View style={styles.inputGroup}>
+          <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Find a Team</ThemedText>
+
+          {/* Search Box */}
+          <View
+            style={[
+              styles.searchBar,
+              { backgroundColor: theme.surfaceLow, borderColor: isSearchFocused ? theme.primary : theme.outlineVariant + '44' }
+            ]}
+          >
+            <Ionicons name="search" size={14} color={theme.textSecondary} />
+            <TextInput
+              style={[styles.searchInput, { color: theme.text }]}
+              placeholder="Search by team name..."
+              placeholderTextColor={theme.textSecondary + '80'}
+              value={searchText}
+              onChangeText={setSearchText}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+            />
+          </View>
+
+          {/* Team list */}
+          <View style={[styles.teamListContainer, { borderColor: theme.outlineVariant + '44', backgroundColor: theme.surfaceLowest }]}>
+            {filteredTeams.map((team, idx) => {
+              const isSelected = selectedTeam === team.id;
+              return (
+                <Pressable
+                  key={team.id}
+                  onPress={() => setSelectedTeam(team.id)}
+                  style={[
+                    styles.teamRow,
+                    isSelected && { backgroundColor: theme.surfaceLow },
+                    idx > 0 && { borderTopWidth: 1, borderTopColor: theme.outlineVariant + '44' }
+                  ]}
+                >
+                  {/* Monogram Crest */}
+                  <View
+                    style={[
+                      styles.teamMonogram,
+                      {
+                        backgroundColor: isSelected ? theme.primary + '11' : theme.surfaceLow,
+                        borderColor: isSelected ? theme.primary : theme.outlineVariant + '44',
+                        overflow: 'hidden'
+                      }
+                    ]}
+                  >
+                    <Image source={team.image} style={{ width: '100%', height: '100%' }} />
+                  </View>
+
+                  {/* Info */}
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={[styles.teamNameText, { color: theme.text }]}>{team.name}</ThemedText>
+                    <View style={styles.teamStatsRow}>
+                      <View style={styles.ratingBox}>
+                        <Ionicons name="star" size={10} color={theme.secondary} />
+                        <ThemedText style={[styles.ratingText, { color: theme.secondary }]}>{team.rating}</ThemedText>
+                      </View>
+                      <ThemedText style={[styles.statsDot, { color: theme.textSecondary }]}>·</ThemedText>
+                      <ThemedText style={[styles.statsText, { color: theme.textSecondary }]}>{team.winRate}% wins</ThemedText>
+                      <ThemedText style={[styles.statsDot, { color: theme.textSecondary }]}>·</ThemedText>
+                      <ThemedText style={[styles.statsText, { color: theme.textSecondary }]}>{team.matches} matches</ThemedText>
+                    </View>
+                  </View>
+
+                  {/* Selector */}
+                  {isSelected ? (
+                    <Ionicons name="checkmark-circle" size={18} color={theme.primary} />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={14} color={theme.outlineVariant} />
+                  )}
                 </Pressable>
               );
             })}
           </View>
         </View>
 
-        {/* Team list (only in friend mode) */}
-        {matchType === 'friend' && (
-          <>
-            <View style={styles.formDivider} />
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.fieldLabel}>FIND A TEAM</ThemedText>
-
-              {/* Search Box */}
-              <View
-                style={[
-                  styles.searchBar,
-                  { borderColor: isSearchFocused ? '#001b3d' : '#c4c6cf' }
-                ]}
-              >
-                <Ionicons name="search" size={14} color="#74777f" />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search by team name..."
-                  placeholderTextColor="#74777f80"
-                  value={searchText}
-                  onChangeText={setSearchText}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setIsSearchFocused(false)}
-                />
-              </View>
-
-              {/* Team list */}
-              <View style={styles.teamListContainer}>
-                {filteredTeams.map((team, idx) => {
-                  const isSelected = selectedTeam === team.id;
-                  return (
-                    <Pressable
-                      key={team.id}
-                      onPress={() => setSelectedTeam(team.id)}
-                      style={[
-                        styles.teamRow,
-                        isSelected && { backgroundColor: '#f2f4f6' },
-                        idx > 0 && { borderTopWidth: 1, borderTopColor: '#eceef0' }
-                      ]}
-                    >
-                      {/* Monogram Crest */}
-                      <View
-                        style={[
-                          styles.teamMonogram,
-                          {
-                            backgroundColor: isSelected ? '#ffc70318' : '#f7f9fb',
-                            borderColor: isSelected ? '#ffc703' : '#c4c6cf'
-                          }
-                        ]}
-                      >
-                        <ThemedText
-                          style={[
-                            styles.monogramText,
-                            { color: isSelected ? '#594400' : '#44474e' }
-                          ]}
-                        >
-                          {team.short}
-                        </ThemedText>
-                      </View>
-
-                      {/* Info */}
-                      <View style={{ flex: 1 }}>
-                        <ThemedText style={styles.teamNameText}>{team.name}</ThemedText>
-                        <View style={styles.teamStatsRow}>
-                          <View style={styles.ratingBox}>
-                            <Ionicons name="star" size={10} color="#ffc703" />
-                            <ThemedText style={styles.ratingText}>{team.rating}</ThemedText>
-                          </View>
-                          <ThemedText style={styles.statsDot}>·</ThemedText>
-                          <ThemedText style={styles.statsText}>{team.winRate}% wins</ThemedText>
-                          <ThemedText style={styles.statsDot}>·</ThemedText>
-                          <ThemedText style={styles.statsText}>{team.matches} matches</ThemedText>
-                        </View>
-                      </View>
-
-                      {/* Selector */}
-                      {isSelected ? (
-                        <Ionicons name="checkmark-circle" size={18} color="#001b3d" />
-                      ) : (
-                        <Ionicons name="chevron-forward" size={14} color="#cbd5e1" />
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          </>
-        )}
-
       </View>
+      </ScrollView>
 
-      {/* ── Actions Row (Gold CTA) ────────────────────── */}
-      <View style={styles.actionsContainer}>
+      {/* ── Actions Row (Primary CTA) ────────────────────── */}
+      <View style={[styles.actionsContainer, { backgroundColor: theme.surfaceLowest }]}>
         <Pressable
-          onPress={handleAction}
-          style={[styles.primaryButton, { backgroundColor: '#ffc703' }]}
+          onPress={() => handleAction('open')}
+          style={[styles.secondaryButton, { borderColor: theme.primary, borderWidth: 1, marginBottom: 10 }]}
+        >
+          <ThemedText style={[styles.secondaryButtonText, { color: theme.primary }]}>
+            Broadcast Open Bid
+          </ThemedText>
+        </Pressable>
+        <Pressable
+          onPress={() => handleAction('friend')}
+          style={[styles.primaryButton, { backgroundColor: theme.primary, opacity: selectedTeam ? 1 : 0.5 }]}
+          disabled={!selectedTeam}
         >
           <View style={styles.btnContent}>
             <ThemedText style={styles.primaryButtonText}>
-              {matchType === 'open'
-                ? 'Broadcast Bid'
-                : selectedTeam
-                  ? 'Send Challenge'
-                  : 'Select Opponent'}
+              {selectedTeam ? 'Send Challenge' : 'Select Opponent to Challenge'}
             </ThemedText>
-            <Ionicons name="arrow-forward" size={16} color="#594400" />
+            <Ionicons name="arrow-forward" size={16} color="#ffffff" />
           </View>
         </Pressable>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1 },
+  scrollArea: { flex: 1 },
   scroll: {
-    padding: Spacing.containerMargin,
-    paddingBottom: 48,
+    padding: Spacing.md,
+    paddingBottom: Spacing.sm,
   },
 
   /* Stake Header */
   stakeHeader: {
-    backgroundColor: '#001b3d',
-    borderRadius: 8,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#001b3d',
+    borderRadius: BorderRadius.xl,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: '#1a2a33',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
@@ -339,41 +320,25 @@ const styles = StyleSheet.create({
     color: '#ffc703',
     marginBottom: 4,
   },
-  balanceWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-  balanceText: {
-    fontFamily: 'HankenGrotesk_600SemiBold',
-    fontSize: 10,
-    color: '#cbd5e1b0',
-  },
   bidRow: {
     flexDirection: 'row',
     gap: 8,
   },
   bidChip: {
     flex: 1,
-    height: 38,
-    borderWidth: 1.5,
-    borderRadius: 4, // 4px sharp radius for chips/buttons
+    height: 34,
+    borderWidth: 1,
+    borderRadius: BorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   /* Bento Card Container */
   bentoCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 32, // premium 32px borders
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    borderColor: '#e0e3e5',
-    padding: 20,
-    marginBottom: 24,
+    padding: 14,
+    marginBottom: 10,
   },
   inputGroup: {
     flexDirection: 'column',
@@ -381,92 +346,68 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontFamily: 'HankenGrotesk_700Bold',
     fontSize: 10,
-    letterSpacing: 0.8,
-    color: '#74777f',
-    marginBottom: 8,
+    letterSpacing: 0.5,
+    marginBottom: 4,
     textTransform: 'uppercase',
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f2f4f6',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e3e5',
-    padding: 3,
-    gap: 3,
-  },
-  toggleBtn: {
-    flex: 1,
-    height: 36,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 6,
-  },
-  toggleBtnText: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 12,
   },
   formDivider: {
     height: 1,
-    backgroundColor: '#eceef0',
-    marginVertical: 18,
+    marginVertical: 12,
   },
   sportList: {
     flexDirection: 'row',
-    gap: 8,
-  },
-  sportPill: {
-    flex: 1,
-    height: 36,
-    borderWidth: 1.5,
-    borderRadius: 4, // 4px border radius per shape rules
-    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 4,
   },
-  sportPillText: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 12,
+  sportChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginRight: 6,
+    justifyContent: 'center',
+  },
+  sportChipText: {
+    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontSize: 10,
+    marginLeft: 4,
   },
 
   /* Find Team Styles */
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 40,
-    borderRadius: 4,
-    borderWidth: 1.5,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
     paddingHorizontal: 10,
-    backgroundColor: '#f7f9fb',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   searchInput: {
     flex: 1,
     fontFamily: 'HankenGrotesk_500Medium',
-    fontSize: 13,
-    color: '#191c1e',
+    fontSize: 12,
     marginLeft: 8,
   },
   teamListContainer: {
     borderWidth: 1,
-    borderColor: '#e0e3e5',
-    borderRadius: 8,
+    borderRadius: BorderRadius.md,
     overflow: 'hidden',
-    backgroundColor: '#ffffff',
   },
   teamRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
   },
   teamMonogram: {
-    width: 38,
-    height: 38,
-    borderRadius: 4,
-    borderWidth: 1.5,
+    width: 34,
+    height: 34,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -476,8 +417,7 @@ const styles = StyleSheet.create({
   },
   teamNameText: {
     fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 13,
-    color: '#191c1e',
+    fontSize: 12,
   },
   teamStatsRow: {
     flexDirection: 'row',
@@ -508,17 +448,23 @@ const styles = StyleSheet.create({
   /* Actions container */
   actionsContainer: {
     flexDirection: 'column',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#0000000a',
   },
   primaryButton: {
-    height: 48,
-    borderRadius: 4, // consistent 4px radius for buttons
+    height: 44,
+    borderRadius: BorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#ffc703',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
+    ...Shadows.level2,
+  },
+  secondaryButton: {
+    height: 44,
+    borderRadius: BorderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   btnContent: {
     flexDirection: 'row',
@@ -527,7 +473,11 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontFamily: 'HankenGrotesk_800ExtraBold',
-    fontSize: 14,
-    color: '#594400',
+    fontSize: 13,
+    color: '#ffffff',
+  },
+  secondaryButtonText: {
+    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontSize: 13,
   },
 });

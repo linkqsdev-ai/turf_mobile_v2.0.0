@@ -320,7 +320,7 @@ export default function TeamRegistrationScreen() {
 
                 <ThemedText type="headlineSm" style={styles.sectionTitle}>1. Team Details</ThemedText>
                 <View style={styles.inputGroup}>
-                  <ThemedText type="labelSm" style={styles.inputLabel}>Team Name *</ThemedText>
+                  <ThemedText type="labelSm" style={styles.inputLabel}>Team name *</ThemedText>
                   <TextInput
                     style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                     placeholder="Enter team name"
@@ -332,7 +332,7 @@ export default function TeamRegistrationScreen() {
 
                 <ThemedText type="headlineSm" style={[styles.sectionTitle, { marginTop: Spacing.md }]}>2. Manager Credentials</ThemedText>
                 <View style={styles.inputGroup}>
-                  <ThemedText type="labelSm" style={styles.inputLabel}>Manager Full Name</ThemedText>
+                  <ThemedText type="labelSm" style={styles.inputLabel}>Manager full name</ThemedText>
                   <TextInput
                     style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                     placeholder="Manager Name"
@@ -342,7 +342,7 @@ export default function TeamRegistrationScreen() {
                 </View>
                 <View style={styles.rowBetween}>
                   <View style={[styles.inputGroup, { width: '48%' }]}>
-                    <ThemedText type="labelSm" style={styles.inputLabel}>Manager Phone</ThemedText>
+                    <ThemedText type="labelSm" style={styles.inputLabel}>Manager phone</ThemedText>
                     <TextInput
                       style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                       placeholder="Phone"
@@ -351,7 +351,7 @@ export default function TeamRegistrationScreen() {
                     />
                   </View>
                   <View style={[styles.inputGroup, { width: '48%' }]}>
-                    <ThemedText type="labelSm" style={styles.inputLabel}>Manager Email</ThemedText>
+                    <ThemedText type="labelSm" style={styles.inputLabel}>Manager email</ThemedText>
                     <TextInput
                       style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                       placeholder="Email"
@@ -413,7 +413,7 @@ export default function TeamRegistrationScreen() {
 
                   <Pressable style={[styles.addPlayerBtn, { borderColor: theme.outlineVariant }]} onPress={handleAddPlayer}>
                     <Ionicons name="add" size={16} color={theme.text} />
-                    <ThemedText type="labelSm" style={{ color: theme.text, marginLeft: 4 }}>Add Roster Player</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: theme.text, marginLeft: 4 }}>Add roster player</ThemedText>
                   </Pressable>
                 </View>
 
@@ -432,7 +432,7 @@ export default function TeamRegistrationScreen() {
                     <ThemedText type="bodyLg" style={{ color: theme.secondaryContainer, fontWeight: 'bold' }}>₹175.00</ThemedText>
                   </View>
 
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: Spacing.md, marginBottom: 8 }}>Select Payment Method</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: Spacing.md, marginBottom: 8 }}>Select payment method</ThemedText>
                   <View style={styles.paymentMethodsRow}>
                     {[
                       { id: 'Card', name: 'Credit Card', icon: 'card-outline' },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,9 +8,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { CoinTossModal } from '@/components/coin-toss-modal';
-import Reanimated, { FadeIn } from 'react-native-reanimated';
+import Reanimated, { FadeIn, withRepeat, withTiming, withSequence, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
@@ -26,32 +26,92 @@ import { QuickMatchTab } from '@/components/matches/QuickMatchTab';
 
 const TABS = ['Home', 'New Team', 'New Player', 'Bid Match', 'Quick Match'];
 
-const getTabIcon = (tab: string, isActive: boolean) => {
-  const color = isActive ? "#ffffff" : "#64748b";
+const getTabIcon = (tab: string, color: string) => {
   switch(tab) {
-    case 'Home': return <MaterialIcons name="home" size={12} color={color} />;
-    case 'New Team': return <MaterialIcons name="group-add" size={12} color={color} />;
-    case 'New Player': return <MaterialIcons name="person-add" size={12} color={color} />;
-    case 'Bid Match': return <MaterialIcons name="handshake" size={12} color={color} />;
-    case 'Quick Match': return <MaterialIcons name="bolt" size={12} color={color} />;
+    case 'Home': return <MaterialIcons name="home" size={20} color={color} />;
+    case 'New Team': return <MaterialIcons name="group-add" size={16} color={color} />;
+    case 'New Player': return <MaterialIcons name="person-add" size={16} color={color} />;
+    case 'Bid Match': return <MaterialIcons name="handshake" size={16} color={color} />;
+    case 'Quick Match': return <MaterialIcons name="bolt" size={16} color={color} />;
     default: return null;
   }
+};
+
+const AnimatedTabItem = ({ tab, isActive, isLast, onPress, theme }: any) => {
+  const isSpecial = tab === 'Bid Match' || tab === 'Quick Match';
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    if (isSpecial && !isActive) {
+      scale.value = withRepeat(
+        withSequence(
+          withTiming(1.15, { duration: 600 }),
+          withTiming(1, { duration: 600 })
+        ),
+        -1,
+        true
+      );
+    } else {
+      scale.value = 1;
+    }
+  }, [isSpecial, isActive]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }));
+
+  const color = isActive ? theme.primary : (isSpecial ? theme.error : theme.textSecondary);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.tabItem,
+        isActive 
+          ? { borderBottomColor: theme.primary } 
+          : { borderBottomColor: 'transparent' }
+      ]}
+    >
+      <Reanimated.View style={animatedStyle}>
+        <View style={isSpecial && !isActive ? { backgroundColor: theme.error + '1a', padding: 4, borderRadius: 10, marginRight: 2 } : {}}>
+          {getTabIcon(tab, color)}
+        </View>
+      </Reanimated.View>
+      {tab !== 'Home' && (
+        <ThemedText style={{
+          color: color,
+          fontFamily: isActive ? 'HankenGrotesk_800ExtraBold' : (isSpecial ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_600SemiBold'),
+          fontSize: isSpecial ? 10 : 9,
+          marginLeft: 2,
+        }}>
+          {tab}
+        </ThemedText>
+      )}
+    </Pressable>
+  );
 };
 
 export default function MatchesScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const params = useLocalSearchParams<{ tab?: string }>();
   const [activeTab, setActiveTab] = useState('Home');
   const [coinTossVisible, setCoinTossVisible] = useState(false);
+
+  useEffect(() => {
+    if (params.tab && TABS.includes(params.tab)) {
+      setActiveTab(params.tab);
+    }
+  }, [params.tab]);
 
   const renderActiveTab = () => {
     return (
       <View style={{ flex: 1 }}>
         {activeTab === 'Home' && <MatchesHomeTab />}
-        {activeTab === 'New Team' && <CreateTeamTab />}
+        {activeTab === 'New Team' && <CreateTeamTab onNavigate={setActiveTab} />}
         {activeTab === 'New Player' && <CreatePlayerTab />}
         {activeTab === 'Bid Match' && <BidMatchTab />}
-        {activeTab === 'Quick Match' && <QuickMatchTab />}
+        {activeTab === 'Quick Match' && <QuickMatchTab onNavigate={setActiveTab} />}
       </View>
     );
   };
@@ -95,41 +155,22 @@ export default function MatchesScreen() {
 
         {/* Top Tab Bar Navigation */}
         <View style={styles.tabBarWrapper}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabBarScroll}
-          >
+          <View style={[styles.tabBarScroll, { flexDirection: 'row', justifyContent: 'space-between', width: '100%' }]}>
             {TABS.map((tab, index) => {
               const isActive = activeTab === tab;
               const isLast = index === TABS.length - 1;
               return (
-                <Pressable
+                <AnimatedTabItem
                   key={tab}
+                  tab={tab}
+                  isActive={isActive}
+                  isLast={isLast}
                   onPress={() => setActiveTab(tab)}
-                  style={[
-                    styles.tabItem,
-                    { marginRight: isLast ? 0 : 4 }, // Use explicit margin instead of gap
-                    isActive 
-                      ? { backgroundColor: theme.primary, borderColor: 'transparent' } 
-                      : { backgroundColor: theme.surfaceHigh, borderColor: 'transparent' }
-                  ]}
-                >
-                  {getTabIcon(tab, isActive)}
-                  {tab !== 'Home' && (
-                    <ThemedText style={{
-                      color: isActive ? '#ffffff' : theme.textSecondary,
-                      fontFamily: isActive ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_600SemiBold',
-                      fontSize: 10,
-                      marginLeft: 4,
-                    }}>
-                      {tab}
-                    </ThemedText>
-                  )}
-                </Pressable>
+                  theme={theme}
+                />
               );
             })}
-          </ScrollView>
+          </View>
         </View>
 
         {/* Active Tab Content */}
@@ -192,20 +233,16 @@ const styles = StyleSheet.create({
   tabBarWrapper: {
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',
-    paddingBottom: 10,
   },
   tabBarScroll: {
-    paddingLeft: Spacing.md,
-    paddingRight: Spacing.md * 2, // Extra padding to prevent cut off
+    paddingHorizontal: 8,
     alignItems: 'center',
-    paddingVertical: 2,
   },
   tabItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
-    borderWidth: 0,
+    paddingHorizontal: 2,
+    paddingVertical: 12,
+    borderBottomWidth: 2,
   },
 });

@@ -6,6 +6,7 @@ import {
   Pressable,
   TextInput,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -31,10 +32,15 @@ export default function EditProfileScreen() {
   const [bio, setBio] = useState(profile.bio);
   const [preferredFoot, setPreferredFoot] = useState(profile.preferredFoot);
   const [playingStyle, setPlayingStyle] = useState(profile.playingStyle);
+  const [role, setRole] = useState(profile.role || 'Player');
 
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Full Name is required.');
+      if (Platform.OS === 'web') {
+        alert('Full Name is required.');
+      } else {
+        Alert.alert('Error', 'Full Name is required.');
+      }
       return;
     }
 
@@ -45,24 +51,34 @@ export default function EditProfileScreen() {
       bio,
       preferredFoot,
       playingStyle,
+      role,
     });
 
-    Alert.alert(
-      'Profile Updated',
-      'Your player profile details have been successfully saved.',
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace('/profile');
-            }
+    if (Platform.OS === 'web') {
+      alert('Your player profile details have been successfully saved.');
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/profile');
+      }
+    } else {
+      Alert.alert(
+        'Profile Updated',
+        'Your player profile details have been successfully saved.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/profile');
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   return (
@@ -126,6 +142,38 @@ export default function EditProfileScreen() {
                   placeholder="e.g. Rahul S. Dravid"
                   placeholderTextColor={theme.textSecondary + '77'}
                 />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <ThemedText type="labelMd" style={styles.inputLabel}>USER ROLE</ThemedText>
+                <View style={styles.segmentedRow}>
+                  {['Player', 'Coach', 'Owner', 'Organizer'].map((r) => {
+                    const isSelected = role === r;
+                    return (
+                      <Pressable
+                        key={r}
+                        onPress={() => setRole(r as any)}
+                        style={[
+                          styles.segmentedBtn,
+                          {
+                            borderColor: isSelected ? theme.secondaryContainer : theme.outlineVariant + '33',
+                            backgroundColor: isSelected ? theme.secondaryContainer + '15' : 'transparent',
+                          },
+                        ]}
+                      >
+                        <ThemedText
+                          type="labelMd"
+                          style={{
+                            color: isSelected ? theme.secondary : theme.textSecondary,
+                            fontFamily: isSelected ? 'PlusJakartaSans_700Bold' : 'PlusJakartaSans_500Medium',
+                          }}
+                        >
+                          {r}
+                        </ThemedText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
 
               <View style={styles.inputContainer}>
@@ -232,30 +280,31 @@ export default function EditProfileScreen() {
             </View>
           </View>
 
-          {/* Actions buttons */}
-          <View style={[styles.actionSection, { paddingBottom: 60 }]}>
-            <Pressable onPress={handleSave} style={[styles.primaryActionBtn, { backgroundColor: theme.primary }]}>
-              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold' }}>
-                SAVE CHANGES
-              </ThemedText>
-            </Pressable>
-
-            <Pressable
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/profile');
-                }
-              }}
-              style={[styles.secondaryActionBtn, { borderColor: theme.outline }]}
-            >
-              <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                CANCEL
-              </ThemedText>
-            </Pressable>
-          </View>
         </ScrollView>
+
+        {/* Actions buttons Fixed at Bottom */}
+        <View style={[styles.actionSection, { paddingBottom: Spacing.md }]}>
+          <Pressable onPress={handleSave} style={[styles.primaryActionBtn, { backgroundColor: theme.primary }]}>
+            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold' }}>
+              SAVE CHANGES
+            </ThemedText>
+          </Pressable>
+
+          <Pressable
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/profile');
+              }
+            }}
+            style={[styles.secondaryActionBtn, { borderColor: theme.outline }]}
+          >
+            <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+              CANCEL
+            </ThemedText>
+          </Pressable>
+        </View>
       </SafeAreaView>
     </GradientContainer>
   );

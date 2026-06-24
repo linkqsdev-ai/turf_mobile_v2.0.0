@@ -103,6 +103,13 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
+          name="book-coach" 
+          options={{ 
+            animation: 'slide_from_right', 
+            presentation: 'card' 
+          }} 
+        />
+        <Stack.Screen 
           name="scoring" 
           options={{ 
             animation: 'slide_from_bottom', 
@@ -132,6 +139,13 @@ export default function RootLayout() {
         />
         <Stack.Screen 
           name="edit-profile" 
+          options={{ 
+            animation: 'slide_from_right', 
+            presentation: 'card' 
+          }} 
+        />
+        <Stack.Screen 
+          name="enroll" 
           options={{ 
             animation: 'slide_from_right', 
             presentation: 'card' 

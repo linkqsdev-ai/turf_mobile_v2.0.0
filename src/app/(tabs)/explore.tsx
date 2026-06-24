@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
@@ -32,18 +32,7 @@ const DATES = [
   { id: '17', day: 'SAT', date: '17' },
 ];
 
-// Mock Data for Sports Categories
-const SPORTS = [
-  { id: 'all', name: 'All', icon: 'grid', library: 'Ionicons' },
-  { id: 'football', name: 'Football', icon: 'soccer', library: 'MaterialCommunityIcons' },
-  { id: 'cricket', name: 'Cricket', icon: 'cricket', library: 'MaterialCommunityIcons' },
-  { id: 'tennis', name: 'Tennis', icon: 'tennis', library: 'MaterialCommunityIcons' },
-  { id: 'swimming', name: 'Swim', icon: 'swim', library: 'MaterialCommunityIcons' },
-  { id: 'badminton', name: 'Badminton', icon: 'badminton', library: 'MaterialCommunityIcons' },
-  { id: 'event', name: 'Event', icon: 'calendar-star', library: 'MaterialCommunityIcons' },
-  { id: 'movie', name: 'Movie', icon: 'movie', library: 'MaterialCommunityIcons' },
-  { id: 'resort', name: 'Resort', icon: 'umbrella-beach', library: 'MaterialCommunityIcons' },
-];
+import { SPORTS_LIST } from '@/constants/sports';
 
 export default function ExploreScreen() {
   const theme = useTheme();
@@ -51,7 +40,7 @@ export default function ExploreScreen() {
   const { profile } = useUserProfile();
   
   const [selectedDate, setSelectedDate] = useState('13');
-  const [selectedSport, setSelectedSport] = useState('all');
+  const [selectedSport, setSelectedSport] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<Record<string, boolean>>({ 'skyline': false, 'the-grid': false, 'lords': false, 'wembley': false });
   const [coinTossVisible, setCoinTossVisible] = useState(false);
@@ -197,40 +186,30 @@ export default function ExploreScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.filtersContainer}
             >
-              {SPORTS.map((sport) => {
-                const isActive = sport.id === selectedSport;
+              {[{ name: 'All', icon: 'apps', color: theme.textSecondary }, ...SPORTS_LIST].map((sport) => {
+                const isActive = sport.name === selectedSport;
                 return (
                   <Pressable
-                    key={sport.id}
-                    onPress={() => setSelectedSport(sport.id)}
+                    key={sport.name}
+                    onPress={() => setSelectedSport(sport.name)}
                     style={[
                       styles.filterChip,
-                      isActive
-                        ? { backgroundColor: 'transparent', borderColor: theme.primary, borderWidth: 1.5 }
-                        : { backgroundColor: 'transparent', borderColor: theme.outlineVariant + '33', borderWidth: 1.5 },
+                      { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+                      isActive && { backgroundColor: theme.primary, borderColor: theme.primary },
                     ]}
                   >
-                    {sport.library === 'Ionicons' ? (
-                      <Ionicons
-                        name={sport.icon as any}
-                        size={14}
-                        color={isActive ? theme.primary : theme.textSecondary}
-                        style={{ marginRight: 4 }}
-                      />
-                    ) : (
-                      <MaterialCommunityIcons
-                        name={sport.icon as any}
-                        size={15}
-                        color={isActive ? theme.primary : theme.textSecondary}
-                        style={{ marginRight: 4 }}
-                      />
-                    )}
+                    <MaterialIcons
+                      name={sport.icon as any}
+                      size={12}
+                      color={isActive ? '#ffffff' : theme.textSecondary}
+                      style={{ marginRight: 4 }}
+                    />
                     <ThemedText
                       type="labelMd"
                       style={{ 
-                        color: isActive ? theme.primary : theme.textSecondary,
-                        fontFamily: 'HankenGrotesk_700Bold',
-                        fontSize: 10.5,
+                        color: isActive ? '#ffffff' : theme.textSecondary,
+                        fontFamily: 'HankenGrotesk_600SemiBold',
+                        fontSize: 10,
                         letterSpacing: 0.2,
                       }}
                     >
@@ -677,9 +656,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    borderRadius: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
     borderWidth: 1,
-    height: 32,
+    height: 30,
+    justifyContent: 'center',
   },
   bannerContainer: {
     borderRadius: BorderRadius.premium,
@@ -839,5 +820,20 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: BorderRadius.premium,
     zIndex: 999,
+  },
+  createPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    marginRight: 4,
+  },
+  createPillText: {
+    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 11,
+    color: '#ffffff',
+    letterSpacing: 0.2,
   },
 });

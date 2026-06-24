@@ -3,6 +3,7 @@
     "name": "turf_mobile_app_v2.0.0",
     "slug": "turf_mobile_app_v2.0.0",
     "version": "1.0.0",
+    "platforms": ["ios", "android", "web"],
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "turfmobileappv200",

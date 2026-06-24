@@ -16,11 +16,12 @@ import { CoinTossModal } from '@/components/coin-toss-modal';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { MaterialIcons } from '@expo/vector-icons';
 import { PromoBanner, AutoScrollingHorizontalBanners } from '@/components/promo-banner';
+import { SPORTS_LIST } from '@/constants/sports';
 
 // Mock Tournaments Data
 const INITIAL_TOURNAMENTS = [
@@ -40,7 +41,7 @@ const INITIAL_TOURNAMENTS = [
     status: 'Registering',
     isLive: false,
     isSponsored: true,
-    banner: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
+    banner: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=300&q=80',
   },
   {
     id: 't2',
@@ -58,7 +59,7 @@ const INITIAL_TOURNAMENTS = [
     status: 'Ongoing',
     isLive: true,
     isSponsored: false,
-    banner: 'https://images.unsplash.com/photo-1531415080290-bc98545ab3ef?auto=format&fit=crop&w=800&q=80',
+    banner: 'https://images.unsplash.com/photo-1531415080290-bc98545ab3ef?w=300&q=80',
   },
   {
     id: 't3',
@@ -76,7 +77,7 @@ const INITIAL_TOURNAMENTS = [
     status: 'Registering',
     isLive: false,
     isSponsored: false,
-    banner: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
+    banner: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=300&q=80',
   },
   {
     id: 't4',
@@ -94,7 +95,7 @@ const INITIAL_TOURNAMENTS = [
     status: 'Upcoming',
     isLive: false,
     isSponsored: true,
-    banner: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=800&q=80',
+    banner: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=300&q=80',
   },
   {
     id: 't5',
@@ -112,7 +113,7 @@ const INITIAL_TOURNAMENTS = [
     status: 'Finished',
     isLive: false,
     isSponsored: false,
-    banner: 'https://images.unsplash.com/photo-1608962714006-25c2d3a3d5e2?auto=format&fit=crop&w=800&q=80',
+    banner: 'https://images.unsplash.com/photo-1608962714006-25c2d3a3d5e2?w=300&q=80',
   }
 ];
 
@@ -147,6 +148,7 @@ export default function TournamentsTab() {
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [sortBy, setSortBy] = useState('Date'); // 'Date' or 'Prize'
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(['t1']);
+  const [failedImageIds, setFailedImageIds] = useState<string[]>([]);
   
   const simulateLoading = false;
   const simulateEmpty = false;
@@ -266,22 +268,52 @@ export default function TournamentsTab() {
               <ThemedText type="headlineLg" style={{ color: theme.text }}>
                 Tournaments
               </ThemedText>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Pressable 
-                  style={[styles.createBtnInline, { backgroundColor: theme.secondaryContainer }]}
-                  onPress={() => router.push('/create-tournament')}
-                >
-                  <Ionicons name="add" size={16} color="#6b4500" />
-                  <ThemedText type="labelSm" style={{ color: '#6b4500', fontWeight: 'bold' }}>Create</ThemedText>
-                </Pressable>
-                <Pressable style={styles.viewToggle} onPress={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}>
-                  <Ionicons name={viewMode === 'list' ? 'grid-outline' : 'list-outline'} size={20} color={theme.text} />
-                </Pressable>
-              </View>
             </View>
             <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
               Register your team, track brackets, and claim ultimate glory.
             </ThemedText>
+          </View>
+
+          {/* Sport Categories Row */}
+          <View style={[styles.categoriesSection, { paddingVertical: 10, marginTop: Spacing.sm }]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 6, paddingHorizontal: Spacing.containerMargin }}
+            >
+              {[{ name: 'All', icon: 'apps', color: theme.textSecondary }, ...SPORTS_LIST].map((sport) => {
+                const isSelected = selectedSport === sport.name;
+                return (
+                  <Pressable
+                    key={sport.name}
+                    onPress={() => setSelectedSport(sport.name)}
+                    style={[
+                      styles.filterChip,
+                      { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+                      isSelected && { backgroundColor: theme.primary, borderColor: theme.primary },
+                    ]}
+                  >
+                    <MaterialIcons
+                      name={sport.icon as any}
+                      size={12}
+                      color={isSelected ? '#ffffff' : theme.textSecondary}
+                      style={{ marginRight: 4 }}
+                    />
+                    <ThemedText
+                      type="labelMd"
+                      style={{ 
+                        color: isSelected ? '#ffffff' : theme.textSecondary,
+                        fontFamily: 'HankenGrotesk_600SemiBold',
+                        fontSize: 10,
+                        letterSpacing: 0.2,
+                      }}
+                    >
+                      {sport.name}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
 
           {/* Offers & Gift Vouchers (Horizontal Card, Auto Scroll, Reduced Width & Gap) */}
@@ -325,37 +357,6 @@ export default function TournamentsTab() {
                 }
               ]}
             />
-          </View>
-
-          {/* Sport Categories Row (Aligned Evenly) */}
-          <View style={styles.categoriesSection}>
-            <View style={styles.categoriesRow}>
-              {[
-                { id: 'All', icon: 'grid-outline', library: 'Ionicons' },
-                { id: 'Football', icon: 'soccer', library: 'MaterialCommunityIcons' },
-                { id: 'Cricket', icon: 'cricket', library: 'MaterialCommunityIcons' },
-                { id: 'Tennis', icon: 'tennis', library: 'MaterialCommunityIcons' },
-              ].map((sport) => {
-                const isSelected = selectedSport === sport.id;
-                return (
-                  <Pressable
-                    key={sport.id}
-                    onPress={() => setSelectedSport(sport.id)}
-                    style={[
-                      styles.sportIconCircle,
-                      { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
-                      isSelected && { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
-                    ]}
-                  >
-                    {sport.library === 'Ionicons' ? (
-                      <Ionicons name={sport.icon as any} size={16} color={isSelected ? '#6b4500' : theme.text} />
-                    ) : (
-                      <MaterialCommunityIcons name={sport.icon as any} size={16} color={isSelected ? '#6b4500' : theme.text} />
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
           </View>
 
           {/* Status Filters & Sort Toggle Row */}
@@ -462,7 +463,7 @@ export default function TournamentsTab() {
                         key={t.id}
                         style={[
                           styles.ticketCard,
-                          { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '1c' },
+                          { backgroundColor: theme.surfaceLowest, borderColor: '#000000' },
                           Shadows.level1
                         ]}
                         onPress={() => router.push({
@@ -475,27 +476,34 @@ export default function TournamentsTab() {
                         <View style={[styles.cutoutBottom, { backgroundColor: theme.background }]} />
 
                         {/* Flush Left Image Cover */}
-                        <Image source={t.banner} style={styles.ticketLeftImage} contentFit="cover" />
+                        <Image 
+                          source={(!failedImageIds.includes(t.id) && t.banner) ? t.banner : require('@/assets/images/illustrations/stadium.png')} 
+                          style={styles.ticketLeftImage} 
+                          contentFit="cover" 
+                          onError={() => setFailedImageIds(prev => [...prev, t.id])}
+                        />
 
                         {/* Left Section (Details) */}
                         <View style={styles.ticketLeft}>
-                          {t.isLive && (
-                            <View style={styles.statusBadgeAbsolute}>
-                              <View style={styles.liveDot} />
-                              <ThemedText style={styles.liveText}>Live</ThemedText>
-                            </View>
-                          )}
                           <View style={styles.sportAndStatus}>
                             <View style={styles.sportBadgeRow}>
-                              {t.sport === 'Football' && <MaterialCommunityIcons name="soccer" size={12} color={theme.secondary} />}
-                              {t.sport === 'Cricket' && <MaterialCommunityIcons name="cricket" size={12} color={theme.secondary} />}
-                              {t.sport === 'Tennis' && <MaterialCommunityIcons name="tennis" size={12} color={theme.secondary} />}
-                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 4 }}>
+                              {t.sport === 'Football' && <MaterialCommunityIcons name="soccer" size={11} color={theme.secondary} />}
+                              {t.sport === 'Cricket' && <MaterialCommunityIcons name="cricket" size={11} color={theme.secondary} />}
+                              {t.sport === 'Tennis' && <MaterialCommunityIcons name="tennis" size={11} color={theme.secondary} />}
+                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8.5, marginLeft: 4 }}>
                                 {t.sport}
                               </ThemedText>
                             </View>
 
-                            {!t.isLive && (
+                            {t.isLive ? (
+                              <View style={[
+                                styles.statusBadgeInline,
+                                { backgroundColor: '#ff174414', borderColor: '#ff174433', borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }
+                              ]}>
+                                <View style={styles.liveDot} />
+                                <ThemedText style={styles.liveText}>Live</ThemedText>
+                              </View>
+                            ) : (
                               <View style={[
                                 styles.statusBadgeInline,
                                 { borderWidth: 1 },
@@ -505,7 +513,7 @@ export default function TournamentsTab() {
                                 t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2', borderColor: '#7f8c8d33' }
                               ]}>
                                 <ThemedText style={[
-                                  { fontSize: 8, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.5 },
+                                  { fontSize: 7, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.3 },
                                   t.registrationStatus === 'Registering' && { color: '#0f9f58' },
                                   t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
                                   t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
@@ -556,8 +564,8 @@ export default function TournamentsTab() {
                         </View>
 
                         {/* Dashed vertical separator line */}
-                        <View style={[styles.verticalDivider, { borderColor: theme.outlineVariant + '33' }]} />
-
+                        <View style={[styles.verticalDivider, { borderColor: '#00000033' }]} />
+ 
                         {/* Right Section (Stub) */}
                         <View style={styles.ticketRight}>
                           {/* Quick Action Overlay (Bookmark & Share) */}
@@ -569,10 +577,10 @@ export default function TournamentsTab() {
                               <Ionicons name="share-social-outline" size={15} color={theme.textSecondary} />
                             </Pressable>
                           </View>
-
-                          <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
-                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8, textAlign: 'center' }}>Prize Pool</ThemedText>
-                            <ThemedText type="bodyLg" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold', marginVertical: 2, textAlign: 'center' }}>
+ 
+                          <View style={[styles.ticketPriceHighlight, { backgroundColor: theme.secondaryContainer + '10' }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 7, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>Prize Pool</ThemedText>
+                            <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 1, textAlign: 'center', fontSize: 13 }}>
                               {t.prizePool}
                             </ThemedText>
                           </View>
@@ -596,7 +604,7 @@ export default function TournamentsTab() {
                         key={t.id}
                         style={[
                           styles.ticketGridCard,
-                          { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '1c' },
+                          { backgroundColor: theme.surfaceLowest, borderColor: '#000000' },
                           Shadows.level1
                         ]}
                         onPress={() => router.push({
@@ -610,7 +618,12 @@ export default function TournamentsTab() {
 
                         {/* Top Image banner */}
                         <View style={styles.gridCardHeader}>
-                          <Image source={t.banner} style={styles.gridCardImage} contentFit="cover" />
+                          <Image 
+                            source={(!failedImageIds.includes(t.id) && t.banner) ? t.banner : require('@/assets/images/illustrations/stadium.png')} 
+                            style={styles.gridCardImage} 
+                            contentFit="cover" 
+                            onError={() => setFailedImageIds(prev => [...prev, t.id])}
+                          />
                           {t.isSponsored && (
                             <View style={styles.gridSponsoredBadge}>
                               <ThemedText type="labelSm" style={{ color: '#5D68E8', fontSize: 8, fontWeight: '800' }}>Sponsored</ThemedText>
@@ -635,7 +648,7 @@ export default function TournamentsTab() {
                               {t.sport === 'Football' && <MaterialCommunityIcons name="soccer" size={10} color={theme.secondary} />}
                               {t.sport === 'Cricket' && <MaterialCommunityIcons name="cricket" size={10} color={theme.secondary} />}
                               {t.sport === 'Tennis' && <MaterialCommunityIcons name="tennis" size={10} color={theme.secondary} />}
-                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, marginLeft: 2 }}>
+                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8.5, marginLeft: 2 }}>
                                 {t.sport}
                               </ThemedText>
                             </View>
@@ -655,7 +668,7 @@ export default function TournamentsTab() {
                                 t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2', borderColor: '#7f8c8d33' }
                               ]}>
                                 <ThemedText style={[
-                                  { fontSize: 8, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.5 },
+                                  { fontSize: 7, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.3 },
                                   t.registrationStatus === 'Registering' && { color: '#0f9f58' },
                                   t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
                                   t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
@@ -704,13 +717,13 @@ export default function TournamentsTab() {
                         </View>
 
                         {/* Dashed divider */}
-                        <View style={[styles.horizontalDivider, { borderColor: theme.outlineVariant + '33' }]} />
+                        <View style={[styles.horizontalDivider, { borderColor: '#00000033' }]} />
 
                         {/* Footer / Stub section */}
                         <View style={styles.gridCardFooter}>
-                          <View>
-                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8 }}>Prize</ThemedText>
-                            <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold' }}>
+                          <View style={[styles.gridPriceHighlight, { backgroundColor: theme.secondaryContainer + '10' }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 7 }}>Prize</ThemedText>
+                            <ThemedText type="bodySm" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold', fontSize: 11 }}>
                               {t.prizePool}
                             </ThemedText>
                           </View>
@@ -733,7 +746,15 @@ export default function TournamentsTab() {
             )}
           </View>
         </ScrollView>
-      </Reanimated.View>
+        </Reanimated.View>
+        
+        {/* Create Tournament FAB */}
+        <Pressable
+          style={[styles.fabTop, { backgroundColor: 'rgb(16, 185, 129)', shadowColor: 'rgb(16, 185, 129)' }]}
+          onPress={() => router.push('/create-tournament')}
+        >
+          <Ionicons name="trophy-outline" size={24} color="#fff" />
+        </Pressable>
       </SafeAreaView>
 
       {/* Floating Toast Notification */}
@@ -790,14 +811,6 @@ const styles = StyleSheet.create({
   },
   profileIconButton: {
     padding: 2,
-  },
-  createBtnInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    gap: 4,
   },
   scrollContent: {
     paddingBottom: 40,
@@ -888,7 +901,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.containerMargin,
   },
   listContainer: {
-    gap: Spacing.md,
+    gap: 20,
   },
   gridContainer: {
     flexDirection: 'row',
@@ -967,10 +980,10 @@ const styles = StyleSheet.create({
   ticketCard: {
     flexDirection: 'row',
     borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    overflow: 'hidden',
+    borderWidth: 2,
+    borderStyle: 'dotted',
     position: 'relative',
-    height: 160,
+    height: 180,
   },
   cutoutTop: {
     position: 'absolute',
@@ -993,6 +1006,8 @@ const styles = StyleSheet.create({
   ticketLeftImage: {
     width: 100,
     height: '100%',
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
   },
   ticketLeft: {
     flex: 1,
@@ -1010,8 +1025,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusBadgeInline: {
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
     borderRadius: 4,
   },
   ticketMetaRow: {
@@ -1076,8 +1091,8 @@ const styles = StyleSheet.create({
   ticketGridCard: {
     width: '48%',
     borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    overflow: 'hidden',
+    borderWidth: 2,
+    borderStyle: 'dotted',
     position: 'relative',
     marginBottom: Spacing.sm,
   },
@@ -1106,6 +1121,8 @@ const styles = StyleSheet.create({
   gridCardImage: {
     width: '100%',
     height: '100%',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   statusBadgeAbsolute: {
     position: 'absolute',
@@ -1135,9 +1152,9 @@ const styles = StyleSheet.create({
   },
   liveText: {
     color: '#ff1744',
-    fontSize: 8,
+    fontSize: 7,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
   gridSponsoredBadge: {
@@ -1196,5 +1213,67 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 8,
     borderRadius: BorderRadius.full,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    height: 30,
+    justifyContent: 'center',
+  },
+  createTournamentHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  ticketPriceHighlight: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.2,
+    borderStyle: 'dotted',
+    borderColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    marginBottom: 8,
+  },
+  gridPriceHighlight: {
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.2,
+    borderStyle: 'dotted',
+    borderColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    marginRight: 6,
+  },
+  fabTop: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 110 : 90,
+    right: Spacing.md,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 999,
   },
 });

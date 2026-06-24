@@ -313,8 +313,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.containerMargin,
     height: 56,
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',
@@ -326,6 +325,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: 'HankenGrotesk_700Bold',
     fontSize: 16,
+    flex: 1,
+    marginLeft: 12,
   },
   headerRightActions: {
     flexDirection: 'row',

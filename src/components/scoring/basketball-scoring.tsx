@@ -20,7 +20,7 @@ interface PointsEvent {
   playerName: string;
 }
 
-export default function BasketballScoring() {
+export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans Utd' }: { teamA?: string; teamB?: string }) {
   const theme = useTheme();
 
   // Timer & Quarter state
@@ -108,7 +108,7 @@ export default function BasketballScoring() {
         team,
         type,
         points,
-        playerName: team === 'A' ? 'Lions Shooter' : 'Titans Shooter',
+        playerName: team === 'A' ? `${teamA} Shooter` : `${teamB} Shooter`,
       },
       ...prev,
     ]);
@@ -168,7 +168,7 @@ export default function BasketballScoring() {
         <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
           <View style={styles.scoreboardRow}>
             <View style={styles.teamScoreSection}>
-              <ThemedText type="headlineSm">Lions FC</ThemedText>
+              <ThemedText type="headlineSm">{teamA}</ThemedText>
               <ThemedText type="displayLg" style={{ fontSize: 50, fontFamily: 'HankenGrotesk_800ExtraBold', marginVertical: Spacing.sm }}>
                 {scoreA}
               </ThemedText>
@@ -188,7 +188,7 @@ export default function BasketballScoring() {
             <View style={styles.divider} />
 
             <View style={styles.teamScoreSection}>
-              <ThemedText type="headlineSm">Titans Utd</ThemedText>
+              <ThemedText type="headlineSm">{teamB}</ThemedText>
               <ThemedText type="displayLg" style={{ fontSize: 50, fontFamily: 'HankenGrotesk_800ExtraBold', marginVertical: Spacing.sm }}>
                 {scoreB}
               </ThemedText>
@@ -213,7 +213,7 @@ export default function BasketballScoring() {
         <View style={styles.statsRow}>
           {/* Team A stats */}
           <View style={[styles.statBox, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Lions Fouls</ThemedText>
+            <ThemedText type="labelSm" style={{ color: theme.textSecondary }} numberOfLines={1} ellipsizeMode="tail">{teamA} Fouls</ThemedText>
             <View style={styles.counterRow}>
               <Pressable onPress={() => setFoulsA(prev => Math.max(0, prev - 1))} style={styles.smallIconBtn}>
                 <Ionicons name="remove-circle-outline" size={20} color={theme.text} />
@@ -237,7 +237,7 @@ export default function BasketballScoring() {
 
           {/* Team B stats */}
           <View style={[styles.statBox, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Titans Fouls</ThemedText>
+            <ThemedText type="labelSm" style={{ color: theme.textSecondary }} numberOfLines={1} ellipsizeMode="tail">{teamB} Fouls</ThemedText>
             <View style={styles.counterRow}>
               <Pressable onPress={() => setFoulsB(prev => Math.max(0, prev - 1))} style={styles.smallIconBtn}>
                 <Ionicons name="remove-circle-outline" size={20} color={theme.text} />
@@ -290,7 +290,7 @@ export default function BasketballScoring() {
                     {event.points > 0 ? `+${event.points} PTS` : 'FOUL'} - {event.playerName}
                   </ThemedText>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>
-                    {event.team === 'A' ? 'Lions FC' : 'Titans Utd'} · {event.type === 'threePointer' ? '3 Point Shot' : event.type === 'fieldGoal' ? 'Field Goal' : 'Free Throw'}
+                    {event.team === 'A' ? teamA : teamB} · {event.type === 'threePointer' ? '3 Point Shot' : event.type === 'fieldGoal' ? 'Field Goal' : 'Free Throw'}
                   </ThemedText>
                 </View>
               </View>

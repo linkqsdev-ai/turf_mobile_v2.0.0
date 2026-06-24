@@ -11,7 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-export default function TennisScoring() {
+export default function TennisScoring({ teamA = 'Lions FC', teamB = 'Titans Utd' }: { teamA?: string; teamB?: string }) {
   const theme = useTheme();
 
   // Set scores: Array of sets [setA, setB]
@@ -195,7 +195,7 @@ export default function TennisScoring() {
             </View>
 
             <View style={styles.setsRow}>
-              <ThemedText type="headlineSm" style={{ flex: 2, color: '#ffffff' }}>Lions FC</ThemedText>
+              <ThemedText type="headlineSm" style={{ flex: 2, color: '#ffffff' }}>{teamA}</ThemedText>
               {setsA.map((val, idx) => {
                 const isCurrent = idx === setsA.length - 1;
                 return (
@@ -211,7 +211,7 @@ export default function TennisScoring() {
             </View>
 
             <View style={styles.setsRow}>
-              <ThemedText type="headlineSm" style={{ flex: 2, color: '#ffffff' }}>Titans Utd</ThemedText>
+              <ThemedText type="headlineSm" style={{ flex: 2, color: '#ffffff' }}>{teamB}</ThemedText>
               {setsB.map((val, idx) => {
                 const isCurrent = idx === setsB.length - 1;
                 return (
@@ -240,7 +240,7 @@ export default function TennisScoring() {
             {/* Player A Point Column */}
             <View style={styles.pointCol}>
               <View style={styles.headerWithServe}>
-                <ThemedText type="headlineSm">Lions FC</ThemedText>
+                <ThemedText type="headlineSm">{teamA}</ThemedText>
                 {server === 'A' && (
                   <MaterialCommunityIcons name="tennis-ball" size={14} color="#ccff00" style={{ marginLeft: 4 }} />
                 )}
@@ -261,7 +261,7 @@ export default function TennisScoring() {
             {/* Player B Point Column */}
             <View style={styles.pointCol}>
               <View style={styles.headerWithServe}>
-                <ThemedText type="headlineSm">Titans Utd</ThemedText>
+                <ThemedText type="headlineSm">{teamB}</ThemedText>
                 {server === 'B' && (
                   <MaterialCommunityIcons name="tennis-ball" size={14} color="#ccff00" style={{ marginLeft: 4 }} />
                 )}
@@ -295,12 +295,12 @@ export default function TennisScoring() {
 
           {/* Aces Adjuster */}
           <View style={styles.statLine}>
-            <ThemedText type="bodyMd" style={{ width: 80 }}>Aces</ThemedText>
+            <ThemedText type="bodyMd" style={{ flex: 1 }} numberOfLines={1}>Aces</ThemedText>
             <View style={styles.adjustRow}>
               <Pressable onPress={() => setAcesA(prev => Math.max(0, prev - 1))} style={styles.adjustBtn}>
                 <Ionicons name="remove" size={14} color={theme.text} />
               </Pressable>
-              <ThemedText type="bodyLg" style={{ minWidth: 40, textAlign: 'center', fontFamily: 'HankenGrotesk_700Bold' }}>
+              <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'HankenGrotesk_700Bold', flex: 1 }}>
                 {acesA} | {acesB}
               </ThemedText>
               <Pressable onPress={() => setAcesB(prev => prev + 1)} style={styles.adjustBtn}>
@@ -308,18 +308,18 @@ export default function TennisScoring() {
               </Pressable>
             </View>
             <Pressable onPress={() => setAcesA(prev => prev + 1)} style={styles.quickAddLink}>
-              <ThemedText type="labelSm" style={{ color: theme.secondary }}>+ Lions Ace</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.secondary }} numberOfLines={1} ellipsizeMode="tail">+ {teamA} Ace</ThemedText>
             </Pressable>
           </View>
 
           {/* Double Faults Adjuster */}
           <View style={[styles.statLine, { marginTop: Spacing.sm }]}>
-            <ThemedText type="bodyMd" style={{ width: 80 }}>Double Faults</ThemedText>
+            <ThemedText type="bodyMd" style={{ flex: 1 }} numberOfLines={1}>Double Faults</ThemedText>
             <View style={styles.adjustRow}>
               <Pressable onPress={() => setDoubleFaultsA(prev => Math.max(0, prev - 1))} style={styles.adjustBtn}>
                 <Ionicons name="remove" size={14} color={theme.text} />
               </Pressable>
-              <ThemedText type="bodyLg" style={{ minWidth: 40, textAlign: 'center', fontFamily: 'HankenGrotesk_700Bold' }}>
+              <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'HankenGrotesk_700Bold', flex: 1 }}>
                 {doubleFaultsA} | {doubleFaultsB}
               </ThemedText>
               <Pressable onPress={() => setDoubleFaultsB(prev => prev + 1)} style={styles.adjustBtn}>
@@ -327,18 +327,18 @@ export default function TennisScoring() {
               </Pressable>
             </View>
             <Pressable onPress={() => setDoubleFaultsA(prev => prev + 1)} style={styles.quickAddLink}>
-              <ThemedText type="labelSm" style={{ color: theme.secondary }}>+ Lions DF</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.secondary }} numberOfLines={1} ellipsizeMode="tail">+ {teamA} DF</ThemedText>
             </Pressable>
           </View>
 
           {/* Unforced Errors */}
           <View style={[styles.statLine, { marginTop: Spacing.sm }]}>
-            <ThemedText type="bodyMd" style={{ width: 80 }}>Errors</ThemedText>
+            <ThemedText type="bodyMd" style={{ flex: 1 }} numberOfLines={1}>Errors</ThemedText>
             <View style={styles.adjustRow}>
               <Pressable onPress={() => setUnforcedErrorsA(prev => Math.max(0, prev - 1))} style={styles.adjustBtn}>
                 <Ionicons name="remove" size={14} color={theme.text} />
               </Pressable>
-              <ThemedText type="bodyLg" style={{ minWidth: 40, textAlign: 'center', fontFamily: 'HankenGrotesk_700Bold' }}>
+              <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'HankenGrotesk_700Bold', flex: 1 }}>
                 {unforcedErrorsA} | {unforcedErrorsB}
               </ThemedText>
               <Pressable onPress={() => setUnforcedErrorsB(prev => prev + 1)} style={styles.adjustBtn}>
@@ -346,7 +346,7 @@ export default function TennisScoring() {
               </Pressable>
             </View>
             <Pressable onPress={() => setUnforcedErrorsA(prev => prev + 1)} style={styles.quickAddLink}>
-              <ThemedText type="labelSm" style={{ color: theme.secondary }}>+ Lions Error</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.secondary }} numberOfLines={1} ellipsizeMode="tail">+ {teamA} Error</ThemedText>
             </Pressable>
           </View>
         </View>
@@ -448,7 +448,9 @@ const styles = StyleSheet.create({
   adjustRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+    width: 90,
+    justifyContent: 'center',
   },
   adjustBtn: {
     width: 26,
@@ -460,6 +462,8 @@ const styles = StyleSheet.create({
   },
   quickAddLink: {
     paddingVertical: 4,
+    width: 110,
+    alignItems: 'flex-end',
   },
   undoBtn: {
     flexDirection: 'row',
