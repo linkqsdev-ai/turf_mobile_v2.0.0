@@ -6,7 +6,6 @@ import {
   TextInput,
   Pressable,
   Animated,
-  Alert,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +19,7 @@ import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { SPORTS_LIST } from '@/constants/sports';
 import { useTheme } from '@/hooks/use-theme';
+import { useTurfStore } from '@/store/app-store';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -76,6 +76,7 @@ export default function CreateTurfScreen() {
   const theme = useTheme();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
+  const { addTurf } = useTurfStore();
 
   // Step 1
   const [turfName, setTurfName] = useState('');
@@ -198,20 +199,28 @@ export default function CreateTurfScreen() {
   };
 
   const handlePublish = () => {
-    if (Platform.OS === 'web') {
-      alert(`"${turfName || 'Your Turf'}" is now live and accepting bookings!`);
-      if (router.canGoBack()) router.back();
-      else router.replace('/');
-    } else {
-      Alert.alert(
-        'Turf Published! 🎉',
-        `"${turfName || 'Your Turf'}" is now live and accepting bookings.`,
-        [{ text: 'Done', onPress: () => {
-          if (router.canGoBack()) router.back();
-          else router.replace('/');
-        }}]
-      );
-    }
+    // Save to global turf store
+    const address = useCurrentLocation ? detectedLocation : manualAddress;
+    addTurf({
+      name: turfName || 'My Turf',
+      sportType: sportType || 'Football',
+      address: address || '',
+      pricePerSlot: parseFloat(pricePerSlot || '0'),
+      contactNumber: contactNumber || '',
+      slots: Object.entries(slotsMap).map(([key, status]) => {
+        const [day, time] = key.split('-');
+        return { day, time, status: status as 'available' | 'blocked' | 'maintenance' };
+      }),
+      amenities: amenities,
+      images: turfImages.filter(Boolean).map(img => img!.uri),
+      thumbnailImage: turfImages.find(img => img?.isThumbnail)?.uri || turfImages.find(Boolean)?.uri || '',
+      description: description || '',
+      ownerId: 'current-user',
+    });
+
+    // Navigate back on success
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)');
   };
 
   // ─── Renderers ───────────────────────────────────────────────────────────

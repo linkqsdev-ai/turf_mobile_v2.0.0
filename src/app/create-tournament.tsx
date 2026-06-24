@@ -7,7 +7,6 @@ import {
   TextInput,
   Animated,
   Modal,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -22,6 +21,8 @@ import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { SPORTS_LIST } from '@/constants/sports';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTournamentStore } from '@/store/app-store';
+import { generateTournamentId } from '@/store/tournament-store';
 
 const STEPS = [
   { title: 'Basic', icon: 'information-circle-outline' },
@@ -36,6 +37,7 @@ export default function CreateTournamentScreen() {
   const theme = useTheme();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
+  const { addTournament } = useTournamentStore();
 
   // Cover Presets for Tournament Sample Image
   const COVER_PRESETS = [
@@ -239,11 +241,32 @@ export default function CreateTournamentScreen() {
       setCurrentStep(0); // Go to step 1
       return;
     }
-    
+
+    // Save to global tournament store
+    addTournament({
+      id: generateTournamentId(),
+      name: form.name,
+      sport: form.sport || 'Football',
+      type: form.format || 'Knockout',
+      location: form.venue || form.location || 'TBD',
+      startDate: form.startDate || '',
+      endDate: form.endDate || '',
+      prizePool: form.prizeAmount ? `₹${form.prizeAmount}` : 'TBD',
+      prizePoolAmount: parseInt(form.prizeAmount || '0', 10),
+      entryFee: parseInt(form.entryFee || '0', 10),
+      maxTeams: parseInt(form.maxTeams || '16', 10),
+      teamsCount: 0,
+      banner: form.coverImage || null,
+      organizerName: form.organizerName,
+      status: 'Registering',
+      createdAt: new Date().toISOString(),
+    });
+
     triggerToast('Tournament published successfully!');
     setTimeout(() => {
-      router.replace('/tournaments');
-    }, 1000);
+      if (router.canGoBack()) router.back();
+      else router.replace('/(tabs)/tournaments');
+    }, 1200);
   };
 
   const updateField = (key: string, value: string) => {

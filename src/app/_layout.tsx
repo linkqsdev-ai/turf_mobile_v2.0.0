@@ -1,6 +1,7 @@
 import { Stack, ThemeProvider, DarkTheme, DefaultTheme } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { AppStoreProvider } from '@/store/app-store';
 import {
   useFonts,
   PlusJakartaSans_400Regular,
@@ -84,109 +85,118 @@ export default function RootLayout() {
   const isDark = theme === 'dark';
 
   return (
-    <ThemeProvider value={activeNavigationTheme}>
-      <StatusBar style={isDark ? "light" : "dark"} />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen 
-          name="details" 
-          options={{ 
-            animation: 'slide_from_right', 
-            presentation: 'card' 
-          }} 
-        />
-        <Stack.Screen 
-          name="booking" 
-          options={{ 
-            animation: 'slide_from_right', 
-            presentation: 'card' 
-          }} 
-        />
-        <Stack.Screen 
-          name="book-coach" 
-          options={{ 
-            animation: 'slide_from_right', 
-            presentation: 'card' 
-          }} 
-        />
-        <Stack.Screen 
-          name="scoring" 
-          options={{ 
-            animation: 'slide_from_bottom', 
-            presentation: 'modal' 
-          }} 
-        />
-        <Stack.Screen 
-          name="profile" 
-          options={{ 
-            animation: 'slide_from_right', 
-            presentation: 'card' 
-          }} 
-        />
-        <Stack.Screen 
-          name="player-profile" 
-          options={{ 
-            animation: 'slide_from_right', 
-            presentation: 'card' 
-          }} 
-        />
-        <Stack.Screen 
-          name="network" 
-          options={{ 
-            animation: 'slide_from_right', 
-            presentation: 'card' 
-          }} 
-        />
-        <Stack.Screen 
-          name="edit-profile" 
-          options={{ 
-            animation: 'slide_from_right', 
-            presentation: 'card' 
-          }} 
-        />
-        <Stack.Screen 
-          name="enroll" 
-          options={{ 
-            animation: 'slide_from_right', 
-            presentation: 'card' 
-          }} 
-        />
-        <Stack.Screen 
-          name="create-tournament" 
-          options={{ 
-            animation: 'slide_from_bottom', 
-            presentation: 'card' 
-          }} 
-        />
-        <Stack.Screen 
-          name="tournament-details" 
-          options={{ 
-            animation: 'slide_from_right', 
-            presentation: 'card' 
-          }} 
-        />
-        <Stack.Screen 
-          name="team-registration" 
-          options={{ 
-            animation: 'slide_from_right', 
-            presentation: 'card' 
-          }} 
-        />
-        <Stack.Screen 
-          name="team-management" 
-          options={{ 
-            animation: 'slide_from_right', 
-            presentation: 'card' 
-          }} 
-        />
-        <Stack.Screen 
-          name="fixture-management" 
-          options={{ 
-            animation: 'slide_from_right', 
-            presentation: 'card' 
-          }} 
-        />
-      </Stack>
-    </ThemeProvider>
+    <AppStoreProvider>
+      <ThemeProvider value={activeNavigationTheme}>
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen 
+            name="details" 
+            options={{ 
+              animation: 'slide_from_right', 
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="booking" 
+            options={{ 
+              animation: 'slide_from_right', 
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="booking-confirmation" 
+            options={{ 
+              animation: 'slide_from_bottom', 
+              presentation: 'modal' 
+            }} 
+          />
+          <Stack.Screen 
+            name="book-coach" 
+            options={{ 
+              animation: 'slide_from_right', 
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="scoring" 
+            options={{ 
+              animation: 'slide_from_bottom', 
+              presentation: 'modal' 
+            }} 
+          />
+          <Stack.Screen 
+            name="profile" 
+            options={{ 
+              animation: 'slide_from_right', 
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="player-profile" 
+            options={{ 
+              animation: 'slide_from_right', 
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="network" 
+            options={{ 
+              animation: 'slide_from_right', 
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="edit-profile" 
+            options={{ 
+              animation: 'slide_from_right', 
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="enroll" 
+            options={{ 
+              animation: 'slide_from_right', 
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="create-tournament" 
+            options={{ 
+              animation: 'slide_from_bottom', 
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="tournament-details" 
+            options={{ 
+              animation: 'slide_from_right', 
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="team-registration" 
+            options={{ 
+              animation: 'slide_from_right', 
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="team-management" 
+            options={{ 
+              animation: 'slide_from_right', 
+              presentation: 'card' 
+            }} 
+          />
+          <Stack.Screen 
+            name="fixture-management" 
+            options={{ 
+              animation: 'slide_from_right', 
+              presentation: 'card' 
+            }} 
+          />
+        </Stack>
+      </ThemeProvider>
+    </AppStoreProvider>
   );
 }

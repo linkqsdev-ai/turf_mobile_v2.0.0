@@ -158,24 +158,53 @@ export const Typography = {
 };
 
 export const Shadows = {
-  // Soft ambient shadows using Deep Navy #1a2a33
+  // Subtle border-only (for dividers / outlined cards)
   level1: {
-    borderWidth: 1,
-    borderColor: '#c3c7cb22',
+    shadowColor: '#1a2a33',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
+  // Standard elevated card
   level2: {
     shadowColor: '#1a2a33',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.09,
     shadowRadius: 16,
-    elevation: 3,
+    elevation: 4,
   },
+  // Hero / prominent card
   level3: {
     shadowColor: '#1a2a33',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.14,
     shadowRadius: 24,
+    elevation: 8,
+  },
+  // FAB floating button glow (green tint)
+  fab: {
+    shadowColor: 'rgb(16, 185, 129)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  // Card with colored primary tint
+  primary: {
+    shadowColor: '#5D68E8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
     elevation: 6,
+  },
+  // Subtle input focus shadow
+  input: {
+    shadowColor: '#5D68E8',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 2,
   },
 };
 

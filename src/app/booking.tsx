@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
   ScrollView,
   Pressable,
-  Alert,
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +17,8 @@ import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { PromoBanner } from '@/components/promo-banner';
+import { useBookings } from '@/store/app-store';
+import { getCalendarGrid, formatDateFull, formatDateISO, MONTH_NAMES, advanceMonth } from '@/utils/date-utils';
 
 // Slots details
 const TIME_SLOTS = [
@@ -97,14 +98,38 @@ export default function BookingConfigurationScreen() {
   const theme = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
+  const { addBooking } = useBookings();
 
   // Lookup details
   const venueId = params.id && VENUE_LOOKUP[params.id] ? params.id : 'lords';
   const venue = VENUE_LOOKUP[venueId];
 
+  // Calendar state — real date aware
+  const today = new Date();
+  const [calYear, setCalYear] = useState(today.getFullYear());
+  const [calMonth, setCalMonth] = useState(today.getMonth());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  const calendarGrid = useMemo(() => getCalendarGrid(calYear, calMonth), [calYear, calMonth]);
+
+  const handlePrevMonth = () => {
+    // Don't allow going to past months
+    const prev = advanceMonth(calYear, calMonth, -1);
+    const prevDate = new Date(prev.year, prev.month, 1);
+    const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    if (prevDate >= thisMonth) {
+      setCalYear(prev.year);
+      setCalMonth(prev.month);
+    }
+  };
+
+  const handleNextMonth = () => {
+    const next = advanceMonth(calYear, calMonth, 1);
+    setCalYear(next.year);
+    setCalMonth(next.month);
+  };
+
   // Booking states
-  const [selectedDayOfMonth, setSelectedDayOfMonth] = useState<number>(14);
-  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<string>('Wednesday');
   const [selectedSlots, setSelectedSlots] = useState<string[]>(['12:00', '13:00']);
   const [coachAdded, setCoachAdded] = useState(false);
   const [recordingAdded, setRecordingAdded] = useState(false);
@@ -129,31 +154,40 @@ export default function BookingConfigurationScreen() {
   };
 
   const handleConfirmBooking = () => {
-    Alert.alert(
-      "Booking Confirmed",
-      `Your session at ${venue.name} on Wed, Feb ${selectedDayOfMonth} is confirmed.\nTotal: ₹${total.toFixed(2)}`,
-      [
-        {
-          text: "Back to Home",
-          onPress: () => {
-            router.dismissAll();
-            router.replace('/(tabs)');
-          }
-        }
-      ]
-    );
-  };
+    if (!selectedDate) {
+      // Show a gentle inline nudge instead of Alert
+      return;
+    }
+    // Save booking to global store
+    const booking = addBooking({
+      venueId,
+      venueName: venue.name,
+      venueLocation: venue.location,
+      venueImage: typeof venue.image === 'string' ? venue.image : '',
+      date: formatDateISO(selectedDate),
+      dayLabel: formatDateFull(selectedDate),
+      slots: selectedSlots,
+      totalAmount: total,
+      advancePaid: advanceAmount,
+      remaining: remainingAmount,
+      paymentMethod,
+      coachAdded,
+      recordingAdded,
+    });
 
-  // Generate calendar days for Feb 2024 (29 days, starts Thursday)
-  // Thursday is index 3 in grid (Monday = 0)
-  const calendarGrid = [];
-  // Add 3 padding items
-  for (let i = 0; i < 3; i++) {
-    calendarGrid.push({ dayNumber: 0, disabled: true });
-  }
-  for (let day = 1; day <= 29; day++) {
-    calendarGrid.push({ dayNumber: day, disabled: false });
-  }
+    // Navigate to confirmation screen
+    router.push({
+      pathname: '/booking-confirmation',
+      params: {
+        bookingRef: booking.bookingRef,
+        venueName: venue.name,
+        dayLabel: formatDateFull(selectedDate),
+        slots: selectedSlots.join(','),
+        total: total.toFixed(2),
+        advancePaid: advanceAmount.toFixed(2),
+      },
+    });
+  };
 
   return (
     <GradientContainer screenName="booking" style={styles.container}>
@@ -230,20 +264,28 @@ export default function BookingConfigurationScreen() {
 
           {/* Date Picker Grid */}
           <View style={styles.section}>
-            <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
+            <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}>
               <View style={styles.monthHeader}>
                 <ThemedText type="headlineSm" style={{ color: theme.text }}>
-                  February 2024
+                  {MONTH_NAMES[calMonth]} {calYear}
                 </ThemedText>
                 <View style={styles.monthNav}>
-                  <Pressable style={styles.monthNavBtn}>
+                  <Pressable style={styles.monthNavBtn} onPress={handlePrevMonth}>
                     <Ionicons name="chevron-back" size={18} color={theme.text} />
                   </Pressable>
-                  <Pressable style={styles.monthNavBtn}>
+                  <Pressable style={styles.monthNavBtn} onPress={handleNextMonth}>
                     <Ionicons name="chevron-forward" size={18} color={theme.text} />
                   </Pressable>
                 </View>
               </View>
+
+              {/* Date not selected nudge */}
+              {!selectedDate && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 4, backgroundColor: theme.error + '15', borderRadius: 8, padding: 8 }}>
+                  <Ionicons name="calendar-outline" size={13} color={theme.error} />
+                  <ThemedText style={{ fontSize: 11, color: theme.error, fontFamily: 'HankenGrotesk_600SemiBold' }}>Please select a date to continue</ThemedText>
+                </View>
+              )}
 
               {/* Day Labels */}
               <View style={styles.dayLabelsRow}>
@@ -254,30 +296,35 @@ export default function BookingConfigurationScreen() {
                 ))}
               </View>
 
-              {/* Month Grid */}
+              {/* Month Grid — real date-aware */}
               <View style={styles.calendarGrid}>
                 {calendarGrid.map((item, idx) => {
-                  if (item.dayNumber === 0) {
+                  if (item.isPadding) {
                     return <View key={`pad-${idx}`} style={styles.calendarDayCell} />;
                   }
 
-                  const isSelected = item.dayNumber === selectedDayOfMonth;
-                  const isCurrent = item.dayNumber === 12; // Muted style for '12' in the mock
+                  const isSelected = selectedDate && item.date &&
+                    selectedDate.toDateString() === item.date.toDateString();
+                  const isToday = item.isToday;
+                  const isPast = item.isPast;
 
                   return (
                     <Pressable
                       key={`day-${item.dayNumber}`}
-                      onPress={() => setSelectedDayOfMonth(item.dayNumber)}
+                      disabled={isPast}
+                      onPress={() => item.date && setSelectedDate(item.date)}
                       style={[
                         styles.calendarDayCell,
                         isSelected && { backgroundColor: theme.secondaryContainer, borderRadius: BorderRadius.md },
+                        isToday && !isSelected && { borderWidth: 1.5, borderColor: theme.primary, borderRadius: BorderRadius.md },
                       ]}
                     >
                       <ThemedText
                         type="bodyMd"
                         style={{
-                          color: isSelected ? theme.onSecondaryContainer : isCurrent ? theme.textSecondary : theme.text,
+                          color: isSelected ? theme.onSecondaryContainer : isPast ? theme.textSecondary : isToday ? theme.primary : theme.text,
                           fontFamily: isSelected ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_400Regular',
+                          opacity: isPast ? 0.35 : 1,
                         }}
                       >
                         {item.dayNumber}
