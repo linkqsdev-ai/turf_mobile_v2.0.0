@@ -20,6 +20,7 @@ export default function BookingConfirmationScreen() {
     slots: string;
     total: string;
     advancePaid: string;
+    cashbackEarned?: string;
   }>();
 
   const slots = params.slots ? params.slots.split(',') : [];
@@ -41,16 +42,36 @@ export default function BookingConfirmationScreen() {
           </Reanimated.View>
 
           {/* Heading */}
-          <Reanimated.View entering={FadeInDown.delay(200).duration(500)} style={{ alignItems: 'center', marginBottom: Spacing.xl }}>
+          <Reanimated.View entering={FadeInDown.delay(200).duration(500)} style={{ alignItems: 'center', marginBottom: Spacing.md }}>
             <ThemedText style={styles.heading}>Booking Confirmed!</ThemedText>
             <ThemedText style={[styles.subheading, { color: theme.textSecondary }]}>
               Your slot has been successfully reserved
             </ThemedText>
           </Reanimated.View>
 
+          {/* Cashback Earned Card */}
+          {params.cashbackEarned && (
+            <Reanimated.View 
+              entering={ZoomIn.delay(300).duration(500)}
+              style={{ width: '100%', backgroundColor: '#10b98115', borderColor: '#10b98133', borderWidth: 1, borderRadius: BorderRadius.xl, padding: Spacing.md, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: Spacing.md }}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#10b98125', justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="gift" size={22} color="#10b981" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <ThemedText style={{ fontSize: 14, fontFamily: 'HankenGrotesk_700Bold', color: '#10b981' }}>
+                  ₹{params.cashbackEarned} Cashback Received!
+                </ThemedText>
+                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
+                  Successfully added to your wallet for future sessions.
+                </ThemedText>
+              </View>
+            </Reanimated.View>
+          )}
+
           {/* Booking Card */}
           <Reanimated.View 
-            entering={FadeInDown.delay(300).duration(500)}
+            entering={FadeInDown.delay(350).duration(500)}
             style={[styles.bookingCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
           >
             {/* Booking Ref */}

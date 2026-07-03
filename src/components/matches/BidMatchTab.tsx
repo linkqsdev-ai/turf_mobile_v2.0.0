@@ -28,7 +28,7 @@ export function BidMatchTab() {
   const theme = useTheme();
   const [bidAmount, setBidAmount] = useState(100);
   const [customBid, setCustomBid] = useState('');
-  const [selectedSport, setSelectedSport] = useState('Football');
+  const [selectedSport, setSelectedSport] = useState('Cricket');
   const [searchText, setSearchText] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
 

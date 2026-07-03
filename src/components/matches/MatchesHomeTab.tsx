@@ -21,13 +21,52 @@ import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { PromoBanner } from '@/components/promo-banner';
+import { useClassStore } from '@/store/app-store';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
-const FILTERS = ['Me', 'All', 'Live', 'Upcoming', 'Finished'];
+const FILTERS = ['Me', 'All', 'Upcoming', 'Finished', 'Classes'];
 
 export function MatchesHomeTab() {
   const theme = useTheme();
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState('Me');
+  const { classes } = useClassStore();
+  const { profile } = useUserProfile();
+
+  const renderFinishedBadge = (sport: string) => {
+    let iconName: any = 'sports-kabaddi';
+    let badgeColor = '#5D68E8';
+    
+    const s = sport.toLowerCase();
+    if (s === 'cricket') {
+      iconName = 'cricket';
+      badgeColor = '#eab308'; // Amber/Gold
+    } else if (s === 'football' || s === 'soccer') {
+      iconName = 'soccer';
+      badgeColor = '#10b981'; // Green
+    } else if (s === 'basketball') {
+      iconName = 'basketball';
+      badgeColor = '#f97316'; // Orange
+    } else if (s === 'tennis') {
+      iconName = 'tennis';
+      badgeColor = '#84cc16'; // Tennis ball green/lime
+    } else if (s === 'badminton') {
+      iconName = 'badminton';
+      badgeColor = '#06b6d4'; // Cyan
+    } else if (s === 'squash') {
+      iconName = 'racket' as any;
+      badgeColor = '#8b5cf6'; // Purple
+    }
+
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2.5 }}>
+        <MaterialCommunityIcons name={iconName} size={12} color={badgeColor} />
+        <ThemedText style={{ color: badgeColor, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 10, letterSpacing: 0.5 }}>
+          Finished
+        </ThemedText>
+      </View>
+    );
+  };
 
   // Spring scale animations for floating buttons
   const scaleAnimTeam = useState(new Animated.Value(1))[0];
@@ -60,50 +99,67 @@ export function MatchesHomeTab() {
 
   return (
     <View style={styles.container}>
-
-
-        <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-          >
-          {/* Filter Tabs */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtersContainer}
-          >
-            {FILTERS.map((filter) => {
-              const isActive = filter === selectedFilter;
-              return (
-                <Pressable
-                  key={filter}
-                  onPress={() => setSelectedFilter(filter)}
-                  style={[
-                    styles.filterChip,
-                    isActive
-                      ? { backgroundColor: 'transparent', borderColor: theme.primary, borderWidth: 1.5 }
-                      : { backgroundColor: 'transparent', borderColor: theme.outlineVariant + '33', borderWidth: 1.5 },
-                  ]}
+      {/* Fixed Filter Tabs at the top */}
+      <View style={{ backgroundColor: theme.background, borderBottomWidth: 1, borderColor: theme.outlineVariant + '15', paddingVertical: 4 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.filtersContainer, { paddingVertical: 8 }]}
+        >
+          {FILTERS.map((filter) => {
+            const isActive = filter === selectedFilter;
+            return (
+              <Pressable
+                key={filter}
+                onPress={() => setSelectedFilter(filter)}
+                style={[
+                  styles.filterChip,
+                  { paddingHorizontal: 12, paddingVertical: 4.5 },
+                  isActive
+                    ? { backgroundColor: 'transparent', borderColor: theme.primary, borderWidth: 1.5 }
+                    : { backgroundColor: 'transparent', borderColor: theme.outlineVariant + '33', borderWidth: 1.5 },
+                ]}
+              >
+                {filter === 'Live' && (
+                  <View style={styles.liveIndicatorDot} />
+                )}
+                <ThemedText
+                  style={{ 
+                    color: isActive ? theme.primary : theme.textSecondary,
+                    fontFamily: isActive ? 'PlusJakartaSans_600SemiBold' : 'PlusJakartaSans_500Medium',
+                    fontSize: 10.5,
+                  }}
                 >
-                  {filter === 'Live' && (
-                    <View style={styles.liveIndicatorDot} />
-                  )}
-                  <ThemedText
-                    type="labelSm"
-                    style={{ 
-                      color: isActive ? theme.primary : theme.textSecondary,
-                      fontFamily: isActive ? 'PlusJakartaSans_700Bold' : 'PlusJakartaSans_500Medium' 
-                    }}
-                  >
-                    {filter}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                  {filter}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
-          {/* LIVE NOW Section */}
+      <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Matches Hero Banner */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, marginBottom: Spacing.xs }}>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="headlineLg" style={{ color: theme.text }}>Matches</ThemedText>
+              <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
+                Track live scores and upcoming fixtures.
+              </ThemedText>
+            </View>
+            <Image
+              source={require('@/assets/images/illustrations/matches_hero.png')}
+              style={{ width: 100, height: 100 }}
+              contentFit="contain"
+            />
+          </View>
+
+          {/* LIVE NOW Section temporarily removed */}
+          {/* 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <ThemedText type="labelMd" style={{ color: theme.textSecondary, textTransform: 'none' }}>
@@ -117,7 +173,6 @@ export function MatchesHomeTab() {
               style={[styles.matchCardShadowWrapper, Shadows.level2]}
             >
               <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
-                {/* Subtle vector watermark */}
                 <Image
                   source={require('@/assets/images/illustrations/cricket_player.png')}
                   style={styles.cardWatermark}
@@ -137,9 +192,7 @@ export function MatchesHomeTab() {
                   </View>
                 </View>
 
-                {/* Match Teams & Live Score */}
                 <View style={styles.liveScoreRow}>
-                  {/* Left Column (RCB) */}
                   <View style={styles.teamInfoCol}>
                     <View style={styles.teamLogoName}>
                       <View style={[styles.teamLetterLogo, { backgroundColor: theme.primaryContainer }]}>
@@ -157,12 +210,10 @@ export function MatchesHomeTab() {
                     </ThemedText>
                   </View>
 
-                  {/* Center vs Container */}
                   <View style={styles.vsContainer}>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_500Medium' }}>vs</ThemedText>
                   </View>
 
-                  {/* Right Column (KXI - Symmetrical Right Alignment) */}
                   <View style={[styles.teamInfoCol, { alignItems: 'flex-end' }]}>
                     <View style={[styles.teamLogoName, { flexDirection: 'row-reverse' }]}>
                       <View style={[styles.teamLetterLogo, { backgroundColor: theme.outlineVariant, marginLeft: 6 }]}>
@@ -181,7 +232,6 @@ export function MatchesHomeTab() {
                   </View>
                 </View>
 
-                {/* Card Footer */}
                 <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33' }]}>
                   <View style={styles.footerVenue}>
                     <Ionicons name="football-outline" size={14} color={theme.textSecondary} />
@@ -189,392 +239,818 @@ export function MatchesHomeTab() {
                       M. Chinnaswamy Stadium
                     </ThemedText>
                   </View>
-                  <Pressable
-                    onPress={() => handleMatchCenterSelect('rcb-ipl')}
-                    style={styles.matchCenterLink}
-                  >
+                  <View style={styles.matchCenterLink}>
                     <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
                       Match Center
                     </ThemedText>
                     <Ionicons name="arrow-forward" size={12} color={theme.text} style={{ marginLeft: 2 }} />
-                  </Pressable>
+                  </View>
                 </View>
               </View>
             </Pressable>
           </View>
+          */}
 
-          {/* Announcements & Matches Banners (Vertical Banners - Single Cards) */}
-          <View style={styles.section}>
-            <PromoBanner 
-              title="Grand Summer Tournament!"
-              subtitle="Win up to ₹50,000 in prizes. Slots filling fast!"
-              buttonText="Register Team"
-              badgeText="ANNOUNCEMENT"
-              backgroundImage="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80"
-              buttonBackgroundColor="#ff8c00"
-              buttonTextColor="#ffffff"
-              onPress={() => router.push('/(tabs)/tournaments')}
-              variant="vertical"
-            />
-            <PromoBanner 
-              title="Bid to Play Elite Teams"
-              subtitle="Use your Coins to bid and challenge high ranked squads."
-              buttonText="Bid Match"
-              badgeText="BID MATCH"
-              backgroundImage="https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80"
-              buttonBackgroundColor="#5D68E8"
-              buttonTextColor="#ffffff"
-              onPress={() => {
-                Alert.alert('Bid Match', 'Quick match bidding is now active. Scroll down to Open Challenges.');
-              }}
-              variant="vertical"
-            />
-          </View>
+          {/* If the filter is 'Classes', only show the coaching classes */}
+          {selectedFilter === 'Classes' ? (
+            <View style={[styles.section, { marginBottom: Spacing.sm }]}>
+              <ThemedText type="labelMd" style={{ color: theme.textSecondary, textTransform: 'none', marginBottom: Spacing.xs }}>
+                Academy Coaching Classes
+              </ThemedText>
+              {classes.length > 0 ? (
+                <ScrollView 
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingVertical: 4, gap: 12 }}
+                >
+                  {classes.map((cls: any, idx: number) => {
+                    const navigateToProfile = () => {
+                      router.push({
+                        pathname: '/coach/[id]',
+                        params: {
+                          id: cls.id || `class-${idx}`,
+                          name: profile.name || 'Coach',
+                          specialty: cls.className,
+                          experience: `${cls.classType} • ${cls.ageGroup || 'All Ages'}`,
+                          trainees: '18',
+                          rating: '5.0',
+                          reviews: '1',
+                          rate: cls.feeAmount ? `₹${cls.feeAmount}/${cls.feeType === 'Per Session' ? 'sess' : 'mo'}` : 'Free',
+                          location: cls.venue,
+                          match: 'Your Class',
+                          sports: [cls.sportType.toLowerCase()].join(','),
+                          avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+                          badge: 'OWNER',
+                        }
+                      });
+                    };
+                    const sportLower = cls.sportType.toLowerCase();
+                    const watermarkSource = sportLower.includes('cricket') ? require('@/assets/images/illustrations/cricket_player.png') : (sportLower.includes('football') || sportLower.includes('futsal') ? require('@/assets/images/illustrations/football_player.png') : (sportLower.includes('badminton') ? require('@/assets/images/illustrations/athletes.png') : require('@/assets/images/illustrations/tennis_player.png')));
 
-          {/* TODAY Section */}
-          <View style={styles.section}>
-            <ThemedText type="labelMd" style={[styles.sectionHeader, { color: theme.textSecondary, textTransform: 'none' }]}>
-              Today
-            </ThemedText>
+                    return (
+                      <Pressable
+                        key={cls.id || `match-class-${idx}`}
+                        style={[styles.advertisementCard, { backgroundColor: '#f5f6ff', borderColor: theme.outlineVariant + '33', width: 220, overflow: 'hidden' }]}
+                        onPress={navigateToProfile}
+                      >
+                        {/* Subtle watermark vector illustration */}
+                        <Image 
+                          source={watermarkSource}
+                          style={{ position: 'absolute', right: -10, bottom: -10, width: 90, height: 90, opacity: 0.12 }}
+                          contentFit="contain"
+                        />
+                        {/* Banner Top Accent */}
+                        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: theme.primary, borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl }} />
+                        
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                          <Image 
+                            source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
+                            style={{ width: 44, height: 44, borderRadius: BorderRadius.full }}
+                          />
+                          <View style={{ flex: 1, marginLeft: 10 }}>
+                            <ThemedText style={{ color: theme.primary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 10, letterSpacing: 0.5 }}>COACHING CLASS</ThemedText>
+                            <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 1 }}>{cls.classType} · {cls.sportType.toUpperCase()}</ThemedText>
+                          </View>
+                        </View>
 
-            {/* Futsal Match Card */}
-            <Pressable
-              onPress={() => router.push({ pathname: '/scoring', params: { matchId: 'futsal-1', sport: 'football' } })}
-              style={[styles.matchCardShadowWrapper, Shadows.level2]}
-            >
-              <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
-                <Image
-                  source={require('@/assets/images/illustrations/football_player.png')}
-                  style={styles.cardWatermark}
-                  contentFit="contain"
-                />
+                        <ThemedText type="title" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', fontSize: 15, lineHeight: 20 }} numberOfLines={1}>
+                          {cls.className}
+                        </ThemedText>
+                        
+                        <ThemedText type="bodyMd" style={{ color: theme.textSecondary, fontSize: 12, marginTop: 4 }} numberOfLines={1}>
+                          Session Duration · {cls.sessionDuration}
+                        </ThemedText>
 
-                <View style={styles.cardHeader}>
-                  <View style={styles.badgeRow}>
-                    <ThemedText style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_700Bold', fontSize: 12 }}>
-                      Summer Futsal League
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.meBadge, { backgroundColor: theme.secondaryContainer + '22', borderColor: theme.secondaryContainer, borderWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
-                    <Ionicons name="person" size={8} color={theme.secondary} style={{ marginRight: 2 }} />
-                    <ThemedText style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>ME</ThemedText>
-                  </View>
+                        <View style={{ borderTopWidth: 1, borderTopColor: theme.outlineVariant + '1a', marginTop: 10, paddingTop: 10 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                            <Ionicons name="location-outline" size={13} color={theme.textSecondary} style={{ marginRight: 4 }} />
+                            <ThemedText style={{ color: theme.textSecondary, fontSize: 11 }} numberOfLines={1}>{cls.venue}</ThemedText>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="time-outline" size={13} color={theme.textSecondary} style={{ marginRight: 4 }} />
+                            <ThemedText style={{ fontSize: 10, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                              {cls.sessionTime}
+                            </ThemedText>
+                          </View>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              ) : (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <ThemedText type="bodyMd" style={{ color: theme.textSecondary }}>No Coaching Classes available.</ThemedText>
                 </View>
+              )}
+            </View>
+          ) : (
+            <>
+              {/* TODAY Section */}
+              {(selectedFilter === 'Me' || selectedFilter === 'All' || selectedFilter === 'Upcoming') && (
+                <View style={styles.section}>
+                  <ThemedText type="labelMd" style={[styles.sectionHeader, { color: theme.textSecondary, textTransform: 'none' }]}>
+                    Today
+                  </ThemedText>
 
-                {/* Match Teams & Time (Symmetrical Compact Row Layout) */}
-                <View style={styles.scheduledMatchRow}>
-                  {/* Left Team */}
-                  <View style={styles.scheduledTeamLeft}>
-                    <View style={styles.crestContainerSmall}>
-                      <Ionicons name="shield-half" size={18} color={theme.primary} />
-                    </View>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold', flex: 1 }} numberOfLines={1}>
-                      London Lions
-                    </ThemedText>
-                  </View>
-
-                  {/* Center Time Pill */}
-                  <View style={[styles.timeBadgeSmall, { backgroundColor: theme.surfaceHigh }]}>
-                    <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_800ExtraBold', color: theme.text }}>19:00</ThemedText>
-                  </View>
-
-                  {/* Right Team */}
-                  <View style={styles.scheduledTeamRight}>
-                    <ThemedText type="bodyMd" style={{ marginRight: 8, fontFamily: 'HankenGrotesk_700Bold', flex: 1, textAlign: 'right' }} numberOfLines={1}>
-                      Kent Kings
-                    </ThemedText>
-                    <View style={styles.crestContainerSmall}>
-                      <Ionicons name="shield-half" size={18} color={theme.secondaryContainer} />
-                    </View>
-                  </View>
-                </View>
-
-                {/* Card Footer */}
-                <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33' }]}>
-                  <View style={styles.footerVenue}>
-                    <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
-                    <ThemedText type="bodyMd" style={styles.footerVenueText}>
-                      O2 Arena Turf
-                    </ThemedText>
-                  </View>
+                  {/* Match Card 1: Futsal */}
                   <Pressable
                     onPress={() => router.push({ pathname: '/scoring', params: { matchId: 'futsal-1', sport: 'football' } })}
-                    style={styles.matchCenterLink}
+                    style={[styles.matchCardShadowWrapper, Shadows.level2]}
                   >
-                    <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                      Match Center
-                    </ThemedText>
-                    <Ionicons name="arrow-forward" size={12} color={theme.text} style={{ marginLeft: 2 }} />
+                    <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
+                      <Image
+                        source={require('@/assets/images/illustrations/football_player.png')}
+                        style={styles.cardWatermark}
+                        contentFit="contain"
+                      />
+
+                      <View style={styles.cardHeader}>
+                        <View style={styles.badgeRow}>
+                          <ThemedText style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_700Bold', fontSize: 12 }}>
+                            Summer Futsal League
+                          </ThemedText>
+                        </View>
+                        <View style={[styles.meBadge, { backgroundColor: theme.secondaryContainer + '22', borderColor: theme.secondaryContainer, borderWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
+                          <Ionicons name="person" size={8} color={theme.secondary} style={{ marginRight: 2 }} />
+                          <ThemedText style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>ME</ThemedText>
+                        </View>
+                      </View>
+
+                      <View style={styles.scheduledMatchRow}>
+                        <View style={styles.scheduledTeamLeft}>
+                          <View style={styles.crestContainerSmall}>
+                            <Ionicons name="shield-half" size={18} color={theme.primary} />
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold', flex: 1 }} numberOfLines={1}>
+                            London Lions
+                          </ThemedText>
+                        </View>
+
+                        <View style={[styles.timeBadgeSmall, { backgroundColor: theme.surfaceHigh }]}>
+                          <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_800ExtraBold', color: theme.text }}>19:00</ThemedText>
+                        </View>
+
+                        <View style={styles.scheduledTeamRight}>
+                          <ThemedText type="bodyMd" style={{ marginRight: 8, fontFamily: 'HankenGrotesk_700Bold', flex: 1, textAlign: 'right' }} numberOfLines={1}>
+                            Kent Kings
+                          </ThemedText>
+                          <View style={styles.crestContainerSmall}>
+                            <Ionicons name="shield-half" size={18} color={theme.secondaryContainer} />
+                          </View>
+                        </View>
+                      </View>
+
+                      <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33' }]}>
+                        <View style={styles.footerVenue}>
+                          <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
+                          <ThemedText type="bodyMd" style={styles.footerVenueText}>
+                            O2 Arena Turf
+                          </ThemedText>
+                        </View>
+                        <View style={styles.matchCenterLink}>
+                          <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            Match Center
+                          </ThemedText>
+                          <Ionicons name="arrow-forward" size={12} color={theme.text} style={{ marginLeft: 2 }} />
+                        </View>
+                      </View>
+                    </View>
                   </Pressable>
-                </View>
-              </View>
-            </Pressable>
 
-            {/* Expanded Match: Premier League (Arsenal vs Chelsea) */}
-            <Pressable
-              onPress={() => router.push({ pathname: '/scoring', params: { matchId: 'pl-1', sport: 'football' } })}
-              style={[styles.matchCardShadowWrapper, Shadows.level2, { marginTop: 12 }]}
-            >
-              <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
-                <Image
-                  source={require('@/assets/images/illustrations/football_player.png')}
-                  style={styles.cardWatermark}
-                  contentFit="contain"
-                />
-
-                <View style={styles.cardHeader}>
-                  <View style={styles.badgeRow}>
-                    <ThemedText style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_700Bold', fontSize: 12 }}>
-                      Premier League
-                    </ThemedText>
-                  </View>
-                </View>
-
-                {/* Match Teams & Time */}
-                <View style={styles.scheduledMatchRow}>
-                  {/* Left Team */}
-                  <View style={styles.scheduledTeamLeft}>
-                    <View style={styles.crestContainerSmall}>
-                      <Ionicons name="shield-half" size={18} color="#ef0107" />
-                    </View>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold', flex: 1 }} numberOfLines={1}>
-                      Arsenal
-                    </ThemedText>
-                  </View>
-
-                  {/* Center Time Pill */}
-                  <View style={[styles.timeBadgeSmall, { backgroundColor: theme.surfaceHigh }]}>
-                    <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_800ExtraBold', color: theme.text }}>21:00</ThemedText>
-                  </View>
-
-                  {/* Right Team */}
-                  <View style={styles.scheduledTeamRight}>
-                    <ThemedText type="bodyMd" style={{ marginRight: 8, fontFamily: 'HankenGrotesk_700Bold', flex: 1, textAlign: 'right' }} numberOfLines={1}>
-                      Chelsea
-                    </ThemedText>
-                    <View style={styles.crestContainerSmall}>
-                      <Ionicons name="shield-half" size={18} color="#034694" />
-                    </View>
-                  </View>
-                </View>
-
-                {/* Card Footer */}
-                <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33' }]}>
-                  <View style={styles.footerVenue}>
-                    <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
-                    <ThemedText type="bodyMd" style={styles.footerVenueText}>
-                      Emirates Stadium
-                    </ThemedText>
-                  </View>
+                  {/* Match Card 2: Arsenal vs Chelsea */}
                   <Pressable
                     onPress={() => router.push({ pathname: '/scoring', params: { matchId: 'pl-1', sport: 'football' } })}
-                    style={styles.matchCenterLink}
+                    style={[styles.matchCardShadowWrapper, Shadows.level2, { marginTop: 12 }]}
                   >
-                    <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                      Match Center
-                    </ThemedText>
-                    <Ionicons name="arrow-forward" size={12} color={theme.text} style={{ marginLeft: 2 }} />
+                    <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
+                      <Image
+                        source={require('@/assets/images/illustrations/football_player.png')}
+                        style={styles.cardWatermark}
+                        contentFit="contain"
+                      />
+
+                      <View style={styles.cardHeader}>
+                        <View style={styles.badgeRow}>
+                          <ThemedText style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_700Bold', fontSize: 12 }}>
+                            Premier League
+                          </ThemedText>
+                        </View>
+                      </View>
+
+                      <View style={styles.scheduledMatchRow}>
+                        <View style={styles.scheduledTeamLeft}>
+                          <View style={styles.crestContainerSmall}>
+                            <Ionicons name="shield-half" size={18} color="#ef0107" />
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold', flex: 1 }} numberOfLines={1}>
+                            Arsenal
+                          </ThemedText>
+                        </View>
+
+                        <View style={[styles.timeBadgeSmall, { backgroundColor: theme.surfaceHigh }]}>
+                          <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_800ExtraBold', color: theme.text }}>21:00</ThemedText>
+                        </View>
+
+                        <View style={styles.scheduledTeamRight}>
+                          <ThemedText type="bodyMd" style={{ marginRight: 8, fontFamily: 'HankenGrotesk_700Bold', flex: 1, textAlign: 'right' }} numberOfLines={1}>
+                            Chelsea
+                          </ThemedText>
+                          <View style={styles.crestContainerSmall}>
+                            <Ionicons name="shield-half" size={18} color="#034694" />
+                          </View>
+                        </View>
+                      </View>
+
+                      <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33' }]}>
+                        <View style={styles.footerVenue}>
+                          <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
+                          <ThemedText type="bodyMd" style={styles.footerVenueText}>
+                            Emirates Stadium
+                          </ThemedText>
+                        </View>
+                        <View style={styles.matchCenterLink}>
+                          <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            Match Center
+                          </ThemedText>
+                          <Ionicons name="arrow-forward" size={12} color={theme.text} style={{ marginLeft: 2 }} />
+                        </View>
+                      </View>
+                    </View>
                   </Pressable>
                 </View>
-              </View>
-            </Pressable>
-          </View>
+              )}
 
-          {/* Tournaments Ad Banner */}
-          <View style={styles.section}>
-            <View style={[styles.tourneyAdCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-              <View style={styles.tourneyAdHeader}>
-                <View style={[styles.tourneyAdBadge, { backgroundColor: theme.secondaryContainer + '22', borderColor: theme.secondaryContainer + '33', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
-                  <Ionicons name="trophy-outline" size={10} color={theme.secondary} />
-                  <ThemedText style={{ color: theme.secondary, fontSize: 8, fontFamily: 'PlusJakartaSans_800ExtraBold', marginLeft: 4, letterSpacing: 0.5 }}>Upcoming Tournament</ThemedText>
-                </View>
-                <ThemedText style={styles.tourneyAdSlots}>12/16 Slots Filled</ThemedText>
-              </View>
-              
-              <View style={styles.tourneyAdBody}>
-                <View style={styles.tourneyAdInfo}>
-                  <ThemedText style={styles.tourneyAdTitle}>Canary Wharf Cup 2026</ThemedText>
-                  <ThemedText style={styles.tourneyAdMeta}>Cricket Knockout • ₹5,000 Prize Pool</ThemedText>
-                </View>
-                <Pressable 
-                  style={[styles.tourneyAdBtn, { backgroundColor: theme.primary }]}
-                  onPress={() => router.push('/(tabs)/tournaments')}
-                >
-                  <ThemedText style={styles.tourneyAdBtnText}>Register Team</ThemedText>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-
-          {/* YESTERDAY Section */}
-          <View style={[styles.section, { paddingBottom: 120 }]}>
-            <ThemedText type="labelMd" style={[styles.sectionHeader, { color: theme.textSecondary, textTransform: 'none' }]}>
-              Yesterday
-            </ThemedText>
-
-            {/* Match 1: T20 Blast */}
-            <Pressable
-              onPress={() => handleMatchCenterSelect('yesterday-cricket-1', 'cricket')}
-              style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9 }]}
-            >
-              <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
-                <View style={styles.cardHeader}>
-                  <View style={[styles.leagueTypeBadge, { backgroundColor: theme.secondary + '14', borderColor: theme.secondary + '33', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
-                    <ThemedText style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>
-                      T20 Blast
-                    </ThemedText>
-                  </View>
-                </View>
-
-                {/* Finished Match Rows */}
-                <View style={{ marginVertical: 6, gap: 6 }}>
-                  <View style={styles.finishedMatchTeamRow}>
-                    <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
-                      <ThemedText type="labelSm" style={{ color: theme.text }}>MT</ThemedText>
+              {/* After Match Card 2 Promo Card Row */}
+              {(selectedFilter === 'Me' || selectedFilter === 'All') && (
+                <View style={[styles.section, { marginBottom: Spacing.sm }]}>
+                  <ThemedText type="labelMd" style={{ color: theme.textSecondary, textTransform: 'none', marginBottom: Spacing.xs }}>
+                    Special Promotions
+                  </ThemedText>
+                  <ScrollView 
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingVertical: 4, gap: 16, paddingHorizontal: 4 }}
+                  >
+                    {/* Turf Ground Ad Card */}
+                    <View style={{ width: 280 }}>
+                      <PromoBanner 
+                        title="Book Premium Turf!"
+                        subtitle="Save up to 20% on your slot booking today."
+                        buttonText="Book Ground"
+                        badgeText="TURF BOOKING"
+                        isGradient={false}
+                        backgroundImage={require('@/assets/images/sports/skyline_turf.png')}
+                        buttonBackgroundColor="#ffffff"
+                        buttonTextColor="#059669"
+                        illustrationImage={require('@/assets/images/illustrations/athletes.png')}
+                        onPress={() => router.push('/(tabs)/explore')}
+                      />
                     </View>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
-                      Middlesex Titans
-                    </ThemedText>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
-                      145/6
-                    </ThemedText>
-                  </View>
-                  <View style={styles.finishedMatchTeamRow}>
-                    <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
-                      <ThemedText type="labelSm" style={{ color: theme.text }}>SS</ThemedText>
-                    </View>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
-                      Sussex Sharks
-                    </ThemedText>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
-                      142/9
-                    </ThemedText>
-                  </View>
-                </View>
 
-                {/* Card Footer */}
-                <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33', paddingTop: 10, marginTop: 10 }]}>
-                  <View style={[styles.finishedBadge, { backgroundColor: theme.surfaceHigh, borderColor: theme.outlineVariant + '33', borderWidth: 1 }]}>
-                    <ThemedText style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>
-                      Finished
-                    </ThemedText>
-                  </View>
+                    {/* Bid Match Ad Card */}
+                    <View style={{ width: 280 }}>
+                      <PromoBanner 
+                        title="Bid to Play Elite Teams"
+                        subtitle="Use your Coins to bid and challenge top-tier squads."
+                        buttonText="Bid Challenge"
+                        badgeText="BID MATCH"
+                        isGradient={false}
+                        backgroundImage={require('@/assets/images/sports/wembley_stadium_turf.png')}
+                        buttonBackgroundColor="#ffffff"
+                        buttonTextColor="#5D68E8"
+                        illustrationImage={require('@/assets/images/illustrations/football_player.png')}
+                        onPress={() => {
+                          Alert.alert('Bid Match', 'Quick match bidding is now active. Scroll down to Open Challenges.');
+                        }}
+                      />
+                    </View>
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* YESTERDAY Section */}
+              {(selectedFilter === 'Me' || selectedFilter === 'All' || selectedFilter === 'Finished') && (
+                <View style={styles.section}>
+                  <ThemedText type="labelMd" style={[styles.sectionHeader, { color: theme.textSecondary, textTransform: 'none' }]}>
+                    Yesterday
+                  </ThemedText>
+
+                  {/* Match Card 3: Cricket T20 Blast */}
                   <Pressable
                     onPress={() => handleMatchCenterSelect('yesterday-cricket-1', 'cricket')}
-                    style={styles.matchCenterLink}
+                    style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9 }]}
                   >
-                    <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                      Scorecard
-                    </ThemedText>
-                    <Ionicons name="chevron-forward" size={12} color={theme.text} />
+                    <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
+                      <View style={styles.cardHeader}>
+                        <View style={[styles.leagueTypeBadge, { backgroundColor: theme.secondary + '14', borderColor: theme.secondary + '33', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
+                          <ThemedText style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>
+                            T20 Blast
+                          </ThemedText>
+                        </View>
+                      </View>
+
+                      <View style={{ marginVertical: 6, gap: 6 }}>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>MT</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Middlesex Titans
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
+                            145/6
+                          </ThemedText>
+                        </View>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>SS</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Sussex Sharks
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
+                            142/9
+                          </ThemedText>
+                        </View>
+                      </View>
+
+                      <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33', paddingTop: 10, marginTop: 10 }]}>
+                        {renderFinishedBadge('cricket')}
+                        <View style={styles.matchCenterLink}>
+                          <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            Scorecard
+                          </ThemedText>
+                          <Ionicons name="chevron-forward" size={12} color={theme.text} />
+                        </View>
+                      </View>
+                    </View>
                   </Pressable>
-                </View>
-              </View>
-            </Pressable>
 
-            {/* Open Challenge / Bid Match Card */}
-            <View style={[styles.challengeShadowWrapper, Shadows.level3]}>
-              <View style={styles.challengeCard}>
-                <Image 
-                  source="https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=600&q=80" 
-                  style={StyleSheet.absoluteFill} 
-                  contentFit="cover" 
-                />
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(11, 59, 96, 0.85)' }]} />
-                
-                <View style={styles.challengeHeader}>
-                  <View style={[styles.challengeBadge, { backgroundColor: 'rgba(254, 174, 44, 0.15)', borderColor: 'rgba(254, 174, 44, 0.3)', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
-                    <Ionicons name="flash-outline" size={10} color="#feae2c" />
-                    <ThemedText style={[styles.challengeBadgeText, { color: '#feae2c', fontSize: 8, letterSpacing: 0.5 }]}>Open Challenge</ThemedText>
-                  </View>
-                  <View style={[styles.challengeBidBadge, { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.3)', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
-                    <FontAwesome5 name="coins" size={9} color="#ffffff" style={{ marginRight: 4 }} />
-                    <ThemedText style={[styles.challengeBidText, { color: '#ffffff', fontSize: 8, letterSpacing: 0.5 }]}>100 Coins Bid</ThemedText>
-                  </View>
-                </View>
-                
-                <View style={styles.challengeTeamInfo}>
-                  <View style={styles.challengeTeamHeader}>
-                    <Image source={{ uri: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=80&q=80' }} style={styles.challengeTeamLogo} contentFit="cover" />
-                    <View style={{ marginLeft: 8 }}>
-                      <ThemedText style={[styles.challengeTeamName, { color: '#ffffff' }]}>Apex Strikers</ThemedText>
-                      <ThemedText style={[styles.challengeTeamRank, { color: '#e2e8f0' }]}>Elite Div • Rank #42</ThemedText>
-                    </View>
-                  </View>
-                  <ThemedText style={[styles.challengeDescription, { color: '#f8fafc' }]}>
-                    Looking for a competitive 7v7 Football match today at 19:30. Accepting bids from Elite tier teams.
-                  </ThemedText>
-                </View>
-                
-                <Pressable 
-                  style={[styles.challengeBtn, { backgroundColor: '#ffffff' }]}
-                  onPress={() => Alert.alert('Bid Match', 'You have bid 100 coins to play Apex Strikers. Your challenge request is pending.')}
-                >
-                  <ThemedText style={[styles.challengeBtnText, { color: '#0b3b60' }]}>Bid to Play</ThemedText>
-                </Pressable>
-              </View>
-            </View>
-
-            {/* Match 2: Champions League */}
-            <Pressable
-              onPress={() => handleMatchCenterSelect('yesterday-football-1', 'football')}
-              style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9, marginTop: 12 }]}
-            >
-              <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
-                <View style={styles.cardHeader}>
-                  <View style={[styles.leagueTypeBadge, { backgroundColor: '#e8f0fe', borderColor: '#d2e3fc33', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
-                    <ThemedText style={{ color: '#1a73e8', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>
-                      Champions League
-                    </ThemedText>
-                  </View>
-                </View>
-
-                {/* Finished Match Rows */}
-                <View style={{ marginVertical: 6, gap: 6 }}>
-                  <View style={styles.finishedMatchTeamRow}>
-                    <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
-                      <ThemedText type="labelSm" style={{ color: theme.text }}>RM</ThemedText>
-                    </View>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
-                      Real Madrid
-                    </ThemedText>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
-                      3
-                    </ThemedText>
-                  </View>
-                  <View style={styles.finishedMatchTeamRow}>
-                    <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
-                      <ThemedText type="labelSm" style={{ color: theme.text }}>MC</ThemedText>
-                    </View>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
-                      Manchester City
-                    </ThemedText>
-                    <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
-                      2
-                    </ThemedText>
-                  </View>
-                </View>
-
-                {/* Card Footer */}
-                <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33', paddingTop: 10, marginTop: 10 }]}>
-                  <View style={[styles.finishedBadge, { backgroundColor: theme.surfaceHigh, borderColor: theme.outlineVariant + '33', borderWidth: 1 }]}>
-                    <ThemedText style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>
-                      Finished
-                    </ThemedText>
-                  </View>
+                  {/* Match Card 4: Champions League */}
                   <Pressable
                     onPress={() => handleMatchCenterSelect('yesterday-football-1', 'football')}
-                    style={styles.matchCenterLink}
+                    style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9, marginTop: 12 }]}
                   >
-                    <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                      Scorecard
-                    </ThemedText>
-                    <Ionicons name="chevron-forward" size={12} color={theme.text} />
+                    <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
+                      <View style={styles.cardHeader}>
+                        <View style={[styles.leagueTypeBadge, { backgroundColor: '#e8f0fe', borderColor: '#d2e3fc33', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
+                          <ThemedText style={{ color: '#1a73e8', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>
+                            Champions League
+                          </ThemedText>
+                        </View>
+                      </View>
+
+                      <View style={{ marginVertical: 6, gap: 6 }}>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>RM</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Real Madrid
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
+                            3
+                          </ThemedText>
+                        </View>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>MC</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Manchester City
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
+                            2
+                          </ThemedText>
+                        </View>
+                      </View>
+
+                      <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33', paddingTop: 10, marginTop: 10 }]}>
+                        {renderFinishedBadge('football')}
+                        <View style={styles.matchCenterLink}>
+                          <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            Scorecard
+                          </ThemedText>
+                          <Ionicons name="chevron-forward" size={12} color={theme.text} />
+                        </View>
+                      </View>
+                    </View>
+                  </Pressable>
+
+                  {/* Match Card 5: Championship Football */}
+                  <Pressable
+                    onPress={() => handleMatchCenterSelect('yesterday-football-2', 'football')}
+                    style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9, marginTop: 12 }]}
+                  >
+                    <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
+                      <View style={styles.cardHeader}>
+                        <View style={[styles.leagueTypeBadge, { backgroundColor: '#e8f0fe', borderColor: '#d2e3fc33', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
+                          <ThemedText style={{ color: '#1a73e8', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>
+                            Championship
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={{ marginVertical: 6, gap: 6 }}>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>BF</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Blue Falcons
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
+                            2
+                          </ThemedText>
+                        </View>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>RH</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Red Hawks
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
+                            1
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33', paddingTop: 10, marginTop: 10 }]}>
+                        {renderFinishedBadge('football')}
+                        <View style={styles.matchCenterLink}>
+                          <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            Scorecard
+                          </ThemedText>
+                          <Ionicons name="chevron-forward" size={12} color={theme.text} />
+                        </View>
+                      </View>
+                    </View>
                   </Pressable>
                 </View>
-              </View>
-            </Pressable>
-          </View>
+              )}
+
+              {/* After Match Card 5: Coach promo banner horizontal Scroll ONLY */}
+              {(selectedFilter === 'Me' || selectedFilter === 'All') && classes.length > 0 && (
+                <View style={[styles.section, { marginBottom: Spacing.sm }]}>
+                  <ThemedText type="labelMd" style={{ color: theme.textSecondary, textTransform: 'none', marginBottom: Spacing.xs }}>
+                    Academy Coaching Classes
+                  </ThemedText>
+                  <ScrollView 
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingVertical: 4, gap: 12 }}
+                  >
+                    {classes.map((cls: any, idx: number) => {
+                      const navigateToProfile = () => {
+                        router.push({
+                          pathname: '/coach/[id]',
+                          params: {
+                            id: cls.id || `class-${idx}`,
+                            name: profile.name || 'Coach',
+                            specialty: cls.className,
+                            experience: `${cls.classType} • ${cls.ageGroup || 'All Ages'}`,
+                            trainees: '18',
+                            rating: '5.0',
+                            reviews: '1',
+                            rate: cls.feeAmount ? `₹${cls.feeAmount}/${cls.feeType === 'Per Session' ? 'sess' : 'mo'}` : 'Free',
+                            location: cls.venue,
+                            match: 'Your Class',
+                            sports: [cls.sportType.toLowerCase()].join(','),
+                            avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+                            badge: 'OWNER',
+                          }
+                        });
+                      };
+
+                      const sportLower = cls.sportType.toLowerCase();
+                      const watermarkSource = sportLower.includes('cricket') ? require('@/assets/images/illustrations/cricket_player.png') : (sportLower.includes('football') || sportLower.includes('futsal') ? require('@/assets/images/illustrations/football_player.png') : (sportLower.includes('badminton') ? require('@/assets/images/illustrations/athletes.png') : require('@/assets/images/illustrations/tennis_player.png')));
+
+                      return (
+                        <Pressable
+                          key={cls.id || `match-class-${idx}`}
+                          style={[styles.advertisementCard, { backgroundColor: '#f5f6ff', borderColor: theme.outlineVariant + '33', width: 220, overflow: 'hidden' }]}
+                          onPress={navigateToProfile}
+                        >
+                          {/* Subtle watermark vector illustration */}
+                          <Image 
+                            source={watermarkSource}
+                            style={{ position: 'absolute', right: -10, bottom: -10, width: 90, height: 90, opacity: 0.12 }}
+                            contentFit="contain"
+                          />
+                          {/* Banner Top Accent */}
+                          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: theme.primary, borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl }} />
+                          
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                            <Image 
+                              source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
+                              style={{ width: 44, height: 44, borderRadius: BorderRadius.full }}
+                            />
+                            <View style={{ flex: 1, marginLeft: 10 }}>
+                              <ThemedText style={{ color: theme.primary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 10, letterSpacing: 0.5 }}>COACHING CLASS</ThemedText>
+                              <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 1 }}>{cls.classType} · {cls.sportType.toUpperCase()}</ThemedText>
+                            </View>
+                          </View>
+
+                          <ThemedText type="title" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', fontSize: 15, lineHeight: 20 }} numberOfLines={1}>
+                            {cls.className}
+                          </ThemedText>
+                          
+                          <ThemedText type="bodyMd" style={{ color: theme.textSecondary, fontSize: 12, marginTop: 4 }} numberOfLines={1}>
+                            Session Duration · {cls.sessionDuration}
+                          </ThemedText>
+
+                          <View style={{ borderTopWidth: 1, borderTopColor: theme.outlineVariant + '1a', marginTop: 10, paddingTop: 10 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                              <Ionicons name="location-outline" size={13} color={theme.textSecondary} style={{ marginRight: 4 }} />
+                              <ThemedText style={{ color: theme.textSecondary, fontSize: 11 }} numberOfLines={1}>{cls.venue}</ThemedText>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                              <Ionicons name="time-outline" size={13} color={theme.textSecondary} style={{ marginRight: 4 }} />
+                              <ThemedText style={{ fontSize: 10, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                                {cls.sessionTime}
+                              </ThemedText>
+                            </View>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Additional Matches Section */}
+              {(selectedFilter === 'Me' || selectedFilter === 'All' || selectedFilter === 'Finished') && (
+                <View style={styles.section}>
+                  {/* Match Card 6: London Giants vs York Knights */}
+                  <Pressable
+                    onPress={() => handleMatchCenterSelect('yesterday-cricket-2', 'cricket')}
+                    style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9 }]}
+                  >
+                    <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
+                      <View style={styles.cardHeader}>
+                        <View style={[styles.leagueTypeBadge, { backgroundColor: theme.secondary + '14', borderColor: theme.secondary + '33', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
+                          <ThemedText style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>
+                            County League
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={{ marginVertical: 6, gap: 6 }}>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>LG</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            London Giants
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
+                            188/3
+                          </ThemedText>
+                        </View>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>YK</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            York Knights
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
+                            185/8
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33', paddingTop: 10, marginTop: 10 }]}>
+                        {renderFinishedBadge('cricket')}
+                        <View style={styles.matchCenterLink}>
+                          <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            Scorecard
+                          </ThemedText>
+                          <Ionicons name="chevron-forward" size={12} color={theme.text} />
+                        </View>
+                      </View>
+                    </View>
+                  </Pressable>
+
+                  {/* Match Card 7: Golden State vs Boston Celtics */}
+                  <Pressable
+                    onPress={() => handleMatchCenterSelect('yesterday-basketball-1', 'basketball')}
+                    style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9, marginTop: 12 }]}
+                  >
+                    <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
+                      <View style={styles.cardHeader}>
+                        <View style={[styles.leagueTypeBadge, { backgroundColor: '#fef3c7', borderColor: '#fde68a', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
+                          <ThemedText style={{ color: '#d97706', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>
+                            NBA Classic
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={{ marginVertical: 6, gap: 6 }}>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>GS</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Golden State
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
+                            108
+                          </ThemedText>
+                        </View>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>BC</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Boston Celtics
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
+                            102
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33', paddingTop: 10, marginTop: 10 }]}>
+                        {renderFinishedBadge('basketball')}
+                        <View style={styles.matchCenterLink}>
+                          <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            Scorecard
+                          </ThemedText>
+                          <Ionicons name="chevron-forward" size={12} color={theme.text} />
+                        </View>
+                      </View>
+                    </View>
+                  </Pressable>
+
+                  {/* Match Card 8: Badminton Open */}
+                  <Pressable
+                    onPress={() => handleMatchCenterSelect('yesterday-badminton-1', 'badminton')}
+                    style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9, marginTop: 12 }]}
+                  >
+                    <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
+                      <View style={styles.cardHeader}>
+                        <View style={[styles.leagueTypeBadge, { backgroundColor: '#e0f2fe', borderColor: '#bae6fd', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
+                          <ThemedText style={{ color: '#0369a1', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>
+                            Badminton Open
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={{ marginVertical: 6, gap: 6 }}>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>VR</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Vikram Rao
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
+                            2
+                          </ThemedText>
+                        </View>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>LD</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Lin Dan
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
+                            1
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33', paddingTop: 10, marginTop: 10 }]}>
+                        {renderFinishedBadge('badminton')}
+                        <View style={styles.matchCenterLink}>
+                          <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            Scorecard
+                          </ThemedText>
+                          <Ionicons name="chevron-forward" size={12} color={theme.text} />
+                        </View>
+                      </View>
+                    </View>
+                  </Pressable>
+
+                  {/* Match Card 9: Tennis Grand Slam */}
+                  <Pressable
+                    onPress={() => handleMatchCenterSelect('yesterday-tennis-1', 'tennis')}
+                    style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9, marginTop: 12 }]}
+                  >
+                    <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
+                      <View style={styles.cardHeader}>
+                        <View style={[styles.leagueTypeBadge, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
+                          <ThemedText style={{ color: '#15803d', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>
+                            Tennis Grand Slam
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={{ marginVertical: 6, gap: 6 }}>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>RF</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Roger Federer
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
+                            2
+                          </ThemedText>
+                        </View>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>RN</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Rafael Nadal
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
+                            0
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33', paddingTop: 10, marginTop: 10 }]}>
+                        {renderFinishedBadge('tennis')}
+                        <View style={styles.matchCenterLink}>
+                          <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            Scorecard
+                          </ThemedText>
+                          <Ionicons name="chevron-forward" size={12} color={theme.text} />
+                        </View>
+                      </View>
+                    </View>
+                  </Pressable>
+
+                  {/* Match Card 10: Squash League */}
+                  <Pressable
+                    onPress={() => handleMatchCenterSelect('yesterday-squash-1', 'squash')}
+                    style={[styles.matchCardShadowWrapper, Shadows.level2, { opacity: 0.9, marginTop: 12 }]}
+                  >
+                    <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
+                      <View style={styles.cardHeader}>
+                        <View style={[styles.leagueTypeBadge, { backgroundColor: '#faf5ff', borderColor: '#f3e8ff', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
+                          <ThemedText style={{ color: '#7e22ce', fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 8, letterSpacing: 0.5 }}>
+                            Squash League
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={{ marginVertical: 6, gap: 6 }}>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>SL</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Sara Lee
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold' }}>
+                            3
+                          </ThemedText>
+                        </View>
+                        <View style={styles.finishedMatchTeamRow}>
+                          <View style={[styles.teamLetterLogoSmall, { backgroundColor: theme.surfaceHigh }]}>
+                            <ThemedText type="labelSm" style={{ color: theme.text }}>ND</ThemedText>
+                          </View>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_700Bold' }}>
+                            Nicol David
+                          </ThemedText>
+                          <ThemedText type="bodyMd" style={{ marginLeft: 'auto', fontFamily: 'HankenGrotesk_700Bold', color: theme.textSecondary }}>
+                            1
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '33', paddingTop: 10, marginTop: 10 }]}>
+                        {renderFinishedBadge('squash')}
+                        <View style={styles.matchCenterLink}>
+                          <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            Scorecard
+                          </ThemedText>
+                          <Ionicons name="chevron-forward" size={12} color={theme.text} />
+                        </View>
+                      </View>
+                    </View>
+                  </Pressable>
+                </View>
+              )}
+
+              {/* After Match Card 7 Promo Card Row */}
+              {(selectedFilter === 'Me' || selectedFilter === 'All') && (
+                <View style={[styles.section, { paddingBottom: 120 }]}>
+                  <ThemedText type="labelMd" style={{ color: theme.textSecondary, textTransform: 'none', marginBottom: Spacing.xs }}>
+                    Featured Tournament
+                  </ThemedText>
+                  <View style={{ width: 280 }}>
+                    <PromoBanner 
+                      title="Grand Summer Tournament!"
+                      subtitle="Win up to ₹50,000 in prizes. Slots filling fast!"
+                      buttonText="Register Team"
+                      badgeText="FEATURED TOURNAMENT"
+                      isGradient={true}
+                      gradientColors={['#ff8c00', '#f97316']}
+                      buttonBackgroundColor="#ffffff"
+                      buttonTextColor="#ff8c00"
+                      illustrationImage={require('@/assets/images/illustrations/cricket_player.png')}
+                      onPress={() => router.push('/(tabs)/tournaments')}
+                    />
+                  </View>
+                </View>
+              )}
+            </>
+          )}
         </ScrollView>
       </Reanimated.View>
 
@@ -1043,5 +1519,16 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontFamily: 'HankenGrotesk_700Bold',
+  },
+  advertisementCard: {
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    padding: 16,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
 });

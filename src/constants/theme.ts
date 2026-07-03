@@ -2,28 +2,28 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    background: '#FFFFFF', // App background
+    background: '#FDFCF7', // App background
     text: '#2D2D2D', // Primary text
     textSecondary: '#64748b', // Secondary text
-    
+
     backgroundElement: '#FFFFFF',
     backgroundSelected: '#EAEAFF', // Soft brand blue tint
-    
+
     primary: '#5D68E8', // Primary Blue
     onPrimary: '#ffffff',
     primaryContainer: '#4552C4', // Primary Dark Blue
     onPrimaryContainer: '#ffffff',
-    
+
     secondary: '#5D68E8', // Primary Blue
     secondaryContainer: '#5D68E8', // Primary Blue
     onSecondaryContainer: '#ffffff',
-    
+
     surfaceLowest: '#FFFFFF', // Cards & components
     surfaceLow: '#F5F6FA',
     surface: '#FFFFFF',
     surfaceHigh: '#e2e8f0',
     surfaceHighest: '#cbd5e1',
-    
+
     outline: '#94a3b8',
     outlineVariant: '#cbd5e1',
     error: '#FF9500', // Accent Orange (Alerts/Status)
@@ -33,53 +33,53 @@ export const Colors = {
     background: '#0d1d26', // Premium Technical Dark
     text: '#f9f9ff', // on-surface dark
     textSecondary: '#94a3b8', // on-surface-variant dark
-    
+
     backgroundElement: '#12202a', // Compatibility link to surfaceLow dark
     backgroundSelected: '#1a2d3b', // Compatibility link to surface dark
-    
+
     primary: '#5D68E8', // Primary Blue
     onPrimary: '#ffffff',
     primaryContainer: '#1a2a33', // Deep Navy container
     onPrimaryContainer: '#cbd5e1',
-    
+
     secondary: '#5D68E8', // Primary Blue
     secondaryContainer: '#5D68E8', // Primary Blue
     onSecondaryContainer: '#ffffff',
-    
+
     surfaceLowest: '#12202a', // Darkest container card
     surfaceLow: '#1a2d3b',
     surface: '#223b4e',
     surfaceHigh: '#2a4961',
     surfaceHighest: '#325774',
-    
+
     outline: '#64748b',
     outlineVariant: '#475569',
     error: '#cf6679',
     errorContainer: '#400009',
   },
   blue: {
-    background: '#F5F6FA', // App background
+    background: '#FDFCF7', // App background
     text: '#2D2D2D', // Primary text
     textSecondary: '#64748b', // Secondary text
-    
+
     backgroundElement: '#FFFFFF',
     backgroundSelected: '#EAEAFF', // Soft brand blue tint
-    
+
     primary: '#5D68E8', // Primary Blue
     onPrimary: '#ffffff',
     primaryContainer: '#4552C4', // Primary Dark Blue
     onPrimaryContainer: '#ffffff',
-    
+
     secondary: '#5D68E8', // Primary Blue
     secondaryContainer: '#5D68E8', // Primary Blue
     onSecondaryContainer: '#ffffff',
-    
+
     surfaceLowest: '#FFFFFF', // Cards & components
     surfaceLow: '#F5F6FA',
     surface: '#FFFFFF',
     surfaceHigh: '#e2e8f0',
     surfaceHighest: '#cbd5e1',
-    
+
     outline: '#94a3b8',
     outlineVariant: '#cbd5e1',
     error: '#FF9500', // Accent Orange (Alerts/Status)
@@ -102,58 +102,58 @@ export const Typography = {
   // Scale styles mapped from DESIGN.md
   displayLg: {
     fontFamily: 'PlusJakartaSans_800ExtraBold',
-    fontSize: 32,
-    lineHeight: 40,
-    letterSpacing: -0.64, // -0.02em
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.56,
   },
   displayLgMobile: {
     fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 26,
-    lineHeight: 32,
-    letterSpacing: -0.52,
+    fontSize: 22,
+    lineHeight: 26,
+    letterSpacing: -0.44,
   },
   headlineLg: {
     fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 28,
-    lineHeight: 36,
-    letterSpacing: -0.28, // -0.01em
+    fontSize: 24,
+    lineHeight: 30,
+    letterSpacing: -0.24,
   },
   headlineMd: {
     fontFamily: 'PlusJakartaSans_600SemiBold',
-    fontSize: 20,
-    lineHeight: 28,
-    letterSpacing: -0.2,
+    fontSize: 16,
+    lineHeight: 22,
+    letterSpacing: -0.16,
   },
   headlineSm: {
     fontFamily: 'PlusJakartaSans_600SemiBold',
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 18,
   },
   bodyLg: {
     fontFamily: 'PlusJakartaSans_400Regular',
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 13,
+    lineHeight: 18,
   },
   bodyMd: {
     fontFamily: 'PlusJakartaSans_400Regular',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 11,
+    lineHeight: 15,
   },
   bodySm: {
     fontFamily: 'PlusJakartaSans_400Regular',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 11,
+    lineHeight: 15,
   },
   labelMd: {
     fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 0.6, // 0.05em
+    fontSize: 9,
+    lineHeight: 12,
+    letterSpacing: 0.45,
   },
   labelSm: {
     fontFamily: 'PlusJakartaSans_500Medium',
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 8,
+    lineHeight: 10,
   },
 };
 

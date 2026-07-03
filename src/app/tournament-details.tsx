@@ -328,13 +328,13 @@ export default function TournamentDetailsScreen() {
       <ThemedText type="headlineSm" style={styles.sectionHeader}>Event Sponsors</ThemedText>
       <View style={styles.sponsorsGrid}>
         {[
-          { name: 'Nike Football', type: 'Title Sponsor', logo: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=150&q=80' },
-          { name: 'Gatorade UK', type: 'Energy Partner', logo: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=150&q=80' },
-          { name: 'Apex Sports', type: 'Ground Sponsor', logo: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=150&q=80' },
-          { name: 'PlayStation', type: 'Gaming Partner', logo: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=150&q=80' },
+          { name: 'Nike Football', type: 'Title Sponsor', logo: require('@/assets/images/mascots/bull.png') },
+          { name: 'Gatorade UK', type: 'Energy Partner', logo: require('@/assets/images/mascots/tiger.png') },
+          { name: 'Apex Sports', type: 'Ground Sponsor', logo: require('@/assets/images/mascots/lion.png') },
+          { name: 'PlayStation', type: 'Gaming Partner', logo: require('@/assets/images/mascots/wolf.png') },
         ].map((sp, idx) => (
           <View key={idx} style={[styles.sponsorCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-            <Image source={sp.logo} style={styles.sponsorLogo} contentFit="contain" />
+            <Image source={typeof sp.logo === 'string' ? { uri: sp.logo } : sp.logo} style={styles.sponsorLogo} contentFit="contain" />
             <ThemedText type="bodySm" style={{ fontWeight: 'bold', marginTop: 8, color: theme.text, textAlign: 'center' }}>
               {sp.name}
             </ThemedText>
@@ -352,13 +352,13 @@ export default function TournamentDetailsScreen() {
       <ThemedText type="headlineSm" style={styles.sectionHeader}>Highlights & Photos</ThemedText>
       <View style={styles.mediaGrid}>
         {[
-          'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=300&q=80',
-          'https://images.unsplash.com/photo-1531415080290-bc98545ab3ef?auto=format&fit=crop&w=300&q=80',
-          'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=300&q=80',
-          'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=300&q=80',
+          require('@/assets/images/illustrations/football_player.png'),
+          require('@/assets/images/illustrations/cricket_player.png'),
+          require('@/assets/images/illustrations/basketball_player.png'),
+          require('@/assets/images/illustrations/tennis_player.png'),
         ].map((url, idx) => (
           <Pressable key={idx} style={styles.mediaFrame} onPress={() => triggerToast('Opening full-screen photo...')}>
-            <Image source={url} style={styles.mediaImage} contentFit="cover" />
+            <Image source={typeof url === 'string' ? { uri: url } : url} style={styles.mediaImage} contentFit="cover" />
             <View style={styles.playOverlay}>
               <Ionicons name="camera" size={24} color="#ffffff" />
             </View>
@@ -402,7 +402,7 @@ export default function TournamentDetailsScreen() {
           {/* Banner with Registration Countdown */}
           <View style={styles.bannerContainer}>
             <Image 
-              source={bannerFailed ? require('@/assets/images/illustrations/stadium.png') : "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80"} 
+              source={require('@/assets/images/illustrations/tournament_cover.png')} 
               style={styles.bannerImage} 
               contentFit="cover" 
               onError={() => setBannerFailed(true)}

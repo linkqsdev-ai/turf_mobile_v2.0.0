@@ -15,6 +15,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { setAuthToken } from '@/services/api-client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -22,6 +25,7 @@ import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useWalletStore } from '@/store/app-store';
 
 const BANNERS: Record<string, any> = {
   football: { uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9H8hZV1gCxBOC9fWHjQyhn5ukWJhiNGuP6cNDATeIj2gP6JceuAOrhkqeTXWFS75Y0nw0QANCmhRdo0NYvbdmh4Xrs2itBjykGtZr0Y91KEzjUMyOoM-B-owetUT1u8vwmIZlGJkcKdkgVfU0TIGzuVVlTN3lhwfdg5OWwHMCKOyPJGWWdIKySwofsCUjnq9pJi4WH0BMDAi73A53u0OeKj_Ufmh6V4PVwghrjz5aX16NlvQZLOkQRC51252maP-4ZXwNw3MwVfU' }, // Premium Football Arena
@@ -38,10 +42,12 @@ export default function ProfileScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { profile, updateProfile } = useUserProfile();
+  const { walletBalance, addWalletFunds } = useWalletStore();
   const [activeTab, setActiveTab] = useState<TabType>('Profile');
   const role = profile.role || 'Player';
   // Settings states
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [signOutModalVisible, setSignOutModalVisible] = useState(false);
   const [pushNotify, setPushNotify] = useState(profile.pushNotifications ?? true);
   const [emailAlert, setEmailAlert] = useState(profile.emailAlerts ?? false);
   const [geminiKey, setGeminiKey] = useState(profile.geminiApiKey ?? '');
@@ -92,6 +98,30 @@ export default function ProfileScreen() {
     setSettingsVisible(false);
     Alert.alert('Settings Saved', 'Preferences have been saved.');
   };
+
+  const logOut = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        try {
+          localStorage.removeItem('@turf_auth_token');
+          localStorage.removeItem('@turf_user_profile');
+        } catch (e) {
+          console.error('localStorage error during sign out:', e);
+        }
+      }
+      await AsyncStorage.removeItem('@turf_user_profile');
+      await setAuthToken(null);
+    } catch (err) {
+      console.error('Sign out client call failed, redirecting anyway:', err);
+    } finally {
+      router.replace('/(auth)/landing');
+    }
+  };
+
+  const handleSignOut = () => {
+    setSignOutModalVisible(true);
+  };
+
   return (
     <GradientContainer screenName="profile" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -122,6 +152,9 @@ export default function ProfileScreen() {
             <Pressable onPress={handleOpenSettings} style={styles.iconButton}>
               <Ionicons name="settings-outline" size={22} color={theme.text} />
             </Pressable>
+            <Pressable onPress={handleSignOut} style={styles.iconButton}>
+              <Ionicons name="log-out-outline" size={22} color="#ef4444" />
+            </Pressable>
           </View>
         </View>
 
@@ -143,20 +176,12 @@ export default function ProfileScreen() {
               <Ionicons name="camera" size={14} color="#ffffff" />
             </Pressable>
             
-            {/* Avatar & Floating Actions Overlap Banner */}
-            <View style={styles.avatarRow}>
-              {/* Left Action Button (Edit Profile - moved from bottom) */}
-              <Pressable 
-                onPress={() => router.push('/edit-profile')}
-                style={[styles.circularActionBtn, { backgroundColor: 'rgba(15, 23, 33, 0.85)', borderColor: 'rgba(255, 255, 255, 0.2)' }]}
-              >
-                <Ionicons name="create-outline" size={14} color="#ffffff" />
-              </Pressable>
-
+            {/* New Premium Profile Info Block with Horizontal Layout */}
+            <View style={styles.profileHeaderBlock}>
               {/* Central Avatar */}
               <View style={styles.avatarWrapper}>
                 <Image
-                  source={{ uri: profile.avatarUrl }}
+                  source={typeof profile.avatarUrl === 'string' && !/^\d+$/.test(profile.avatarUrl) ? { uri: profile.avatarUrl } : (typeof profile.avatarUrl === 'number' ? profile.avatarUrl : parseInt(profile.avatarUrl, 10))}
                   style={styles.avatarImage}
                 />
                 <Pressable 
@@ -167,49 +192,62 @@ export default function ProfileScreen() {
                 </Pressable>
               </View>
 
-              {/* Right Action Button (Share Stats - moved from bottom) */}
+              {/* Profile details column */}
+              <View style={styles.profileTextDetails}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                  <ThemedText type="headlineMd" style={{ color: '#ffffff', fontSize: 22, fontFamily: 'HankenGrotesk_700Bold' }}>
+                    {profile.name}
+                  </ThemedText>
+                  
+                  {/* Badges inline next to name */}
+                  <View style={[styles.proBadgeCard, { backgroundColor: theme.secondaryContainer, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
+                    <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontFamily: 'HankenGrotesk_700Bold', fontSize: 8 }}>
+                      PRO ELITE
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.diamondBadgeCard, { backgroundColor: 'rgba(255, 255, 255, 0.08)', borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }]}>
+                    <Ionicons name="diamond-outline" size={8} color="#ffffff" style={{ marginRight: 3 }} />
+                    <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold', fontSize: 8, letterSpacing: 0.5 }}>
+                      DIAMOND
+                    </ThemedText>
+                  </View>
+                </View>
+
+                <ThemedText type="bodySm" style={{ color: '#cbd5e1', marginTop: 4, fontSize: 13, fontFamily: 'HankenGrotesk_500Medium' }}>
+                  {role === 'Owner' 
+                    ? 'Arena Owner' 
+                    : role === 'Coach' 
+                    ? 'Professional Coach' 
+                    : role === 'Organizer' 
+                    ? 'Tournament Organizer' 
+                    : profile.position} • {profile.location}
+                </ThemedText>
+
+                <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 2, fontSize: 10 }}>
+                  Member since {profile.memberSince.split(' ')[0]} {profile.memberSince.split(' ')[1]}
+                </ThemedText>
+              </View>
+            </View>
+
+            {/* Pill Action Button Row */}
+            <View style={styles.pillActionRow}>
+              <Pressable 
+                onPress={() => router.push('/edit-profile')}
+                style={[styles.pillActionBtn, { flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1 }]}
+              >
+                <Ionicons name="create-outline" size={14} color="#ffffff" style={{ marginRight: 6 }} />
+                <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: 'bold' }}>Edit Profile</ThemedText>
+              </Pressable>
+
               <Pressable 
                 onPress={() => {
                   Alert.alert('Share Stats', 'Your profile stats link has been copied to your clipboard!');
                 }}
-                style={[styles.circularActionBtn, { backgroundColor: 'rgba(15, 23, 33, 0.85)', borderColor: 'rgba(255, 255, 255, 0.2)' }]}
+                style={[styles.pillActionBtn, { flex: 1, backgroundColor: theme.secondaryContainer }]}
               >
-                <Ionicons name="share-social-outline" size={14} color="#ffffff" />
+                <Ionicons name="share-social-outline" size={14} color={theme.onSecondaryContainer} style={{ marginRight: 6 }} />
+                <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontWeight: 'bold' }}>Share Stats</ThemedText>
               </Pressable>
-            </View>
-
-            {/* Badges Row */}
-            <View style={styles.badgeRow}>
-              <View style={[styles.proBadgeCard, { backgroundColor: theme.secondaryContainer }]}>
-                <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontFamily: 'HankenGrotesk_700Bold', fontSize: 9 }}>
-                  PRO ELITE
-                </ThemedText>
-              </View>
-              <View style={[styles.diamondBadgeCard, { backgroundColor: 'rgba(255, 255, 255, 0.08)', borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1 }]}>
-                <Ionicons name="diamond-outline" size={10} color="#ffffff" style={{ marginRight: 4 }} />
-                <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold', fontSize: 9, letterSpacing: 0.5 }}>
-                  DIAMOND TIER
-                </ThemedText>
-              </View>
-            </View>
-
-            {/* Member Date */}
-            <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 4, fontSize: 10 }}>
-              Member since {profile.memberSince.split(' ')[0]} {profile.memberSince.split(' ')[1]}
-            </ThemedText>
-
-            {/* Profile Info */}
-            <View style={styles.heroInfo}>
-              <ThemedText type="headlineMd" style={{ color: '#ffffff', fontSize: 22 }}>{profile.name}</ThemedText>
-              <ThemedText type="bodySm" style={{ color: '#94a3b8', marginTop: 2, fontSize: 13 }}>
-                {role === 'Owner' 
-                  ? 'Arena Owner' 
-                  : role === 'Coach' 
-                  ? 'Professional Coach' 
-                  : role === 'Organizer' 
-                  ? 'Tournament Organizer' 
-                  : profile.position} • {profile.location}
-              </ThemedText>
             </View>
 
             {/* Card Stats Grid (Mock Reference Alignment) */}
@@ -883,7 +921,7 @@ export default function ProfileScreen() {
                   <>
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#eab308' }]}>1</ThemedText>
-                      <Image source={{ uri: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=120&q=80' }} style={styles.rankAvatar} />
+                      <Image source={require('@/assets/images/sports/sport_football.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Wembley Indoor Hub</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4.9 Rating • London</ThemedText>
@@ -895,7 +933,7 @@ export default function ProfileScreen() {
                     </View>
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#94a3b8' }]}>2</ThemedText>
-                      <Image source={{ uri: 'https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=120&q=80' }} style={styles.rankAvatar} />
+                      <Image source={require('@/assets/images/sports/sport_booking.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Chelsea Astro Arena</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4.8 Rating • London</ThemedText>
@@ -907,7 +945,7 @@ export default function ProfileScreen() {
                     </View>
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.primaryContainer + '11', borderColor: theme.primary, borderWidth: 1.5 }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: theme.primary }]}>3</ThemedText>
-                      <Image source={profile.avatarUrl} style={styles.rankAvatar} />
+                      <Image source={typeof profile.avatarUrl === 'string' && !/^\d+$/.test(profile.avatarUrl) ? { uri: profile.avatarUrl } : (typeof profile.avatarUrl === 'number' ? profile.avatarUrl : parseInt(profile.avatarUrl, 10))} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                           <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.primary }}>{profile.name} Arena (You)</ThemedText>
@@ -924,7 +962,7 @@ export default function ProfileScreen() {
                     </View>
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#b45309' }]}>4</ThemedText>
-                      <Image source={{ uri: 'https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=120&q=80' }} style={styles.rankAvatar} />
+                      <Image source={require('@/assets/images/sports/sport_all.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Stratford Green Fields</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4.6 Rating • London</ThemedText>
@@ -939,7 +977,7 @@ export default function ProfileScreen() {
                   <>
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#eab308' }]}>1</ThemedText>
-                      <Image source={{ uri: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80' }} style={styles.rankAvatar} />
+                      <Image source={require('@/assets/images/avatars/avatar_2.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Coach Alan Shearer</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>UEFA Pro • London</ThemedText>
@@ -951,7 +989,7 @@ export default function ProfileScreen() {
                     </View>
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#94a3b8' }]}>2</ThemedText>
-                      <Image source={{ uri: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80' }} style={styles.rankAvatar} />
+                      <Image source={require('@/assets/images/avatars/avatar_3.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Coach Alex Ferguson</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>UEFA Pro • London</ThemedText>
@@ -963,7 +1001,7 @@ export default function ProfileScreen() {
                     </View>
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.primaryContainer + '11', borderColor: theme.primary, borderWidth: 1.5 }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: theme.primary }]}>3</ThemedText>
-                      <Image source={profile.avatarUrl} style={styles.rankAvatar} />
+                      <Image source={typeof profile.avatarUrl === 'string' && !/^\d+$/.test(profile.avatarUrl) ? { uri: profile.avatarUrl } : (typeof profile.avatarUrl === 'number' ? profile.avatarUrl : parseInt(profile.avatarUrl, 10))} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                           <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.primary }}>Coach {profile.name} (You)</ThemedText>
@@ -980,7 +1018,7 @@ export default function ProfileScreen() {
                     </View>
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#b45309' }]}>4</ThemedText>
-                      <Image source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' }} style={styles.rankAvatar} />
+                      <Image source={require('@/assets/images/avatars/avatar_4.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Coach Pep Guardiola</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>UEFA Pro • Manchester</ThemedText>
@@ -995,7 +1033,7 @@ export default function ProfileScreen() {
                   <>
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#eab308' }]}>1</ThemedText>
-                      <Image source={{ uri: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=120&q=80' }} style={styles.rankAvatar} />
+                      <Image source={require('@/assets/images/sports/sport_tournament.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Premier League Org</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Gold Status • London</ThemedText>
@@ -1007,7 +1045,7 @@ export default function ProfileScreen() {
                     </View>
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#94a3b8' }]}>2</ThemedText>
-                      <Image source={{ uri: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=120&q=80' }} style={styles.rankAvatar} />
+                      <Image source={require('@/assets/images/sports/sport_football.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>London Futsal Comm.</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Gold Status • London</ThemedText>
@@ -1019,7 +1057,7 @@ export default function ProfileScreen() {
                     </View>
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.primaryContainer + '11', borderColor: theme.primary, borderWidth: 1.5 }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: theme.primary }]}>3</ThemedText>
-                      <Image source={profile.avatarUrl} style={styles.rankAvatar} />
+                      <Image source={typeof profile.avatarUrl === 'string' && !/^\d+$/.test(profile.avatarUrl) ? { uri: profile.avatarUrl } : (typeof profile.avatarUrl === 'number' ? profile.avatarUrl : parseInt(profile.avatarUrl, 10))} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                           <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.primary }}>{profile.name} (You)</ThemedText>
@@ -1036,7 +1074,7 @@ export default function ProfileScreen() {
                     </View>
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#b45309' }]}>4</ThemedText>
-                      <Image source={{ uri: 'https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=120&q=80' }} style={styles.rankAvatar} />
+                      <Image source={require('@/assets/images/sports/sport_all.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>City Sports Assoc.</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Silver Status • Bristol</ThemedText>
@@ -1055,7 +1093,7 @@ export default function ProfileScreen() {
                     >
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#eab308' }]}>1</ThemedText>
                       <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' }}
+                        source={require('@/assets/images/avatars/avatar_5.png')}
                         style={styles.rankAvatar}
                       />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
@@ -1074,7 +1112,7 @@ export default function ProfileScreen() {
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#94a3b8' }]}>2</ThemedText>
                       <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80' }}
+                        source={require('@/assets/images/avatars/avatar_6.png')}
                         style={styles.rankAvatar}
                       />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
@@ -1090,7 +1128,7 @@ export default function ProfileScreen() {
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.primaryContainer + '11', borderColor: theme.primary, borderWidth: 1.5 }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: theme.primary }]}>3</ThemedText>
                       <Image
-                        source={profile.avatarUrl}
+                        source={typeof profile.avatarUrl === 'string' && !/^\d+$/.test(profile.avatarUrl) ? { uri: profile.avatarUrl } : (typeof profile.avatarUrl === 'number' ? profile.avatarUrl : parseInt(profile.avatarUrl, 10))}
                         style={styles.rankAvatar}
                       />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
@@ -1111,7 +1149,7 @@ export default function ProfileScreen() {
                     <View style={[styles.leaderboardRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level2]}>
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#b45309' }]}>4</ThemedText>
                       <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80' }}
+                        source={require('@/assets/images/avatars/avatar_7.png')}
                         style={styles.rankAvatar}
                       />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
@@ -1136,6 +1174,65 @@ export default function ProfileScreen() {
             showsVerticalScrollIndicator={false} 
             contentContainerStyle={styles.scrollContent}
           >
+            {/* ── Redesigned Wallet Card Section ── */}
+            <View style={styles.section}>
+              <View style={styles.tabHeaderRow}>
+                <Ionicons name="wallet-outline" size={18} color={theme.secondary} />
+                <ThemedText type="labelMd" style={[styles.tabHeaderTitle, { color: theme.text }]}>
+                  MY SPORTS WALLET
+                </ThemedText>
+              </View>
+
+              <View
+                style={{
+                  backgroundColor: theme.surfaceLowest,
+                  borderRadius: BorderRadius.premium,
+                  padding: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderWidth: 1,
+                  borderColor: theme.outlineVariant + '33',
+                  ...Shadows.level2,
+                }}
+              >
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <ThemedText style={{ color: theme.textSecondary, fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', letterSpacing: 0.5 }}>
+                    WALLET BALANCE
+                  </ThemedText>
+                  <ThemedText style={{ color: theme.text, fontSize: 24, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 4 }}>
+                    ₹{walletBalance.toFixed(2)}
+                  </ThemedText>
+
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                    <Pressable 
+                      onPress={() => {
+                        addWalletFunds(100);
+                        Alert.alert('Top Up Success', '₹100.00 mock funds added to your Sports Wallet!');
+                      }}
+                      style={{
+                        backgroundColor: theme.primary,
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                      }}
+                    >
+                      <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                        + Top Up ₹100
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* New Blue Wallet Illustration */}
+                <Image 
+                  source={require('@/assets/images/illustrations/wallet_blue.png')}
+                  style={{ width: 75, height: 75 }}
+                  contentFit="contain"
+                />
+              </View>
+            </View>
+
             {/* Bio Details Card */}
             <View style={styles.section}>
               {/* Tab Header with Icon */}
@@ -1793,6 +1890,49 @@ export default function ProfileScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      {/* Sign Out Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={signOutModalVisible}
+        onRequestClose={() => setSignOutModalVisible(false)}
+      >
+        <View style={styles.confirmModalBackdrop}>
+          <View style={[styles.confirmModalCard, { backgroundColor: theme.surfaceLowest }]}>
+            <View style={[styles.confirmIconContainer, { backgroundColor: theme.error + '15' }]}>
+              <Ionicons name="log-out" size={28} color={theme.error} />
+            </View>
+            <ThemedText type="headlineSm" style={styles.confirmTitle}>
+              Sign Out
+            </ThemedText>
+            <ThemedText type="bodyMd" style={[styles.confirmText, { color: theme.textSecondary }]}>
+              Are you sure you want to sign out from NonStricker?
+            </ThemedText>
+            <View style={styles.confirmActionsRow}>
+              <Pressable
+                onPress={() => setSignOutModalVisible(false)}
+                style={[styles.confirmBtn, styles.cancelBtn, { borderColor: theme.outlineVariant + '55' }]}
+              >
+                <ThemedText type="labelMd" style={{ color: theme.text }}>
+                  Cancel
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setSignOutModalVisible(false);
+                  logOut();
+                }}
+                style={[styles.confirmBtn, styles.actionConfirmBtn, { backgroundColor: theme.error }]}
+              >
+                <ThemedText type="labelMd" style={{ color: '#ffffff' }}>
+                  Sign Out
+                </ThemedText>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </GradientContainer>
   );
 }
@@ -1855,6 +1995,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.md,
     zIndex: 10,
+  },
+  profileHeaderBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    zIndex: 10,
+    paddingHorizontal: Spacing.xs,
+  },
+  profileTextDetails: {
+    flex: 1,
+    marginLeft: Spacing.md,
+    justifyContent: 'center',
+  },
+  pillActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    width: '100%',
+    marginTop: Spacing.md,
+    marginBottom: Spacing.xs,
+    paddingHorizontal: Spacing.xs,
+    zIndex: 10,
+  },
+  pillActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: BorderRadius.xl,
   },
   circularActionBtn: {
     width: 30,
@@ -2328,12 +2497,15 @@ const styles = StyleSheet.create({
   },
   modalKeyboardAvoiding: {
     width: '100%',
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   modalSheet: {
     borderTopLeftRadius: BorderRadius.premium,
     borderTopRightRadius: BorderRadius.premium,
     padding: Spacing.lg,
-    maxHeight: '90%',
+    maxHeight: '85%',
+    width: '100%',
   },
   modalHeaderRow: {
     flexDirection: 'row',
@@ -2438,6 +2610,76 @@ const styles = StyleSheet.create({
   dropdownItemText: {
     fontSize: 13,
     fontFamily: 'HankenGrotesk_500Medium',
+  },
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1.5,
+    width: '100%',
+  },
+  confirmModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 33, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  confirmModalCard: {
+    width: '100%',
+    maxWidth: 320,
+    borderRadius: BorderRadius.premium,
+    padding: Spacing.lg,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  confirmIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  confirmTitle: {
+    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 18,
+    marginBottom: Spacing.xs,
+    textAlign: 'center',
+  },
+  confirmText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+    lineHeight: 20,
+  },
+  confirmActionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    width: '100%',
+  },
+  confirmBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: BorderRadius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelBtn: {
+    borderWidth: 1,
+  },
+  actionConfirmBtn: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });
 

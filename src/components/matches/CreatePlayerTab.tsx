@@ -57,8 +57,8 @@ export function CreatePlayerTab() {
   const [fullName, setFullName] = useState('');
   const [jerseyNo, setJerseyNo] = useState('');
   const [mobileNo, setMobileNo] = useState('');
-  const [selectedSport, setSelectedSport] = useState('Football');
-  const [playingRole, setPlayingRole] = useState(SPORT_ROLES['Football'][0].id);
+  const [selectedSport, setSelectedSport] = useState('Cricket');
+  const [playingRole, setPlayingRole] = useState(SPORT_ROLES['Cricket'][0].id);
   const [battingStyle, setBattingStyle] = useState('Right Hand Bat');
   const [bowlingStyle, setBowlingStyle] = useState('None / Not Applicable');
   const [profileImage, setProfileImage] = useState<any>(require('@/assets/images/avatars/avatar_1.png'));
@@ -70,6 +70,27 @@ export function CreatePlayerTab() {
   const [isNameFocused, setIsNameFocused] = useState(false);
   const [isJerseyFocused, setIsJerseyFocused] = useState(false);
   const [isMobileFocused, setIsMobileFocused] = useState(false);
+
+  // Validation errors
+  const [nameError, setNameError] = useState('');
+  const [jerseyError, setJerseyError] = useState('');
+  const [mobileError, setMobileError] = useState('');
+
+  const handleJerseyChange = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    setJerseyNo(cleaned);
+    setJerseyError('');
+  };
+
+  const handleMobileChange = (text: string) => {
+    const cleaned = text.replace(/[^0-9+]/g, '').replace(/(?!^)\+/g, '');
+    setMobileNo(cleaned);
+    if (cleaned.length > 0 && cleaned.replace('+', '').length < 7) {
+      setMobileError('Enter a valid phone number (min 7 digits)');
+    } else {
+      setMobileError('');
+    }
+  };
 
   // Auto-update playing role when sport changes
   useEffect(() => {
@@ -91,10 +112,10 @@ export function CreatePlayerTab() {
   };
 
   const handleCreatePlayer = () => {
-    if (!fullName) {
-      Alert.alert('Missing Fields', 'Please fill in your full name.');
-      return;
-    }
+    let hasError = false;
+    if (!fullName.trim()) { setNameError('Full name is required'); hasError = true; } else { setNameError(''); }
+    if (mobileNo && mobileNo.replace('+', '').length < 7) { setMobileError('Enter a valid phone number (min 7 digits)'); hasError = true; } else { setMobileError(''); }
+    if (hasError) return;
     Alert.alert('Success', `Player profile for "${fullName}" created successfully!`);
   };
 
@@ -108,21 +129,13 @@ export function CreatePlayerTab() {
         style={styles.scrollArea}
         bounces={false}
       >
-      {/* ── Banner ─────────────────────────────── */}
-      <View style={[styles.bannerCard, { backgroundColor: '#10b981' }]}>
-        <View style={[styles.badgeWrap, { backgroundColor: '#ffffff22' }]}>
-          <ThemedText style={styles.badgeText}>NEW REGISTRATION</ThemedText>
-        </View>
-        <ThemedText style={styles.bannerTitle}>Build Your Legacy</ThemedText>
-        <ThemedText style={styles.bannerSubtitle}>
-          Create a professional profile. Input precise athletic data to ensure peak performance tracking across the APEX ecosystem.
-        </ThemedText>
-        <View style={[styles.featureRow, { backgroundColor: '#ffffff1a' }]}>
-          <Ionicons name="shield-checkmark" size={14} color="#ffffff" />
-          <ThemedText style={styles.featureText}>Designed for quick setup</ThemedText>
-        </View>
-
-        <Ionicons name="person" size={100} color="#00000015" style={styles.bannerBgIcon} />
+      {/* ── Vector Illustration Banner ─────────────────────────────── */}
+      <View style={{ width: '100%', height: 200, borderRadius: 16, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: theme.outlineVariant + '33' }}>
+        <Image
+          source={require('@/assets/images/illustrations/player_illustration.png')}
+          style={{ width: '100%', height: '100%' }}
+          contentFit="cover"
+        />
       </View>
 
       {/* ── Form Body Bento Card ────────────────────────── */}
@@ -255,17 +268,18 @@ export function CreatePlayerTab() {
             <TextInput
               style={[
                 styles.input,
-                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isJerseyFocused ? theme.primary : theme.outlineVariant + '44' }
+                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: jerseyError ? '#ef4444' : isJerseyFocused ? theme.primary : theme.outlineVariant + '44' }
               ]}
               placeholder="10"
               placeholderTextColor={theme.textSecondary + '80'}
               keyboardType="number-pad"
               maxLength={3}
               value={jerseyNo}
-              onChangeText={setJerseyNo}
+              onChangeText={handleJerseyChange}
               onFocus={() => setIsJerseyFocused(true)}
               onBlur={() => setIsJerseyFocused(false)}
             />
+            {!!jerseyError && <ThemedText style={{ color: '#ef4444', fontSize: 10, marginTop: 3 }}>{jerseyError}</ThemedText>}
           </View>
           <View style={{ flex: 8 }}>
             <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
@@ -274,16 +288,17 @@ export function CreatePlayerTab() {
             <TextInput
               style={[
                 styles.input,
-                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isMobileFocused ? theme.primary : theme.outlineVariant + '44' }
+                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: mobileError ? '#ef4444' : isMobileFocused ? theme.primary : theme.outlineVariant + '44' }
               ]}
               placeholder="+91..."
               placeholderTextColor={theme.textSecondary + '80'}
               keyboardType="phone-pad"
               value={mobileNo}
-              onChangeText={setMobileNo}
+              onChangeText={handleMobileChange}
               onFocus={() => setIsMobileFocused(true)}
               onBlur={() => setIsMobileFocused(false)}
             />
+            {!!mobileError && <ThemedText style={{ color: '#ef4444', fontSize: 11, marginTop: 3 }}>{mobileError}</ThemedText>}
           </View>
         </View>
 

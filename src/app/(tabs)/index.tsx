@@ -19,16 +19,18 @@ import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { PromoBanner, AutoScrollingHorizontalBanners } from '@/components/promo-banner';
+import { useClassStore } from '@/store/app-store';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { profile } = useUserProfile();
+  const { classes } = useClassStore();
   const role: string = profile.role || 'Player';
   const [coinTossVisible, setCoinTossVisible] = useState(false);
 
   const handleProfilePress = () => router.push('/profile');
-  const handleNetworkPress = () => router.push('/network');
+  const handleNetworkPress = () => router.push('/(tabs)/network');
 
   return (
     <GradientContainer screenName="home" style={styles.container}>
@@ -38,7 +40,7 @@ export default function HomeScreen() {
           <View style={styles.headerLeft}>
             <Pressable style={styles.profileIconButton} onPress={handleProfilePress}>
               <Image
-                source={{ uri: profile.avatarUrl }}
+                source={typeof profile.avatarUrl === 'string' && !/^\d+$/.test(profile.avatarUrl) ? { uri: profile.avatarUrl } : (typeof profile.avatarUrl === 'number' ? profile.avatarUrl : parseInt(profile.avatarUrl, 10))}
                 style={styles.headerAvatar}
               />
             </Pressable>
@@ -55,14 +57,16 @@ export default function HomeScreen() {
             </View>
           </View>
           <View style={styles.headerRightActions}>
-            <Pressable style={styles.iconButton} onPress={handleNetworkPress}>
-              <Ionicons name="pulse" size={20} color={theme.secondary} />
-            </Pressable>
+
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
             </Pressable>
             <Pressable style={styles.iconButton} onPress={() => setCoinTossVisible(true)}>
-              <FontAwesome5 name="coins" size={16} color={theme.secondary} />
+              <Image
+                source={require('@/assets/images/coin_toss_icon.png')}
+                style={{ width: 26, height: 26 }}
+                contentFit="contain"
+              />
             </Pressable>
           </View>
         </View>
@@ -96,7 +100,7 @@ export default function HomeScreen() {
                   ? require('@/assets/images/illustrations/football_player.png')
                   : role === 'Organizer'
                   ? require('@/assets/images/illustrations/trophy.png')
-                  : { uri: 'https://lh3.googleusercontent.com/aida/AP1WRLsrliF0Cd3A1noW1I-8QmrA86jnUIhi367jWWnWwX_4cOBZvy0pEfT2NOP469vVIgcettV0_tGsG8CLAVsU4gpyVZYJY30Ms2S9po_TAFCHtuZGlN0TfD6UKPJL-W4zBAou4QiM6fwBAoQ70des2-UtAfllHZdyG7TSX_arZ0Gj7rIEGoIjW_lyUG2y-nnju08P3-ZpQxYURos2c2MwDDLdxzAOYHCf2_wzduUmBoMEaIV3RjBJMlYV2MM' }
+                  : require('@/assets/images/illustrations/home_dashboard_hero.png')
               }
               style={[
                 styles.welcomeIllustration,
@@ -253,7 +257,7 @@ export default function HomeScreen() {
               {/* 3. Today's Academy Sessions */}
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <ThemedText type="headlineSm">Today's Academy Sessions</ThemedText>
+                  <ThemedText type="headlineSm">{"Today's Academy Sessions"}</ThemedText>
                   <Pressable>
                     <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_700Bold' }}>
                       Full Calendar
@@ -261,7 +265,91 @@ export default function HomeScreen() {
                   </Pressable>
                 </View>
 
+                {classes.length > 0 && (
+                  <ScrollView 
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 16, gap: 12 }}
+                  >
+                    {classes.map((cls, idx) => {
+                      const navigateToProfile = () => {
+                        router.push({
+                          pathname: '/coach/[id]',
+                          params: {
+                            id: cls.id || `class-${idx}`,
+                            name: profile.name || 'Coach',
+                            specialty: cls.className,
+                            experience: `${cls.classType} • ${cls.ageGroup || 'All Ages'}`,
+                            trainees: '18',
+                            rating: '5.0',
+                            reviews: '1',
+                            rate: cls.feeAmount ? `₹${cls.feeAmount}/${cls.feeType === 'Per Session' ? 'sess' : 'mo'}` : 'Free',
+                            location: cls.venue,
+                            match: 'Your Class',
+                            sports: [cls.sportType.toLowerCase()].join(','),
+                            avatar: typeof profile.avatarUrl === 'string' && !/^\d+$/.test(profile.avatarUrl) ? profile.avatarUrl : (typeof profile.avatarUrl === 'number' ? String(profile.avatarUrl) : String(profile.avatarUrl)),
+                            badge: 'OWNER',
+                          }
+                        });
+                      };
+
+                      const sportLower = cls.sportType.toLowerCase();
+                      const watermarkSource = sportLower.includes('cricket') ? require('@/assets/images/illustrations/cricket_player.png') : (sportLower.includes('football') || sportLower.includes('futsal') ? require('@/assets/images/illustrations/football_player.png') : (sportLower.includes('badminton') ? require('@/assets/images/illustrations/athletes.png') : require('@/assets/images/illustrations/tennis_player.png')));
+
+                      return (
+                        <Pressable 
+                          key={cls.id || idx} 
+                          style={[styles.advertisementCard, { backgroundColor: '#f5f6ff', borderColor: theme.outlineVariant + '33', width: 220, overflow: 'hidden' }]}
+                          onPress={navigateToProfile}
+                        >
+                          {/* Subtle watermark vector illustration */}
+                          <Image 
+                            source={watermarkSource}
+                            style={{ position: 'absolute', right: -10, bottom: -10, width: 90, height: 90, opacity: 0.12 }}
+                            contentFit="contain"
+                          />
+                          {/* Banner Top Accent */}
+                          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: theme.primary, borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl }} />
+                          
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                            <Image 
+                              source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
+                              style={{ width: 44, height: 44, borderRadius: BorderRadius.full }}
+                            />
+                            <View style={{ flex: 1, marginLeft: 10 }}>
+                              <ThemedText style={{ color: theme.primary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 10, letterSpacing: 0.5 }}>COACHING CLASS</ThemedText>
+                              <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 1 }}>{cls.classType} · {cls.sportType.toUpperCase()}</ThemedText>
+                            </View>
+                          </View>
+
+                          <ThemedText type="title" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', fontSize: 15, lineHeight: 20 }} numberOfLines={1}>
+                            {cls.className}
+                          </ThemedText>
+                          
+                          <ThemedText type="bodyMd" style={{ color: theme.textSecondary, fontSize: 12, marginTop: 4 }} numberOfLines={1}>
+                            Session Duration · {cls.sessionDuration}
+                          </ThemedText>
+
+                          <View style={{ borderTopWidth: 1, borderTopColor: theme.outlineVariant + '1a', marginTop: 10, paddingTop: 10 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                              <Ionicons name="location-outline" size={13} color={theme.textSecondary} style={{ marginRight: 4 }} />
+                              <ThemedText style={{ color: theme.textSecondary, fontSize: 11 }} numberOfLines={1}>{cls.venue}</ThemedText>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                              <Ionicons name="time-outline" size={13} color={theme.textSecondary} style={{ marginRight: 4 }} />
+                              <ThemedText style={{ fontSize: 10, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                                {cls.sessionTime}
+                              </ThemedText>
+                            </View>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+
                 <View style={styles.scheduleList}>
+
                   {/* Session 1 */}
                   <View style={[styles.scheduleCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
                     <View style={[styles.scheduleIconWrap, { backgroundColor: theme.primaryContainer + '1a' }]}>
@@ -330,7 +418,7 @@ export default function HomeScreen() {
                       role: 'Forward • Level 10',
                       notes: 'Excellent explosive speed',
                       rating: '4.9',
-                      image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80',
+                      image: require('@/assets/images/avatars/avatar_2.png'),
                       focus: 'TACTICAL DEPLOY'
                     },
                     {
@@ -339,7 +427,7 @@ export default function HomeScreen() {
                       role: 'Midfielder • Level 14',
                       notes: 'Great ball possession control',
                       rating: '4.8',
-                      image: 'https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=600&q=80',
+                      image: require('@/assets/images/avatars/avatar_5.png'),
                       focus: 'BALL POSSESSION'
                     },
                     {
@@ -348,7 +436,7 @@ export default function HomeScreen() {
                       role: 'Goalkeeper • Level 8',
                       notes: 'Needs reflex response practice',
                       rating: '4.5',
-                      image: 'https://images.unsplash.com/photo-1549451371-64aa98a6f660?auto=format&fit=crop&w=600&q=80',
+                      image: require('@/assets/images/avatars/avatar_12.png'),
                       focus: 'GK POSITIONING'
                     }
                   ].map((student) => (
@@ -356,7 +444,7 @@ export default function HomeScreen() {
                       key={student.id}
                       style={[styles.featuredTurfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
                     >
-                      <Image source={{ uri: student.image }} style={styles.featuredTurfImage} contentFit="cover" />
+                      <Image source={typeof student.image === 'string' ? { uri: student.image } : student.image} style={styles.featuredTurfImage} contentFit="cover" />
                       <View style={styles.featuredTurfContent}>
                         <View style={styles.featuredTurfHeader}>
                           <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '700', fontSize: 9 }} numberOfLines={1}>
@@ -453,12 +541,14 @@ export default function HomeScreen() {
               <View style={styles.section}>
                 <PromoBanner 
                   title="Grand Summer Tournament!"
-                  subtitle="Join the Weekend League and win amazing prizes up to ₹50,000!"
-                  buttonText="Register Now"
-                  badgeText="ANNOUNCEMENT"
-                  backgroundImage="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80"
-                  buttonBackgroundColor="#ff8c00"
-                  buttonTextColor="#ffffff"
+                  subtitle="Register your Team, compete in the League and win ₹50,000 + kit gifts!"
+                  buttonText="Register Team"
+                  badgeText="TOURNAMENT CHALLENGE"
+                  isGradient={true}
+                  gradientColors={['#6366f1', '#a855f7']}
+                  buttonBackgroundColor="#ffffff"
+                  buttonTextColor="#6366f1"
+                  illustrationImage={require("@/assets/images/illustrations/trophy.png")}
                   onPress={() => router.push('/(tabs)/tournaments')}
                   variant="vertical"
                 />
@@ -470,37 +560,43 @@ export default function HomeScreen() {
                   SPECIAL DEALS & VOUCHERS
                 </ThemedText>
                 <AutoScrollingHorizontalBanners 
-                  cardWidth={270}
-                  gap={12}
+                  cardWidth={280}
+                  gap={16}
                   banners={[
                     {
                       title: "YAWAH Turf Special Offer",
-                      subtitle: "Get flat 30% OFF on all bookings. Code: YAWAHTURF",
-                      buttonText: "Book Now",
-                      badgeText: "PROMO OFFER",
-                      backgroundImage: "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?auto=format&fit=crop&w=600&q=80",
-                      buttonBackgroundColor: "#a3e635",
-                      buttonTextColor: "#064e3b",
+                      subtitle: "Save flat 30% on slot bookings + ₹100 instant cashback!",
+                      buttonText: "Book Turf",
+                      badgeText: "CASHBACK & OFFER",
+                      isGradient: true,
+                      gradientColors: ['#10b981', '#059669'],
+                      buttonBackgroundColor: "#ffffff",
+                      buttonTextColor: "#059669",
+                      illustrationImage: require("@/assets/images/illustrations/athletes.png"),
                       onPress: () => router.push('/(tabs)/explore'),
                     },
                     {
-                      title: "Gift a Game to Your Loved Ones",
-                      subtitle: "The easiest way to nail a gift for a sports lover",
-                      buttonText: "Buy Gift Card",
+                      title: "Gift a Game to Loved Ones",
+                      subtitle: "Buy e-Gift vouchers for your family & friends instantly.",
+                      buttonText: "Get Gift Card",
                       badgeText: "GIFT VOUCHER",
-                      backgroundImage: "https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=600&q=80",
+                      isGradient: true,
+                      gradientColors: ['#f59e0b', '#d97706'],
                       buttonBackgroundColor: "#ffffff",
-                      buttonTextColor: "#1e3a8a",
+                      buttonTextColor: "#d97706",
+                      illustrationImage: require("@/assets/images/illustrations/trophy.png"),
                       onPress: () => router.push('/booking'),
                     },
                     {
                       title: "Happy Hour Turf Booking",
-                      subtitle: "Book morning slots for ₹15/hr only!",
+                      subtitle: "Book morning slots for ₹150/hr & get 15% cashback!",
                       buttonText: "Book Turf",
-                      badgeText: "PROMO OFFER",
-                      backgroundImage: "https://images.unsplash.com/photo-1549451371-64aa98a6f660?auto=format&fit=crop&w=600&q=80",
+                      badgeText: "HAPPY HOUR VOUCHER",
+                      isGradient: true,
+                      gradientColors: ['#ff5f6d', '#ff9966'],
                       buttonBackgroundColor: "#ffffff",
-                      buttonTextColor: "#ff8c00",
+                      buttonTextColor: "#ff5f6d",
+                      illustrationImage: require("@/assets/images/illustrations/athletes.png"),
                       onPress: () => router.push('/(tabs)/explore'),
                     }
                   ]}
@@ -640,7 +736,7 @@ export default function HomeScreen() {
                 <View style={[styles.dailyPlanCard, { backgroundColor: theme.primaryContainer }, Shadows.level3]}>
                   <View style={styles.planInfo}>
                     <ThemedText type="headlineSm" style={{ color: '#ffffff' }}>
-                      Today's Occupancy
+                      {"Today's Occupancy"}
                     </ThemedText>
                     <ThemedText type="bodyMd" style={{ color: 'rgba(255, 255, 255, 0.85)', marginTop: 4 }}>
                       8 of 12 slots booked
@@ -675,7 +771,7 @@ export default function HomeScreen() {
                     </View>
                     <View style={styles.bentoTextWrap}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5 }}>
-                        Today's Revenue
+                        {"Today's Revenue"}
                       </ThemedText>
                       <ThemedText type="headlineSm" style={{ marginTop: 2 }}>
                         ₹18,500 <ThemedText type="labelSm" style={{ fontWeight: 'normal', color: '#10b981' }}>+15%</ThemedText>
@@ -723,7 +819,7 @@ export default function HomeScreen() {
                       status: 'BOOKED',
                       statusColor: '#ff8c00',
                       time: '17:00 - 18:00',
-                      image: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=600&q=80',
+                      image: require('@/assets/images/sports/sport_football.png'),
                       desc: '5G Rubber Infill Turf'
                     },
                     {
@@ -732,7 +828,7 @@ export default function HomeScreen() {
                       status: 'AVAILABLE',
                       statusColor: '#10b981',
                       time: 'Free to book',
-                      image: 'https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=600&q=80',
+                      image: require('@/assets/images/sports/sport_cricket.png'),
                       desc: 'AstroTurf wicket nets'
                     },
                     {
@@ -741,7 +837,7 @@ export default function HomeScreen() {
                       status: 'MAINTENANCE',
                       statusColor: '#ef4444',
                       time: 'Unavailable today',
-                      image: 'https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=600&q=80',
+                      image: require('@/assets/images/sports/sport_all.png'),
                       desc: 'Polished teakwood court'
                     }
                   ].map((pitch) => (
@@ -749,7 +845,7 @@ export default function HomeScreen() {
                       key={pitch.id}
                       style={[styles.featuredTurfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
                     >
-                      <Image source={{ uri: pitch.image }} style={styles.featuredTurfImage} contentFit="cover" />
+                      <Image source={typeof pitch.image === 'string' ? { uri: pitch.image } : pitch.image} style={styles.featuredTurfImage} contentFit="cover" />
                       <View style={styles.featuredTurfContent}>
                         <View style={styles.featuredTurfHeader}>
                           <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '700', fontSize: 9 }} numberOfLines={1}>
@@ -781,7 +877,7 @@ export default function HomeScreen() {
               {/* 6. Today's Turf Bookings Timeline */}
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <ThemedText type="headlineSm">Today's Turf Bookings</ThemedText>
+                  <ThemedText type="headlineSm">{"Today's Turf Bookings"}</ThemedText>
                   <Pressable>
                     <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_700Bold' }}>
                       Full Schedule
@@ -899,12 +995,14 @@ export default function HomeScreen() {
               <View style={styles.section}>
                 <PromoBanner 
                   title="Grand Summer Tournament!"
-                  subtitle="Join the Weekend League and win amazing prizes up to ₹50,000!"
-                  buttonText="Register Now"
-                  badgeText="ANNOUNCEMENT"
-                  backgroundImage="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80"
-                  buttonBackgroundColor="#ff8c00"
-                  buttonTextColor="#ffffff"
+                  subtitle="Register your Team, compete in the League and win ₹50,000 + kit gifts!"
+                  buttonText="Register Team"
+                  badgeText="TOURNAMENT CHALLENGE"
+                  isGradient={true}
+                  gradientColors={['#6366f1', '#a855f7']}
+                  buttonBackgroundColor="#ffffff"
+                  buttonTextColor="#6366f1"
+                  illustrationImage={require("@/assets/images/illustrations/trophy.png")}
                   onPress={() => router.push('/(tabs)/tournaments')}
                   variant="vertical"
                 />
@@ -916,37 +1014,43 @@ export default function HomeScreen() {
                   SPECIAL DEALS & VOUCHERS
                 </ThemedText>
                 <AutoScrollingHorizontalBanners 
-                  cardWidth={270}
-                  gap={12}
+                  cardWidth={280}
+                  gap={16}
                   banners={[
                     {
                       title: "YAWAH Turf Special Offer",
-                      subtitle: "Get flat 30% OFF on all bookings. Code: YAWAHTURF",
-                      buttonText: "Book Now",
-                      badgeText: "PROMO OFFER",
-                      backgroundImage: "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?auto=format&fit=crop&w=600&q=80",
-                      buttonBackgroundColor: "#a3e635",
-                      buttonTextColor: "#064e3b",
+                      subtitle: "Save flat 30% on slot bookings + ₹100 instant cashback!",
+                      buttonText: "Book Turf",
+                      badgeText: "CASHBACK & OFFER",
+                      isGradient: true,
+                      gradientColors: ['#10b981', '#059669'],
+                      buttonBackgroundColor: "#ffffff",
+                      buttonTextColor: "#059669",
+                      illustrationImage: require("@/assets/images/illustrations/athletes.png"),
                       onPress: () => router.push('/(tabs)/explore'),
                     },
                     {
-                      title: "Gift a Game to Your Loved Ones",
-                      subtitle: "The easiest way to nail a gift for a sports lover",
-                      buttonText: "Buy Gift Card",
+                      title: "Gift a Game to Loved Ones",
+                      subtitle: "Buy e-Gift vouchers for your family & friends instantly.",
+                      buttonText: "Get Gift Card",
                       badgeText: "GIFT VOUCHER",
-                      backgroundImage: "https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=600&q=80",
+                      isGradient: true,
+                      gradientColors: ['#f59e0b', '#d97706'],
                       buttonBackgroundColor: "#ffffff",
-                      buttonTextColor: "#1e3a8a",
+                      buttonTextColor: "#d97706",
+                      illustrationImage: require("@/assets/images/illustrations/trophy.png"),
                       onPress: () => router.push('/booking'),
                     },
                     {
                       title: "Happy Hour Turf Booking",
-                      subtitle: "Book morning slots for ₹15/hr only!",
+                      subtitle: "Book morning slots for ₹150/hr & get 15% cashback!",
                       buttonText: "Book Turf",
-                      badgeText: "PROMO OFFER",
-                      backgroundImage: "https://images.unsplash.com/photo-1549451371-64aa98a6f660?auto=format&fit=crop&w=600&q=80",
+                      badgeText: "HAPPY HOUR VOUCHER",
+                      isGradient: true,
+                      gradientColors: ['#ff5f6d', '#ff9966'],
                       buttonBackgroundColor: "#ffffff",
-                      buttonTextColor: "#ff8c00",
+                      buttonTextColor: "#ff5f6d",
+                      illustrationImage: require("@/assets/images/illustrations/athletes.png"),
                       onPress: () => router.push('/(tabs)/explore'),
                     }
                   ]}
@@ -961,7 +1065,7 @@ export default function HomeScreen() {
               <View style={[styles.dailyPlanCard, { backgroundColor: theme.primaryContainer }, Shadows.level3]}>
                 <View style={styles.planInfo}>
                   <ThemedText type="headlineSm" style={{ color: '#ffffff' }}>
-                    Today's Occupancy
+                    {"Today's Occupancy"}
                   </ThemedText>
                   <ThemedText type="bodyMd" style={{ color: 'rgba(255, 255, 255, 0.85)', marginTop: 4 }}>
                     8 of 12 slots booked
@@ -1060,12 +1164,14 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <PromoBanner 
               title="Grand Summer Tournament!"
-              subtitle="Join the Weekend League and win amazing prizes up to ₹50,000!"
-              buttonText="Register Now"
-              badgeText="ANNOUNCEMENT"
-              backgroundImage="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80"
-              buttonBackgroundColor="#ff8c00"
-              buttonTextColor="#ffffff"
+              subtitle="Register your Team, compete in the League and win ₹50,000 + kit gifts!"
+              buttonText="Register Team"
+              badgeText="TOURNAMENT CHALLENGE"
+              isGradient={true}
+              gradientColors={['#6366f1', '#a855f7']}
+              buttonBackgroundColor="#ffffff"
+              buttonTextColor="#6366f1"
+              illustrationImage={require("@/assets/images/illustrations/trophy.png")}
               onPress={() => router.push('/(tabs)/tournaments')}
               variant="vertical"
             />
@@ -1077,37 +1183,43 @@ export default function HomeScreen() {
               SPECIAL DEALS & VOUCHERS
             </ThemedText>
             <AutoScrollingHorizontalBanners 
-              cardWidth={270}
-              gap={12}
+              cardWidth={280}
+              gap={16}
               banners={[
                 {
                   title: "YAWAH Turf Special Offer",
-                  subtitle: "Get flat 30% OFF on all bookings. Code: YAWAHTURF",
-                  buttonText: "Book Now",
-                  badgeText: "PROMO OFFER",
-                  backgroundImage: "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?auto=format&fit=crop&w=600&q=80",
-                  buttonBackgroundColor: "#a3e635",
-                  buttonTextColor: "#064e3b",
+                  subtitle: "Save flat 30% on slot bookings + ₹100 instant cashback!",
+                  buttonText: "Book Turf",
+                  badgeText: "CASHBACK & OFFER",
+                  isGradient: true,
+                  gradientColors: ['#10b981', '#059669'],
+                  buttonBackgroundColor: "#ffffff",
+                  buttonTextColor: "#059669",
+                  illustrationImage: require("@/assets/images/illustrations/athletes.png"),
                   onPress: () => router.push('/(tabs)/explore'),
                 },
                 {
-                  title: "Gift a Game to Your Loved Ones",
-                  subtitle: "The easiest way to nail a gift for a sports lover",
-                  buttonText: "Buy Gift Card",
+                  title: "Gift a Game to Loved Ones",
+                  subtitle: "Buy e-Gift vouchers for your family & friends instantly.",
+                  buttonText: "Get Gift Card",
                   badgeText: "GIFT VOUCHER",
-                  backgroundImage: "https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=600&q=80",
+                  isGradient: true,
+                  gradientColors: ['#f59e0b', '#d97706'],
                   buttonBackgroundColor: "#ffffff",
-                  buttonTextColor: "#1e3a8a",
+                  buttonTextColor: "#d97706",
+                  illustrationImage: require("@/assets/images/illustrations/trophy.png"),
                   onPress: () => router.push('/booking'),
                 },
                 {
                   title: "Happy Hour Turf Booking",
-                  subtitle: "Book morning slots for ₹15/hr only!",
+                  subtitle: "Book morning slots for ₹150/hr & get 15% cashback!",
                   buttonText: "Book Turf",
-                  badgeText: "PROMO OFFER",
-                  backgroundImage: "https://images.unsplash.com/photo-1549451371-64aa98a6f660?auto=format&fit=crop&w=600&q=80",
+                  badgeText: "HAPPY HOUR VOUCHER",
+                  isGradient: true,
+                  gradientColors: ['#ff5f6d', '#ff9966'],
                   buttonBackgroundColor: "#ffffff",
-                  buttonTextColor: "#ff8c00",
+                  buttonTextColor: "#ff5f6d",
+                  illustrationImage: require("@/assets/images/illustrations/athletes.png"),
                   onPress: () => router.push('/(tabs)/explore'),
                 }
               ]}
@@ -1138,7 +1250,7 @@ export default function HomeScreen() {
                     status: 'BOOKED',
                     statusColor: '#ff8c00',
                     time: '17:00 - 18:00',
-                    image: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=600&q=80',
+                    image: require('@/assets/images/sports/sport_football.png'),
                     desc: '5G Rubber Infill Turf'
                   },
                   {
@@ -1147,7 +1259,7 @@ export default function HomeScreen() {
                     status: 'AVAILABLE',
                     statusColor: '#10b981',
                     time: 'Free to book',
-                    image: 'https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=600&q=80',
+                    image: require('@/assets/images/sports/sport_cricket.png'),
                     desc: 'AstroTurf wicket nets'
                   },
                   {
@@ -1156,7 +1268,7 @@ export default function HomeScreen() {
                     status: 'MAINTENANCE',
                     statusColor: '#ef4444',
                     time: 'Unavailable today',
-                    image: 'https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=600&q=80',
+                    image: require('@/assets/images/sports/sport_all.png'),
                     desc: 'Polished teakwood court'
                   }
                 ].map((pitch) => (
@@ -1164,7 +1276,7 @@ export default function HomeScreen() {
                     key={pitch.id}
                     style={[styles.featuredTurfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
                   >
-                    <Image source={{ uri: pitch.image }} style={styles.featuredTurfImage} contentFit="cover" />
+                    <Image source={typeof pitch.image === 'string' ? { uri: pitch.image } : pitch.image} style={styles.featuredTurfImage} contentFit="cover" />
                     <View style={styles.featuredTurfContent}>
                       <View style={styles.featuredTurfHeader}>
                         <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '700', fontSize: 9 }} numberOfLines={1}>
@@ -1215,7 +1327,7 @@ export default function HomeScreen() {
                     role: 'Forward • Level 10',
                     notes: 'Excellent explosive speed',
                     rating: '4.9',
-                    image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80',
+                    image: require('@/assets/images/avatars/avatar_8.png'),
                     focus: 'TACTICAL DEPLOY'
                   },
                   {
@@ -1224,7 +1336,7 @@ export default function HomeScreen() {
                     role: 'Midfielder • Level 14',
                     notes: 'Great ball possession control',
                     rating: '4.8',
-                    image: 'https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=600&q=80',
+                    image: require('@/assets/images/sports/sport_all.png'),
                     focus: 'BALL POSSESSION'
                   },
                   {
@@ -1233,7 +1345,7 @@ export default function HomeScreen() {
                     role: 'Goalkeeper • Level 8',
                     notes: 'Needs reflex response practice',
                     rating: '4.5',
-                    image: 'https://images.unsplash.com/photo-1549451371-64aa98a6f660?auto=format&fit=crop&w=600&q=80',
+                    image: require('@/assets/images/avatars/avatar_10.png'),
                     focus: 'GK POSITIONING'
                   }
                 ].map((student) => (
@@ -1241,7 +1353,7 @@ export default function HomeScreen() {
                     key={student.id}
                     style={[styles.featuredTurfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
                   >
-                    <Image source={{ uri: student.image }} style={styles.featuredTurfImage} contentFit="cover" />
+                    <Image source={typeof student.image === 'string' ? { uri: student.image } : student.image} style={styles.featuredTurfImage} contentFit="cover" />
                     <View style={styles.featuredTurfContent}>
                       <View style={styles.featuredTurfHeader}>
                         <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '700', fontSize: 9 }} numberOfLines={1}>
@@ -1291,7 +1403,7 @@ export default function HomeScreen() {
                     status: 'LIVE NOW',
                     statusColor: '#ff8c00',
                     teams: '16 Teams Registered',
-                    image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80',
+                    image: require('@/assets/images/avatars/avatar_8.png'),
                     sport: 'CRICKET'
                   },
                   {
@@ -1300,7 +1412,7 @@ export default function HomeScreen() {
                     status: 'REGISTERING',
                     statusColor: '#10b981',
                     teams: '8 Teams Registered',
-                    image: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=600&q=80',
+                    image: require('@/assets/images/sports/sport_football.png'),
                     sport: 'FOOTBALL'
                   },
                   {
@@ -1309,7 +1421,7 @@ export default function HomeScreen() {
                     status: 'COMPLETED',
                     statusColor: '#81919c',
                     teams: '32 Players Bracket',
-                    image: 'https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=600&q=80',
+                    image: require('@/assets/images/sports/sport_all.png'),
                     sport: 'TENNIS'
                   }
                 ].map((tourn) => (
@@ -1318,7 +1430,7 @@ export default function HomeScreen() {
                     onPress={() => router.push('/(tabs)/tournaments')}
                     style={[styles.featuredTurfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
                   >
-                    <Image source={{ uri: tourn.image }} style={styles.featuredTurfImage} contentFit="cover" />
+                    <Image source={typeof tourn.image === 'string' ? { uri: tourn.image } : tourn.image} style={styles.featuredTurfImage} contentFit="cover" />
                     <View style={styles.featuredTurfContent}>
                       <View style={styles.featuredTurfHeader}>
                         <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '700', fontSize: 9 }} numberOfLines={1}>
@@ -1369,7 +1481,7 @@ export default function HomeScreen() {
                     location: 'Canary Wharf, East London',
                     price: '₹25',
                     rating: '4.9',
-                    image: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=600&q=80',
+                    image: require('@/assets/images/sports/sport_football.png'),
                     pitch: '5G Rubber Infill'
                   },
                   {
@@ -1378,7 +1490,7 @@ export default function HomeScreen() {
                     location: "St John's Wood, London",
                     price: '₹22',
                     rating: '4.8',
-                    image: 'https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=600&q=80',
+                    image: require('@/assets/images/sports/sport_cricket.png'),
                     pitch: 'Hybrid Grass Turf'
                   },
                   {
@@ -1387,7 +1499,7 @@ export default function HomeScreen() {
                     location: 'Stratford Central, London',
                     price: '₹18',
                     rating: '4.7',
-                    image: 'https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=600&q=80',
+                    image: require('@/assets/images/sports/sport_all.png'),
                     pitch: 'Indoor Woodcourt'
                   }
                 ].map((turf) => (
@@ -1396,7 +1508,7 @@ export default function HomeScreen() {
                     onPress={() => router.push({ pathname: '/details', params: { id: turf.id, name: turf.name } })}
                     style={[styles.featuredTurfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
                   >
-                    <Image source={{ uri: turf.image }} style={styles.featuredTurfImage} contentFit="cover" />
+                    <Image source={typeof turf.image === 'string' ? { uri: turf.image } : turf.image} style={styles.featuredTurfImage} contentFit="cover" />
                     <View style={styles.featuredTurfContent}>
                       <View style={styles.featuredTurfHeader}>
                         <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '700', fontSize: 9 }} numberOfLines={1}>
@@ -1439,7 +1551,7 @@ export default function HomeScreen() {
           {role === 'Owner' ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <ThemedText type="headlineSm">Today's Turf Bookings</ThemedText>
+                <ThemedText type="headlineSm">{"Today's Turf Bookings"}</ThemedText>
                 <Pressable>
                   <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_700Bold' }}>
                     View Schedule
@@ -1496,7 +1608,7 @@ export default function HomeScreen() {
           ) : role === 'Coach' ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <ThemedText type="headlineSm">Today's Academy Sessions</ThemedText>
+                <ThemedText type="headlineSm">{"Today's Academy Sessions"}</ThemedText>
                 <Pressable>
                   <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_700Bold' }}>
                     Full Calendar
@@ -1504,7 +1616,91 @@ export default function HomeScreen() {
                 </Pressable>
               </View>
 
+              {classes.length > 0 && (
+                <ScrollView 
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingBottom: 16, gap: 12 }}
+                >
+                  {classes.map((cls, idx) => {
+                    const navigateToProfile = () => {
+                      router.push({
+                        pathname: '/coach/[id]',
+                        params: {
+                          id: cls.id || `class-${idx}`,
+                          name: profile.name || 'Coach',
+                          specialty: cls.className,
+                          experience: `${cls.classType} • ${cls.ageGroup || 'All Ages'}`,
+                          trainees: '18',
+                          rating: '5.0',
+                          reviews: '1',
+                          rate: cls.feeAmount ? `₹${cls.feeAmount}/${cls.feeType === 'Per Session' ? 'sess' : 'mo'}` : 'Free',
+                          location: cls.venue,
+                          match: 'Your Class',
+                          sports: [cls.sportType.toLowerCase()].join(','),
+                          avatar: typeof profile.avatarUrl === 'string' && !/^\d+$/.test(profile.avatarUrl) ? profile.avatarUrl : (typeof profile.avatarUrl === 'number' ? String(profile.avatarUrl) : String(profile.avatarUrl)),
+                          badge: 'OWNER',
+                        }
+                      });
+                    };
+
+                    const sportLower = cls.sportType.toLowerCase();
+                    const watermarkSource = sportLower.includes('cricket') ? require('@/assets/images/illustrations/cricket_player.png') : (sportLower.includes('football') || sportLower.includes('futsal') ? require('@/assets/images/illustrations/football_player.png') : (sportLower.includes('badminton') ? require('@/assets/images/illustrations/athletes.png') : require('@/assets/images/illustrations/tennis_player.png')));
+
+                    return (
+                      <Pressable 
+                        key={cls.id || idx} 
+                        style={[styles.advertisementCard, { backgroundColor: '#f5f6ff', borderColor: theme.outlineVariant + '33', width: 220, overflow: 'hidden' }]}
+                        onPress={navigateToProfile}
+                      >
+                        {/* Subtle watermark vector illustration */}
+                        <Image 
+                          source={watermarkSource}
+                          style={{ position: 'absolute', right: -10, bottom: -10, width: 90, height: 90, opacity: 0.12 }}
+                          contentFit="contain"
+                        />
+                        {/* Banner Top Accent */}
+                        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: theme.primary, borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl }} />
+                        
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                          <Image 
+                            source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
+                            style={{ width: 44, height: 44, borderRadius: BorderRadius.full }}
+                          />
+                          <View style={{ flex: 1, marginLeft: 10 }}>
+                            <ThemedText style={{ color: theme.primary, fontFamily: 'PlusJakartaSans_800ExtraBold', fontSize: 10, letterSpacing: 0.5 }}>COACHING CLASS</ThemedText>
+                            <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 1 }}>{cls.classType} · {cls.sportType.toUpperCase()}</ThemedText>
+                          </View>
+                        </View>
+
+                        <ThemedText type="title" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', fontSize: 15, lineHeight: 20 }} numberOfLines={1}>
+                          {cls.className}
+                        </ThemedText>
+                        
+                        <ThemedText type="bodyMd" style={{ color: theme.textSecondary, fontSize: 12, marginTop: 4 }} numberOfLines={1}>
+                          Session Duration · {cls.sessionDuration}
+                        </ThemedText>
+
+                        <View style={{ borderTopWidth: 1, borderTopColor: theme.outlineVariant + '1a', marginTop: 10, paddingTop: 10 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                            <Ionicons name="location-outline" size={13} color={theme.textSecondary} style={{ marginRight: 4 }} />
+                            <ThemedText style={{ color: theme.textSecondary, fontSize: 11 }} numberOfLines={1}>{cls.venue}</ThemedText>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="time-outline" size={13} color={theme.textSecondary} style={{ marginRight: 4 }} />
+                            <ThemedText style={{ fontSize: 10, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                              {cls.sessionTime}
+                            </ThemedText>
+                          </View>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              )}
+
               <View style={styles.scheduleList}>
+
                 {/* Session 1 */}
                 <View style={[styles.scheduleCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
                   <View style={[styles.scheduleIconWrap, { backgroundColor: theme.primaryContainer + '1a' }]}>
@@ -1550,7 +1746,7 @@ export default function HomeScreen() {
           ) : role === 'Organizer' ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <ThemedText type="headlineSm">Today's Organized Matches</ThemedText>
+                <ThemedText type="headlineSm">{"Today's Organized Matches"}</ThemedText>
                 <Pressable>
                   <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_700Bold' }}>
                     Full Bracket
@@ -1617,7 +1813,7 @@ export default function HomeScreen() {
                 <View style={[styles.scheduleCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
                   <View style={[styles.scheduleIconWrap, { backgroundColor: theme.secondaryContainer + '1a' }]}>
                     <Image
-                      source={{ uri: 'https://lh3.googleusercontent.com/aida/AP1WRLtktV94nJFc0U5ggptbWUmJdSyDpzbXQmz0_Q8mx0mGuM0jwTvOYvB8NJV5PiYkP9f7ZvujLKNMFqOAPGdU64Qf9kcw9LBrrNmqyA5SjFWCFo74KLUo6y9pQIsIzQqXje9l_-qoQw07AzB9s9fy4ANoskUlqNfHpM6Ef8ELcIqwSXwbJuToojtZEvvCDg9-2XbE-mNw9LGBe8tgJp6rRCzHknvrnmculyjYWwW0eukUl3qTOYtxBH8daw' }}
+                      source={require('@/assets/images/sports/sport_matches.png')}
                       style={styles.scheduleIllustration}
                     />
                   </View>
@@ -1931,7 +2127,7 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.bentoTextWrap}>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5 }}>
-                      Today's Revenue
+                      {"Today's Revenue"}
                     </ThemedText>
                     <ThemedText type="headlineSm" style={{ marginTop: 2 }}>
                       ₹18,500 <ThemedText type="labelSm" style={{ fontWeight: 'normal', color: '#10b981' }}>+15%</ThemedText>
@@ -2586,5 +2782,16 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
     marginTop: Spacing.xs,
+  },
+  advertisementCard: {
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    padding: 16,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
 });

@@ -19,9 +19,11 @@ import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { MaterialIcons } from '@expo/vector-icons';
 import { PromoBanner, AutoScrollingHorizontalBanners } from '@/components/promo-banner';
 import { SPORTS_LIST } from '@/constants/sports';
+import { useTournamentStore } from '@/store/app-store';
 
 // Mock Tournaments Data
 const INITIAL_TOURNAMENTS = [
@@ -41,7 +43,7 @@ const INITIAL_TOURNAMENTS = [
     status: 'Registering',
     isLive: false,
     isSponsored: true,
-    banner: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=300&q=80',
+    banner: require('@/assets/images/sports/tournament_football.png'),
   },
   {
     id: 't2',
@@ -59,7 +61,7 @@ const INITIAL_TOURNAMENTS = [
     status: 'Ongoing',
     isLive: true,
     isSponsored: false,
-    banner: 'https://images.unsplash.com/photo-1531415080290-bc98545ab3ef?w=300&q=80',
+    banner: require('@/assets/images/sports/tournament_cricket.png'),
   },
   {
     id: 't3',
@@ -77,7 +79,7 @@ const INITIAL_TOURNAMENTS = [
     status: 'Registering',
     isLive: false,
     isSponsored: false,
-    banner: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=300&q=80',
+    banner: require('@/assets/images/sports/tournament_futsal.png'),
   },
   {
     id: 't4',
@@ -95,7 +97,7 @@ const INITIAL_TOURNAMENTS = [
     status: 'Upcoming',
     isLive: false,
     isSponsored: true,
-    banner: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=300&q=80',
+    banner: require('@/assets/images/sports/tournament_tennis.png'),
   },
   {
     id: 't5',
@@ -113,7 +115,7 @@ const INITIAL_TOURNAMENTS = [
     status: 'Finished',
     isLive: false,
     isSponsored: false,
-    banner: 'https://images.unsplash.com/photo-1608962714006-25c2d3a3d5e2?w=300&q=80',
+    banner: require('@/assets/images/sports/tournament_cricket.png'),
   }
 ];
 
@@ -135,15 +137,17 @@ const formatDateRange = (start: string, end: string) => {
   return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
 };
 
-export default function TournamentsTab() {
+export default function TournamentsScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { profile } = useUserProfile();
+  const role = profile.role || 'Player';
+  const { publishedTournaments } = useTournamentStore();
 
   // State Management
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState('All');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [tournaments] = useState(INITIAL_TOURNAMENTS);
   const [coinTossVisible, setCoinTossVisible] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [sortBy, setSortBy] = useState('Date'); // 'Date' or 'Prize'
@@ -175,7 +179,7 @@ export default function TournamentsTab() {
   };
 
   const handleProfilePress = () => router.push('/profile');
-  const handleNetworkPress = () => router.push('/network');
+  const handleNetworkPress = () => router.push('/(tabs)/network');
 
   const toggleBookmark = (id: string) => {
     if (bookmarkedIds.includes(id)) {
@@ -198,8 +202,30 @@ export default function TournamentsTab() {
     setSortBy('Date');
   };
 
+  // Map dynamically added tournaments from global store to fit list schema
+  const mappedPublished = (publishedTournaments || []).map((t: any) => ({
+    id: t.id,
+    name: t.name,
+    sport: t.sport.charAt(0).toUpperCase() + t.sport.slice(1).toLowerCase(), // Normalize e.g. "football" to "Football"
+    type: t.type,
+    location: t.location,
+    startDate: t.startDate,
+    endDate: t.endDate,
+    registrationStatus: t.status === 'Draft' ? 'Upcoming' : t.status,
+    teamsCount: t.teamsCount,
+    maxTeams: t.maxTeams,
+    prizePool: t.prizePool,
+    prizePoolAmount: t.prizePoolAmount,
+    status: t.status === 'Draft' ? 'Upcoming' : (t.status === 'Completed' ? 'Finished' : t.status),
+    isLive: t.status === 'Ongoing',
+    isSponsored: false,
+    banner: t.banner || require('@/assets/images/sports/tournament_football.png'),
+  }));
+
+  const allTournaments = [...mappedPublished, ...INITIAL_TOURNAMENTS];
+
   // Filter and Sort Logic
-  const filteredTournaments = tournaments.filter(t => {
+  const filteredTournaments = allTournaments.filter(t => {
     if (simulateEmpty) return false;
     
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -231,7 +257,7 @@ export default function TournamentsTab() {
           <View style={styles.headerLeft}>
             <Pressable style={styles.profileIconButton} onPress={handleProfilePress}>
               <Image
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI' }}
+                source={require('@/assets/images/avatars/avatar_1.png')}
                 style={styles.headerAvatar}
               />
             </Pressable>
@@ -248,33 +274,22 @@ export default function TournamentsTab() {
             </View>
           </View>
           <View style={styles.headerRightActions}>
-            <Pressable style={styles.iconButton} onPress={handleNetworkPress}>
-              <Ionicons name="pulse" size={20} color={theme.secondaryContainer} />
-            </Pressable>
+
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondaryContainer} />
             </Pressable>
             <Pressable style={styles.iconButton} onPress={() => setCoinTossVisible(true)}>
-              <FontAwesome5 name="coins" size={16} color={theme.secondaryContainer} />
+              <Image
+                source={require('@/assets/images/coin_toss_icon.png')}
+                style={{ width: 26, height: 26 }}
+                contentFit="contain"
+              />
             </Pressable>
           </View>
         </View>
 
         <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {/* Header section with description */}
-          <View style={styles.welcomeSection}>
-            <View style={styles.rowBetween}>
-              <ThemedText type="headlineLg" style={{ color: theme.text }}>
-                Tournaments
-              </ThemedText>
-            </View>
-            <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
-              Register your team, track brackets, and claim ultimate glory.
-            </ThemedText>
-          </View>
-
-          {/* Sport Categories Row */}
+          {/* Sport Categories Row (Fixed) */}
           <View style={[styles.categoriesSection, { paddingVertical: 10, marginTop: Spacing.sm }]}>
             <ScrollView
               horizontal
@@ -316,51 +331,8 @@ export default function TournamentsTab() {
             </ScrollView>
           </View>
 
-          {/* Offers & Gift Vouchers (Horizontal Card, Auto Scroll, Reduced Width & Gap) */}
-          <View style={{ paddingHorizontal: 0, marginTop: Spacing.sm }}>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary, paddingHorizontal: Spacing.containerMargin, marginBottom: 4, letterSpacing: 0.5 }}>
-              SPECIAL DEALS & VOUCHERS
-            </ThemedText>
-            <AutoScrollingHorizontalBanners 
-              cardWidth={270}
-              gap={12}
-              banners={[
-                {
-                  title: "YAWAH Turf Special Offer",
-                  subtitle: "Get flat 30% OFF on all bookings. Code: YAWAHTURF",
-                  buttonText: "Book Now",
-                  badgeText: "SPECIAL OFFER",
-                  backgroundImage: "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?auto=format&fit=crop&w=600&q=80",
-                  buttonBackgroundColor: "#a3e635",
-                  buttonTextColor: "#064e3b",
-                  onPress: () => router.push('/(tabs)/explore'),
-                },
-                {
-                  title: "Gift a Game to Your Loved Ones",
-                  subtitle: "The easiest way to nail a gift for a sports lover",
-                  buttonText: "Buy Gift Card",
-                  badgeText: "GIFT VOUCHER",
-                  backgroundImage: "https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=600&q=80",
-                  buttonBackgroundColor: "#ffffff",
-                  buttonTextColor: "#1e3a8a",
-                  onPress: () => router.push('/booking'),
-                },
-                {
-                  title: "Happy Hour Booking Deals",
-                  subtitle: "Play for just ₹15/hr between 6 AM - 9 AM!",
-                  buttonText: "Claim Deal",
-                  badgeText: "PROMO OFFER",
-                  backgroundImage: "https://images.unsplash.com/photo-1549451371-64aa98a6f660?auto=format&fit=crop&w=600&q=80",
-                  buttonBackgroundColor: "#ffffff",
-                  buttonTextColor: "#ff8c00",
-                  onPress: () => router.push('/(tabs)/explore'),
-                }
-              ]}
-            />
-          </View>
-
-          {/* Status Filters & Sort Toggle Row */}
-          <View style={styles.filtersRow}>
+          {/* Status Filters & Sort Toggle Row (Fixed) */}
+          <View style={[styles.filtersRow, { paddingHorizontal: Spacing.containerMargin, paddingBottom: 10 }]}>
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false} 
@@ -411,8 +383,71 @@ export default function TournamentsTab() {
             </Pressable>
           </View>
 
-          {/* Main Content Area */}
-          <View style={[styles.listSection, { paddingBottom: 110 }]}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            {/* Header section with description */}
+            <View style={styles.welcomeSection}>
+              <View style={styles.rowBetween}>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="headlineLg" style={{ color: theme.text }}>
+                    Tournaments
+                  </ThemedText>
+                  <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
+                    Register your team, track brackets, and claim ultimate glory.
+                  </ThemedText>
+                </View>
+                <Image
+                  source={require('@/assets/images/illustrations/tournament_hero.png')}
+                  style={{ width: 100, height: 100 }}
+                  contentFit="contain"
+                />
+              </View>
+            </View>
+
+            {/* Offers & Gift Vouchers (Horizontal Card, Auto Scroll, Reduced Width & Gap) */}
+            <View style={{ paddingHorizontal: 0, marginTop: Spacing.sm, marginBottom: Spacing.sm }}>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, paddingHorizontal: Spacing.containerMargin, marginBottom: 4, letterSpacing: 0.5 }}>
+                SPECIAL DEALS & VOUCHERS
+              </ThemedText>
+              <AutoScrollingHorizontalBanners 
+                cardWidth={270}
+                gap={12}
+                banners={[
+                  {
+                    title: "YAWAH Turf Special Offer",
+                    subtitle: "Get flat 30% OFF on all bookings. Code: YAWAHTURF",
+                    buttonText: "Book Now",
+                    badgeText: "SPECIAL OFFER",
+                    backgroundImage: require("@/assets/images/sports/sport_booking.png"),
+                    buttonBackgroundColor: "#a3e635",
+                    buttonTextColor: "#064e3b",
+                    onPress: () => router.push('/(tabs)/explore'),
+                  },
+                  {
+                    title: "Gift a Game to Your Loved Ones",
+                    subtitle: "The easiest way to nail a gift for a sports lover",
+                    buttonText: "Buy Gift Card",
+                    badgeText: "GIFT VOUCHER",
+                    backgroundImage: require("@/assets/images/sports/sport_all.png"),
+                    buttonBackgroundColor: "#ffffff",
+                    buttonTextColor: "#1e3a8a",
+                    onPress: () => router.push('/booking'),
+                  },
+                  {
+                    title: "Happy Hour Booking Deals",
+                    subtitle: "Play for just ₹15/hr between 6 AM - 9 AM!",
+                    buttonText: "Claim Deal",
+                    badgeText: "PROMO OFFER",
+                    backgroundImage: require("@/assets/images/sports/sport_booking.png"),
+                    buttonBackgroundColor: "#ffffff",
+                    buttonTextColor: "#ff8c00",
+                    onPress: () => router.push('/(tabs)/explore'),
+                  }
+                ]}
+              />
+            </View>
+
+            {/* Main Content Area */}
+            <View style={[styles.listSection, { paddingBottom: 110 }]}>
             {simulateLoading ? (
               // Beautiful Skeleton Cards
               <View style={viewMode === 'grid' ? styles.gridContainer : styles.listContainer}>
@@ -463,7 +498,7 @@ export default function TournamentsTab() {
                         key={t.id}
                         style={[
                           styles.ticketCard,
-                          { backgroundColor: theme.surfaceLowest, borderColor: '#000000' },
+                          { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
                           Shadows.level1
                         ]}
                         onPress={() => router.push({
@@ -504,16 +539,9 @@ export default function TournamentsTab() {
                                 <ThemedText style={styles.liveText}>Live</ThemedText>
                               </View>
                             ) : (
-                              <View style={[
-                                styles.statusBadgeInline,
-                                { borderWidth: 1 },
-                                t.registrationStatus === 'Registering' && { backgroundColor: '#e2f9ec', borderColor: '#0f9f5833' },
-                                t.registrationStatus === 'Filling Fast' && { backgroundColor: '#fff4e5', borderColor: '#e67e2233' },
-                                t.registrationStatus === 'Upcoming' && { backgroundColor: '#e6f0fa', borderColor: '#2980b933' },
-                                t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2', borderColor: '#7f8c8d33' }
-                              ]}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <ThemedText style={[
-                                  { fontSize: 7, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.3 },
+                                  { fontSize: 10, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.3 },
                                   t.registrationStatus === 'Registering' && { color: '#0f9f58' },
                                   t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
                                   t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
@@ -564,7 +592,7 @@ export default function TournamentsTab() {
                         </View>
 
                         {/* Dashed vertical separator line */}
-                        <View style={[styles.verticalDivider, { borderColor: '#00000033' }]} />
+                        <View style={[styles.verticalDivider, { borderColor: theme.outlineVariant + '22' }]} />
  
                         {/* Right Section (Stub) */}
                         <View style={styles.ticketRight}>
@@ -578,22 +606,27 @@ export default function TournamentsTab() {
                             </Pressable>
                           </View>
  
-                          <View style={[styles.ticketPriceHighlight, { backgroundColor: theme.secondaryContainer + '10' }]}>
-                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 7, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>Prize Pool</ThemedText>
-                            <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 1, textAlign: 'center', fontSize: 13 }}>
-                              {t.prizePool}
-                            </ThemedText>
+                          <View style={{ width: '100%', gap: 4, marginTop: 'auto' }}>
+                            <View style={[styles.ticketPriceHighlight, { backgroundColor: theme.primary + '0a', borderColor: theme.primary + '22' }]}>
+                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 7, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>Prize Pool</ThemedText>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 1 }}>
+                                <Image source={require('@/assets/images/illustrations/wallet_blue.png')} style={{ width: 16, height: 16 }} contentFit="contain" />
+                                <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold', textAlign: 'center', fontSize: 13 }}>
+                                  {t.prizePool}
+                                </ThemedText>
+                              </View>
+                            </View>
+                            
+                            <Pressable 
+                              style={[styles.ticketRegisterBtn, { backgroundColor: theme.primary }]}
+                              onPress={() => router.push({
+                                pathname: '/team-registration',
+                                params: { id: t.id, name: t.name }
+                              })}
+                            >
+                              <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '700', fontSize: 10 }}>Register</ThemedText>
+                            </Pressable>
                           </View>
-                          
-                          <Pressable 
-                            style={[styles.ticketRegisterBtn, { backgroundColor: theme.primary }]}
-                            onPress={() => router.push({
-                              pathname: '/team-registration',
-                              params: { id: t.id, name: t.name }
-                            })}
-                          >
-                            <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '700', fontSize: 10 }}>Register</ThemedText>
-                          </Pressable>
                         </View>
                       </Pressable>
                     );
@@ -604,7 +637,7 @@ export default function TournamentsTab() {
                         key={t.id}
                         style={[
                           styles.ticketGridCard,
-                          { backgroundColor: theme.surfaceLowest, borderColor: '#000000' },
+                          { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
                           Shadows.level1
                         ]}
                         onPress={() => router.push({
@@ -659,16 +692,9 @@ export default function TournamentsTab() {
                                 <ThemedText style={styles.liveText}>Live</ThemedText>
                               </View>
                             ) : (
-                              <View style={[
-                                styles.statusBadgeInline,
-                                { borderWidth: 1 },
-                                t.registrationStatus === 'Registering' && { backgroundColor: '#e2f9ec', borderColor: '#0f9f5833' },
-                                t.registrationStatus === 'Filling Fast' && { backgroundColor: '#fff4e5', borderColor: '#e67e2233' },
-                                t.registrationStatus === 'Upcoming' && { backgroundColor: '#e6f0fa', borderColor: '#2980b933' },
-                                t.registrationStatus === 'Closed' && { backgroundColor: '#f0f0f2', borderColor: '#7f8c8d33' }
-                              ]}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <ThemedText style={[
-                                  { fontSize: 7, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.3 },
+                                  { fontSize: 10, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: 0.3 },
                                   t.registrationStatus === 'Registering' && { color: '#0f9f58' },
                                   t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
                                   t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
@@ -717,11 +743,11 @@ export default function TournamentsTab() {
                         </View>
 
                         {/* Dashed divider */}
-                        <View style={[styles.horizontalDivider, { borderColor: '#00000033' }]} />
+                        <View style={[styles.horizontalDivider, { borderColor: theme.outlineVariant + '22' }]} />
 
                         {/* Footer / Stub section */}
                         <View style={styles.gridCardFooter}>
-                          <View style={[styles.gridPriceHighlight, { backgroundColor: theme.secondaryContainer + '10' }]}>
+                          <View style={[styles.gridPriceHighlight, { backgroundColor: theme.primary + '0a', borderColor: theme.primary + '22' }]}>
                             <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 7 }}>Prize</ThemedText>
                             <ThemedText type="bodySm" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold', fontSize: 11 }}>
                               {t.prizePool}
@@ -980,8 +1006,7 @@ const styles = StyleSheet.create({
   ticketCard: {
     flexDirection: 'row',
     borderRadius: BorderRadius.xl,
-    borderWidth: 2,
-    borderStyle: 'dotted',
+    borderWidth: 1,
     position: 'relative',
     height: 180,
   },
@@ -1055,8 +1080,7 @@ const styles = StyleSheet.create({
   verticalDivider: {
     width: 1,
     height: '100%',
-    borderStyle: 'dashed',
-    borderWidth: 1,
+    borderWidth: 0.5,
     position: 'absolute',
     right: '30%',
   },
@@ -1091,8 +1115,7 @@ const styles = StyleSheet.create({
   ticketGridCard: {
     width: '48%',
     borderRadius: BorderRadius.xl,
-    borderWidth: 2,
-    borderStyle: 'dotted',
+    borderWidth: 1,
     position: 'relative',
     marginBottom: Spacing.sm,
   },
@@ -1196,8 +1219,7 @@ const styles = StyleSheet.create({
   horizontalDivider: {
     width: '100%',
     height: 1,
-    borderStyle: 'dashed',
-    borderWidth: 1,
+    borderWidth: 0.5,
     position: 'absolute',
     bottom: 58,
   },
@@ -1241,21 +1263,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: BorderRadius.md,
-    borderWidth: 1.2,
-    borderStyle: 'dotted',
-    borderColor: '#000000',
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    marginBottom: 8,
   },
   gridPriceHighlight: {
     paddingVertical: 4,
     paddingHorizontal: 6,
     borderRadius: BorderRadius.md,
-    borderWidth: 1.2,
-    borderStyle: 'dotted',
-    borderColor: '#000000',
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,

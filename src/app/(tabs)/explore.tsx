@@ -33,11 +33,14 @@ const DATES = [
 ];
 
 import { SPORTS_LIST } from '@/constants/sports';
+import { useWalletStore, useTurfStore } from '@/store/app-store';
 
 export default function ExploreScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { profile } = useUserProfile();
+  const { walletBalance } = useWalletStore();
+  const { ownedTurfs } = useTurfStore();
   
   const [selectedDate, setSelectedDate] = useState('13');
   const [selectedSport, setSelectedSport] = useState('All');
@@ -85,7 +88,7 @@ export default function ExploreScreen() {
           <View style={styles.headerLeft}>
             <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
               <Image
-                source={{ uri: profile.avatarUrl }}
+                source={typeof profile.avatarUrl === 'string' && !/^\d+$/.test(profile.avatarUrl) ? { uri: profile.avatarUrl } : (typeof profile.avatarUrl === 'number' ? profile.avatarUrl : parseInt(profile.avatarUrl, 10))}
                 style={styles.headerAvatar}
               />
             </Pressable>
@@ -102,123 +105,160 @@ export default function ExploreScreen() {
             </View>
           </View>
           <View style={styles.headerRightActions}>
-            <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
-              <Ionicons name="pulse" size={20} color={theme.secondary} />
+            <Pressable 
+              style={[styles.iconButton, { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, backgroundColor: theme.primary + '10', borderRadius: 16, height: 32 }]} 
+              onPress={() => triggerToast(`Wallet Balance: ₹${walletBalance.toFixed(2)}`)}
+            >
+              <Image source={require('@/assets/images/illustrations/wallet_blue.png')} style={{ width: 16, height: 16 }} contentFit="contain" />
+              <ThemedText style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: theme.primary }}>
+                ₹{walletBalance.toFixed(0)}
+              </ThemedText>
             </Pressable>
+            {/* Temporarily Hidden Network Activity Icon */}
+            {/* <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
+              <Ionicons name="pulse" size={20} color={theme.secondary} />
+            </Pressable> */}
             <Pressable style={styles.iconButton} onPress={() => triggerToast('No new notifications')}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
             </Pressable>
             <Pressable style={styles.iconButton} onPress={() => setCoinTossVisible(true)}>
-              <FontAwesome5 name="coins" size={16} color={theme.secondary} />
+              <Image
+                source={require('@/assets/images/coin_toss_icon.png')}
+                style={{ width: 26, height: 26 }}
+                contentFit="contain"
+              />
             </Pressable>
           </View>
         </View>
 
-        <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
+      {/* Sticky top Date Selection and Categories Filter Container */}
+      <View style={{ backgroundColor: theme.background, borderBottomWidth: 1, borderColor: theme.outlineVariant + '15', paddingBottom: 4 }}>
+        
+        {/* Compact Calendar Picker Row */}
+        <View style={[styles.section, { marginTop: 4, marginBottom: 4 }]}>
+          <View style={[styles.sectionHeader, { marginBottom: 2 }]}>
+            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
+              FEBRUARY 2024
+            </ThemedText>
+          </View>
           <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[styles.calendarContainer, { paddingVertical: 4 }]}
           >
-          {/* Calendar Picker Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <ThemedText type="headlineMd">February</ThemedText>
-              <ThemedText type="labelMd" style={{ color: theme.textSecondary }}>2024</ThemedText>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.calendarContainer}
-            >
-              {DATES.map((item) => {
-                const isActive = item.date === selectedDate;
-                return (
-                  <Pressable
-                    key={item.id}
-                    onPress={() => setSelectedDate(item.date)}
-                    style={[
-                      styles.calendarDay,
-                      isActive
-                        ? { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
-                        : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
-                    ]}
+            {DATES.map((item) => {
+              const isActive = item.date === selectedDate;
+              return (
+                <Pressable
+                  key={item.id}
+                  onPress={() => setSelectedDate(item.date)}
+                  style={[
+                    styles.calendarDay,
+                    isActive
+                      ? { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
+                      : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
+                  ]}
+                >
+                  <ThemedText
+                    type="labelSm"
+                    style={{
+                      color: isActive ? theme.onSecondaryContainer : theme.textSecondary,
+                      opacity: isActive ? 0.8 : 1,
+                      fontSize: 8.5,
+                    }}
                   >
-                    <ThemedText
-                      type="labelSm"
-                      style={{
-                        color: isActive ? theme.onSecondaryContainer : theme.textSecondary,
-                        opacity: isActive ? 0.8 : 1,
-                      }}
-                    >
-                      {item.day}
-                    </ThemedText>
-                    <ThemedText
-                      type="headlineSm"
-                      style={{
-                        color: isActive ? theme.text : theme.text,
-                        fontFamily: isActive ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_600SemiBold',
-                        marginTop: 4,
-                      }}
-                    >
-                      {item.date}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+                    {item.day}
+                  </ThemedText>
+                  <ThemedText
+                    type="headlineSm"
+                    style={{
+                      color: theme.text,
+                      fontFamily: isActive ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_600SemiBold',
+                      marginTop: 2,
+                      fontSize: 11,
+                    }}
+                  >
+                    {item.date}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Search & Filter Category Row */}
+        <View style={[styles.section, { marginTop: 4, marginBottom: 4 }]}>
+          <View style={[styles.searchContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+            <Ionicons name="search" size={16} color={theme.textSecondary} style={{ marginRight: 6 }} />
+            <TextInput
+              style={[styles.searchInput, { color: theme.text }]}
+              placeholder="Search venues or sports..."
+              placeholderTextColor={theme.textSecondary + 'aa'}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           </View>
 
-          {/* Search & Filter Section */}
-          <View style={styles.section}>
-            <View style={[styles.searchContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-              <Ionicons name="search" size={20} color={theme.textSecondary} style={{ marginRight: 8 }} />
-              <TextInput
-                style={[styles.searchInput, { color: theme.text }]}
-                placeholder="Search venues or sports..."
-                placeholderTextColor={theme.textSecondary + 'aa'}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filtersContainer}
-            >
-              {[{ name: 'All', icon: 'apps', color: theme.textSecondary }, ...SPORTS_LIST].map((sport) => {
-                const isActive = sport.name === selectedSport;
-                return (
-                  <Pressable
-                    key={sport.name}
-                    onPress={() => setSelectedSport(sport.name)}
-                    style={[
-                      styles.filterChip,
-                      { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
-                      isActive && { backgroundColor: theme.primary, borderColor: theme.primary },
-                    ]}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[styles.filtersContainer, { paddingVertical: 4 }]}
+            style={{ marginTop: 4 }}
+          >
+            {[{ name: 'All', icon: 'apps', color: theme.textSecondary }, ...SPORTS_LIST].map((sport) => {
+              const isActive = sport.name === selectedSport;
+              return (
+                <Pressable
+                  key={sport.name}
+                  onPress={() => setSelectedSport(sport.name)}
+                  style={[
+                    styles.filterChip,
+                    { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+                    isActive && { backgroundColor: theme.primary, borderColor: theme.primary },
+                  ]}
+                >
+                  <MaterialIcons
+                    name={sport.icon as any}
+                    size={12}
+                    color={isActive ? '#ffffff' : theme.textSecondary}
+                    style={{ marginRight: 4 }}
+                  />
+                  <ThemedText
+                    type="labelMd"
+                    style={{ 
+                      color: isActive ? '#ffffff' : theme.textSecondary,
+                      fontFamily: 'HankenGrotesk_600SemiBold',
+                      fontSize: 10,
+                      letterSpacing: 0.2,
+                    }}
                   >
-                    <MaterialIcons
-                      name={sport.icon as any}
-                      size={12}
-                      color={isActive ? '#ffffff' : theme.textSecondary}
-                      style={{ marginRight: 4 }}
-                    />
-                    <ThemedText
-                      type="labelMd"
-                      style={{ 
-                        color: isActive ? '#ffffff' : theme.textSecondary,
-                        fontFamily: 'HankenGrotesk_600SemiBold',
-                        fontSize: 10,
-                        letterSpacing: 0.2,
-                      }}
-                    >
-                      {sport.name}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+                    {sport.name}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </View>
+
+      <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Booking Hero Banner */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, marginBottom: Spacing.xs }}>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="headlineLg" style={{ color: theme.text }}>Book a Turf</ThemedText>
+              <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
+                Find and book the perfect sports turf near you.
+              </ThemedText>
+            </View>
+            <Image
+              source={require('@/assets/images/illustrations/booking_hero.png')}
+              style={{ width: 100, height: 100 }}
+              contentFit="contain"
+            />
           </View>
 
           {/* Offers & Gift Vouchers (Horizontal Card, Auto Scroll, Reduced Width & Gap) */}
@@ -235,7 +275,7 @@ export default function ExploreScreen() {
                   subtitle: "The easiest way to nail a gift for a sports lover",
                   buttonText: "Buy Gift Card",
                   badgeText: "GIFT VOUCHER",
-                  backgroundImage: "https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=600&q=80",
+                  backgroundImage: require("@/assets/images/sports/sport_all.png"),
                   buttonBackgroundColor: "#ffffff",
                   buttonTextColor: "#1e3a8a",
                   onPress: () => router.push('/booking'),
@@ -245,7 +285,7 @@ export default function ExploreScreen() {
                   subtitle: "Play under the stars. Special discounts after 9PM.",
                   buttonText: "Explore Offers",
                   badgeText: "SPECIAL OFFER",
-                  backgroundImage: "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?auto=format&fit=crop&w=600&q=80",
+                  backgroundImage: require("@/assets/images/sports/sport_booking.png"),
                   buttonBackgroundColor: "#a3e635",
                   buttonTextColor: "#064e3b",
                   onPress: () => router.push('/(tabs)/explore'),
@@ -255,7 +295,7 @@ export default function ExploreScreen() {
                   subtitle: "Get flat 30% OFF on all bookings. Code: YAWAHTURF",
                   buttonText: "Book Now",
                   badgeText: "SPECIAL OFFER",
-                  backgroundImage: "https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=600&q=80",
+                  backgroundImage: require("@/assets/images/sports/sport_booking.png"),
                   buttonBackgroundColor: "#5D68E8",
                   buttonTextColor: "#ffffff",
                   onPress: () => router.push('/(tabs)/explore'),
@@ -263,281 +303,170 @@ export default function ExploreScreen() {
               ]}
             />
           </View>
-
           {/* Turf List */}
-          <View style={[styles.section, { gap: 10, paddingBottom: 100 }]}>
-            
-            {/* Skyline Arena Elite (AI Recommended) */}
-            <Pressable
-              onPress={() => handleTurfSelect('skyline', 'Skyline Arena Elite')}
-              style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
-            >
-              <View style={styles.imageContainer}>
-                {/* AI Recommended Badge */}
-                <View style={[styles.aiBadge, { backgroundColor: theme.secondaryContainer + 'E6', borderColor: theme.onSecondaryContainer + '33' }]}>
-                  <Ionicons name="sparkles" size={8} color={theme.onSecondaryContainer} />
-                  <ThemedText style={[styles.aiBadgeText, { color: theme.onSecondaryContainer }]}>AI</ThemedText>
-                </View>
-                <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=600&q=80' }}
-                  style={styles.turfImage}
-                  contentFit="cover"
-                />
-              </View>
+          <View style={[styles.section, { gap: 22, paddingBottom: 100 }]}>
+            {(() => {
+              const STATIC_TURFS = [
+                {
+                  id: 'skyline',
+                  name: 'Skyline Arena Elite',
+                  location: 'Canary Wharf, East London',
+                  rating: '4.9',
+                  price: 25,
+                  image: require('@/assets/images/sports/skyline_turf.png'),
+                  sports: ['soccer', 'cricket'],
+                  amenities: ['shower', 'car', 'wifi'],
+                  statusText: '🟢 8 slots left today',
+                  favCount: 124,
+                  isAi: true,
+                },
+                {
+                  id: 'the-grid',
+                  name: 'The Grid Multisport',
+                  location: 'Stratford Central',
+                  rating: '4.7',
+                  price: 18,
+                  image: require('@/assets/images/sports/grid_court.png'),
+                  sports: ['soccer', 'cricket'],
+                  amenities: ['shower', 'coffee', 'hanger'],
+                  statusText: '🟢 12 slots left today',
+                  favCount: 89,
+                  isAi: false,
+                },
+                {
+                  id: 'lords',
+                  name: "Lord's View Pavillion",
+                  location: "St John's Wood",
+                  rating: '4.8',
+                  price: 22,
+                  image: require('@/assets/images/sports/lords_nets.png'),
+                  sports: ['cricket', 'tennis'],
+                  amenities: ['car', 'hanger', 'coffee'],
+                  statusText: '🟢 4 slots left today',
+                  favCount: 210,
+                  isAi: false,
+                },
+                {
+                  id: 'wembley',
+                  name: 'Wembley Turf Hub',
+                  location: 'Wembley Park, London',
+                  rating: '4.6',
+                  price: 30,
+                  image: require('@/assets/images/sports/wembley_stadium_turf.png'),
+                  sports: ['soccer'],
+                  amenities: ['shower', 'car', 'coffee'],
+                  statusText: '🔴 Filling Fast - 2 slots left',
+                  favCount: 342,
+                  isAi: false,
+                }
+              ];
 
-              <View style={styles.cardInfo}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <View style={{ flex: 1, paddingRight: 8 }}>
-                    <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text, marginBottom: 4 }]} numberOfLines={1}>
-                      Skyline Arena Elite
-                    </ThemedText>
-                    <View style={styles.locationRow}>
-                      <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
-                      <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
-                        Canary Wharf, East London
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <View style={styles.ratingBadge}>
-                      <Ionicons name="star" size={10} color={theme.secondaryContainer} />
-                      <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.9</ThemedText>
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
-                      <MaterialCommunityIcons name="soccer" size={12} color={theme.secondary} />
-                      <MaterialCommunityIcons name="cricket" size={12} color={theme.secondary} />
-                    </View>
-                  </View>
-                </View>
+              const customTurfs = (ownedTurfs || []).map((t: any) => ({
+                id: t.id,
+                name: t.name,
+                location: t.location,
+                rating: '4.5',
+                price: t.basePrice || 20,
+                image: require('@/assets/images/sports/sport_booking.png'),
+                sports: ['soccer', 'cricket'],
+                amenities: ['shower', 'car'],
+                statusText: '🟢 Slots Available',
+                favCount: 10,
+                isAi: false,
+              }));
 
-                <View style={styles.cardActions}>
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                    <ThemedText type="headlineSm" style={{ color: theme.secondary, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' }}>₹25</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>/hr</ThemedText>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Pressable 
-                      onPress={() => handleTurfSelect('skyline', 'Skyline Arena Elite')}
-                      style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
-                    >
-                      <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontSize: 11, fontFamily: 'HankenGrotesk_700Bold' }}>Book Now</ThemedText>
-                    </Pressable>
-                    <Pressable 
-                      onPress={() => toggleFavorite('skyline')}
-                      style={styles.favButton}
-                    >
-                      <MaterialCommunityIcons 
-                        name={favorites['skyline'] ? 'cards-heart' : 'cards-heart-outline'} 
-                        size={16} 
-                        color={favorites['skyline'] ? theme.error : theme.textSecondary} 
+              const allTurfs = [...customTurfs, ...STATIC_TURFS];
+
+              return allTurfs.map((turf) => {
+                const isFav = !!favorites[turf.id];
+                return (
+                  <Pressable
+                    key={turf.id}
+                    onPress={() => handleTurfSelect(turf.id, turf.name)}
+                    style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
+                  >
+                    <View style={styles.imageContainer}>
+                      {turf.isAi && (
+                        <View style={[styles.aiBadge, { backgroundColor: theme.primary }]}>
+                          <Ionicons name="sparkles" size={8} color="#ffffff" />
+                          <ThemedText style={[styles.aiBadgeText, { color: '#ffffff' }]}>AI</ThemedText>
+                        </View>
+                      )}
+                      <Image
+                        source={turf.image}
+                        style={styles.turfImage}
+                        contentFit="cover"
                       />
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 4 }}>124</ThemedText>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            </Pressable>
-
-            {/* The Grid Multisport */}
-            <Pressable
-              onPress={() => handleTurfSelect('the-grid', 'The Grid Multisport')}
-              style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
-            >
-              <View style={styles.imageContainer}>
-                <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=600&q=80' }}
-                  style={styles.turfImage}
-                  contentFit="cover"
-                />
-              </View>
-
-              <View style={styles.cardInfo}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <View style={{ flex: 1, paddingRight: 8 }}>
-                    <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text, marginBottom: 4 }]} numberOfLines={1}>
-                      The Grid Multisport
-                    </ThemedText>
-                    <View style={styles.locationRow}>
-                      <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
-                      <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
-                        Stratford Central
-                      </ThemedText>
                     </View>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <View style={styles.ratingBadge}>
-                      <Ionicons name="star" size={10} color={theme.secondaryContainer} />
-                      <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.7</ThemedText>
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
-                      <MaterialCommunityIcons name="grid" size={12} color={theme.secondary} />
-                      <MaterialCommunityIcons name="soccer" size={12} color={theme.secondary} />
-                      <MaterialCommunityIcons name="cricket" size={12} color={theme.secondary} />
-                      <MaterialCommunityIcons name="tennis" size={12} color={theme.secondary} />
-                      <MaterialCommunityIcons name="basketball" size={12} color={theme.secondary} />
-                    </View>
-                  </View>
-                </View>
 
-                <View style={styles.cardActions}>
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                    <ThemedText type="headlineSm" style={{ color: theme.secondary, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' }}>₹18</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>/hr</ThemedText>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Pressable 
-                      onPress={() => handleTurfSelect('the-grid', 'The Grid Multisport')}
-                      style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
-                    >
-                      <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontSize: 11, fontFamily: 'HankenGrotesk_700Bold' }}>Book Now</ThemedText>
-                    </Pressable>
-                    <Pressable 
-                      onPress={() => toggleFavorite('the-grid')}
-                      style={styles.favButton}
-                    >
-                      <MaterialCommunityIcons 
-                        name={favorites['the-grid'] ? 'cards-heart' : 'cards-heart-outline'} 
-                        size={16} 
-                        color={favorites['the-grid'] ? theme.error : theme.textSecondary} 
-                      />
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 4 }}>89</ThemedText>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            </Pressable>
+                    <View style={styles.cardInfo}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                        <View style={{ flex: 1, paddingRight: 8 }}>
+                          <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text, marginBottom: 2 }]} numberOfLines={1}>
+                            {turf.name}
+                          </ThemedText>
+                          <View style={styles.locationRow}>
+                            <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                            <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
+                              {turf.location}
+                            </ThemedText>
+                          </View>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <View style={styles.ratingBadge}>
+                            <Ionicons name="star" size={10} color={theme.secondaryContainer} />
+                            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>{turf.rating}</ThemedText>
+                          </View>
+                          <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+                            {turf.sports.map((sp: string) => (
+                              <MaterialCommunityIcons key={sp} name={sp as any} size={12} color={theme.secondary} />
+                            ))}
+                          </View>
+                        </View>
+                      </View>
 
-            {/* Lord's View Pavillion */}
-            <Pressable
-              onPress={() => handleTurfSelect('lords', "Lord's View Pavillion")}
-              style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
-            >
-              <View style={styles.imageContainer}>
-                <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1518605368461-1e1e38ce7161?auto=format&fit=crop&w=600&q=80' }}
-                  style={styles.turfImage}
-                  contentFit="cover"
-                />
-              </View>
+                      {/* Extra Details (Icons Only for Amenities) */}
+                      <View style={{ marginVertical: 3, gap: 4 }}>
+                        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                          {turf.amenities.map((am: string) => (
+                            <MaterialCommunityIcons key={am} name={am as any} size={14} color={theme.primary} />
+                          ))}
+                        </View>
+                        <ThemedText style={{ color: turf.statusText.includes('🔴') ? '#d97706' : '#0f9f58', fontSize: 9.5, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
+                          {turf.statusText}
+                        </ThemedText>
+                      </View>
 
-              <View style={styles.cardInfo}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <View style={{ flex: 1, paddingRight: 8 }}>
-                    <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text, marginBottom: 4 }]} numberOfLines={1}>
-                      {"Lord's View Pavillion"}
-                    </ThemedText>
-                    <View style={styles.locationRow}>
-                      <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
-                      <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
-                        {"St John's Wood"}
-                      </ThemedText>
+                      <View style={styles.cardActions}>
+                        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                          <ThemedText type="headlineSm" style={{ color: theme.secondary, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' }}>₹{turf.price}</ThemedText>
+                          <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>/hr</ThemedText>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Pressable 
+                            onPress={() => handleTurfSelect(turf.id, turf.name)}
+                            style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
+                          >
+                            <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontSize: 11, fontFamily: 'HankenGrotesk_700Bold' }}>Book Now</ThemedText>
+                          </Pressable>
+                          <Pressable 
+                            onPress={() => toggleFavorite(turf.id)}
+                            style={styles.favButton}
+                          >
+                            <MaterialCommunityIcons 
+                              name={isFav ? 'cards-heart' : 'cards-heart-outline'} 
+                              size={16} 
+                              color={isFav ? theme.error : theme.textSecondary} 
+                            />
+                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 4 }}>{turf.favCount}</ThemedText>
+                          </Pressable>
+                        </View>
+                      </View>
                     </View>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <View style={styles.ratingBadge}>
-                      <Ionicons name="star" size={10} color={theme.secondaryContainer} />
-                      <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.8</ThemedText>
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
-                      <MaterialCommunityIcons name="cricket" size={12} color={theme.secondary} />
-                      <MaterialCommunityIcons name="tennis" size={12} color={theme.secondary} />
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.cardActions}>
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                    <ThemedText type="headlineSm" style={{ color: theme.secondary, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' }}>₹22</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>/hr</ThemedText>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Pressable 
-                      onPress={() => handleTurfSelect('lords', "Lord's View Pavillion")}
-                      style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
-                    >
-                      <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontSize: 11, fontFamily: 'HankenGrotesk_700Bold' }}>Book Now</ThemedText>
-                    </Pressable>
-                    <Pressable 
-                      onPress={() => toggleFavorite('lords')}
-                      style={styles.favButton}
-                    >
-                      <MaterialCommunityIcons 
-                        name={favorites['lords'] ? 'cards-heart' : 'cards-heart-outline'} 
-                        size={16} 
-                        color={favorites['lords'] ? theme.error : theme.textSecondary} 
-                      />
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 4 }}>210</ThemedText>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            </Pressable>
-
-            {/* Wembley Turf Hub (New 4th Card) */}
-            <Pressable
-              onPress={() => handleTurfSelect('wembley', 'Wembley Turf Hub')}
-              style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
-            >
-              <View style={styles.imageContainer}>
-                <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80' }}
-                  style={styles.turfImage}
-                  contentFit="cover"
-                />
-              </View>
-
-              <View style={styles.cardInfo}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <View style={{ flex: 1, paddingRight: 8 }}>
-                    <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text, marginBottom: 4 }]} numberOfLines={1}>
-                      Wembley Turf Hub
-                    </ThemedText>
-                    <View style={styles.locationRow}>
-                      <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
-                      <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
-                        Wembley Park, London
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <View style={styles.ratingBadge}>
-                      <Ionicons name="star" size={10} color={theme.secondaryContainer} />
-                      <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>4.6</ThemedText>
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: 4, marginTop: 6 }}>
-                      <MaterialCommunityIcons name="soccer" size={12} color={theme.secondary} />
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.cardActions}>
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                    <ThemedText type="headlineSm" style={{ color: theme.secondary, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' }}>₹30</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>/hr</ThemedText>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Pressable 
-                      onPress={() => handleTurfSelect('wembley', 'Wembley Turf Hub')}
-                      style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
-                    >
-                      <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontSize: 11, fontFamily: 'HankenGrotesk_700Bold' }}>Book Now</ThemedText>
-                    </Pressable>
-                    <Pressable 
-                      onPress={() => toggleFavorite('wembley')}
-                      style={styles.favButton}
-                    >
-                      <MaterialCommunityIcons 
-                        name={favorites['wembley'] ? 'cards-heart' : 'cards-heart-outline'} 
-                        size={16} 
-                        color={favorites['wembley'] ? theme.error : theme.textSecondary} 
-                      />
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 4 }}>342</ThemedText>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            </Pressable>
-
+                  </Pressable>
+                );
+              });
+            })()}
           </View>
         </ScrollView>
       </Reanimated.View>
@@ -615,9 +544,9 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.base,
   },
   calendarDay: {
-    width: 52,
-    height: 72,
-    borderRadius: BorderRadius.xl,
+    width: 48,
+    height: 58,
+    borderRadius: BorderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -633,7 +562,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.md,
-    height: 48,
+    height: 38,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -644,12 +573,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     fontFamily: 'HankenGrotesk_400Regular',
-    fontSize: 14,
+    fontSize: 12,
     paddingVertical: 0,
+    ...({ outlineStyle: 'none' } as any),
   },
   filtersContainer: {
     gap: Spacing.xs,
-    marginTop: Spacing.md,
+    marginTop: Spacing.xs,
     paddingBottom: 2,
   },
   filterChip: {
@@ -720,14 +650,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: 16,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    height: 116,
+    height: 154,
     marginBottom: 0,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   imageContainer: {
-    width: 110,
-    height: 116,
+    width: 120,
+    height: 154,
     position: 'relative',
   },
   turfImage: {
@@ -736,13 +669,13 @@ const styles = StyleSheet.create({
   },
   aiBadge: {
     position: 'absolute',
-    top: 6,
-    left: 6,
+    top: 0,
+    left: 0,
     zIndex: 5,
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 4,
-    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderTopLeftRadius: 16,
+    borderBottomRightRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -755,7 +688,8 @@ const styles = StyleSheet.create({
   },
   cardInfo: {
     flex: 1,
-    padding: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     justifyContent: 'space-between',
   },
   cardHeaderRow: {

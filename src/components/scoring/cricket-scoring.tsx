@@ -7,13 +7,17 @@ import {
   Modal,
   Alert,
   TextInput,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { matchApi } from '@/services/match-api';
 
 interface Batsman {
   name: string;
@@ -33,50 +37,53 @@ interface Bowler {
   wickets: number;
 }
 
-export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent Kings' }: { teamA?: string; teamB?: string }) {
+export default function CricketScoring({ matchId, teamA = 'London Lions', teamB = 'Kent Kings' }: { matchId?: string; teamA?: string; teamB?: string }) {
   const theme = useTheme();
+  const router = useRouter();
 
   const [showScoringModal, setShowScoringModal] = useState(false);
   const [showBatsmenModal, setShowBatsmenModal] = useState(false);
   const [showBowlersModal, setShowBowlersModal] = useState(false);
   const [showEditPlayersModal, setShowEditPlayersModal] = useState(false);
+  const [showOverCompleteModal, setShowOverCompleteModal] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<'live' | 'scorecard' | 'stats' | 'details'>('live');
+  const [scorecardTab, setScorecardTab] = useState<'batsmen' | 'bowlers'>('batsmen');
 
   // Scoreboard State
-  const [runs, setRuns] = useState(142);
-  const [wickets, setWickets] = useState(4);
-  const [overs, setOvers] = useState(18);
-  const [ballsInCurrentOver, setBallsInCurrentOver] = useState(2); // 18.2 overs initially
-  const [overLog, setOverLog] = useState<string[]>(['1', '0', '4', 'W', '2', '6']);
+  const [runs, setRuns] = useState(0);
+  const [wickets, setWickets] = useState(0);
+  const [overs, setOvers] = useState(0);
+  const [ballsInCurrentOver, setBallsInCurrentOver] = useState(0); // 0.0 overs initially
+  const [overLog, setOverLog] = useState<string[]>([]);
   const [history, setHistory] = useState<any[]>([]); // for undo support
+
+  const [showExtraModal, setShowExtraModal] = useState(false);
+  const [activeExtraType, setActiveExtraType] = useState<'WD' | 'NB' | 'BYE' | 'LB' | null>(null);
 
   // Player Stats State
   const [batsmen, setBatsmen] = useState<Batsman[]>([
-    { name: 'J. Root', runs: 42, balls: 28, fours: 5, sixes: 1, active: true },
-    { name: 'O. Pope', runs: 18, balls: 14, fours: 2, sixes: 0, active: false },
+    { name: 'Azar', runs: 0, balls: 0, fours: 0, sixes: 0, active: true },
+    { name: 'Jaffer', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
   ]);
 
   const [bowler, setBowler] = useState<Bowler>(
-    { name: 'Rashid Khan', overs: 3, ballsInOver: 2, maidens: 0, runs: 24, wickets: 1 }
+    { name: 'Dinesh', overs: 0, ballsInOver: 0, maidens: 0, runs: 0, wickets: 0 }
   );
 
   // Squad Lists State
-  const [dismissedBatsmen, setDismissedBatsmen] = useState<any[]>([
-    { name: 'Zak Crawley', status: 'c & b Rashid Khan', runs: 28, balls: 18, fours: 4, sixes: 1, active: false },
-    { name: 'Ben Duckett', status: 'lbw b Rashid Khan', runs: 15, balls: 11, fours: 2, sixes: 0, active: false },
-    { name: 'Harry Brook', status: 'c Smith b Starc', runs: 34, balls: 22, fours: 3, sixes: 2, active: false },
-  ]);
+  const [dismissedBatsmen, setDismissedBatsmen] = useState<any[]>([]);
 
   const [yetToBatBatsmen, setYetToBatBatsmen] = useState<any[]>([
-    { name: 'Ben Stokes', status: 'yet to bat', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
-    { name: 'Jos Buttler', status: 'yet to bat', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
-    { name: 'Moeen Ali', status: 'yet to bat', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
-    { name: 'Chris Woakes', status: 'yet to bat', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
+    { name: 'Kaja', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
+    { name: 'Messi', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
+    { name: 'Ronaldo', runs: 0, balls: 0, fours: 0, sixes: 0, active: false },
   ]);
 
   const [otherBowlers, setOtherBowlers] = useState<any[]>([
-    { name: 'Mitchell Starc', overs: 4, ballsInOver: 0, maidens: 0, runs: 35, wickets: 1 },
-    { name: 'Jofra Archer', overs: 4, ballsInOver: 0, maidens: 1, runs: 22, wickets: 2 },
-    { name: 'Adil Rashid', overs: 3, ballsInOver: 0, maidens: 0, runs: 28, wickets: 0 },
+    { name: 'Carter', overs: 0, ballsInOver: 0, maidens: 0, runs: 0, wickets: 0 },
+    { name: 'Williams', overs: 0, ballsInOver: 0, maidens: 0, runs: 0, wickets: 0 },
+    { name: 'Apex', overs: 0, ballsInOver: 0, maidens: 0, runs: 0, wickets: 0 },
+    { name: 'Vanguard', overs: 0, ballsInOver: 0, maidens: 0, runs: 0, wickets: 0 },
   ]);
 
   // Form edit states
@@ -128,7 +135,7 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
       ...dismissedBatsmen,
       { ...batsmen[0], status: 'not out' },
       { ...batsmen[1], status: 'not out' },
-      ...yetToBatBatsmen,
+      ...yetToBatBatsmen.map(b => ({ ...b, status: 'yet to bat' })),
     ];
   };
 
@@ -437,7 +444,7 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
     if (type === 'run') {
       const runVal = value as number;
       setRuns(prev => prev + runVal);
-      
+
       // Update batsman runs
       setBatsmen(prev =>
         prev.map(b => {
@@ -467,7 +474,7 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
     } else if (type === 'wicket') {
       if (wickets >= 10) return;
       setWickets(prev => prev + 1);
-      
+
       // Update active batsman balls
       setBatsmen(prev =>
         prev.map(b => (b.active ? { ...b, balls: b.balls + 1 } : b))
@@ -487,33 +494,11 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
   };
 
   const handleExtraClick = (extraType: 'WD' | 'NB' | 'BYE' | 'LB') => {
-    if (extraType === 'WD' || extraType === 'NB') {
-      Alert.alert(
-        `Runs for ${extraType === 'WD' ? 'Wide' : 'No Ball'}`,
-        `Select the number of runs to award for this ${extraType === 'WD' ? 'wide' : 'no ball'}:`,
-        [
-          { text: '0 Runs', onPress: () => recordExtraWithRuns(extraType, 0) },
-          { text: '1 Run', onPress: () => recordExtraWithRuns(extraType, 1) },
-          { text: '2 Runs', onPress: () => recordExtraWithRuns(extraType, 2) },
-          { text: 'Cancel', style: 'cancel' }
-        ]
-      );
-    } else {
-      Alert.alert(
-        `Runs for ${extraType === 'BYE' ? 'Bye' : 'Leg Bye'}`,
-        `Select the number of ${extraType === 'BYE' ? 'bye' : 'leg bye'} runs:`,
-        [
-          { text: '1 Run', onPress: () => recordExtraWithRuns(extraType, 1) },
-          { text: '2 Runs', onPress: () => recordExtraWithRuns(extraType, 2) },
-          { text: '3 Runs', onPress: () => recordExtraWithRuns(extraType, 3) },
-          { text: '4 Runs', onPress: () => recordExtraWithRuns(extraType, 4) },
-          { text: 'Cancel', style: 'cancel' }
-        ]
-      );
-    }
+    setActiveExtraType(extraType);
+    setShowExtraModal(true);
   };
 
-  const recordExtraWithRuns = (extraType: 'WD' | 'NB' | 'BYE' | 'LB', runCount: number) => {
+  const recordExtraWithRuns = (extraType: 'WD' | 'NB' | 'BYE' | 'LB', runCount: number, isLegalOverride?: boolean) => {
     // Save state history for undo
     const oldState = {
       runs,
@@ -528,59 +513,152 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
 
     setRuns(prev => prev + runCount);
 
+    const isLegal = isLegalOverride !== undefined ? isLegalOverride : (extraType === 'BYE' || extraType === 'LB');
+
     setBowler(prev => ({
       ...prev,
       runs: prev.runs + runCount,
-      // Wide/No-ball doesn't count as a legal ball. Bye/Leg bye does.
-      ballsInOver: (extraType === 'BYE' || extraType === 'LB') ? prev.ballsInOver + 1 : prev.ballsInOver,
+      ballsInOver: isLegal ? prev.ballsInOver + 1 : prev.ballsInOver,
     }));
 
-    // Update batsman balls faced for No Ball, Bye, and Leg Bye
-    if (extraType === 'NB' || extraType === 'BYE' || extraType === 'LB') {
+    // Update batsman balls faced for No Ball, Bye, Leg Bye, and free/legal Wides
+    if (extraType === 'NB' || extraType === 'BYE' || extraType === 'LB' || (extraType === 'WD' && isLegal)) {
       setBatsmen(prev =>
         prev.map(b => (b.active ? { ...b, balls: b.balls + 1 } : b))
       );
     }
 
-    const logString = runCount === 1 ? extraType : `${runCount}${extraType}`;
+    // Determine string in log: e.g. WD, 0WD, 1WD, 2WD, etc.
+    const logString = runCount === 0 ? `0${extraType}` : runCount === 1 ? extraType : `${runCount}${extraType}`;
     setOverLog(prev => [...prev, logString]);
 
-    if (extraType === 'BYE' || extraType === 'LB') {
+    if (isLegal) {
       incrementBallCount();
     }
+  };
+
+  const handleOverCompletion = () => {
+    // 1. Save old state for undo history
+    const oldState = {
+      runs,
+      wickets,
+      overs,
+      ballsInCurrentOver: 6,
+      overLog: [...overLog],
+      batsmen: batsmen.map(b => ({ ...b })),
+      bowler: { ...bowler },
+      otherBowlers: otherBowlers.map(ob => ({ ...ob })),
+    };
+    setHistory(prev => [...prev, oldState]);
+
+    // 2. Automatically swap batsman ends (striker/non-striker end rotation)
+    setBatsmen(prev => prev.map(b => ({ ...b, active: !b.active })));
+
+    // 3. Increment overs count
+    setOvers(prev => prev + 1);
+    setBallsInCurrentOver(0);
+    setOverLog([]);
+
+    // 4. Update current bowler overs
+    setBowler(prev => ({
+      ...prev,
+      overs: prev.overs + 1,
+      ballsInOver: 0,
+    }));
+
+    // 5. Trigger next bowler selection modal
+    setShowOverCompleteModal(true);
   };
 
   const incrementBallCount = () => {
     setBallsInCurrentOver(prev => {
       const next = prev + 1;
       if (next >= 6) {
-        return 6;
+        setTimeout(() => {
+          handleOverCompletion();
+        }, 100);
+        return 0;
       }
       return next;
     });
   };
 
   const handleCompleteOver = () => {
-    // Save history
-    const oldState = {
-      runs,
-      wickets,
-      overs,
-      ballsInCurrentOver,
-      overLog: [...overLog],
-      batsmen: batsmen.map(b => ({ ...b })),
-      bowler: { ...bowler },
-    };
-    setHistory([...history, oldState]);
+    handleOverCompletion();
+  };
 
-    setOvers(prev => prev + 1);
-    setBallsInCurrentOver(0);
-    setOverLog([]);
-    setBowler(prev => ({
-      ...prev,
-      overs: prev.overs + 1,
-      ballsInOver: 0,
-    }));
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleEndMatch = () => {
+    Alert.alert(
+      'End Match',
+      'Are you sure you want to end this match and sync the scores to the database?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'End & Sync',
+          style: 'destructive',
+          onPress: async () => {
+            if (!matchId) {
+              Alert.alert('Success', 'Match completed locally! (No matchId to sync)', [
+                { text: 'OK', onPress: () => router.replace('/(tabs)/matches') }
+              ]);
+              return;
+            }
+            try {
+              setIsSyncing(true);
+              const rr = parseFloat((runs / (overs + ballsInCurrentOver / 6 || 1)).toFixed(2));
+
+              await matchApi.completeMatch(matchId, {
+                homeScore: runs,
+                awayScore: 0,
+                events: [],
+                cricketData: [
+                  {
+                    runs,
+                    wickets,
+                    overs,
+                    balls: ballsInCurrentOver,
+                    runRate: rr,
+                    batsmen: batsmen.map(b => ({
+                      playerName: b.name,
+                      runs: b.runs,
+                      balls: b.balls,
+                      fours: b.fours,
+                      sixes: b.sixes,
+                      isOut: !b.active,
+                      dismissalType: 'Caught',
+                    })),
+                    bowlers: [
+                      {
+                        playerName: bowler.name,
+                        overs: bowler.overs + bowler.ballsInOver / 6,
+                        maidens: bowler.maidens,
+                        runs: bowler.runs,
+                        wickets: bowler.wickets,
+                      }
+                    ]
+                  }
+                ],
+              });
+
+              Alert.alert('Match Synced', 'Scores successfully synchronized to the database!', [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    router.replace('/(tabs)/matches');
+                  },
+                },
+              ]);
+            } catch (err: any) {
+              Alert.alert('Sync Failed', err.message || 'Could not sync match.');
+            } finally {
+              setIsSyncing(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleUndo = () => {
@@ -601,355 +679,1082 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
   };
 
   return (
-    <>
+    <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-      
-      {/* Live Scorecard Banner */}
-      <View style={styles.bannerWrapper}>
-        <View style={[styles.scoreBanner, { backgroundColor: theme.primaryContainer }]}>
-          {/* Cricket player watermark background */}
-          <Image
-            source={require('@/assets/images/illustrations/cricket_player.png')}
-            style={styles.bannerWatermark}
-            contentFit="contain"
-          />
 
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: '700' }}>
-              1st Innings
-            </ThemedText>
-            <View style={styles.liveBadgeAbsolute}>
-              <View style={styles.liveDotRed} />
-              <ThemedText style={styles.liveText}>Live</ThemedText>
-            </View>
-          </View>
+        {/* Live Scorecard Banner */}
+        <View style={styles.bannerWrapper}>
+          <View style={[styles.scoreBanner, { backgroundColor: theme.primaryContainer }]}>
+            {/* Cricket player watermark background */}
+            <Image
+              source={require('@/assets/images/illustrations/cricket_player.png')}
+              style={styles.bannerWatermark}
+              contentFit="contain"
+            />
 
-          <View style={styles.bannerRow}>
-            <View style={styles.bannerLeftCol}>
-              <ThemedText type="headlineLg" style={styles.teamTitle}>
-                {teamA}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: '700' }}>
+                1st Innings
               </ThemedText>
-              <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer }}>
-                vs {teamB}
-              </ThemedText>
+              <View style={styles.liveBadgeAbsolute}>
+                <View style={styles.liveDotRed} />
+                <ThemedText style={styles.liveText}>Live</ThemedText>
+              </View>
             </View>
 
-            <View style={styles.bannerRightCol}>
-              <ThemedText type="displayLg" style={[styles.scoreText, { color: '#ffffff' }]}>
-                {runs}/{wickets}
-              </ThemedText>
-              <ThemedText type="headlineSm" style={styles.oversText}>
-                {overs}.{ballsInCurrentOver} Overs
-              </ThemedText>
-            </View>
-          </View>
+            <View style={styles.bannerRow}>
+              <View style={styles.bannerLeftCol}>
+                <ThemedText type="headlineLg" style={styles.teamTitle}>
+                  {teamA}
+                </ThemedText>
+                <ThemedText type="bodyMd" style={{ color: theme.onPrimaryContainer }}>
+                  vs {teamB}
+                </ThemedText>
+              </View>
 
-          <View style={styles.bannerStatsRow}>
-            <View style={styles.bannerStatItem}>
-              <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>RUN RATE</ThemedText>
-              <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>
-                {runRate.toFixed(2)}
-              </ThemedText>
+              <View style={styles.bannerRightCol}>
+                <ThemedText type="displayLg" style={[styles.scoreText, { color: '#ffffff' }]}>
+                  {runs}/{wickets}
+                </ThemedText>
+                <ThemedText type="headlineSm" style={styles.oversText}>
+                  {overs}.{ballsInCurrentOver} Overs
+                </ThemedText>
+              </View>
             </View>
-            <View style={styles.bannerStatItem}>
-              <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>PROJECTED</ThemedText>
-              <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>
-                {Math.round(projectedScore)}
-              </ThemedText>
+
+            <View style={styles.bannerStatsRow}>
+              <View style={styles.bannerStatItem}>
+                <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>RUN RATE</ThemedText>
+                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>
+                  {runRate.toFixed(2)}
+                </ThemedText>
+              </View>
+              <View style={styles.bannerStatItem}>
+                <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>PROJECTED</ThemedText>
+                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>
+                  {Math.round(projectedScore)}
+                </ThemedText>
+              </View>
             </View>
           </View>
         </View>
-      </View>
 
-      {/* Current Over Log Card */}
-      <View style={styles.section}>
-        <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
-            <ThemedText type="labelMd" style={{ color: theme.textSecondary }}>
-              Current Over Log
+        {/* Sub-tab Navigation */}
+        <View style={styles.subTabBar}>
+          <Pressable
+            onPress={() => setActiveSubTab('live')}
+            style={[styles.subTabItem, activeSubTab === 'live' && { borderBottomColor: theme.primary }]}
+          >
+            <Ionicons name="flash-outline" size={14} color={activeSubTab === 'live' ? theme.primary : theme.textSecondary} />
+            <ThemedText style={[styles.subTabText, { color: activeSubTab === 'live' ? theme.primary : theme.textSecondary }, activeSubTab === 'live' && { fontFamily: 'HankenGrotesk_700Bold' }]}>
+              Live Scoring
             </ThemedText>
-            <Pressable
-              onPress={() => setShowScoringModal(true)}
-              style={[styles.recordBallBtn, { backgroundColor: theme.primaryContainer + '15' }]}
+          </Pressable>
+          <Pressable
+            onPress={() => setActiveSubTab('scorecard')}
+            style={[styles.subTabItem, activeSubTab === 'scorecard' && { borderBottomColor: theme.primary }]}
+          >
+            <Ionicons name="list-outline" size={14} color={activeSubTab === 'scorecard' ? theme.primary : theme.textSecondary} />
+            <ThemedText style={[styles.subTabText, { color: activeSubTab === 'scorecard' ? theme.primary : theme.textSecondary }, activeSubTab === 'scorecard' && { fontFamily: 'HankenGrotesk_700Bold' }]}>
+              Scorecard
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            onPress={() => setActiveSubTab('stats')}
+            style={[styles.subTabItem, activeSubTab === 'stats' && { borderBottomColor: theme.primary }]}
+          >
+            <Ionicons name="bar-chart-outline" size={14} color={activeSubTab === 'stats' ? theme.primary : theme.textSecondary} />
+            <ThemedText style={[styles.subTabText, { color: activeSubTab === 'stats' ? theme.primary : theme.textSecondary }, activeSubTab === 'stats' && { fontFamily: 'HankenGrotesk_700Bold' }]}>
+              Statistics
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            onPress={() => setActiveSubTab('details')}
+            style={[styles.subTabItem, activeSubTab === 'details' && { borderBottomColor: theme.primary }]}
+          >
+            <Ionicons name="information-circle-outline" size={14} color={activeSubTab === 'details' ? theme.primary : theme.textSecondary} />
+            <ThemedText style={[styles.subTabText, { color: activeSubTab === 'details' ? theme.primary : theme.textSecondary }, activeSubTab === 'details' && { fontFamily: 'HankenGrotesk_700Bold' }]}>
+              Details
+            </ThemedText>
+          </Pressable>
+        </View>
+
+        {activeSubTab === 'live' && (
+          <>
+            <View style={styles.section}>
+              <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
+                  <ThemedText type="labelMd" style={{ color: theme.textSecondary }}>
+                    Current Over Log
+                  </ThemedText>
+                  <Pressable
+                    onPress={() => setShowScoringModal(true)}
+                    style={[styles.recordBallBtn, { backgroundColor: theme.primaryContainer + '15' }]}
+                  >
+                    <Ionicons name="add" size={14} color={theme.primary} />
+                    <ThemedText type="labelSm" style={{ color: theme.primary, marginLeft: 2, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                      Ball by Ball
+                    </ThemedText>
+                  </Pressable>
+                </View>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.logBallsRow}
+                >
+                  {overLog.map((ball, idx) => {
+                    // Determine Ball Type and Color Scheme
+                    let bgColor = theme.primary;
+                    let textColor = '#ffffff';
+                    let borderWidth = 0;
+                    let borderColor = 'transparent';
+
+                    const isWicket = ball === 'W';
+                    const isDot = ball === '0';
+                    const isFour = ball === '4';
+                    const isSix = ball === '6';
+
+                    if (isWicket) {
+                      bgColor = '#EF4444'; // Red
+                      textColor = '#ffffff';
+                    } else if (isDot) {
+                      bgColor = theme.surfaceLow;
+                      textColor = theme.textSecondary;
+                      borderWidth = 1;
+                      borderColor = theme.outlineVariant + '33';
+                    } else if (isFour) {
+                      bgColor = '#10B981'; // Green for 4
+                      textColor = '#ffffff';
+                    } else if (isSix) {
+                      bgColor = '#8B5CF6'; // Purple for 6
+                      textColor = '#ffffff';
+                    } else if (ball.includes('WD')) {
+                      bgColor = '#F59E0B'; // Amber for Wides
+                      textColor = '#ffffff';
+                    } else if (ball.includes('NB')) {
+                      bgColor = '#F43F5E'; // Pink-red for No Balls
+                      textColor = '#ffffff';
+                    } else if (ball.includes('BYE') || ball.includes('LB')) {
+                      bgColor = '#06B6D4'; // Teal for Byes/Leg-byes
+                      textColor = '#ffffff';
+                    } else {
+                      // Default runs 1, 2, 3
+                      bgColor = theme.primary;
+                      textColor = '#ffffff';
+                    }
+
+                    // Parse content for rendering
+                    const match = ball.match(/^(\d+)?(WD|NB|BYE|LB)$/);
+                    let renderContent;
+
+                    if (match) {
+                      const num = match[1];
+                      const type = match[2];
+                      if (num === undefined) {
+                        renderContent = (
+                          <ThemedText
+                            style={{
+                              color: textColor,
+                              fontFamily: 'HankenGrotesk_700Bold',
+                              fontSize: 12,
+                            }}
+                          >
+                            {type}
+                          </ThemedText>
+                        );
+                      } else {
+                        renderContent = (
+                          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
+                            <ThemedText
+                              style={{
+                                color: textColor,
+                                fontFamily: 'HankenGrotesk_800ExtraBold',
+                                fontSize: 14,
+                              }}
+                            >
+                              {num}
+                            </ThemedText>
+                            <ThemedText
+                              style={{
+                                color: textColor,
+                                fontFamily: 'HankenGrotesk_700Bold',
+                                fontSize: 8,
+                                marginLeft: 1,
+                              }}
+                            >
+                              {type}
+                            </ThemedText>
+                          </View>
+                        );
+                      }
+                    } else {
+                      renderContent = (
+                        <ThemedText
+                          type="bodyMd"
+                          style={{
+                            color: textColor,
+                            fontFamily: 'HankenGrotesk_700Bold',
+                          }}
+                        >
+                          {ball}
+                        </ThemedText>
+                      );
+                    }
+
+                    return (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.logBall,
+                          {
+                            backgroundColor: bgColor,
+                            borderWidth,
+                            borderColor,
+                          },
+                        ]}
+                      >
+                        {renderContent}
+                      </View>
+                    );
+                  })}
+                  {overLog.length === 0 && (
+                    <ThemedText type="bodyMd" style={{ color: theme.textSecondary, italic: true } as any}>
+                      Starting new over...
+                    </ThemedText>
+                  )}
+                </ScrollView>
+
+                <View style={[styles.bowlerNameRow, { borderTopColor: theme.outlineVariant + '1a' }]}>
+                  <ThemedText style={{ color: theme.textSecondary, fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
+                    Bowler: {bowler.name} ({bowler.overs * 6 + bowler.ballsInOver} balls)
+                  </ThemedText>
+                  <View style={styles.bowlerOverDots}>
+                    {[1, 2, 3, 4, 5, 6].map((b) => (
+                      <View
+                        key={b}
+                        style={[
+                          styles.bowlerDot,
+                          b <= ballsInCurrentOver
+                            ? { backgroundColor: theme.primary }
+                            : { backgroundColor: theme.outlineVariant + '33' },
+                        ]}
+                      />
+                    ))}
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Players Table Section */}
+            <View style={styles.section}>
+              <View style={[styles.tableCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+                <View style={[styles.tableHeader, { backgroundColor: theme.surfaceLow }]}>
+                  <ThemedText type="labelMd" style={{ color: theme.text }}>Current Batsmen</ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Pressable
+                      onPress={handleSwapStrike}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: theme.primary + '10',
+                        paddingHorizontal: 6,
+                        paddingVertical: 4,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Ionicons name="swap-horizontal" size={12} color={theme.primary} />
+                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                        Swap
+                      </ThemedText>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => {
+                        openEditPlayersModal();
+                        setActionTarget({ type: 'replace', batsmanIndex: 0 });
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: theme.primary + '10',
+                        paddingHorizontal: 6,
+                        paddingVertical: 4,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Ionicons name="person-add" size={12} color={theme.primary} />
+                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                        + Add New
+                      </ThemedText>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={openEditPlayersModal}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: theme.primary + '10',
+                        paddingHorizontal: 6,
+                        paddingVertical: 4,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Ionicons name="create" size={12} color={theme.primary} />
+                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                        Edit
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* Sub-Header Row */}
+                <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '50', borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '33' }]}>
+                  <View style={styles.batsmanNameCell}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>Batsman</ThemedText>
+                  </View>
+                  <View style={styles.batStatsCells}>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>R</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>B</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>4s</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>6s</ThemedText></View>
+                    <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold', textAlign: 'center' }}>SR</ThemedText></View>
+                  </View>
+                </View>
+
+                {batsmen.map((b, idx) => {
+                  const sr = b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0';
+                  return (
+                    <Pressable
+                      key={idx}
+                      onPress={() => toggleActiveBatsman(idx)}
+                      style={[
+                        styles.tableRow,
+                        { paddingVertical: 8, borderLeftWidth: 4 },
+                        b.active
+                          ? { backgroundColor: theme.secondaryContainer + '1a', borderLeftColor: theme.secondaryContainer }
+                          : { borderLeftColor: 'transparent' },
+                      ]}
+                    >
+                      <Pressable 
+                        onPress={openEditPlayersModal}
+                        style={styles.batsmanNameCell}
+                      >
+                        <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
+                          <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
+                          </ThemedText>
+                        </View>
+                        <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                          {b.name}
+                        </ThemedText>
+                        {b.active && (
+                          <Ionicons name="star" size={8} color={theme.error} style={{ marginLeft: 3 }} />
+                        )}
+                      </Pressable>
+                      <View style={styles.batStatsCells}>
+                        <View style={styles.statCell}>
+                          <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>{b.runs}</ThemedText>
+                        </View>
+                        <View style={styles.statCell}>
+                          <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.balls}</ThemedText>
+                        </View>
+                        <View style={styles.statCell}>
+                          <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.fours}</ThemedText>
+                        </View>
+                        <View style={styles.statCell}>
+                          <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.sixes}</ThemedText>
+                        </View>
+                        <View style={[styles.statCell, { width: 50 }]}>
+                          <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>{sr}</ThemedText>
+                        </View>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <View style={[styles.tableCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', marginTop: Spacing.md }]}>
+                <View style={[styles.tableHeader, { backgroundColor: theme.surfaceLow }]}>
+                  <ThemedText type="labelMd" style={{ color: theme.text }}>Current Bowler</ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Pressable
+                      onPress={() => { openEditPlayersModal(); setActionTarget({ type: 'bowler' }); }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: theme.primary + '10',
+                        paddingHorizontal: 6,
+                        paddingVertical: 4,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Ionicons name="create" size={12} color={theme.primary} />
+                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                        Edit
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* Bowler Sub-Header Row */}
+                <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '50', borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '33' }]}>
+                  <View style={styles.batsmanNameCell}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>Bowler</ThemedText>
+                  </View>
+                  <View style={styles.batStatsCells}>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>O</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>M</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>R</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>W</ThemedText></View>
+                    <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold', textAlign: 'center' }}>ECON</ThemedText></View>
+                  </View>
+                </View>
+
+                <View style={[styles.tableRow, { paddingVertical: 8, borderLeftWidth: 4, borderLeftColor: 'transparent' }]}>
+                  <Pressable 
+                    onPress={() => {
+                      openEditPlayersModal();
+                      setActionTarget({ type: 'bowler' });
+                    }}
+                    style={styles.batsmanNameCell}
+                  >
+                    <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
+                      <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                        {bowler.name ? bowler.name.trim().charAt(0).toUpperCase() : 'P'}
+                      </ThemedText>
+                    </View>
+                    <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                      {bowler.name}
+                    </ThemedText>
+                  </Pressable>
+                  <View style={styles.batStatsCells}>
+                    <View style={styles.statCell}>
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                        {bowler.overs}.{bowler.ballsInOver}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.statCell}>
+                      <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{bowler.maidens}</ThemedText>
+                    </View>
+                    <View style={styles.statCell}>
+                      <ThemedText style={{ fontSize: 12, color: theme.text }}>{bowler.runs}</ThemedText>
+                    </View>
+                    <View style={styles.statCell}>
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>{bowler.wickets}</ThemedText>
+                    </View>
+                    <View style={[styles.statCell, { width: 50 }]}>
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                        {((bowler.overs * 6 + bowler.ballsInOver) > 0 ? (bowler.runs / ((bowler.overs * 6 + bowler.ballsInOver) / 6)) : 0).toFixed(2)}
+                      </ThemedText>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* AI Suggestion Card */}
+            <View style={styles.section}>
+              <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderRadius: BorderRadius.xl, padding: 16, ...Shadows.level2 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                  <Ionicons name="sparkles" size={18} color={theme.primary} />
+                  <ThemedText style={{ fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                    AI Next Batsman Suggestion
+                  </ThemedText>
+                </View>
+
+                <View style={{ gap: Spacing.sm }}>
+                  {/* Suggestion 1: Ben Stokes */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: theme.surfaceLow, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12 }}>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <ThemedText style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                        Ben Stokes
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 2, fontFamily: 'PlusJakartaSans_500Medium' }}>
+                        Death Overs Specialist
+                      </ThemedText>
+                      <View style={{ flexDirection: 'row', marginTop: 6 }}>
+                        <View style={{ backgroundColor: '#10B98115', paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 }}>
+                          <ThemedText style={{ fontSize: 9, color: '#10B981', fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            RECOMMENDED
+                          </ThemedText>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                      <View style={{ alignItems: 'flex-end', width: 70 }}>
+                        <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold', textTransform: 'uppercase', marginBottom: 2 }}>SR / HS</ThemedText>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                          148.5 / 135*
+                        </ThemedText>
+                      </View>
+                      <View style={{ alignItems: 'flex-end', width: 45 }}>
+                        <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold', textTransform: 'uppercase', marginBottom: 2 }}>Runs</ThemedText>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                          2840
+                        </ThemedText>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Suggestion 2: Jos Buttler */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: theme.surfaceLow, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12 }}>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <ThemedText style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                        Jos Buttler
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 2, fontFamily: 'PlusJakartaSans_500Medium' }}>
+                        Accelerate Run Rate
+                      </ThemedText>
+                      <View style={{ flexDirection: 'row', marginTop: 6 }}>
+                        <View style={{ backgroundColor: '#8B5CF615', paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4 }}>
+                          <ThemedText style={{ fontSize: 9, color: '#8B5CF6', fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            HIGH INTENT
+                          </ThemedText>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                      <View style={{ alignItems: 'flex-end', width: 70 }}>
+                        <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold', textTransform: 'uppercase', marginBottom: 2 }}>SR / HS</ThemedText>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                          144.2 / 116
+                        </ThemedText>
+                      </View>
+                      <View style={{ alignItems: 'flex-end', width: 45 }}>
+                        <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold', textTransform: 'uppercase', marginBottom: 2 }}>Runs</ThemedText>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                          3120
+                        </ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </>
+        )}
+
+      {activeSubTab === 'scorecard' && (
+        <View style={{ paddingHorizontal: Spacing.containerMargin, gap: Spacing.md, marginTop: Spacing.sm }}>
+          
+          {/* Segment Selector Switcher */}
+          <View style={{ flexDirection: 'row', backgroundColor: theme.surfaceLow, padding: 4, borderRadius: 10, width: '100%', marginBottom: 4 }}>
+            <Pressable 
+              onPress={() => setScorecardTab('batsmen')}
+              style={[{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 }, scorecardTab === 'batsmen' && { backgroundColor: theme.surfaceLowest, ...Shadows.level1 }]}
             >
-              <Ionicons name="add" size={14} color={theme.primary} />
-              <ThemedText type="labelSm" style={{ color: theme.primary, marginLeft: 2, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                Ball by Ball
+              <ThemedText style={{ fontSize: 13, fontFamily: scorecardTab === 'batsmen' ? 'PlusJakartaSans_700Bold' : 'PlusJakartaSans_600SemiBold', color: scorecardTab === 'batsmen' ? theme.primary : theme.textSecondary }}>
+                Batsmen
+              </ThemedText>
+            </Pressable>
+            <Pressable 
+              onPress={() => setScorecardTab('bowlers')}
+              style={[{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 }, scorecardTab === 'bowlers' && { backgroundColor: theme.surfaceLowest, ...Shadows.level1 }]}
+            >
+              <ThemedText style={{ fontSize: 13, fontFamily: scorecardTab === 'bowlers' ? 'PlusJakartaSans_700Bold' : 'PlusJakartaSans_600SemiBold', color: scorecardTab === 'bowlers' ? theme.primary : theme.textSecondary }}>
+                Bowlers
               </ThemedText>
             </Pressable>
           </View>
-          
-          <View style={styles.logBallsRow}>
-            {overLog.map((ball, idx) => {
-              const isWicket = ball === 'W';
-              const isBoundary = ball === '4' || ball === '6';
-              const isDot = ball === '0';
 
-              return (
-                <View
-                  key={idx}
-                  style={[
-                    styles.logBall,
-                    { backgroundColor: theme.primary },
-                    isWicket && { backgroundColor: theme.error },
-                    isBoundary && { backgroundColor: theme.secondaryContainer },
-                    isDot && { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33', borderWidth: 1 },
-                  ]}
-                >
-                  <ThemedText
-                    type="bodyMd"
-                    style={{
-                      color: (isWicket || (!isBoundary && !isDot)) ? theme.onPrimary : isBoundary ? theme.onSecondaryContainer : theme.text,
-                      fontFamily: 'HankenGrotesk_700Bold',
-                    }}
-                  >
-                    {ball}
-                  </ThemedText>
-                </View>
-              );
-            })}
-            {overLog.length === 0 && (
-              <ThemedText type="bodyMd" style={{ color: theme.textSecondary, italic: true } as any}>
-                Starting new over...
-              </ThemedText>
-            )}
-          </View>
-          
-          <View style={[styles.bowlerNameRow, { borderTopColor: theme.outlineVariant + '1a' }]}>
-            <ThemedText style={{ color: theme.textSecondary, fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
-              Bowler: {bowler.name}
-            </ThemedText>
-            <View style={styles.bowlerOverDots}>
-              {[1, 2, 3, 4, 5, 6].map((b) => (
-                <View
-                  key={b}
-                  style={[
-                    styles.bowlerDot,
-                    b <= ballsInCurrentOver
-                      ? { backgroundColor: theme.primary }
-                      : { backgroundColor: theme.outlineVariant + '33' },
-                  ]}
-                />
-              ))}
-            </View>
-          </View>
-        </View>
-      </View>
+          {/* Full Batsmen Scorecard */}
+          {scorecardTab === 'batsmen' && (
+            <View style={{ gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 }}>
+                <Ionicons name="stats-chart-outline" size={16} color={theme.primary} />
+                <ThemedText style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                  Batsmen Scorecard
+                </ThemedText>
+              </View>
 
-      {/* Players Table Section */}
-      <View style={styles.section}>
-        <View style={[styles.tableCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-          <View style={[styles.tableHeader, { backgroundColor: theme.surfaceLow }]}>
-            <ThemedText type="labelMd" style={{ color: theme.text }}>Current Batsmen</ThemedText>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Pressable onPress={handleSwapStrike}>
-                <Ionicons name="swap-horizontal-outline" size={16} color={theme.text} />
-              </Pressable>
-              <Pressable onPress={() => setShowBatsmenModal(true)}>
-                <Ionicons name="list-outline" size={16} color={theme.text} />
-              </Pressable>
-              <Pressable onPress={openEditPlayersModal}>
-                <Ionicons name="create-outline" size={16} color={theme.text} />
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Sub-Header Row */}
-          <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '50', borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '33' }]}>
-            <View style={styles.batsmanNameCell}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>Batsman</ThemedText>
-            </View>
-            <View style={styles.batStatsCells}>
-              <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>R</ThemedText></View>
-              <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>B</ThemedText></View>
-              <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>4s</ThemedText></View>
-              <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>6s</ThemedText></View>
-              <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold', textAlign: 'center' }}>SR</ThemedText></View>
-            </View>
-          </View>
-
-          {batsmen.map((b, idx) => {
-            const sr = b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0';
-            return (
-              <Pressable
-                key={idx}
-                onPress={() => toggleActiveBatsman(idx)}
-                style={[
-                  styles.tableRow,
-                  { paddingVertical: 8, borderLeftWidth: 4 },
-                  b.active 
-                    ? { backgroundColor: theme.secondaryContainer + '1a', borderLeftColor: theme.secondaryContainer }
-                    : { borderLeftColor: 'transparent' },
-                ]}
-              >
+              {/* Sub-Header Row */}
+              <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '70', borderRadius: 8, borderBottomWidth: 0, borderLeftWidth: 4, borderLeftColor: 'transparent' }]}>
                 <View style={styles.batsmanNameCell}>
-                  <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
-                    <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                      {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
-                    </ThemedText>
-                  </View>
-                  <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
-                    {b.name}
-                  </ThemedText>
-                  {b.active && (
-                    <Ionicons name="star" size={8} color={theme.error} style={{ marginLeft: 3 }} />
-                  )}
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>Batsman</ThemedText>
                 </View>
                 <View style={styles.batStatsCells}>
-                  <View style={styles.statCell}>
-                    <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>{b.runs}</ThemedText>
-                  </View>
-                  <View style={styles.statCell}>
-                    <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.balls}</ThemedText>
-                  </View>
-                  <View style={styles.statCell}>
-                    <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.fours}</ThemedText>
-                  </View>
-                  <View style={styles.statCell}>
-                    <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.sixes}</ThemedText>
-                  </View>
-                  <View style={[styles.statCell, { width: 50 }]}>
-                    <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>{sr}</ThemedText>
-                  </View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>R</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>B</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>4s</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>6s</ThemedText></View>
+                  <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold', textAlign: 'center' }}>SR</ThemedText></View>
                 </View>
-              </Pressable>
-            );
-          })}
-        </View>
+              </View>
 
-        <View style={[styles.tableCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', marginTop: Spacing.md }]}>
-          <View style={[styles.tableHeader, { backgroundColor: theme.surfaceLow }]}>
-            <ThemedText type="labelMd" style={{ color: theme.text }}>Current Bowler</ThemedText>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Pressable onPress={() => { openEditPlayersModal(); setActionTarget({ type: 'bowler' }); }}>
-                <Ionicons name="swap-horizontal-outline" size={16} color={theme.text} />
-              </Pressable>
-              <Pressable onPress={() => setShowBowlersModal(true)}>
-                <Ionicons name="list-outline" size={16} color={theme.text} />
-              </Pressable>
-              <Pressable onPress={openEditPlayersModal}>
-                <Ionicons name="create-outline" size={16} color={theme.text} />
-              </Pressable>
+              {getFullBatsmenScorecard().map((b, idx) => {
+                const sr = b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '-';
+                return (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.tableRow,
+                      { paddingVertical: 10, borderLeftWidth: 4, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '15' },
+                      b.active
+                        ? { backgroundColor: theme.secondaryContainer + '1a', borderLeftColor: theme.secondaryContainer, borderRadius: 8, borderBottomWidth: 0 }
+                        : { borderLeftColor: 'transparent' },
+                    ]}
+                  >
+                    <View style={[styles.batsmanNameCell, { gap: 8 }]}>
+                      <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
+                        <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                          {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
+                        </ThemedText>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                            {b.name}
+                          </ThemedText>
+                          {b.active && (
+                            <Ionicons name="star" size={8} color={theme.error} style={{ marginLeft: 3 }} />
+                          )}
+                        </View>
+                        <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginTop: 1 }}>
+                          {b.status}
+                        </ThemedText>
+                      </View>
+                    </View>
+                    <View style={styles.batStatsCells}>
+                      <View style={styles.statCell}>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>{b.runs}</ThemedText>
+                      </View>
+                      <View style={styles.statCell}>
+                        <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.balls}</ThemedText>
+                      </View>
+                      <View style={styles.statCell}>
+                        <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.fours}</ThemedText>
+                      </View>
+                      <View style={styles.statCell}>
+                        <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.sixes}</ThemedText>
+                      </View>
+                      <View style={[styles.statCell, { width: 50 }]}>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>{sr}</ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
-          </View>
+          )}
 
-          {/* Bowler Sub-Header Row */}
-          <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '50', borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '33' }]}>
-            <View style={styles.batsmanNameCell}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>Bowler</ThemedText>
-            </View>
-            <View style={styles.batStatsCells}>
-              <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>O</ThemedText></View>
-              <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>M</ThemedText></View>
-              <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>R</ThemedText></View>
-              <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>W</ThemedText></View>
-              <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold', textAlign: 'center' }}>ECON</ThemedText></View>
-            </View>
-          </View>
-
-          <View style={[styles.tableRow, { paddingVertical: 8, borderLeftWidth: 4, borderLeftColor: 'transparent' }]}>
-            <View style={styles.batsmanNameCell}>
-              <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
-                <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                  {bowler.name ? bowler.name.trim().charAt(0).toUpperCase() : 'P'}
+          {/* Full Bowler Scorecard */}
+          {scorecardTab === 'bowlers' && (
+            <View style={{ gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 }}>
+                <Ionicons name="analytics-outline" size={16} color={theme.primary} />
+                <ThemedText style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                  Bowlers Scorecard
                 </ThemedText>
               </View>
-              <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
-                {bowler.name}
+
+              {/* Sub-Header Row */}
+              <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '70', borderRadius: 8, borderBottomWidth: 0, borderLeftWidth: 4, borderLeftColor: 'transparent' }]}>
+                <View style={styles.batsmanNameCell}>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>Bowler</ThemedText>
+                </View>
+                <View style={styles.batStatsCells}>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>O</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>M</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>R</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>W</ThemedText></View>
+                  <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold', textAlign: 'center' }}>ECON</ThemedText></View>
+                </View>
+              </View>
+
+              {getFullBowlerScorecard().map((b, idx) => {
+                const totalBalls = b.ballsInOver !== undefined ? (b.overs * 6 + b.ballsInOver) : (b.overs * 6);
+                const econ = totalBalls > 0 ? ((b.runs / (totalBalls / 6))).toFixed(2) : '0.00';
+                const oversDisplay = b.ballsInOver !== undefined ? `${b.overs}.${b.ballsInOver}` : `${b.overs}.0`;
+
+                return (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.tableRow,
+                      { paddingVertical: 10, borderLeftWidth: 4, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '15' },
+                      b.active
+                        ? { backgroundColor: theme.secondaryContainer + '1a', borderLeftColor: theme.secondaryContainer, borderRadius: 8, borderBottomWidth: 0 }
+                        : { borderLeftColor: 'transparent' },
+                    ]}
+                  >
+                    <View style={[styles.batsmanNameCell, { gap: 8 }]}>
+                      <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
+                        <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                          {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
+                        </ThemedText>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                            {b.name}
+                          </ThemedText>
+                          {b.active && (
+                            <Ionicons name="star" size={8} color={theme.error} style={{ marginLeft: 3 }} />
+                          )}
+                        </View>
+                        {b.active && (
+                          <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginTop: 1 }}>
+                            bowling
+                          </ThemedText>
+                        )}
+                      </View>
+                    </View>
+                    <View style={styles.batStatsCells}>
+                      <View style={styles.statCell}>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>{oversDisplay}</ThemedText>
+                      </View>
+                      <View style={styles.statCell}>
+                        <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.maidens}</ThemedText>
+                      </View>
+                      <View style={styles.statCell}>
+                        <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.runs}</ThemedText>
+                      </View>
+                      <View style={styles.statCell}>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>{b.wickets}</ThemedText>
+                      </View>
+                      <View style={[styles.statCell, { width: 50 }]}>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>{econ}</ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      )}
+
+      {activeSubTab === 'stats' && (
+        <View style={{ paddingHorizontal: Spacing.containerMargin, gap: Spacing.md, marginTop: Spacing.sm }}>
+          {/* Quick Metrics Cards */}
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <View style={[styles.card, { flex: 1, backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22', alignItems: 'center', paddingVertical: 14, borderRadius: BorderRadius.xl, borderWidth: 1, borderTopColor: '#10B981', borderTopWidth: 3, ...Shadows.level1 }]}>
+              <View style={{ backgroundColor: '#10B98115', padding: 5, borderRadius: 20, marginBottom: 4 }}>
+                <Ionicons name="ellipse-outline" size={14} color="#10B981" />
+              </View>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold' }}>DOT BALLS</ThemedText>
+              <ThemedText type="headlineLg" style={{ color: theme.text, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 2 }}>
+                45%
+              </ThemedText>
+              <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginTop: 2 }}>9 of 20 balls</ThemedText>
+            </View>
+
+            <View style={[styles.card, { flex: 1, backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22', alignItems: 'center', paddingVertical: 14, borderRadius: BorderRadius.xl, borderWidth: 1, borderTopColor: '#F59E0B', borderTopWidth: 3, ...Shadows.level1 }]}>
+              <View style={{ backgroundColor: '#F59E0B15', padding: 5, borderRadius: 20, marginBottom: 4 }}>
+                <Ionicons name="flash-outline" size={14} color="#F59E0B" />
+              </View>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold' }}>BOUNDARIES</ThemedText>
+              <ThemedText type="headlineLg" style={{ color: theme.text, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 2 }}>
+                3
+              </ThemedText>
+              <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginTop: 2 }}>2 Fours • 1 Six</ThemedText>
+            </View>
+
+            <View style={[styles.card, { flex: 1, backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22', alignItems: 'center', paddingVertical: 14, borderRadius: BorderRadius.xl, borderWidth: 1, borderTopColor: '#8B5CF6', borderTopWidth: 3, ...Shadows.level1 }]}>
+              <View style={{ backgroundColor: '#8B5CF615', padding: 5, borderRadius: 20, marginBottom: 4 }}>
+                <Ionicons name="gift-outline" size={14} color="#8B5CF6" />
+              </View>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold' }}>EXTRAS</ThemedText>
+              <ThemedText type="headlineLg" style={{ color: theme.text, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 2 }}>
+                7
+              </ThemedText>
+              <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginTop: 2 }}>1 WD • 1 NB • 1 B</ThemedText>
+            </View>
+          </View>
+
+          {/* Active Partnership Card */}
+          <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderRadius: BorderRadius.xl, borderWidth: 1, padding: 14, ...Shadows.level1 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+              <Ionicons name="people-outline" size={16} color={theme.primary} />
+              <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                Active Partnership
               </ThemedText>
             </View>
-            <View style={styles.batStatsCells}>
-              <View style={styles.statCell}>
-                <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
-                  {bowler.overs}.{bowler.ballsInOver}
-                </ThemedText>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: theme.surfaceLow + '30', padding: 12, borderRadius: BorderRadius.lg }}>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15', width: 28, height: 28, borderRadius: 14 }]}>
+                  <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>A</ThemedText>
+                </View>
+                <View>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>Azar</ThemedText>
+                  <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>10 (5)</ThemedText>
+                </View>
               </View>
-              <View style={styles.statCell}>
-                <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{bowler.maidens}</ThemedText>
+
+              <View style={{ alignItems: 'center', paddingHorizontal: 12, backgroundColor: theme.primary + '10', paddingVertical: 4, borderRadius: BorderRadius.sm }}>
+                <ThemedText style={{ fontSize: 14, fontFamily: 'HankenGrotesk_800ExtraBold', color: theme.primary }}>16</ThemedText>
+                <ThemedText style={{ fontSize: 8, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>runs (9b)</ThemedText>
               </View>
-              <View style={styles.statCell}>
-                <ThemedText style={{ fontSize: 12, color: theme.text }}>{bowler.runs}</ThemedText>
+
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>Jaffer</ThemedText>
+                  <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>0 (0)</ThemedText>
+                </View>
+                <View style={[styles.playerAvatar, { backgroundColor: theme.secondary + '15', width: 28, height: 28, borderRadius: 14 }]}>
+                  <ThemedText style={{ color: theme.secondary, fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>J</ThemedText>
+                </View>
               </View>
-              <View style={styles.statCell}>
-                <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>{bowler.wickets}</ThemedText>
+            </View>
+
+            {/* Visual Partnership Bar */}
+            <View style={{ height: 6, backgroundColor: theme.surfaceLow, borderRadius: 3, marginTop: 12, overflow: 'hidden', flexDirection: 'row' }}>
+              <View style={{ flex: 10, backgroundColor: theme.primary }} />
+              <View style={{ flex: 7, backgroundColor: theme.secondaryContainer }} />
+            </View>
+          </View>
+
+          {/* Over-by-Over Run Rate Progress Chart */}
+          <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderRadius: BorderRadius.xl, borderWidth: 1, padding: 14, ...Shadows.level1 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+              <Ionicons name="bar-chart-outline" size={16} color={theme.primary} />
+              <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                Over-by-Over Run Rate
+              </ThemedText>
+            </View>
+
+            <View style={{ height: 130, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '15' }}>
+              {[
+                { over: 1, runs: 6, label: '6' },
+                { over: 2, runs: 12, label: '12' },
+                { over: 3, runs: 8, label: '8' },
+                { over: 4, runs: 16, label: '16' },
+              ].map((item, idx) => {
+                const maxVal = 20;
+                const heightPct = (item.runs / maxVal) * 100;
+                return (
+                  <View key={idx} style={{ alignItems: 'center', flex: 1 }}>
+                    <ThemedText style={{ fontSize: 9, color: theme.primary, fontFamily: 'PlusJakartaSans_700Bold', marginBottom: 4 }}>
+                      {item.label}
+                    </ThemedText>
+                    <View style={{ width: 20, height: `${heightPct}%`, backgroundColor: theme.primary, borderTopLeftRadius: 6, borderTopRightRadius: 6, opacity: 0.85 }} />
+                    <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: theme.surfaceLow, justifyContent: 'center', alignItems: 'center', marginTop: 8 }}>
+                      <ThemedText style={{ fontSize: 7, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                        {item.over}
+                      </ThemedText>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Wagon Wheel Diagram Card */}
+          <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', alignItems: 'center', borderRadius: BorderRadius.xl, borderWidth: 1, padding: 14, ...Shadows.level1 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, alignSelf: 'flex-start' }}>
+              <Ionicons name="color-palette-outline" size={16} color={theme.primary} />
+              <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                Wagon Wheel
+              </ThemedText>
+            </View>
+
+            <View style={{ width: 180, height: 180, borderRadius: 90, borderWidth: 2, borderColor: '#10B98144', backgroundColor: '#10B98108', justifyContent: 'center', alignItems: 'center', position: 'relative', marginVertical: 8, overflow: 'hidden' }}>
+              <View style={{ width: 32, height: 60, borderRadius: 2, backgroundColor: '#E2E8F0', borderWidth: 1, borderColor: '#CBD5E0', position: 'absolute', opacity: 0.6 }} />
+              <View style={{ width: 100, height: 100, borderRadius: 50, borderWidth: 1, borderColor: '#10B98122', borderStyle: 'dashed', position: 'absolute' }} />
+              <ThemedText style={{ position: 'absolute', top: 10, fontSize: 8, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Off Side</ThemedText>
+              <ThemedText style={{ position: 'absolute', bottom: 10, fontSize: 8, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Leg Side</ThemedText>
+              <ThemedText style={{ position: 'absolute', left: 10, fontSize: 8, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Third Man</ThemedText>
+              <ThemedText style={{ position: 'absolute', right: 10, fontSize: 8, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Fine Leg</ThemedText>
+
+              <View style={{ position: 'absolute', width: 2, height: 75, backgroundColor: '#5D68E8', transform: [{ rotate: '45deg' }], transformOrigin: 'bottom center', bottom: 90, left: 89 }} />
+              <View style={{ position: 'absolute', width: 2, height: 90, backgroundColor: '#10B981', transform: [{ rotate: '-60deg' }], transformOrigin: 'bottom center', bottom: 90, left: 89 }} />
+              <View style={{ position: 'absolute', width: 2.5, height: 90, backgroundColor: '#8B5CF6', transform: [{ rotate: '120deg' }], transformOrigin: 'bottom center', bottom: 90, left: 89 }} />
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 16, marginTop: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#5D68E8' }} />
+                <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Singles</ThemedText>
               </View>
-              <View style={[styles.statCell, { width: 50 }]}>
-                <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
-                  {((bowler.overs * 6 + bowler.ballsInOver) > 0 ? (bowler.runs / ((bowler.overs * 6 + bowler.ballsInOver) / 6)) : 0).toFixed(2)}
-                </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />
+                <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Fours</ThemedText>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#8B5CF6' }} />
+                <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Sixes</ThemedText>
               </View>
             </View>
           </View>
         </View>
-      </View>
+      )}
 
-      {/* AI Suggestion Card */}
-      <View style={styles.section}>
-        <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <Ionicons name="sparkles" size={16} color={theme.primary} />
-            <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
-              AI Next Batsman Suggestion
-            </ThemedText>
-          </View>
-          
-          <View style={{ gap: Spacing.sm }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: theme.surfaceLow, padding: 10, borderRadius: BorderRadius.md }}>
-              <View style={{ flex: 1, paddingRight: 8 }}>
-                <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
-                  Ben Stokes
-                </ThemedText>
-                <ThemedText style={{ fontSize: 10, color: theme.textSecondary, marginTop: 2 }}>
-                  Death Overs Specialist • Recommended
-                </ThemedText>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <ThemedText style={{ fontSize: 9, color: theme.textSecondary }}>SR / HS</ThemedText>
-                  <ThemedText style={{ fontSize: 11, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
-                    148.5 / 135*
-                  </ThemedText>
+      {activeSubTab === 'details' && (
+        <View style={{ paddingHorizontal: Spacing.containerMargin, gap: Spacing.md, marginTop: Spacing.sm }}>
+          {/* Match Info Bento Box Card */}
+          <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderRadius: BorderRadius.xl, borderWidth: 1, padding: 14, ...Shadows.level1 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+              <Ionicons name="information-circle-outline" size={16} color={theme.primary} />
+              <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                Match Information
+              </ThemedText>
+            </View>
+
+            {/* Bento Grid */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {/* Venue (Full Width) */}
+              <View style={{ width: '100%', backgroundColor: theme.surfaceLow + '30', padding: 10, borderRadius: BorderRadius.md, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="location-outline" size={14} color={theme.primary} />
                 </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <ThemedText style={{ fontSize: 9, color: theme.textSecondary }}>Runs</ThemedText>
-                  <ThemedText style={{ fontSize: 11, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
-                    2840
-                  </ThemedText>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>VENUE</ThemedText>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>Lord's Turf Ground, Pitch A</ThemedText>
+                </View>
+              </View>
+
+              {/* Date / Time */}
+              <View style={{ width: '48.5%', backgroundColor: theme.surfaceLow + '30', padding: 10, borderRadius: BorderRadius.md, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: theme.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="calendar-outline" size={12} color={theme.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={{ fontSize: 8, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>DATE & TIME</ThemedText>
+                  <ThemedText style={{ fontSize: 11, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>July 2, 2026 • 10:00 AM</ThemedText>
+                </View>
+              </View>
+
+              {/* Match Format */}
+              <View style={{ width: '48.5%', backgroundColor: theme.surfaceLow + '30', padding: 10, borderRadius: BorderRadius.md, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: theme.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="trophy-outline" size={12} color={theme.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={{ fontSize: 8, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>FORMAT</ThemedText>
+                  <ThemedText style={{ fontSize: 11, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>T20 (20 Overs)</ThemedText>
+                </View>
+              </View>
+
+              {/* Match Type */}
+              <View style={{ width: '48.5%', backgroundColor: theme.surfaceLow + '30', padding: 10, borderRadius: BorderRadius.md, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: theme.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="ribbon-outline" size={12} color={theme.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={{ fontSize: 8, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>MATCH TYPE</ThemedText>
+                  <ThemedText style={{ fontSize: 11, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>Quick Match</ThemedText>
+                </View>
+              </View>
+
+              {/* Umpires */}
+              <View style={{ width: '48.5%', backgroundColor: theme.surfaceLow + '30', padding: 10, borderRadius: BorderRadius.md, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: theme.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="people-outline" size={12} color={theme.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={{ fontSize: 8, color: theme.textSecondary, fontFamily: 'PlusJakartaSans_600SemiBold' }}>UMPIRES</ThemedText>
+                  <ThemedText style={{ fontSize: 11, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>J. Doe • Kettleboro</ThemedText>
                 </View>
               </View>
             </View>
+          </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: theme.surfaceLow, padding: 10, borderRadius: BorderRadius.md }}>
-              <View style={{ flex: 1, paddingRight: 8 }}>
-                <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
-                  Jos Buttler
-                </ThemedText>
-                <ThemedText style={{ fontSize: 10, color: theme.textSecondary, marginTop: 2 }}>
-                  Accelerate Run Rate • High Intent
-                </ThemedText>
+          {/* Squad Details Card */}
+          <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderRadius: BorderRadius.xl, borderWidth: 1, padding: 14, ...Shadows.level1 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+              <Ionicons name="shield-outline" size={16} color={theme.primary} />
+              <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                Playing Squads
+              </ThemedText>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+              {/* Team A List */}
+              <View style={{ flex: 1 }}>
+                <View style={{ backgroundColor: theme.primary, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6, marginBottom: 10 }}>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#ffffff', textAlign: 'center' }}>
+                    {teamA}
+                  </ThemedText>
+                </View>
+                {[
+                  { name: 'Azar', role: 'Capt / Batsman' },
+                  { name: 'Jaffer', role: 'Batsman' },
+                  { name: 'Kaja', role: 'Batsman' },
+                  { name: 'Messi', role: 'All-Rounder' },
+                  { name: 'Ronaldo', role: 'All-Rounder' },
+                ].map((p, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, borderBottomWidth: idx === 4 ? 0 : 1, borderBottomColor: theme.outlineVariant + '15' }}>
+                    <View style={[styles.playerAvatar, { width: 22, height: 22, borderRadius: 11, backgroundColor: theme.primary + '10' }]}>
+                      <ThemedText style={{ fontSize: 8, fontFamily: 'PlusJakartaSans_700Bold', color: theme.primary }}>
+                        {p.name.charAt(0)}
+                      </ThemedText>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={{ fontSize: 11, color: theme.text, fontFamily: 'HankenGrotesk_700Bold' }}>{p.name}</ThemedText>
+                      <ThemedText style={{ fontSize: 8, color: theme.textSecondary }}>{p.role}</ThemedText>
+                    </View>
+                  </View>
+                ))}
               </View>
-              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <ThemedText style={{ fontSize: 9, color: theme.textSecondary }}>SR / HS</ThemedText>
-                  <ThemedText style={{ fontSize: 11, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
-                    144.2 / 116
+
+              {/* Divider line */}
+              <View style={{ width: 1, backgroundColor: theme.outlineVariant + '1a' }} />
+
+              {/* Team B List */}
+              <View style={{ flex: 1 }}>
+                <View style={{ backgroundColor: theme.secondary, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6, marginBottom: 10 }}>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#ffffff', textAlign: 'center' }}>
+                    {teamB}
                   </ThemedText>
                 </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <ThemedText style={{ fontSize: 9, color: theme.textSecondary }}>Runs</ThemedText>
-                  <ThemedText style={{ fontSize: 11, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
-                    3120
-                  </ThemedText>
-                </View>
+                {[
+                  { name: 'Dinesh', role: 'Bowler' },
+                  { name: 'Carter', role: 'Bowler' },
+                  { name: 'Williams', role: 'All-Rounder' },
+                  { name: 'Apex', role: 'All-Rounder' },
+                  { name: 'Vanguard', role: 'Bowler' },
+                ].map((p, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, borderBottomWidth: idx === 4 ? 0 : 1, borderBottomColor: theme.outlineVariant + '15' }}>
+                    <View style={[styles.playerAvatar, { width: 22, height: 22, borderRadius: 11, backgroundColor: theme.secondary + '10' }]}>
+                      <ThemedText style={{ fontSize: 8, fontFamily: 'PlusJakartaSans_700Bold', color: theme.secondary }}>
+                        {p.name.charAt(0)}
+                      </ThemedText>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={{ fontSize: 11, color: theme.text, fontFamily: 'HankenGrotesk_700Bold' }}>{p.name}</ThemedText>
+                      <ThemedText style={{ fontSize: 8, color: theme.textSecondary }}>{p.role}</ThemedText>
+                    </View>
+                  </View>
+                ))}
               </View>
             </View>
           </View>
         </View>
-      </View>
+      )}
 
-      {/* Spacer */}
-      <View style={{ height: 40 }} />
-    </ScrollView>
+        {/* Spacer */}
+        <View style={{ height: 40 }} />
+      </ScrollView>
+
+      {activeSubTab === 'live' && (
+        <View style={[styles.stickyBottomBar, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '22' }]}>
+          <Pressable
+            onPress={handleUndo}
+            disabled={history.length === 0}
+            style={[styles.mainUndoBtn, { flex: 1, backgroundColor: theme.primaryContainer }, history.length === 0 && { opacity: 0.5 }]}
+          >
+            <Ionicons name="arrow-undo" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+            <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Undo Ball</ThemedText>
+          </Pressable>
+
+          <Pressable
+            onPress={handleEndMatch}
+            disabled={isSyncing}
+            style={[styles.mainEndMatchBtn, { flex: 1, backgroundColor: theme.error }, isSyncing && { opacity: 0.7 }]}
+          >
+            {isSyncing ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-done" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+                <ThemedText type="labelMd" style={{ color: '#ffffff' }}>End Match</ThemedText>
+              </>
+            )}
+          </Pressable>
+        </View>
+      )}
 
       {/* Interactive Scoring Console Modal */}
       <Modal
@@ -973,33 +1778,124 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
                 <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
                   Current Over Log
                 </ThemedText>
-                
-                <View style={styles.logBallsRow}>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.logBallsRow}
+                >
                   {overLog.map((ball, idx) => {
+                    // Determine Ball Type and Color Scheme
+                    let bgColor = theme.primary;
+                    let textColor = '#ffffff';
+                    let borderWidth = 0;
+                    let borderColor = 'transparent';
+
                     const isWicket = ball === 'W';
-                    const isBoundary = ball === '4' || ball === '6';
                     const isDot = ball === '0';
+                    const isFour = ball === '4';
+                    const isSix = ball === '6';
+
+                    if (isWicket) {
+                      bgColor = '#EF4444'; // Red
+                      textColor = '#ffffff';
+                    } else if (isDot) {
+                      bgColor = theme.surfaceLowest;
+                      textColor = theme.textSecondary;
+                      borderWidth = 1;
+                      borderColor = theme.outlineVariant + '33';
+                    } else if (isFour) {
+                      bgColor = '#10B981'; // Green for 4
+                      textColor = '#ffffff';
+                    } else if (isSix) {
+                      bgColor = '#8B5CF6'; // Purple for 6
+                      textColor = '#ffffff';
+                    } else if (ball.includes('WD')) {
+                      bgColor = '#F59E0B'; // Amber for Wides
+                      textColor = '#ffffff';
+                    } else if (ball.includes('NB')) {
+                      bgColor = '#F43F5E'; // Pink-red for No Balls
+                      textColor = '#ffffff';
+                    } else if (ball.includes('BYE') || ball.includes('LB')) {
+                      bgColor = '#06B6D4'; // Teal for Byes/Leg-byes
+                      textColor = '#ffffff';
+                    } else {
+                      // Default runs 1, 2, 3
+                      bgColor = theme.primary;
+                      textColor = '#ffffff';
+                    }
+
+                    // Parse content for rendering
+                    const match = ball.match(/^(\d+)?(WD|NB|BYE|LB)$/);
+                    let renderContent;
+
+                    if (match) {
+                      const num = match[1];
+                      const type = match[2];
+                      if (num === undefined) {
+                        renderContent = (
+                          <ThemedText
+                            style={{
+                              color: textColor,
+                              fontFamily: 'HankenGrotesk_700Bold',
+                              fontSize: 12,
+                            }}
+                          >
+                            {type}
+                          </ThemedText>
+                        );
+                      } else {
+                        renderContent = (
+                          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
+                            <ThemedText
+                              style={{
+                                color: textColor,
+                                fontFamily: 'HankenGrotesk_800ExtraBold',
+                                fontSize: 14,
+                              }}
+                            >
+                              {num}
+                            </ThemedText>
+                            <ThemedText
+                              style={{
+                                color: textColor,
+                                fontFamily: 'HankenGrotesk_700Bold',
+                                fontSize: 8,
+                                marginLeft: 1,
+                              }}
+                            >
+                              {type}
+                            </ThemedText>
+                          </View>
+                        );
+                      }
+                    } else {
+                      renderContent = (
+                        <ThemedText
+                          type="bodyMd"
+                          style={{
+                            color: textColor,
+                            fontFamily: 'HankenGrotesk_700Bold',
+                          }}
+                        >
+                          {ball}
+                        </ThemedText>
+                      );
+                    }
 
                     return (
                       <View
                         key={idx}
                         style={[
                           styles.logBall,
-                          { backgroundColor: theme.primary },
-                          isWicket && { backgroundColor: theme.error },
-                          isBoundary && { backgroundColor: theme.secondaryContainer },
-                          isDot && { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderWidth: 1 },
+                          {
+                            backgroundColor: bgColor,
+                            borderWidth,
+                            borderColor,
+                          },
                         ]}
                       >
-                        <ThemedText
-                          type="bodyMd"
-                          style={{
-                            color: (isWicket || (!isBoundary && !isDot)) ? theme.onPrimary : isBoundary ? theme.onSecondaryContainer : theme.text,
-                            fontFamily: 'HankenGrotesk_700Bold',
-                          }}
-                        >
-                          {ball}
-                        </ThemedText>
+                        {renderContent}
                       </View>
                     );
                   })}
@@ -1008,11 +1904,11 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
                       Starting new over...
                     </ThemedText>
                   )}
-                </View>
-                
+                </ScrollView>
+
                 <View style={[styles.bowlerNameRow, { borderTopColor: theme.outlineVariant + '1a', marginTop: Spacing.sm, paddingTop: Spacing.sm }]}>
                   <ThemedText style={{ color: theme.textSecondary, fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
-                    Bowler: {bowler.name}
+                    Bowler: {bowler.name} ({bowler.overs * 6 + bowler.ballsInOver} balls)
                   </ThemedText>
                   <View style={styles.bowlerOverDots}>
                     {[1, 2, 3, 4, 5, 6].map((b) => (
@@ -1038,7 +1934,7 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
                 {[0, 1, 2, 3, 4, 6].map((num) => {
                   const isFourOrSix = num === 4 || num === 6;
                   const label = num === 0 ? 'Dot' : num === 1 ? 'Single' : num === 2 ? 'Double' : num === 3 ? 'Triple' : num === 4 ? 'Four' : 'Six';
-                  
+
                   return (
                     <Pressable
                       key={num}
@@ -1088,7 +1984,7 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
                     Wicket
                   </ThemedText>
                 </Pressable>
-                
+
                 <Pressable
                   onPress={handleUndo}
                   disabled={history.length === 0}
@@ -1303,7 +2199,7 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
             </View>
 
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScrollContent}>
-              
+
               {/* Inline replacement options */}
               {actionTarget !== null && (
                 <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outline, borderWidth: 1.5, marginBottom: 16, padding: 12 }]}>
@@ -1337,7 +2233,7 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 6 }}>
                     Select from squad bench:
                   </ThemedText>
-                  
+
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
                     {actionTarget.type === 'bowler' ? (
                       otherBowlers.map((b) => (
@@ -1377,7 +2273,7 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 6 }}>
                     Or enter custom name (without list):
                   </ThemedText>
-                  
+
                   <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                     <TextInput
                       style={[styles.modalInput, { flex: 1, color: theme.text, borderColor: theme.outlineVariant, marginBottom: 0 }]}
@@ -1632,13 +2528,303 @@ export default function CricketScoring({ teamA = 'London Lions', teamB = 'Kent K
           </View>
         </View>
       </Modal>
-    </>
+
+      {/* Over Completed / Change Bowler Modal */}
+      <Modal
+        visible={showOverCompleteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowOverCompleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowOverCompleteModal(false)} />
+          <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#10B98115', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="checkmark-circle" size={22} color="#10B981" />
+                </View>
+                <View>
+                  <ThemedText style={{ fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                    Over Completed!
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 1 }}>
+                    Batsmen have automatically swapped ends.
+                  </ThemedText>
+                </View>
+              </View>
+              <Pressable onPress={() => setShowOverCompleteModal(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={20} color={theme.text} />
+              </Pressable>
+            </View>
+
+            <View style={{ padding: Spacing.md, gap: Spacing.md }}>
+              <View>
+                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 8, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                  SELECT NEXT BOWLER
+                </ThemedText>
+
+                {/* List of other bowlers on the bench */}
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+                >
+                  {otherBowlers.map((b) => (
+                    <Pressable
+                      key={b.name}
+                      onPress={() => {
+                        executeReplaceBowler(b.name);
+                        setShowOverCompleteModal(false);
+                      }}
+                      style={({ pressed }) => [
+                        {
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          backgroundColor: theme.surfaceLow,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 20,
+                          borderWidth: 1,
+                          borderColor: theme.outlineVariant + '33',
+                        },
+                        pressed && { opacity: 0.7 }
+                      ]}
+                    >
+                      <Ionicons name="shirt-outline" size={12} color={theme.primary} />
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'HankenGrotesk_600SemiBold', color: theme.text }}>
+                        {b.name}
+                      </ThemedText>
+                    </Pressable>
+                  ))}
+                  {otherBowlers.length === 0 && (
+                    <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontStyle: 'italic', paddingVertical: 8 }}>
+                      No bench bowlers available.
+                    </ThemedText>
+                  )}
+                </ScrollView>
+              </View>
+
+              <View>
+                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 6, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                  OR ADD NEW CUSTOM BOWLER
+                </ThemedText>
+
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                  <TextInput
+                    style={[styles.modalInput, { flex: 1, color: theme.text, borderColor: theme.outlineVariant, marginBottom: 0 }]}
+                    value={customNewName}
+                    onChangeText={setCustomNewName}
+                    placeholder="Enter new bowler's name..."
+                    placeholderTextColor={theme.textSecondary + '70'}
+                  />
+                  <Pressable
+                    onPress={() => {
+                      if (!customNewName.trim()) {
+                        Alert.alert('Error', 'Please enter a bowler name.');
+                        return;
+                      }
+                      executeReplaceBowler(customNewName);
+                      setShowOverCompleteModal(false);
+                    }}
+                    style={[styles.addBtn, { backgroundColor: theme.primary, height: 40 }]}
+                  >
+                    <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Set Bowler</ThemedText>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Extra Runs Selection Modal */}
+      <Modal
+        visible={showExtraModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowExtraModal(false);
+          setActiveExtraType(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => {
+              setShowExtraModal(false);
+              setActiveExtraType(null);
+            }}
+          />
+          <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', maxHeight: '70%' }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText type="headlineSm" style={{ color: theme.text }}>
+                {activeExtraType === 'WD' ? 'Record Wide Ball' :
+                  activeExtraType === 'NB' ? 'Record No Ball' :
+                    activeExtraType === 'BYE' ? 'Record Bye' : 'Record Leg Bye'}
+              </ThemedText>
+              <Pressable
+                onPress={() => {
+                  setShowExtraModal(false);
+                  setActiveExtraType(null);
+                }}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons name="close" size={20} color={theme.text} />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+              <ThemedText style={{ color: theme.textSecondary, marginBottom: 16, fontSize: 13 }}>
+                Select the runs and over configuration for this extra delivery:
+              </ThemedText>
+
+              {/* Wide & No Ball options */}
+              {(activeExtraType === 'WD' || activeExtraType === 'NB') && (
+                <View style={{ gap: 10 }}>
+                  <Pressable
+                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
+                    onPress={() => {
+                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 1, false);
+                      setShowExtraModal(false);
+                    }}
+                  >
+                    <ThemedText style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>1 Run (Re-bowl)</ThemedText>
+                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>Standard extra penalty run, delivery re-bowled</ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
+                    onPress={() => {
+                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 2, false);
+                      setShowExtraModal(false);
+                    }}
+                  >
+                    <ThemedText style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>2 Runs (Re-bowl)</ThemedText>
+                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>2 extra runs, delivery re-bowled</ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
+                    onPress={() => {
+                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 3, false);
+                      setShowExtraModal(false);
+                    }}
+                  >
+                    <ThemedText style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>3 Runs (Re-bowl)</ThemedText>
+                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>3 extra runs, delivery re-bowled</ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
+                    onPress={() => {
+                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 0, false);
+                      setShowExtraModal(false);
+                    }}
+                  >
+                    <ThemedText style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>0 Runs (Re-bowl)</ThemedText>
+                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>No penalty runs, but delivery re-bowled</ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.extraOptionBtn, { backgroundColor: theme.primaryContainer + '22', borderColor: theme.primary }]}
+                    onPress={() => {
+                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 0, true);
+                      setShowExtraModal(false);
+                    }}
+                  >
+                    <ThemedText style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.primary }}>Ball Count & 0 Runs</ThemedText>
+                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>Counts as a legal ball in the over, 0 runs added</ThemedText>
+                  </Pressable>
+                </View>
+              )}
+
+              {/* Bye & Leg Bye options */}
+              {(activeExtraType === 'BYE' || activeExtraType === 'LB') && (
+                <View style={{ gap: 10 }}>
+                  <Pressable
+                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
+                    onPress={() => {
+                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 1, true);
+                      setShowExtraModal(false);
+                    }}
+                  >
+                    <ThemedText style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>1 Run</ThemedText>
+                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>1 bye/leg-bye run, counts as a legal ball</ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
+                    onPress={() => {
+                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 2, true);
+                      setShowExtraModal(false);
+                    }}
+                  >
+                    <ThemedText style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>2 Runs</ThemedText>
+                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>2 bye/leg-bye runs, counts as a legal ball</ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
+                    onPress={() => {
+                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 3, true);
+                      setShowExtraModal(false);
+                    }}
+                  >
+                    <ThemedText style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>3 Runs</ThemedText>
+                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>3 bye/leg-bye runs, counts as a legal ball</ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
+                    onPress={() => {
+                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 4, true);
+                      setShowExtraModal(false);
+                    }}
+                  >
+                    <ThemedText style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>4 Runs</ThemedText>
+                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>4 bye/leg-bye runs (boundary), counts as a legal ball</ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
+                    onPress={() => {
+                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 0, true);
+                      setShowExtraModal(false);
+                    }}
+                  >
+                    <ThemedText style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>0 Runs (Dot Ball)</ThemedText>
+                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>Counts as a legal ball, 0 runs added</ThemedText>
+                  </Pressable>
+                </View>
+              )}
+
+              <Pressable
+                onPress={() => {
+                  setShowExtraModal(false);
+                  setActiveExtraType(null);
+                }}
+                style={[styles.cancelBtn, { borderColor: theme.outlineVariant, width: '100%', marginTop: 20, paddingVertical: 10 }]}
+              >
+                <ThemedText type="labelMd" style={{ color: theme.textSecondary, textAlign: 'center' }}>
+                  Cancel
+                </ThemedText>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   bannerWrapper: {
     paddingHorizontal: Spacing.containerMargin,
@@ -2000,5 +3186,106 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  mainActionButtons: {
+    marginVertical: Spacing.sm,
+  },
+  mainUndoBtn: {
+    flexDirection: 'row',
+    height: 44,
+    borderRadius: BorderRadius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainEndMatchBtn: {
+    flexDirection: 'row',
+    height: 44,
+    borderRadius: BorderRadius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stickyBottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.containerMargin,
+    paddingTop: Spacing.sm,
+    paddingBottom: Platform.OS === 'ios' ? 24 : Spacing.md,
+    borderTopWidth: 1,
+    zIndex: 100,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  rulesGroup: {
+    marginBottom: Spacing.md,
+    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+    padding: 12,
+    borderRadius: BorderRadius.md,
+  },
+  rulesGroupLabel: {
+    marginBottom: Spacing.sm,
+    fontFamily: 'PlusJakartaSans_700Bold',
+  },
+  rulesOptionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  ruleOptionChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ruleCheckboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+  },
+  ruleCheckbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  extraOptionBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  subTabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+    paddingHorizontal: Spacing.containerMargin,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  subTabItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginRight: 20,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    gap: 4,
+  },
+  subTabText: {
+    fontSize: 10.5,
+    fontFamily: 'HankenGrotesk_600SemiBold',
   },
 });

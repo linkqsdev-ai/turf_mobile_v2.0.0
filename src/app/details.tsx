@@ -103,7 +103,7 @@ const VENUE_DETAILS: Record<string, {
     pitch: '4G Hybrid Turf',
     hours: '08:00 - 24:00',
     capacity: '16 Players (8v8)',
-    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80',
+    image: require('@/assets/images/sports/sport_football.png'),
     about: "State-of-the-art hybrid turf pitch located in the shadow of the iconic Wembley Stadium. Features professional-grade artificial grass, advanced shock-absorbent base, and premium LED lighting. Perfect for 8v8 matches, corporate events, and regular league play.",
     amenities: [
       { icon: 'flashlight-outline', title: 'Floodlights' },
@@ -153,7 +153,7 @@ export default function TurfDetailsScreen() {
           >
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </Pressable>
-          <ThemedText type="headlineSm" style={styles.headerTitle} numberOfLines={1}>
+          <ThemedText type="headlineSm" style={[styles.headerTitle, { fontSize: 14 }]} numberOfLines={1}>
             {details.name}
           </ThemedText>
           <Pressable style={styles.iconButton}>
@@ -189,7 +189,7 @@ export default function TurfDetailsScreen() {
             <View style={styles.contentSection}>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                <ThemedText type="headlineLg" style={{ color: theme.text, flex: 1, fontFamily: 'HankenGrotesk_700Bold' }}>
+                <ThemedText type="headlineLg" style={{ color: theme.text, flex: 1, fontFamily: 'HankenGrotesk_700Bold', fontSize: 18 }}>
                   {details.name}
                 </ThemedText>
                 <View style={[styles.sportBadge, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
@@ -202,18 +202,18 @@ export default function TurfDetailsScreen() {
               </View>
 
               <View style={styles.locationRow}>
-                <Ionicons name="location-outline" size={14} color={theme.secondary} />
-                <ThemedText type="bodyMd" style={{ color: theme.textSecondary, marginLeft: 4 }}>
+                <Ionicons name="location-outline" size={12} color={theme.secondary} />
+                <ThemedText type="bodyMd" style={{ color: theme.textSecondary, marginLeft: 4, fontSize: 11 }}>
                   {details.location}
                 </ThemedText>
                 <View style={[styles.dot, { backgroundColor: theme.outlineVariant }]} />
                 
                 <Pressable onPress={() => setReviewsVisible(true)} style={styles.ratingRow}>
-                  <Ionicons name="star" size={14} color="#5D68E8" />
-                  <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4, fontWeight: '700' }}>
+                  <Ionicons name="star" size={12} color="#5D68E8" />
+                  <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4, fontWeight: '700', fontSize: 11 }}>
                     {details.rating}
                   </ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, textDecorationLine: 'underline' }}>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, textDecorationLine: 'underline', fontSize: 10 }}>
                     ({details.reviews.split(' ')[0]})
                   </ThemedText>
                 </Pressable>
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bentoValue: {
-    fontSize: 12.5,
+    fontSize: 11,
     fontFamily: 'HankenGrotesk_700Bold',
     flex: 1,
   },
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
   },
   cardSectionHeader: {
     color: '#111c2c',
-    fontSize: 15,
+    fontSize: 13,
     fontFamily: 'HankenGrotesk_700Bold',
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',

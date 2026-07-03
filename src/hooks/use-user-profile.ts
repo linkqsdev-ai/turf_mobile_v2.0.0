@@ -8,7 +8,7 @@ export interface UserProfile {
   preferredFoot: string;
   playingStyle: string;
   memberSince: string;
-  avatarUrl: string;
+  avatarUrl: any;
   bannerImage?: string;
   theme?: 'light' | 'dark' | 'blue';
   role: 'Player' | 'Coach' | 'Owner' | 'Organizer';
@@ -28,7 +28,7 @@ let globalProfile: UserProfile = {
   preferredFoot: 'Right',
   playingStyle: 'Target Man / Poacher',
   memberSince: 'January 2024',
-  avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+  avatarUrl: require('@/assets/images/avatars/avatar_1.png'),
   bannerImage: 'football',
   theme: 'blue',
   role: 'Coach',

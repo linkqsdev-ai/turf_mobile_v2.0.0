@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
   ScrollView,
   Pressable,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -18,6 +19,7 @@ import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useClassStore } from '@/store/app-store';
 
 // Mock Players Data
 const PLAYERS = [
@@ -161,7 +163,41 @@ export default function CoachTab() {
   const theme = useTheme();
   const router = useRouter();
   const { profile } = useUserProfile();
+  const { classes } = useClassStore();
   const [coinTossVisible, setCoinTossVisible] = useState(false);
+  const [coachFilter, setCoachFilter] = useState<'Me' | 'All' | 'Others'>('Me');
+
+  // Map our self-created classes to coach cards layout
+  const myCreatedCoaches = useMemo(() => {
+    return classes.map((cls: any, idx: number) => ({
+      id: cls.id || `created-${idx}`,
+      name: profile.name || 'My Coaching',
+      specialty: cls.className,
+      experience: `${cls.classType} • ${cls.ageGroup || 'All Ages'}`,
+      trainees: 0,
+      rating: 5.0,
+      reviews: 0,
+      rate: cls.feeAmount ? `₹${cls.feeAmount}/${cls.feeType === 'Per Session' ? 'sess' : 'mo'}` : 'Free',
+      location: cls.venue,
+      match: 'Your Class',
+      matchStyle: 'featured',
+      sports: [cls.sportType.toLowerCase()],
+      avatar: profile.avatarUrl || require('@/assets/images/avatars/avatar_12.png'),
+      badge: 'OWNER',
+      defaultAction: 'Active Class',
+    }));
+  }, [classes, profile.name, profile.avatarUrl]);
+
+  // Filter items based on coachFilter selection
+  const visibleCoaches = useMemo(() => {
+    if (coachFilter === 'Me') {
+      return myCreatedCoaches;
+    } else if (coachFilter === 'Others') {
+      return COACHES;
+    } else {
+      return [...myCreatedCoaches, ...COACHES];
+    }
+  }, [coachFilter, myCreatedCoaches]);
 
   const [coachActionStates, setCoachActionStates] = useState<Record<string, string>>(
     Object.fromEntries(COACHES.map(c => [c.id, c.defaultAction]))
@@ -183,7 +219,16 @@ export default function CoachTab() {
     }, 2000);
   };
 
-  const displayAvatar = profile.avatarUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI';
+  const avatarSource = useMemo(() => {
+    const val = profile.avatarUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI';
+    if (typeof val === 'string' && !/^\d+$/.test(val)) {
+      return { uri: val };
+    }
+    if (typeof val === 'number') {
+      return val;
+    }
+    return parseInt(val, 10);
+  }, [profile.avatarUrl]);
 
   if (profile.role === 'Owner') {
     return (
@@ -194,7 +239,7 @@ export default function CoachTab() {
             <View style={styles.headerLeft}>
               <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
                 <Image
-                  source={{ uri: displayAvatar }}
+                  source={avatarSource}
                   style={styles.headerAvatar}
                 />
               </Pressable>
@@ -211,11 +256,16 @@ export default function CoachTab() {
               </View>
             </View>
             <View style={styles.headerRightActions}>
-              <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
+              {/* Temporarily Hidden Network Activity Icon */}
+              {/* <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
                 <Ionicons name="pulse" size={20} color={theme.secondary} />
-              </Pressable>
+              </Pressable> */}
               <Pressable style={styles.iconButton} onPress={() => setCoinTossVisible(true)}>
-                <FontAwesome5 name="coins" size={16} color={theme.secondary} />
+                <Image
+                  source={require('@/assets/images/coin_toss_icon.png')}
+                  style={{ width: 26, height: 26 }}
+                  contentFit="contain"
+                />
               </Pressable>
             </View>
           </View>
@@ -320,7 +370,7 @@ export default function CoachTab() {
           <View style={styles.headerLeft}>
             <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
               <Image
-                source={{ uri: displayAvatar }}
+                source={avatarSource}
                 style={styles.headerAvatar}
               />
             </Pressable>
@@ -337,14 +387,19 @@ export default function CoachTab() {
             </View>
           </View>
           <View style={styles.headerRightActions}>
-            <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
+            {/* Temporarily Hidden Network Activity Icon */}
+            {/* <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
               <Ionicons name="pulse" size={20} color={theme.secondary} />
-            </Pressable>
+            </Pressable> */}
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
             </Pressable>
             <Pressable style={styles.iconButton} onPress={() => setCoinTossVisible(true)}>
-              <FontAwesome5 name="coins" size={16} color={theme.secondary} />
+              <Image
+                source={require('@/assets/images/coin_toss_icon.png')}
+                style={{ width: 26, height: 26 }}
+                contentFit="contain"
+              />
             </Pressable>
           </View>
         </View>
@@ -432,343 +487,377 @@ export default function CoachTab() {
                 </View>
               </View>
 
-              {/* Coach Cards with Summer Class Ads interspersed */}
-              <View style={styles.teamGrid}>
-                {COACHES.map((coach, index) => {
-                  const isFeatured = coach.matchStyle === 'featured';
-                  const actionState = coachActionStates[coach.id];
-                  const isRequestSent = actionState === 'Request Sent ✓';
-
-                  const navigateToProfile = () => router.push({
-                    pathname: '/coach/[id]',
-                    params: {
-                      id: coach.id,
-                      name: coach.name,
-                      specialty: coach.specialty,
-                      experience: coach.experience,
-                      trainees: String(coach.trainees),
-                      rating: String(coach.rating),
-                      reviews: String(coach.reviews),
-                      rate: coach.rate,
-                      location: coach.location,
-                      match: coach.match,
-                      sports: coach.sports.join(','),
-                      avatar: coach.avatar,
-                      badge: coach.badge ?? '',
-                    },
-                  });
-
-                  const navigateToBooking = () => {
-                    router.push({
-                      pathname: '/book-coach',
-                      params: {
-                        id: coach.id,
-                        coachName: coach.name,
-                        coachRate: coach.rate,
-                        coachAvatar: coach.avatar
-                      }
-                    });
-                  };
-
+              {/* Segmented Filter Bar */}
+              <View style={styles.filterTabsRow}>
+                {['Me', 'All', 'Others'].map((tab) => {
+                  const isActive = coachFilter === tab;
                   return (
-                    <React.Fragment key={coach.id}>
-                      {/* Summer Class Ad after 2nd and 4th coach */}
-                      {index === 2 && (
-                        <Reanimated.View entering={FadeInDown.delay(index * 80 - 20).duration(500).damping(14)}>
-                          <Pressable 
-                            style={styles.summerAdCard}
-                            onPress={() => router.push({
-                              pathname: '/enroll',
-                              params: {
-                                title: '⚽ Football Summer Camp 2024',
-                                price: '4999',
-                                dates: 'Jun 15 – Aug 10',
-                                location: 'Bangalore, India',
-                                image: 'https://images.unsplash.com/photo-1528702748617-c64d49f918af?auto=format&fit=crop&w=600&q=80',
-                                themeColor: '#fbbf24',
-                                badgeText: 'SUMMER CLASS',
-                                badgeIcon: 'sunny'
-                              }
-                            })}
-                          >
-                            {/* Background gradient overlay */}
-                            <View style={styles.summerAdBg}>
-                              <Image
-                                source={{ uri: 'https://images.unsplash.com/photo-1528702748617-c64d49f918af?auto=format&fit=crop&w=600&q=80' }}
-                                style={styles.summerAdBgImage}
-                                contentFit="cover"
-                              />
-                              <View style={styles.summerAdOverlay} />
-                            </View>
-                            <View style={styles.summerAdContent}>
-                              <View style={styles.summerAdBadgeRow}>
-                                <View style={styles.summerAdBadge}>
-                                  <Ionicons name="sunny" size={11} color="#fbbf24" />
-                                  <ThemedText type="labelSm" style={{ color: '#fbbf24', fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', marginLeft: 4, letterSpacing: 0.8 }}>SUMMER CLASS</ThemedText>
-                                </View>
-                                <ThemedText type="labelSm" style={{ color: '#ffffff99', fontSize: 10 }}>Limited Seats</ThemedText>
-                              </View>
-                              <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 6, fontSize: 18 }}>
-                                {'⚽ Football Summer Camp 2024'}
-                              </ThemedText>
-                              <ThemedText type="bodySm" style={{ color: '#ffffffcc', marginTop: 4, lineHeight: 18 }}>
-                                8-week intensive training with elite coaches. Ages 12–18.
-                              </ThemedText>
-                              <View style={styles.summerAdMeta}>
-                                <View style={styles.summerAdMetaItem}>
-                                  <Ionicons name="calendar-outline" size={12} color="#ffffffaa" />
-                                  <ThemedText type="labelSm" style={{ color: '#ffffffcc', marginLeft: 4, fontSize: 11 }}>Jun 15 – Aug 10</ThemedText>
-                                </View>
-                                <View style={styles.summerAdMetaItem}>
-                                  <Ionicons name="location-outline" size={12} color="#ffffffaa" />
-                                  <ThemedText type="labelSm" style={{ color: '#ffffffcc', marginLeft: 4, fontSize: 11 }}>Bangalore, India</ThemedText>
-                                </View>
-                              </View>
-                              <View style={styles.summerAdFooter}>
-                                <View>
-                                  <ThemedText type="labelSm" style={{ color: '#ffffffaa', fontSize: 10 }}>Early Bird Price</ThemedText>
-                                  <ThemedText type="headlineSm" style={{ color: '#fbbf24', fontFamily: 'HankenGrotesk_800ExtraBold' }}>₹4,999</ThemedText>
-                                </View>
-                                <View style={styles.summerAdBtn}>
-                                  <ThemedText type="labelMd" style={{ color: '#1a1a2e', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 }}>Enroll Now</ThemedText>
-                                  <Ionicons name="arrow-forward" size={14} color="#1a1a2e" style={{ marginLeft: 4 }} />
-                                </View>
-                              </View>
-                            </View>
-                          </Pressable>
-                        </Reanimated.View>
-                      )}
-
-                      {index === 4 && (
-                        <Reanimated.View entering={FadeInDown.delay(index * 80 - 20).duration(500).damping(14)}>
-                          <Pressable 
-                            style={styles.summerAdCard}
-                            onPress={() => router.push({
-                              pathname: '/enroll',
-                              params: {
-                                title: '🎾 Tennis Masterclass Series',
-                                price: '2499',
-                                dates: 'Jul 1 – Aug 31',
-                                location: 'Mumbai, India',
-                                image: 'https://images.unsplash.com/photo-1593341646782-e0b495cff86d?auto=format&fit=crop&w=600&q=80',
-                                themeColor: '#a78bfa',
-                                badgeText: 'MASTERCLASS',
-                                badgeIcon: 'tennisball'
-                              }
-                            })}
-                          >
-                            <View style={styles.summerAdBg}>
-                              <Image
-                                source={{ uri: 'https://images.unsplash.com/photo-1593341646782-e0b495cff86d?auto=format&fit=crop&w=600&q=80' }}
-                                style={styles.summerAdBgImage}
-                                contentFit="cover"
-                              />
-                              <View style={[styles.summerAdOverlay, { backgroundColor: '#0f172aee' }]} />
-                            </View>
-                            <View style={styles.summerAdContent}>
-                              <View style={styles.summerAdBadgeRow}>
-                                <View style={[styles.summerAdBadge, { backgroundColor: '#7c3aed33', borderColor: '#7c3aed66' }]}>
-                                  <Ionicons name="tennisball" size={11} color="#a78bfa" />
-                                  <ThemedText type="labelSm" style={{ color: '#a78bfa', fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', marginLeft: 4, letterSpacing: 0.8 }}>SUMMER CLASS</ThemedText>
-                                </View>
-                                <ThemedText type="labelSm" style={{ color: '#ffffff99', fontSize: 10 }}>8 Spots Left</ThemedText>
-                              </View>
-                              <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 6, fontSize: 18 }}>
-                                {'🎾 Tennis Masterclass Series'}
-                              </ThemedText>
-                              <ThemedText type="bodySm" style={{ color: '#ffffffcc', marginTop: 4, lineHeight: 18 }}>
-                                Pro-level techniques with certified international coaches. All levels.
-                              </ThemedText>
-                              <View style={styles.summerAdMeta}>
-                                <View style={styles.summerAdMetaItem}>
-                                  <Ionicons name="calendar-outline" size={12} color="#ffffffaa" />
-                                  <ThemedText type="labelSm" style={{ color: '#ffffffcc', marginLeft: 4, fontSize: 11 }}>Jul 1 – Aug 31</ThemedText>
-                                </View>
-                                <View style={styles.summerAdMetaItem}>
-                                  <Ionicons name="location-outline" size={12} color="#ffffffaa" />
-                                  <ThemedText type="labelSm" style={{ color: '#ffffffcc', marginLeft: 4, fontSize: 11 }}>Mumbai, India</ThemedText>
-                                </View>
-                              </View>
-                              <View style={styles.summerAdFooter}>
-                                <View>
-                                  <ThemedText type="labelSm" style={{ color: '#ffffffaa', fontSize: 10 }}>Per Session</ThemedText>
-                                  <ThemedText type="headlineSm" style={{ color: '#a78bfa', fontFamily: 'HankenGrotesk_800ExtraBold' }}>₹2,499</ThemedText>
-                                </View>
-                                <View style={[styles.summerAdBtn, { backgroundColor: '#7c3aed' }]}>
-                                  <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 }}>Register</ThemedText>
-                                  <Ionicons name="arrow-forward" size={14} color="#ffffff" style={{ marginLeft: 4 }} />
-                                </View>
-                              </View>
-                            </View>
-                          </Pressable>
-                        </Reanimated.View>
-                      )}
-
-                      <Reanimated.View
-                        entering={FadeInDown.delay(index * 80).duration(500).damping(14)}
-                      >
-                        <View
-                          style={[
-                            styles.teamCard,
-                            isFeatured
-                              ? { backgroundColor: theme.secondaryContainer, borderColor: theme.secondary }
-                              : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
-                          ]}
-                        >
-                          {/* Card Header Row: Avatar (tappable) + Match Badge */}
-                          <View style={styles.teamCardHeader}>
-                            {/* Coach Avatar — tapping goes to profile */}
-                            <Pressable style={styles.coachAvatarWrapper} onPress={navigateToProfile}>
-                              <Image
-                                source={{ uri: coach.avatar }}
-                                style={styles.coachAvatar}
-                                contentFit="cover"
-                              />
-                              {/* Online dot */}
-                              <View style={[styles.onlineDot, { backgroundColor: '#4caf50', borderColor: isFeatured ? theme.secondaryContainer : theme.surfaceLowest }]} />
-                            </Pressable>
-
-                            {/* Match badge */}
-                            <View style={[
-                              styles.matchPercentage,
-                              isFeatured
-                                ? { backgroundColor: theme.primary }
-                                : { backgroundColor: theme.secondaryContainer + '33' },
-                            ]}>
-                              {isFeatured && (
-                                <Ionicons name="flash" size={11} color="#ffffff" style={{ marginRight: 3 }} />
-                              )}
-                              <ThemedText
-                                type="labelSm"
-                                style={{
-                                  color: isFeatured ? '#ffffff' : theme.secondary,
-                                  fontFamily: 'PlusJakartaSans_700Bold',
-                                }}
-                              >
-                                {coach.match}
-                              </ThemedText>
-                            </View>
-                          </View>
-
-                          {/* Coach Name + Specialty — tapping name also goes to profile */}
-                          <Pressable onPress={navigateToProfile} style={{ marginTop: Spacing.md }}>
-                            <View style={styles.coachNameRow}>
-                              <ThemedText
-                                type="headlineSm"
-                                style={isFeatured ? { color: theme.onSecondaryContainer } : {}}
-                              >
-                                {coach.name}
-                              </ThemedText>
-                              {coach.badge && (
-                                <View style={[styles.proBadge, { backgroundColor: theme.primary }]}>
-                                  <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                                    {coach.badge}
-                                  </ThemedText>
-                                </View>
-                              )}
-                            </View>
-
-                            {/* Specialty */}
-                            <ThemedText
-                              type="bodySm"
-                              style={{ color: isFeatured ? theme.onSecondaryContainer + 'cc' : theme.secondary, marginTop: 2, fontFamily: 'HankenGrotesk_600SemiBold' }}
-                            >
-                              {coach.specialty}
-                            </ThemedText>
-
-                            {/* Rating Row */}
-                            <View style={styles.ratingRow}>
-                              <Ionicons name="star" size={13} color="#f59e0b" />
-                              <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.text, fontFamily: 'HankenGrotesk_700Bold', marginLeft: 3 }}>
-                                {coach.rating}
-                              </ThemedText>
-                              <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + '88' : theme.textSecondary, marginLeft: 3 }}>
-                                ({coach.reviews} reviews)
-                              </ThemedText>
-                            </View>
-
-                            {/* Details Row: experience, location */}
-                            <View style={styles.detailsRow}>
-                              <View style={styles.detailItem}>
-                                <Ionicons name="person-outline" size={12} color={isFeatured ? theme.onSecondaryContainer + 'aa' : theme.textSecondary} />
-                                <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + 'bb' : theme.textSecondary, marginLeft: 3, fontSize: 11 }}>
-                                  {coach.experience}
-                                </ThemedText>
-                              </View>
-                              <View style={styles.detailItem}>
-                                <Ionicons name="location-outline" size={12} color={isFeatured ? theme.onSecondaryContainer + 'aa' : theme.textSecondary} />
-                                <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + 'bb' : theme.textSecondary, marginLeft: 3, fontSize: 11 }}>
-                                  {coach.location}
-                                </ThemedText>
-                              </View>
-                            </View>
-
-                            {/* Rate + Trainees */}
-                            <View style={styles.rateRow}>
-                              <Ionicons name="cash-outline" size={13} color={isFeatured ? theme.onSecondaryContainer + 'aa' : theme.primary} />
-                              <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.primary, fontFamily: 'HankenGrotesk_700Bold', marginLeft: 4 }}>
-                                {coach.rate}
-                              </ThemedText>
-                              <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + '88' : theme.textSecondary, marginLeft: 4 }}>
-                                • {coach.trainees} trainees
-                              </ThemedText>
-                            </View>
-
-                            {/* Sport Icons Row */}
-                            <View style={styles.sportsRow}>
-                              {coach.sports.map(sport => {
-                                const def = SPORT_ICONS[sport];
-                                if (!def) return null;
-                                const chipBg = isFeatured ? 'rgba(255, 255, 255, 0.15)' : def.color + '18';
-                                const chipBorder = isFeatured ? 'rgba(255, 255, 255, 0.3)' : def.color + '44';
-                                const chipTextColor = isFeatured ? '#ffffff' : def.color;
-                                return (
-                                  <View
-                                    key={sport}
-                                    style={[styles.sportChip, { backgroundColor: chipBg, borderColor: chipBorder }]}
-                                  >
-                                    <SportIcon sport={sport} size={12} color={chipTextColor} />
-                                    <ThemedText type="labelSm" style={{ color: chipTextColor, fontSize: 10, marginLeft: 4, fontFamily: 'HankenGrotesk_600SemiBold' }}>
-                                      {def.label}
-                                    </ThemedText>
-                                  </View>
-                                );
-                              })}
-                            </View>
-                          </Pressable>
-
-                          {/* Action Buttons */}
-                          <View style={styles.teamCardActions}>
-                            <Pressable
-                              onPress={navigateToBooking}
-                              style={[
-                                styles.joinBtn,
-                                coach.id === 'volt' ? { width: '100%' } : {},
-                                { backgroundColor: theme.primary },
-                              ]}
-                            >
-                              <Ionicons name="calendar-outline" size={14} color="#ffffff" style={{ marginRight: 5 }} />
-                              <ThemedText
-                                type="labelMd"
-                                style={{ color: '#ffffff' }}
-                              >
-                                {coach.defaultAction}
-                              </ThemedText>
-                            </Pressable>
-                            {coach.id !== 'volt' && (
-                              <Pressable
-                                onPress={navigateToProfile}
-                                style={[styles.optionsBtn, { borderColor: isFeatured ? theme.secondary + '66' : theme.outlineVariant }]}
-                              >
-                                <Ionicons name="person" size={16} color={isFeatured ? theme.onSecondaryContainer : theme.secondary} />
-                              </Pressable>
-                            )}
-                          </View>
-                        </View>
-                      </Reanimated.View>
-                    </React.Fragment>
+                    <Pressable
+                      key={tab}
+                      onPress={() => setCoachFilter(tab as any)}
+                      style={[
+                        styles.filterTabChip,
+                        { backgroundColor: isActive ? theme.primary : theme.surfaceLow },
+                        isActive && { borderColor: theme.primary }
+                      ]}
+                    >
+                      <ThemedText style={[styles.filterTabText, { color: isActive ? '#ffffff' : theme.textSecondary }]}>
+                        {tab === 'Me' ? 'Me (Created)' : tab === 'All' ? 'All Coaches' : 'Others'}
+                      </ThemedText>
+                    </Pressable>
                   );
                 })}
+              </View>
+
+              {/* Coach Cards */}
+              <View style={styles.teamGrid}>
+                {visibleCoaches.length === 0 ? (
+                  <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                    <Ionicons name="school-outline" size={48} color={theme.textSecondary + '77'} style={{ marginBottom: 12 }} />
+                    <ThemedText style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_600SemiBold', textAlign: 'center', fontSize: 13, lineHeight: 18 }}>
+                      {"No self-created classes yet.\nTap the school icon button at the top right to create one!"}
+                    </ThemedText>
+                  </View>
+                ) : (
+                  visibleCoaches.map((coach: any, index: number) => {
+                    const isFeatured = coach.matchStyle === 'featured';
+                    const actionState = coachActionStates[coach.id] || coach.defaultAction;
+                    const isRequestSent = actionState === 'Request Sent ✓';
+
+                    const navigateToProfile = () => {
+                      router.push({
+                        pathname: '/coach/[id]',
+                        params: {
+                          id: coach.id,
+                          name: coach.name,
+                          specialty: coach.specialty,
+                          experience: coach.experience,
+                          trainees: String(coach.trainees),
+                          rating: String(coach.rating),
+                          reviews: String(coach.reviews),
+                          rate: coach.rate,
+                          location: coach.location,
+                          match: coach.match,
+                          sports: coach.sports.join(','),
+                          avatar: typeof coach.avatar === 'string' && !/^\d+$/.test(coach.avatar) ? coach.avatar : (typeof coach.avatar === 'number' ? String(coach.avatar) : String(coach.avatar)),
+                          badge: coach.badge ?? '',
+                        },
+                      });
+                    };
+
+                    const navigateToBooking = () => {
+                      if (coach.badge === 'OWNER') {
+                        Alert.alert('Manage Class', 'This is your own published coaching class.');
+                        return;
+                      }
+                      router.push({
+                        pathname: '/book-coach',
+                        params: {
+                          id: coach.id,
+                          coachName: coach.name,
+                          coachRate: coach.rate,
+                          coachAvatar: typeof coach.avatar === 'number' ? String(coach.avatar) : coach.avatar
+                        }
+                      });
+                    };
+
+                    return (
+                      <React.Fragment key={coach.id}>
+                        {/* Summer Class Ad after 2nd and 4th coach */}
+                        {index === 2 && coachFilter !== 'Me' && (
+                          <Reanimated.View entering={FadeInDown.delay(index * 80 - 20).duration(500).damping(14)}>
+                            <Pressable 
+                              style={styles.summerAdCard}
+                              onPress={() => router.push({
+                                pathname: '/enroll',
+                                params: {
+                                  title: '⚽ Football Summer Camp 2024',
+                                  price: '4999',
+                                  dates: 'Jun 15 – Aug 10',
+                                  location: 'Bangalore, India',
+                                  image: 'https://images.unsplash.com/photo-1528702748617-c64d49f918af?auto=format&fit=crop&w=600&q=80',
+                                  themeColor: '#fbbf24',
+                                  badgeText: 'SUMMER CLASS',
+                                  badgeIcon: 'sunny'
+                                }
+                              })}
+                            >
+                              {/* Background gradient overlay */}
+                              <View style={styles.summerAdBg}>
+                                <Image
+                                  source={{ uri: 'https://images.unsplash.com/photo-1528702748617-c64d49f918af?auto=format&fit=crop&w=600&q=80' }}
+                                  style={styles.summerAdBgImage}
+                                  contentFit="cover"
+                                />
+                                <View style={styles.summerAdOverlay} />
+                              </View>
+                              <View style={styles.summerAdContent}>
+                                <View style={styles.summerAdBadgeRow}>
+                                  <View style={styles.summerAdBadge}>
+                                    <Ionicons name="sunny" size={11} color="#fbbf24" />
+                                    <ThemedText type="labelSm" style={{ color: '#fbbf24', fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', marginLeft: 4, letterSpacing: 0.8 }}>SUMMER CLASS</ThemedText>
+                                  </View>
+                                  <ThemedText type="labelSm" style={{ color: '#ffffff99', fontSize: 10 }}>Limited Seats</ThemedText>
+                                </View>
+                                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 6, fontSize: 18 }}>
+                                  {'⚽ Football Summer Camp 2024'}
+                                </ThemedText>
+                                <ThemedText type="bodySm" style={{ color: '#ffffffcc', marginTop: 4, lineHeight: 18 }}>
+                                  8-week intensive training with elite coaches. Ages 12–18.
+                                </ThemedText>
+                                <View style={styles.summerAdMeta}>
+                                  <View style={styles.summerAdMetaItem}>
+                                    <Ionicons name="calendar-outline" size={12} color="#ffffffaa" />
+                                    <ThemedText type="labelSm" style={{ color: '#ffffffcc', marginLeft: 4, fontSize: 11 }}>Jun 15 – Aug 10</ThemedText>
+                                  </View>
+                                  <View style={styles.summerAdMetaItem}>
+                                    <Ionicons name="location-outline" size={12} color="#ffffffaa" />
+                                    <ThemedText type="labelSm" style={{ color: '#ffffffcc', marginLeft: 4, fontSize: 11 }}>Bangalore, India</ThemedText>
+                                  </View>
+                                </View>
+                                <View style={styles.summerAdFooter}>
+                                  <View>
+                                    <ThemedText type="labelSm" style={{ color: '#ffffffaa', fontSize: 10 }}>Early Bird Price</ThemedText>
+                                    <ThemedText type="headlineSm" style={{ color: '#fbbf24', fontFamily: 'HankenGrotesk_800ExtraBold' }}>₹4,999</ThemedText>
+                                  </View>
+                                  <View style={styles.summerAdBtn}>
+                                    <ThemedText type="labelMd" style={{ color: '#1a1a2e', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 }}>Enroll Now</ThemedText>
+                                    <Ionicons name="arrow-forward" size={14} color="#1a1a2e" style={{ marginLeft: 4 }} />
+                                  </View>
+                                </View>
+                              </View>
+                            </Pressable>
+                          </Reanimated.View>
+                        )}
+
+                        {index === 4 && coachFilter !== 'Me' && (
+                          <Reanimated.View entering={FadeInDown.delay(index * 80 - 20).duration(500).damping(14)}>
+                            <Pressable 
+                              style={styles.summerAdCard}
+                              onPress={() => router.push({
+                                pathname: '/enroll',
+                                params: {
+                                  title: '🎾 Tennis Masterclass Series',
+                                  price: '2499',
+                                  dates: 'Jul 1 – Aug 31',
+                                  location: 'Mumbai, India',
+                                  image: 'https://images.unsplash.com/photo-1593341646782-e0b495cff86d?auto=format&fit=crop&w=600&q=80',
+                                  themeColor: '#a78bfa',
+                                  badgeText: 'MASTERCLASS',
+                                  badgeIcon: 'tennisball'
+                                }
+                              })}
+                            >
+                              <View style={styles.summerAdBg}>
+                                <Image
+                                  source={{ uri: 'https://images.unsplash.com/photo-1593341646782-e0b495cff86d?auto=format&fit=crop&w=600&q=80' }}
+                                  style={styles.summerAdBgImage}
+                                  contentFit="cover"
+                                />
+                                <View style={[styles.summerAdOverlay, { backgroundColor: '#0f172aee' }]} />
+                              </View>
+                              <View style={styles.summerAdContent}>
+                                <View style={styles.summerAdBadgeRow}>
+                                  <View style={[styles.summerAdBadge, { backgroundColor: '#7c3aed33', borderColor: '#7c3aed66' }]}>
+                                    <Ionicons name="tennisball" size={11} color="#a78bfa" />
+                                    <ThemedText type="labelSm" style={{ color: '#a78bfa', fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', marginLeft: 4, letterSpacing: 0.8 }}>SUMMER CLASS</ThemedText>
+                                  </View>
+                                  <ThemedText type="labelSm" style={{ color: '#ffffff99', fontSize: 10 }}>8 Spots Left</ThemedText>
+                                </View>
+                                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 6, fontSize: 18 }}>
+                                  {'🎾 Tennis Masterclass Series'}
+                                </ThemedText>
+                                <ThemedText type="bodySm" style={{ color: '#ffffffcc', marginTop: 4, lineHeight: 18 }}>
+                                  Pro-level techniques with certified international coaches. All levels.
+                                </ThemedText>
+                                <View style={styles.summerAdMeta}>
+                                  <View style={styles.summerAdMetaItem}>
+                                    <Ionicons name="calendar-outline" size={12} color="#ffffffaa" />
+                                    <ThemedText type="labelSm" style={{ color: '#ffffffcc', marginLeft: 4, fontSize: 11 }}>Jul 1 – Aug 31</ThemedText>
+                                  </View>
+                                  <View style={styles.summerAdMetaItem}>
+                                    <Ionicons name="location-outline" size={12} color="#ffffffaa" />
+                                    <ThemedText type="labelSm" style={{ color: '#ffffffcc', marginLeft: 4, fontSize: 11 }}>Mumbai, India</ThemedText>
+                                  </View>
+                                </View>
+                                <View style={styles.summerAdFooter}>
+                                  <View>
+                                    <ThemedText type="labelSm" style={{ color: '#ffffffaa', fontSize: 10 }}>Per Session</ThemedText>
+                                    <ThemedText type="headlineSm" style={{ color: '#a78bfa', fontFamily: 'HankenGrotesk_800ExtraBold' }}>₹2,499</ThemedText>
+                                  </View>
+                                  <View style={[styles.summerAdBtn, { backgroundColor: '#7c3aed' }]}>
+                                    <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 }}>Register</ThemedText>
+                                    <Ionicons name="arrow-forward" size={14} color="#ffffff" style={{ marginLeft: 4 }} />
+                                  </View>
+                                </View>
+                              </View>
+                            </Pressable>
+                          </Reanimated.View>
+                        )}
+
+                        <Reanimated.View
+                          entering={FadeInDown.delay(index * 80).duration(500).damping(14)}
+                        >
+                          <View
+                            style={[
+                              styles.teamCard,
+                              isFeatured
+                                ? { backgroundColor: theme.secondaryContainer, borderColor: theme.secondary }
+                                : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
+                            ]}
+                          >
+                            {/* Card Header Row: Avatar (tappable) + Match Badge */}
+                            <View style={styles.teamCardHeader}>
+                              {/* Coach Avatar — tapping goes to profile */}
+                              <Pressable style={styles.coachAvatarWrapper} onPress={navigateToProfile}>
+                                <Image
+                                  source={typeof coach.avatar === 'string' && !/^\d+$/.test(coach.avatar) ? { uri: coach.avatar } : (typeof coach.avatar === 'number' ? coach.avatar : parseInt(coach.avatar, 10))}
+                                  style={styles.coachAvatar}
+                                  contentFit="cover"
+                                />
+                                {/* Online dot */}
+                                <View style={[styles.onlineDot, { backgroundColor: '#4caf50', borderColor: isFeatured ? theme.secondaryContainer : theme.surfaceLowest }]} />
+                              </Pressable>
+
+                              {/* Match badge */}
+                              <View style={[
+                                styles.matchPercentage,
+                                isFeatured
+                                  ? { backgroundColor: theme.primary }
+                                  : { backgroundColor: theme.secondaryContainer + '33' },
+                              ]}>
+                                {isFeatured && (
+                                  <Ionicons name="flash" size={11} color="#ffffff" style={{ marginRight: 3 }} />
+                                )}
+                                <ThemedText
+                                  type="labelSm"
+                                  style={{
+                                    color: isFeatured ? '#ffffff' : theme.secondary,
+                                    fontFamily: 'PlusJakartaSans_700Bold',
+                                  }}
+                                >
+                                  {coach.match}
+                                </ThemedText>
+                              </View>
+                            </View>
+
+                            {/* Coach Name + Specialty — tapping name also goes to profile */}
+                            <Pressable onPress={navigateToProfile} style={{ marginTop: Spacing.md }}>
+                              <View style={styles.coachNameRow}>
+                                <ThemedText
+                                  type="headlineSm"
+                                  style={isFeatured ? { color: theme.onSecondaryContainer } : {}}
+                                >
+                                  {coach.name}
+                                </ThemedText>
+                                {coach.badge && (
+                                  <View style={[styles.proBadge, { backgroundColor: theme.primary }]}>
+                                    <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                                      {coach.badge}
+                                    </ThemedText>
+                                  </View>
+                                )}
+                              </View>
+
+                              {/* Specialty */}
+                              <ThemedText
+                                type="bodySm"
+                                style={{ color: isFeatured ? theme.onSecondaryContainer + 'cc' : theme.secondary, marginTop: 2, fontFamily: 'HankenGrotesk_600SemiBold' }}
+                              >
+                                {coach.specialty}
+                              </ThemedText>
+
+                              {/* Rating Row */}
+                              <View style={styles.ratingRow}>
+                                <Ionicons name="star" size={13} color="#f59e0b" />
+                                <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.text, fontFamily: 'HankenGrotesk_700Bold', marginLeft: 3 }}>
+                                  {coach.rating}
+                                </ThemedText>
+                                <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + '88' : theme.textSecondary, marginLeft: 3 }}>
+                                  ({coach.reviews} reviews)
+                                </ThemedText>
+                              </View>
+
+                              {/* Details Row: experience, location */}
+                              <View style={styles.detailsRow}>
+                                <View style={styles.detailItem}>
+                                  <Ionicons name="person-outline" size={12} color={isFeatured ? theme.onSecondaryContainer + 'aa' : theme.textSecondary} />
+                                  <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + 'bb' : theme.textSecondary, marginLeft: 3, fontSize: 11 }}>
+                                    {coach.experience}
+                                  </ThemedText>
+                                </View>
+                                <View style={styles.detailItem}>
+                                  <Ionicons name="location-outline" size={12} color={isFeatured ? theme.onSecondaryContainer + 'aa' : theme.textSecondary} />
+                                  <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + 'bb' : theme.textSecondary, marginLeft: 3, fontSize: 11 }}>
+                                    {coach.location}
+                                  </ThemedText>
+                                </View>
+                              </View>
+
+                              {/* Rate */}
+                              <View style={styles.rateRow}>
+                                <Ionicons name="cash-outline" size={13} color={isFeatured ? theme.onSecondaryContainer + 'aa' : theme.primary} />
+                                <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.primary, fontFamily: 'HankenGrotesk_700Bold', marginLeft: 4 }}>
+                                  {coach.rate}
+                                </ThemedText>
+                              </View>
+
+                              {/* Sport Icons Row */}
+                              <View style={styles.sportsRow}>
+                                {coach.sports.map((sport: string) => {
+                                  const def = SPORT_ICONS[sport];
+                                  if (!def) return null;
+                                  const chipBg = isFeatured ? 'rgba(255, 255, 255, 0.15)' : def.color + '18';
+                                  const chipBorder = isFeatured ? 'rgba(255, 255, 255, 0.3)' : def.color + '44';
+                                  const chipTextColor = isFeatured ? '#ffffff' : def.color;
+                                  return (
+                                    <View
+                                      key={sport}
+                                      style={[styles.sportChip, { backgroundColor: chipBg, borderColor: chipBorder }]}
+                                    >
+                                      <SportIcon sport={sport} size={12} color={chipTextColor} />
+                                      <ThemedText type="labelSm" style={{ color: chipTextColor, fontSize: 10, marginLeft: 4, fontFamily: 'HankenGrotesk_600SemiBold' }}>
+                                        {def.label}
+                                      </ThemedText>
+                                    </View>
+                                  );
+                                })}
+                              </View>
+                            </Pressable>
+
+                            {/* Action Buttons */}
+                            <View style={styles.teamCardActions}>
+                              <Pressable
+                                onPress={navigateToBooking}
+                                style={[
+                                  styles.joinBtn,
+                                  coach.id === 'volt' ? { width: '100%' } : {},
+                                  { backgroundColor: theme.primary },
+                                ]}
+                              >
+                                <Ionicons name="calendar-outline" size={14} color="#ffffff" style={{ marginRight: 5 }} />
+                                <ThemedText
+                                  type="labelMd"
+                                  style={{ color: '#ffffff' }}
+                                >
+                                  {actionState}
+                                </ThemedText>
+                              </Pressable>
+                              {coach.id !== 'volt' && coach.badge !== 'OWNER' && (
+                                <Pressable
+                                  onPress={navigateToProfile}
+                                  style={[styles.optionsBtn, { borderColor: isFeatured ? theme.secondary + '66' : theme.outlineVariant }]}
+                                >
+                                  <Ionicons name="person" size={16} color={isFeatured ? theme.onSecondaryContainer : theme.secondary} />
+                                </Pressable>
+                              )}
+                            </View>
+                          </View>
+                        </Reanimated.View>
+                      </React.Fragment>
+                    );
+                  })
+                )}
               </View>
             </View>
 
@@ -833,6 +922,25 @@ export default function CoachTab() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  filterTabsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  filterTabChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterTabText: {
+    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 11,
   },
   safeArea: {
     flex: 1,
@@ -1037,7 +1145,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: BorderRadius.full,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
   },
   teamCardActions: {

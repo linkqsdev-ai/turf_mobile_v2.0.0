@@ -13,23 +13,42 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useMatchStore } from '@/store/app-store';
 
 import { SPORTS_LIST } from '@/constants/sports';
 
 export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   const theme = useTheme();
+  const { addTeam } = useMatchStore();
 
   const [teamName, setTeamName] = useState('');
   const [shortName, setShortName] = useState('');
-  const [selectedSport, setSelectedSport] = useState('Football');
+  const [selectedSport, setSelectedSport] = useState('Cricket');
   const [homeGround, setHomeGround] = useState('');
   const [captainPhone, setCaptainPhone] = useState('');
   const [crestImage, setCrestImage] = useState<any>(require('@/assets/images/mascots/lion.png'));
+  const [isFavourite, setIsFavourite] = useState(false);
 
   const [isNameFocused, setIsNameFocused] = useState(false);
   const [isShortFocused, setIsShortFocused] = useState(false);
   const [isGroundFocused, setIsGroundFocused] = useState(false);
   const [isPhoneFocused, setIsPhoneFocused] = useState(false);
+
+  // Validation errors
+  const [teamNameError, setTeamNameError] = useState('');
+  const [shortNameError, setShortNameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+
+  const handlePhoneChange = (text: string) => {
+    // Strip all non-numeric chars except leading +
+    const cleaned = text.replace(/[^0-9+]/g, '').replace(/(?!^)\+/g, '');
+    setCaptainPhone(cleaned);
+    if (cleaned.length > 0 && cleaned.replace('+', '').length < 7) {
+      setPhoneError('Enter a valid phone number (min 7 digits)');
+    } else {
+      setPhoneError('');
+    }
+  };
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -45,10 +64,22 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
   };
 
   const handleCreateTeam = () => {
-    if (!teamName || !shortName || !captainPhone) {
-      Alert.alert('Missing Fields', 'Please fill in all required fields.');
-      return;
-    }
+    let hasError = false;
+    if (!teamName.trim()) { setTeamNameError('Team name is required'); hasError = true; } else { setTeamNameError(''); }
+    if (!shortName.trim()) { setShortNameError('Short name is required'); hasError = true; } else { setShortNameError(''); }
+    if (!captainPhone.trim()) { setPhoneError('Phone number is required'); hasError = true; }
+    else if (captainPhone.replace('+','').length < 7) { setPhoneError('Enter a valid phone number (min 7 digits)'); hasError = true; }
+    else { setPhoneError(''); }
+    if (hasError) return;
+
+    addTeam({
+      name: teamName,
+      sport: selectedSport,
+      mascot: typeof crestImage === 'string' ? crestImage : 'lion',
+      players: [],
+      isFavourite: isFavourite,
+    });
+
     Alert.alert('Success', `Team "${teamName}" created successfully!`);
     onNavigate?.('Quick Match');
   };
@@ -61,21 +92,13 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
         style={styles.scrollArea}
         bounces={false}
       >
-      {/* ── Banner ─────────────────────────────── */}
-      <View style={[styles.bannerCard, { backgroundColor: theme.primary }]}>
-        <View style={[styles.badgeWrap, { backgroundColor: '#ffffff22' }]}>
-          <ThemedText style={styles.badgeText}>TEAM BRANDING</ThemedText>
-        </View>
-        <ThemedText style={styles.bannerTitle}>Create your team identity</ThemedText>
-        <ThemedText style={styles.bannerSubtitle}>
-          Use one consistent identity for your squad. Upload a logo, add your name, and pick the sport your team plays.
-        </ThemedText>
-        <View style={[styles.featureRow, { backgroundColor: '#ffffff1a' }]}>
-          <Ionicons name="shield-checkmark" size={14} color="#ffffff" />
-          <ThemedText style={styles.featureText}>Designed for fast team setup</ThemedText>
-        </View>
-
-        <Ionicons name="people" size={100} color="#00000015" style={styles.bannerBgIcon} />
+      {/* ── Vector Illustration Banner ─────────────────────────────── */}
+      <View style={{ width: '100%', height: 200, borderRadius: 16, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: theme.outlineVariant + '33' }}>
+        <Image
+          source={require('@/assets/images/illustrations/team_creation_vector.png')}
+          style={{ width: '100%', height: '100%' }}
+          contentFit="cover"
+        />
       </View>
 
       {/* ── Form Body Bento Card ────────────────────────── */}
@@ -86,10 +109,37 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
           <View style={[styles.cardIconWrap, { backgroundColor: theme.primary + '11' }]}>
             <Ionicons name="id-card" size={16} color={theme.primary} />
           </View>
-          <View>
+          <View style={{ flex: 1 }}>
             <ThemedText style={styles.cardTitle}>Identity & Branding</ThemedText>
             <ThemedText style={[styles.cardSubtitle, { color: theme.textSecondary }]}>Set the foundation for your team.</ThemedText>
           </View>
+          <Pressable 
+            onPress={() => setIsFavourite(!isFavourite)} 
+            style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              gap: 4, 
+              paddingHorizontal: 8, 
+              paddingVertical: 5, 
+              borderRadius: BorderRadius.full, 
+              backgroundColor: isFavourite ? '#FFE25920' : theme.surfaceLow,
+              borderWidth: 1,
+              borderColor: isFavourite ? '#FFA751' : theme.outlineVariant + '44'
+            }}
+          >
+            <Ionicons 
+              name={isFavourite ? "star" : "star-outline"} 
+              size={13} 
+              color={isFavourite ? "#FFA751" : theme.textSecondary} 
+            />
+            <ThemedText style={{ 
+              fontFamily: 'HankenGrotesk_700Bold', 
+              fontSize: 10, 
+              color: isFavourite ? "#FFA751" : theme.textSecondary 
+            }}>
+              Favourite
+            </ThemedText>
+          </Pressable>
         </View>
 
         {/* Sport selection */}
@@ -149,15 +199,16 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
             <TextInput
               style={[
                 styles.input,
-                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isNameFocused ? theme.primary : theme.outlineVariant + '44' }
+                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: teamNameError ? '#ef4444' : isNameFocused ? theme.primary : theme.outlineVariant + '44' }
               ]}
-              placeholder="London Strikers"
+              placeholder="e.g. London Strikers"
               placeholderTextColor={theme.textSecondary + '80'}
               value={teamName}
-              onChangeText={setTeamName}
+              onChangeText={(t) => { setTeamName(t); if (t.trim()) setTeamNameError(''); }}
               onFocus={() => setIsNameFocused(true)}
-              onBlur={() => setIsNameFocused(false)}
+              onBlur={() => { setIsNameFocused(false); if (!teamName.trim()) setTeamNameError('Team name is required'); }}
             />
+            {!!teamNameError && <ThemedText style={{ color: '#ef4444', fontSize: 11, marginTop: 3 }}>{teamNameError}</ThemedText>}
           </View>
         </View>
 
@@ -169,16 +220,17 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
             <TextInput
               style={[
                 styles.input,
-                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isShortFocused ? theme.primary : theme.outlineVariant + '44' }
+                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: shortNameError ? '#ef4444' : isShortFocused ? theme.primary : theme.outlineVariant + '44' }
               ]}
               placeholder="LSR"
               placeholderTextColor={theme.textSecondary + '80'}
               maxLength={4}
               value={shortName}
-              onChangeText={setShortName}
+              onChangeText={(t) => { setShortName(t.toUpperCase()); if (t.trim()) setShortNameError(''); }}
               onFocus={() => setIsShortFocused(true)}
-              onBlur={() => setIsShortFocused(false)}
+              onBlur={() => { setIsShortFocused(false); if (!shortName.trim()) setShortNameError('Short name is required'); }}
             />
+            {!!shortNameError && <ThemedText style={{ color: '#ef4444', fontSize: 10, marginTop: 3 }}>{shortNameError}</ThemedText>}
           </View>
           <View style={{ flex: 7 }}>
             <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
@@ -187,16 +239,17 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
             <TextInput
               style={[
                 styles.input,
-                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isPhoneFocused ? theme.primary : theme.outlineVariant + '44' }
+                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: phoneError ? '#ef4444' : isPhoneFocused ? theme.primary : theme.outlineVariant + '44' }
               ]}
               placeholder="+44 7000"
               placeholderTextColor={theme.textSecondary + '80'}
               keyboardType="phone-pad"
               value={captainPhone}
-              onChangeText={setCaptainPhone}
+              onChangeText={handlePhoneChange}
               onFocus={() => setIsPhoneFocused(true)}
               onBlur={() => setIsPhoneFocused(false)}
             />
+            {!!phoneError && <ThemedText style={{ color: '#ef4444', fontSize: 11, marginTop: 3 }}>{phoneError}</ThemedText>}
           </View>
         </View>
 

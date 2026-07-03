@@ -17,7 +17,7 @@ import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { PromoBanner } from '@/components/promo-banner';
-import { useBookings } from '@/store/app-store';
+import { useBookings, useWalletStore } from '@/store/app-store';
 import { getCalendarGrid, formatDateFull, formatDateISO, MONTH_NAMES, advanceMonth } from '@/utils/date-utils';
 
 // Slots details
@@ -73,7 +73,7 @@ const VENUE_LOOKUP: Record<string, {
     location: 'Canary Wharf, East London',
     rating: '4.9',
     reviews: '184 Reviews',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9H8hZV1gCxBOC9fWHjQyhn5ukWJhiNGuP6cNDATeIj2gP6JceuAOrhkqeTXWFS75Y0nw0QANCmhRdo0NYvbdmh4Xrs2itBjykGtZr0Y91KEzjUMyOoM-B-owetUT1u8vwmIZlGJkcKdkgVfU0TIGzuVVlTN3lhwfdg5OWwHMCKOyPJGWWdIKySwofsCUjnq9pJi4WH0BMDAi73A53u0OeKj_Ufmh6V4PVwghrjz5aX16NlvQZLOkQRC51252maP-4ZXwNw3MwVfU',
+    image: require('@/assets/images/sports/sport_football.png'),
     basePrice: 150,
   },
   'the-grid': {
@@ -81,7 +81,7 @@ const VENUE_LOOKUP: Record<string, {
     location: 'Stratford Central, London',
     rating: '4.7',
     reviews: '96 Reviews',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDYH5UnRgCz_j_xsBoTCePAImR1ZHOP1RfajoZLHKUgxQwU2qFlQ8NWyiYz_-6zqqufh9YnYe3jfTI8tuaUrjmH6obvvea2p2vYA7ndyut0M5-lxcOtwTVQQwh58VRPis3197lvVOpVGsJ6YCx55CCy4Q_1CqZxk1rVqp9mBGHM-rDNwh7PGYSDJt6Vq4tmn6G1gXGiZsm13J0D1BFkKFRb8WvrWqqyLWxu-oSZsnMp6YXOONRG89ypF-GKlh96WMcF3HOikmE9l-g',
+    image: require('@/assets/images/sports/sport_basketball.png'),
     basePrice: 110,
   },
   'lords': {
@@ -89,7 +89,7 @@ const VENUE_LOOKUP: Record<string, {
     location: "St John's Wood, London",
     rating: '4.9',
     reviews: '248 Reviews',
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBgd1vfTA0Wj7Aw7aa0JRKzQ5y-6py-pQtMBI-gst90jIWFZoLSiIKBngPK1pn2UxzH_X3pN_lyCt75AnQxS2ssN4J4LUIYpph_JK48kGmSoO16OFhs5uLgsc_Yu3PIrOEneDELuLpKY8BDiUsatTLvRSu0sukxSfAxInyA2XknjvcswWPyUJA2YeNlJ2Vg2t7N807Cydno4uUCtypPyLkI0hi7Xl4DnWaNBueVN4jqiXqkqrc8MEPwQF24g45uu8z8gsXQ9IL87oI',
+    image: require('@/assets/images/sports/sport_cricket.png'),
     basePrice: 120,
   },
 };
@@ -99,6 +99,7 @@ export default function BookingConfigurationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const { addBooking } = useBookings();
+  const { walletBalance, addWalletFunds, deductWalletFunds } = useWalletStore();
 
   // Lookup details
   const venueId = params.id && VENUE_LOOKUP[params.id] ? params.id : 'lords';
@@ -109,6 +110,11 @@ export default function BookingConfigurationScreen() {
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<string>(
+    today.toLocaleDateString('en-US', { weekday: 'long' })
+  );
+
+  const selectedDayOfMonth = selectedDate ? selectedDate.getDate() : today.getDate();
 
   const calendarGrid = useMemo(() => getCalendarGrid(calYear, calMonth), [calYear, calMonth]);
 
@@ -135,6 +141,64 @@ export default function BookingConfigurationScreen() {
   const [recordingAdded, setRecordingAdded] = useState(false);
   const [advancePct, setAdvancePct] = useState<number>(100); // 25 | 50 | 100
   const [paymentMethod, setPaymentMethod] = useState<string>('apple');
+  const [useWallet, setUseWallet] = useState<boolean>(false);
+
+  // Coupon / Promo Code states
+  const [couponCode, setCouponCode] = useState<string>('');
+  const [couponInput, setCouponInput] = useState<string>('');
+  const [couponDiscount, setCouponDiscount] = useState<number>(0);
+  const [couponError, setCouponError] = useState<string>('');
+  const [couponApplied, setCouponApplied] = useState<boolean>(false);
+  const [cashbackOffer, setCashbackOffer] = useState<{ code: string; cashback: number } | null>(null);
+
+  // Valid coupon codes
+  const VALID_COUPONS: Record<string, { discount: number; type: 'flat' | 'percent'; cashback: number }> = {
+    'YAWAH30':   { discount: 30,  type: 'percent', cashback: 50  },
+    'FIRST50':   { discount: 50,  type: 'flat',    cashback: 100 },
+    'TURF20':    { discount: 20,  type: 'percent', cashback: 0   },
+    'HAPPYHOUR': { discount: 15,  type: 'flat',    cashback: 20  },
+  };
+
+  const applyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    const found = VALID_COUPONS[code];
+    if (!found) {
+      setCouponError('Invalid coupon code. Try YAWAH30 or FIRST50.');
+      setCouponDiscount(0);
+      setCouponApplied(false);
+      setCashbackOffer(null);
+      return;
+    }
+    const disc = found.type === 'percent'
+      ? Math.round((total * found.discount) / 100)
+      : found.discount;
+    setCouponCode(code);
+    setCouponDiscount(disc);
+    setCouponApplied(true);
+    setCouponError('');
+    if (found.cashback > 0) {
+      setCashbackOffer({ code, cashback: found.cashback });
+    } else {
+      setCashbackOffer(null);
+    }
+  };
+
+  const removeCoupon = () => {
+    setCouponCode('');
+    setCouponInput('');
+    setCouponDiscount(0);
+    setCouponApplied(false);
+    setCouponError('');
+    setCashbackOffer(null);
+  };
+
+  // Split Bill states
+  const [isSplitEnabled, setIsSplitEnabled] = useState<boolean>(false);
+  const [splitPlayers, setSplitPlayers] = useState<Array<{ id: string; name: string; hours: number }>>([
+    { id: '1', name: 'You', hours: 1 },
+    { id: '2', name: 'Alen', hours: 1 },
+  ]);
+  const [newPlayerName, setNewPlayerName] = useState<string>('');
 
   // Constants
   const courtFee = venue.basePrice * selectedSlots.length;
@@ -143,6 +207,10 @@ export default function BookingConfigurationScreen() {
   const recordingFee = recordingAdded ? 25.00 : 0.00;
   const total = courtFee + serviceCharge + coachFee + recordingFee;
   const advanceAmount = Math.round((total * advancePct) / 100);
+
+  // Wallet deductions
+  const walletDeduction = useWallet ? Math.min(walletBalance, advanceAmount) : 0;
+  const finalPayable = advanceAmount - walletDeduction - couponDiscount;
   const remainingAmount = total - advanceAmount;
 
   const toggleSlot = (time: string) => {
@@ -158,6 +226,15 @@ export default function BookingConfigurationScreen() {
       // Show a gentle inline nudge instead of Alert
       return;
     }
+
+    // Deduct funds from wallet if applied
+    if (useWallet && walletDeduction > 0) {
+      deductWalletFunds(walletDeduction);
+    }
+
+    // Add ₹100 Cashback reward to wallet balance
+    addWalletFunds(100);
+
     // Save booking to global store
     const booking = addBooking({
       venueId,
@@ -168,14 +245,14 @@ export default function BookingConfigurationScreen() {
       dayLabel: formatDateFull(selectedDate),
       slots: selectedSlots,
       totalAmount: total,
-      advancePaid: advanceAmount,
+      advancePaid: finalPayable,
       remaining: remainingAmount,
-      paymentMethod,
+      paymentMethod: finalPayable === 0 ? 'wallet' : paymentMethod,
       coachAdded,
       recordingAdded,
     });
 
-    // Navigate to confirmation screen
+    // Navigate to confirmation screen with cashback parameters
     router.push({
       pathname: '/booking-confirmation',
       params: {
@@ -184,7 +261,8 @@ export default function BookingConfigurationScreen() {
         dayLabel: formatDateFull(selectedDate),
         slots: selectedSlots.join(','),
         total: total.toFixed(2),
-        advancePaid: advanceAmount.toFixed(2),
+        advancePaid: finalPayable.toFixed(2),
+        cashbackEarned: '100', // Pass cashback amount to display success splash
       },
     });
   };
@@ -258,7 +336,7 @@ export default function BookingConfigurationScreen() {
               backgroundColor="#0b4d24"
               buttonBackgroundColor="#a3e635"
               buttonTextColor="#064e3b"
-              backgroundImage="https://images.unsplash.com/photo-1549451371-64aa98a6f660?auto=format&fit=crop&w=600&q=80"
+              backgroundImage={require("@/assets/images/illustrations/gift_card_banner_bg.png")}
             />
           </View>
 
@@ -312,7 +390,12 @@ export default function BookingConfigurationScreen() {
                     <Pressable
                       key={`day-${item.dayNumber}`}
                       disabled={isPast}
-                      onPress={() => item.date && setSelectedDate(item.date)}
+                      onPress={() => {
+                        if (item.date) {
+                          setSelectedDate(item.date);
+                          setSelectedDayOfWeek(item.date.toLocaleDateString('en-US', { weekday: 'long' }));
+                        }
+                      }}
                       style={[
                         styles.calendarDayCell,
                         isSelected && { backgroundColor: theme.secondaryContainer, borderRadius: BorderRadius.md },
@@ -346,7 +429,15 @@ export default function BookingConfigurationScreen() {
                   return (
                     <Pressable
                       key={d.full}
-                      onPress={() => setSelectedDayOfWeek(d.full)}
+                      onPress={() => {
+                        setSelectedDayOfWeek(d.full);
+                        const matched = calendarGrid.find(cell => 
+                          cell.date && cell.date.toLocaleDateString('en-US', { weekday: 'long' }) === d.full
+                        );
+                        if (matched && matched.date) {
+                          setSelectedDate(matched.date);
+                        }
+                      }}
                       style={[
                         styles.daySelectorTab,
                         isActive
@@ -539,78 +630,259 @@ export default function BookingConfigurationScreen() {
               </ThemedText>
             </View>
 
-            <View style={{ gap: Spacing.sm }}>
-              {PAYMENT_METHODS.map(pm => {
-                const isSelected = paymentMethod === pm.id;
-                return (
-                  <Pressable
-                    key={pm.id}
-                    onPress={() => setPaymentMethod(pm.id)}
-                    style={[{ flexDirection: 'column', padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: theme.outlineVariant + '40', backgroundColor: theme.surfaceLowest }, isSelected && { borderColor: theme.primary, backgroundColor: theme.primaryContainer }]}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        {pm.id === 'gpay' ? (
-                          <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={{ width: 24, height: 24, marginHorizontal: 4 }} />
-                        ) : pm.family === 'Ionicons' ? (
-                          <Ionicons name={pm.icon as any} size={24} color={isSelected ? theme.surfaceLowest : (pm.color === '#000000' ? theme.text : pm.color)} style={{ width: 32, textAlign: 'center' }} />
-                        ) : (
-                          <FontAwesome5 name={pm.icon as any} size={24} color={isSelected ? theme.surfaceLowest : (pm.color === '#000000' ? theme.text : pm.color)} style={{ width: 32, textAlign: 'center' }} />
-                        )}
-                        <ThemedText type="bodyMd" style={{ marginLeft: 12, color: isSelected ? theme.surfaceLowest : theme.text }}>{pm.label}</ThemedText>
-                      </View>
-                      <View style={[{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: theme.outlineVariant, justifyContent: 'center', alignItems: 'center' }, isSelected && { borderColor: theme.surfaceLowest }]}>
-                        {isSelected && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.surfaceLowest }} />}
-                      </View>
-                    </View>
+            {/* Cashback Offer Card */}
+            <View style={{ backgroundColor: '#10B98115', borderColor: '#10B98133', borderWidth: 1, borderRadius: BorderRadius.lg, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: Spacing.md }}>
+              <View style={{ backgroundColor: '#10B98125', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="gift" size={16} color="#10B981" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <ThemedText style={{ fontSize: 12.5, fontFamily: 'PlusJakartaSans_700Bold', color: '#10B981' }}>
+                  Cashback Offer Activated!
+                </ThemedText>
+                <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 1 }}>
+                  Get ₹100.00 Cashback instantly added to your wallet on completing this booking.
+                </ThemedText>
+              </View>
+            </View>
 
-                    {/* Expanded Payment Details */}
-                    {isSelected && (pm.id === 'credit' || pm.id === 'debit') && (
-                      <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignSelf: 'stretch' }}>
-                        <TextInput 
-                          placeholder="Card Number" 
-                          placeholderTextColor={theme.onPrimaryContainer}
-                          style={{ backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, marginBottom: Spacing.sm, alignSelf: 'stretch' }} 
-                        />
-                        <View style={{ flexDirection: 'row', gap: Spacing.sm, alignSelf: 'stretch' }}>
-                          <TextInput 
-                            placeholder="MM/YY" 
-                            placeholderTextColor={theme.onPrimaryContainer}
-                            style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }} 
-                          />
-                          <TextInput 
-                            placeholder="CVV" 
-                            placeholderTextColor={theme.onPrimaryContainer}
-                            style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }} 
-                            secureTextEntry
-                          />
+            {/* Wallet Option Card */}
+            <View style={{ backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.lg, padding: 14, marginBottom: Spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', ...Shadows.level1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: theme.primary + '10', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="wallet-outline" size={20} color={theme.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                    Pay with Wallet Balance
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 11, color: theme.textSecondary }}>
+                    Available Balance: ₹{walletBalance.toFixed(2)}
+                  </ThemedText>
+                </View>
+              </View>
+              {walletBalance > 0 ? (
+                <Pressable 
+                  onPress={() => setUseWallet(!useWallet)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: useWallet ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 }}
+                >
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'PlusJakartaSans_700Bold', color: useWallet ? '#ffffff' : theme.textSecondary }}>
+                    {useWallet ? 'Applied' : 'Apply'}
+                  </ThemedText>
+                  <Ionicons name={useWallet ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={useWallet ? '#ffffff' : theme.textSecondary} />
+                </Pressable>
+              ) : (
+                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontStyle: 'italic' }}>
+                  Empty
+                </ThemedText>
+              )}
+            </View>
+
+            {finalPayable === 0 ? (
+              <View style={{ backgroundColor: theme.primary + '10', padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: theme.primary + '22', alignItems: 'center', marginVertical: Spacing.sm }}>
+                <Ionicons name="shield-checkmark-outline" size={32} color={theme.primary} />
+                <ThemedText style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text, marginTop: 8 }}>
+                  Wallet Balance Applied Fully
+                </ThemedText>
+                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, textAlign: 'center', marginTop: 4, paddingHorizontal: Spacing.md }}>
+                  Your advance amount of ₹{advanceAmount.toFixed(2)} is completely covered by your wallet balance.
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={{ gap: Spacing.sm }}>
+                {PAYMENT_METHODS.map(pm => {
+                  const isSelected = paymentMethod === pm.id;
+                  return (
+                    <Pressable
+                      key={pm.id}
+                      onPress={() => setPaymentMethod(pm.id)}
+                      style={[{ flexDirection: 'column', padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: theme.outlineVariant + '40', backgroundColor: theme.surfaceLowest }, isSelected && { borderColor: theme.primary, backgroundColor: theme.primaryContainer }]}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          {pm.id === 'gpay' ? (
+                            <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={{ width: 24, height: 24, marginHorizontal: 4 }} />
+                          ) : pm.family === 'Ionicons' ? (
+                            <Ionicons name={pm.icon as any} size={24} color={isSelected ? theme.surfaceLowest : (pm.color === '#000000' ? theme.text : pm.color)} style={{ width: 32, textAlign: 'center' }} />
+                          ) : (
+                            <FontAwesome5 name={pm.icon as any} size={24} color={isSelected ? theme.surfaceLowest : (pm.color === '#000000' ? theme.text : pm.color)} style={{ width: 32, textAlign: 'center' }} />
+                          )}
+                          <ThemedText type="bodyMd" style={{ marginLeft: 12, color: isSelected ? theme.surfaceLowest : theme.text }}>{pm.label}</ThemedText>
+                        </View>
+                        <View style={[{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: theme.outlineVariant, justifyContent: 'center', alignItems: 'center' }, isSelected && { borderColor: theme.surfaceLowest }]}>
+                          {isSelected && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.surfaceLowest }} />}
                         </View>
                       </View>
-                    )}
-                    {isSelected && pm.id === 'gpay' && (
-                      <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignItems: 'center' }}>
-                        <ThemedText type="bodySm" style={{ color: theme.surfaceLowest, marginBottom: Spacing.sm, textAlign: 'center' }}>You will be redirected to Google Pay to complete the transaction securely.</ThemedText>
-                      </View>
-                    )}
-                    {isSelected && pm.id === 'paypal' && (
-                      <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignItems: 'center' }}>
-                        <ThemedText type="bodySm" style={{ color: theme.surfaceLowest, marginBottom: Spacing.sm, textAlign: 'center' }}>You will be redirected to PayPal to complete the transaction securely.</ThemedText>
-                      </View>
-                    )}
-                    {isSelected && pm.id === 'apple' && (
-                      <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignItems: 'center' }}>
-                        <ThemedText type="bodySm" style={{ color: theme.surfaceLowest, marginBottom: Spacing.sm, textAlign: 'center' }}>Pay securely with Apple Pay.</ThemedText>
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
+
+                      {/* Expanded Payment Details */}
+                      {isSelected && (pm.id === 'credit' || pm.id === 'debit') && (
+                        <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignSelf: 'stretch' }}>
+                          <TextInput 
+                            placeholder="Card Number" 
+                            placeholderTextColor={theme.onPrimaryContainer}
+                            style={{ backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, marginBottom: Spacing.sm, alignSelf: 'stretch' }} 
+                          />
+                          <View style={{ flexDirection: 'row', gap: Spacing.sm, alignSelf: 'stretch' }}>
+                            <TextInput 
+                              placeholder="MM/YY" 
+                              placeholderTextColor={theme.onPrimaryContainer}
+                              style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }} 
+                            />
+                            <TextInput 
+                              placeholder="CVV" 
+                              placeholderTextColor={theme.onPrimaryContainer}
+                              style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }} 
+                              secureTextEntry
+                            />
+                          </View>
+                        </View>
+                      )}
+                      {isSelected && pm.id === 'gpay' && (
+                        <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignItems: 'center' }}>
+                          <ThemedText type="bodySm" style={{ color: theme.surfaceLowest, marginBottom: Spacing.sm, textAlign: 'center' }}>You will be redirected to Google Pay to complete the transaction securely.</ThemedText>
+                        </View>
+                      )}
+                      {isSelected && pm.id === 'paypal' && (
+                        <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignItems: 'center' }}>
+                          <ThemedText type="bodySm" style={{ color: theme.surfaceLowest, marginBottom: Spacing.sm, textAlign: 'center' }}>You will be redirected to PayPal to complete the transaction securely.</ThemedText>
+                        </View>
+                      )}
+                      {isSelected && pm.id === 'apple' && (
+                        <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignItems: 'center' }}>
+                          <ThemedText type="bodySm" style={{ color: theme.surfaceLowest, marginBottom: Spacing.sm, textAlign: 'center' }}>Secure transaction via Apple Pay. Authenticate with Touch ID or Face ID.</ThemedText>
+                        </View>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+
+          {/* ── Split Booking Amount ── */}
+          <View style={styles.section}>
+            <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.lg, padding: 16, ...Shadows.level1 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md }}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <ThemedText style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                    Split Cost among Players
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
+                    Split booking fee based on play hours (e.g., 1 hr, 2 hrs)
+                  </ThemedText>
+                </View>
+                <Pressable 
+                  onPress={() => setIsSplitEnabled(!isSplitEnabled)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: isSplitEnabled ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 }}
+                >
+                  <ThemedText style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: isSplitEnabled ? '#ffffff' : theme.textSecondary }}>
+                    {isSplitEnabled ? 'Active' : 'Enable'}
+                  </ThemedText>
+                  <Ionicons name={isSplitEnabled ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={isSplitEnabled ? '#ffffff' : theme.textSecondary} />
+                </Pressable>
+              </View>
+
+              {isSplitEnabled && (
+                <View style={{ marginTop: Spacing.xs }}>
+                  {/* Players list */}
+                  <View style={{ gap: Spacing.sm, marginBottom: Spacing.md }}>
+                    {splitPlayers.map((player) => {
+                      const totalHours = splitPlayers.reduce((sum, p) => sum + p.hours, 0) || 1;
+                      const shareOfTotal = (player.hours / totalHours) * total;
+                      const shareOfAdvance = (player.hours / totalHours) * finalPayable;
+
+                      return (
+                        <View key={player.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '15' }}>
+                          <View style={{ flex: 1 }}>
+                            <ThemedText style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                              {player.name}
+                            </ThemedText>
+                            <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 1 }}>
+                              Share: ₹{shareOfAdvance.toFixed(2)} Pay Now · ₹{shareOfTotal.toFixed(2)} Total
+                            </ThemedText>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                            {/* Hours Selector */}
+                            <Pressable 
+                              onPress={() => {
+                                if (player.hours > 1) {
+                                  setSplitPlayers(splitPlayers.map(p => p.id === player.id ? { ...p, hours: p.hours - 1 } : p));
+                                } else if (player.name !== 'You') {
+                                  // Remove player if hours decremented to 0
+                                  setSplitPlayers(splitPlayers.filter(p => p.id !== player.id));
+                                }
+                              }}
+                              style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: theme.surfaceLow, justifyContent: 'center', alignItems: 'center' }}
+                            >
+                              <Ionicons name={player.hours > 1 ? "remove" : "trash-outline"} size={14} color={theme.text} />
+                            </Pressable>
+
+                            <ThemedText style={{ width: 32, textAlign: 'center', fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                              {player.hours} {player.hours === 1 ? 'hr' : 'hrs'}
+                            </ThemedText>
+
+                            <Pressable 
+                              onPress={() => {
+                                setSplitPlayers(splitPlayers.map(p => p.id === player.id ? { ...p, hours: p.hours + 1 } : p));
+                              }}
+                              style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: theme.surfaceLow, justifyContent: 'center', alignItems: 'center' }}
+                            >
+                              <Ionicons name="add" size={14} color={theme.text} />
+                            </Pressable>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+
+                  {/* Add Friend Input */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md }}>
+                    <TextInput
+                      value={newPlayerName}
+                      onChangeText={setNewPlayerName}
+                      placeholder="Enter player/friend's name..."
+                      placeholderTextColor={theme.textSecondary + 'aa'}
+                      style={[{ flex: 1, backgroundColor: theme.surfaceLow, color: theme.text, paddingHorizontal: 12, height: 38, borderRadius: BorderRadius.md, fontSize: 12.5 }, ...({ outlineStyle: 'none' } as any)]}
+                    />
+                    <Pressable
+                      onPress={() => {
+                        if (newPlayerName.trim()) {
+                          setSplitPlayers([...splitPlayers, {
+                            id: Date.now().toString(),
+                            name: newPlayerName.trim(),
+                            hours: 1
+                          }]);
+                          setNewPlayerName('');
+                        }
+                      }}
+                      style={{ backgroundColor: theme.primary, height: 38, paddingHorizontal: 14, borderRadius: BorderRadius.md, justifyContent: 'center', alignItems: 'center' }}
+                    >
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#ffffff' }}>
+                        + Add
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+
+                  {/* Proportional Split Info summary card */}
+                  <View style={{ backgroundColor: theme.primary + '10', borderRadius: BorderRadius.md, padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                    <Ionicons name="calculator-outline" size={16} color={theme.primary} style={{ marginTop: 1 }} />
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: theme.primary }}>
+                        Proportional Split Calculation
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 3, lineHeight: 15 }}>
+                        The total booking cost is dynamically split based on individual hours played. Players playing 2 hrs pay double the share of players playing 1 hr.
+                      </ThemedText>
+                    </View>
+                  </View>
+                </View>
+              )}
             </View>
           </View>
 
           {/* Booking Summary Ticket Card */}
           <View style={[styles.section, { paddingBottom: 60 }]}>
-            <View style={[styles.ticketContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }, Shadows.level3]}>
+            <View style={[styles.ticketContainer, { backgroundColor: theme.surfaceLowest }, Shadows.level3]}>
               
               {/* Top part: Rounded banner/hero image */}
               <View style={styles.ticketTopSection}>
@@ -712,6 +984,83 @@ export default function BookingConfigurationScreen() {
 
               {/* Bottom part: Pricing, Barcode & Action Button */}
               <View style={styles.ticketBottomSection}>
+
+                {/* ── Coupon / Promo Code Section ── */}
+                <View style={[styles.couponSection, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                    <Ionicons name="pricetag" size={14} color={theme.primary} />
+                    <ThemedText style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', fontSize: 13 }}>Coupon & Offers</ThemedText>
+                  </View>
+
+                  {couponApplied ? (
+                    // Applied state
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#dcfce7', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
+                        <View>
+                          <ThemedText style={{ color: '#15803d', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 }}>{couponCode} applied!</ThemedText>
+                          <ThemedText style={{ color: '#16a34a', fontSize: 10, marginTop: 2 }}>You save ₹{couponDiscount}</ThemedText>
+                        </View>
+                      </View>
+                      <Pressable onPress={removeCoupon} style={{ padding: 4 }}>
+                        <Ionicons name="close-circle" size={18} color="#16a34a" />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    // Input state
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TextInput
+                        style={[
+                          styles.couponInput,
+                          { backgroundColor: theme.surfaceLowest, color: theme.text, borderColor: couponError ? '#ef4444' : theme.outlineVariant + '44' }
+                        ]}
+                        placeholder="Enter promo / coupon code"
+                        placeholderTextColor={theme.textSecondary + '80'}
+                        value={couponInput}
+                        onChangeText={(t) => { setCouponInput(t.toUpperCase()); setCouponError(''); }}
+                        autoCapitalize="characters"
+                        returnKeyType="done"
+                        onSubmitEditing={applyCoupon}
+                      />
+                      <Pressable
+                        onPress={applyCoupon}
+                        style={[styles.couponApplyBtn, { backgroundColor: theme.primary }]}
+                      >
+                        <ThemedText style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 }}>Apply</ThemedText>
+                      </Pressable>
+                    </View>
+                  )}
+
+                  {couponError !== '' && (
+                    <ThemedText style={{ color: '#ef4444', fontSize: 10, marginTop: 6 }}>{couponError}</ThemedText>
+                  )}
+
+                  {/* Cashback Offer banner */}
+                  {cashbackOffer && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#eff6ff', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginTop: 8 }}>
+                      <Ionicons name="wallet" size={14} color="#2563eb" />
+                      <ThemedText style={{ color: '#1d4ed8', fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold', flex: 1 }}>
+                        🎉 Cashback ₹{cashbackOffer.cashback} will be credited to your wallet after booking!
+                      </ThemedText>
+                    </View>
+                  )}
+
+                  {/* Available offer hints */}
+                  {!couponApplied && (
+                    <View style={{ marginTop: 8 }}>
+                      <ThemedText style={{ color: theme.textSecondary, fontSize: 9, letterSpacing: 0.4 }}>AVAILABLE CODES</ThemedText>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                        {[{ code: 'YAWAH30', label: '30% OFF + ₹50 cashback' }, { code: 'FIRST50', label: '₹50 flat + ₹100 cashback' }, { code: 'TURF20', label: '20% OFF' }].map(({ code, label }) => (
+                          <Pressable key={code} onPress={() => { setCouponInput(code); setCouponError(''); }} style={[styles.offerPill, { borderColor: theme.primary + '44', backgroundColor: theme.primary + '0a' }]}>
+                            <ThemedText style={{ color: theme.primary, fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold' }}>{code}</ThemedText>
+                            <ThemedText style={{ color: theme.textSecondary, fontSize: 8 }}>{label}</ThemedText>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </View>
+
                 {/* Pricing Tally inside a clean breakdown container */}
                 <View style={[styles.ticketPriceBreakdown, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}>
                   <View style={styles.ticketPriceRow}>
@@ -735,16 +1084,31 @@ export default function BookingConfigurationScreen() {
                     <ThemedText style={[styles.ticketPriceValue, { color: theme.text }]}>₹{serviceCharge.toFixed(2)}</ThemedText>
                   </View>
                   
+                  {couponApplied && couponDiscount > 0 && (
+                    <View style={styles.ticketPriceRow}>
+                      <ThemedText style={[styles.ticketPriceLabel, { color: '#16a34a', fontWeight: 'bold' }]}>Coupon Discount ({couponCode})</ThemedText>
+                      <ThemedText style={{ fontSize: 12, color: '#16a34a', fontWeight: 'bold' }}>-₹{couponDiscount.toFixed(2)}</ThemedText>
+                    </View>
+                  )}
+
                   <View style={styles.ticketPriceTotalRow}>
                     <ThemedText style={[styles.ticketPriceTotalLabel, { color: theme.text }]}>Total Due</ThemedText>
                     <ThemedText style={[styles.ticketPriceTotalVal, { color: theme.secondary }]}>₹{total.toFixed(2)}</ThemedText>
                   </View>
-                  {advancePct < 100 && (
-                    <View style={[styles.ticketPriceRow, { marginTop: 4 }]}>
-                      <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontWeight: 'bold' }}>Pay Now ({advancePct}%)</ThemedText>
-                      <ThemedText style={{ color: theme.primary, fontSize: 12, fontWeight: 'bold' }}>₹{advanceAmount.toFixed(2)}</ThemedText>
+                  {useWallet && walletDeduction > 0 && (
+                    <View style={styles.ticketPriceRow}>
+                      <ThemedText style={[styles.ticketPriceLabel, { color: '#10B981', fontWeight: 'bold' }]}>Wallet Discount</ThemedText>
+                      <ThemedText style={{ fontSize: 12, color: '#10B981', fontWeight: 'bold' }}>-₹{walletDeduction.toFixed(2)}</ThemedText>
                     </View>
                   )}
+                  <View style={[styles.ticketPriceRow, { marginTop: 6, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '15', paddingTop: 6 }]}>
+                    <ThemedText style={{ color: theme.text, fontSize: 12, fontWeight: 'bold' }}>
+                      {advancePct < 100 ? `Amount to Pay Now (${advancePct}%)` : 'Amount to Pay Now'}
+                    </ThemedText>
+                    <ThemedText style={{ color: theme.primary, fontSize: 13, fontWeight: 'bold' }}>
+                      ₹{finalPayable.toFixed(2)}
+                    </ThemedText>
+                  </View>
                 </View>
 
                 {/* Mock Barcode Element */}
@@ -783,7 +1147,7 @@ export default function BookingConfigurationScreen() {
                   <View style={{ flex: 1, paddingLeft: 8 }}>
                     <ThemedText style={styles.ticketConfirmBtnTitle}>CONFIRM BOOKING</ThemedText>
                     <ThemedText style={styles.ticketConfirmBtnSub}>
-                      ₹{advanceAmount} via {PAYMENT_METHODS.find(p => p.id === paymentMethod)?.label ?? 'Apple Pay'}
+                      ₹{finalPayable.toFixed(2)} via {finalPayable === 0 ? 'Wallet Balance' : (PAYMENT_METHODS.find(p => p.id === paymentMethod)?.label ?? 'Apple Pay')}
                     </ThemedText>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color="#ffffff" />
@@ -890,7 +1254,6 @@ const styles = StyleSheet.create({
   },
   formCard: {
     borderRadius: BorderRadius.premium,
-    borderWidth: 1,
     padding: Spacing.md,
   },
   monthHeader: {
@@ -975,7 +1338,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.md,
     borderRadius: BorderRadius.premium,
-    borderWidth: 1,
   },
   serviceLeft: {
     flexDirection: 'row',
@@ -995,7 +1357,6 @@ const styles = StyleSheet.create({
   },
   ticketContainer: {
     borderRadius: BorderRadius.premium,
-    borderWidth: 1,
     paddingVertical: 0,
   },
   ticketTopSection: {
@@ -1275,5 +1636,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
+  },
+  couponSection: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 12,
+  },
+  couponInput: {
+    flex: 1,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_500Medium',
+  },
+  couponApplyBtn: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    height: 40,
+    borderRadius: 8,
+  },
+  offerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
 });

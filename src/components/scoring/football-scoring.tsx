@@ -5,6 +5,8 @@ import {
   ScrollView,
   Pressable,
   Alert,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -24,36 +26,43 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
   const theme = useTheme();
 
   // Timer state
-  const [seconds, setSeconds] = useState(74 * 60); // Starts at 74 mins like the mockup
+  const [seconds, setSeconds] = useState(0); // Starts at 0 for a new match
   const [isRunning, setIsRunning] = useState(false);
 
   // Score state
-  const [scoreA, setScoreA] = useState(2);
-  const [scoreB, setScoreB] = useState(1);
+  const [scoreA, setScoreA] = useState(0);
+  const [scoreB, setScoreB] = useState(0);
 
   // Stats state
-  const [possessionA, setPossessionA] = useState(54); // Team A Possession %
-  const [shotsA, setShotsA] = useState(8);
-  const [shotsB, setShotsB] = useState(3);
-  const [cornersA, setCornersA] = useState(12);
-  const [cornersB, setCornersB] = useState(5);
-  const [foulsA, setFoulsA] = useState(6);
-  const [foulsB, setFoulsB] = useState(9);
-  const [yellowA, setYellowA] = useState(1);
-  const [yellowB, setYellowB] = useState(2);
+  const [possessionA, setPossessionA] = useState(50); // Balanced 50% start
+  const [shotsA, setShotsA] = useState(0);
+  const [shotsB, setShotsB] = useState(0);
+  const [cornersA, setCornersA] = useState(0);
+  const [cornersB, setCornersB] = useState(0);
+  const [foulsA, setFoulsA] = useState(0);
+  const [foulsB, setFoulsB] = useState(0);
+  const [yellowA, setYellowA] = useState(0);
+  const [yellowB, setYellowB] = useState(0);
   const [redA, setRedA] = useState(0);
   const [redB, setRedB] = useState(0);
 
   // Event Log
-  const [events, setEvents] = useState<MatchEvent[]>([
-    { minute: 34, type: 'goal', team: 'A', playerName: 'M. Sterling', assistName: 'K. De Bruyne' },
-    { minute: 42, type: 'yellow', team: 'B', playerName: 'K. De Rossi' },
-    { minute: 61, type: 'goal', team: 'B', playerName: 'J. Vardy' },
-    { minute: 71, type: 'goal', team: 'A', playerName: 'H. Kane' },
-  ]);
+  const [events, setEvents] = useState<MatchEvent[]>([]);
 
   // Undo History
   const [history, setHistory] = useState<any[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleEndMatch = () => {
+    Alert.alert(
+      'End Match',
+      'Are you sure you want to end this match?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'End Match', style: 'destructive', onPress: () => console.log('Match ended') }
+      ]
+    );
+  };
 
   useEffect(() => {
     let interval: any;
@@ -181,7 +190,8 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
   };
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
       {/* Live Timer Controls Banner */}
       <View style={styles.bannerWrapper}>
         <View style={[styles.timerBanner, { backgroundColor: theme.primaryContainer }]}>
@@ -400,17 +410,7 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
         </View>
       </View>
 
-      {/* Action Buttons: Undo & Manual Event */}
-      <View style={styles.section}>
-        <Pressable
-          onPress={handleUndo}
-          disabled={history.length === 0}
-          style={[styles.undoButton, { backgroundColor: theme.primaryContainer }, history.length === 0 && { opacity: 0.5 }]}
-        >
-          <Ionicons name="arrow-undo" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Undo Last Action</ThemedText>
-        </Pressable>
-      </View>
+      {/* (Action Buttons moved to sticky footer) */}
 
       {/* Match Events Timeline */}
       <View style={[styles.section, { paddingBottom: 120 }]}>
@@ -456,12 +456,43 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
         </View>
       </View>
     </ScrollView>
+
+      {/* Action Buttons: Undo & End Match (Sticky Bottom) */}
+      <View style={[styles.stickyBottomBar, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '22' }]}>
+        <Pressable
+          onPress={handleUndo}
+          disabled={history.length === 0}
+          style={[styles.undoButton, { flex: 1, backgroundColor: theme.primaryContainer }, history.length === 0 && { opacity: 0.5 }]}
+        >
+          <Ionicons name="arrow-undo" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Undo</ThemedText>
+        </Pressable>
+
+        <Pressable
+          onPress={handleEndMatch}
+          disabled={isSyncing}
+          style={[styles.endMatchButton, { flex: 1, backgroundColor: theme.error }, isSyncing && { opacity: 0.7 }]}
+        >
+          {isSyncing ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <>
+              <Ionicons name="checkmark-done" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+              <ThemedText type="labelMd" style={{ color: '#ffffff' }}>End Match</ThemedText>
+            </>
+          )}
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   bannerWrapper: {
     paddingHorizontal: Spacing.containerMargin,
@@ -609,7 +640,31 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.level2,
+  },
+  endMatchButton: {
+    flexDirection: 'row',
+    height: 40,
+    borderRadius: BorderRadius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stickyBottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.containerMargin,
+    paddingTop: Spacing.sm,
+    paddingBottom: Platform.OS === 'ios' ? 24 : Spacing.md,
+    borderTopWidth: 1,
+    zIndex: 100,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 10,
   },
   timelineList: {
     gap: Spacing.md,

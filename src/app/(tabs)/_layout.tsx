@@ -1,7 +1,9 @@
+import React, { useEffect, useMemo } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Platform, View, StyleSheet } from 'react-native';
+import { Platform, View, StyleSheet, Animated } from 'react-native';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { ThemedText } from '@/components/themed-text';
 
 function TabIcon({ 
   focused, 
@@ -16,8 +18,37 @@ function TabIcon({
   library?: 'Ionicons' | 'MaterialCommunityIcons';
   isBook?: boolean;
 }) {
+  const pulseAnim = useMemo(() => new Animated.Value(1), []);
+
+  useEffect(() => {
+    if (isBook) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.15,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [isBook]);
+
   return (
-    <View style={[styles.iconContainer, isBook && styles.iconContainerBook]}>
+    <Animated.View 
+      style={[
+        styles.iconContainer, 
+        isBook && styles.iconContainerBook,
+        isBook && { transform: [{ translateY: -12 }, { scale: pulseAnim }] }
+      ]}
+    >
       <View style={[
         styles.iconWrapper,
         focused && styles.iconWrapperActive,
@@ -28,18 +59,18 @@ function TabIcon({
           <Ionicons 
             name={focused ? iconName as any : `${iconName}-outline` as any} 
             size={20} 
-            color={isBook ? (focused ? '#5D68E8' : '#ffffff') : color} 
+            color={isBook ? (focused ? '#5D68E8' : '#00ffd0') : color} 
           />
         ) : (
           <MaterialCommunityIcons 
             name={iconName as any} 
             size={24} 
-            color={isBook ? (focused ? '#5D68E8' : '#ffffff') : color} 
+            color={isBook ? (focused ? '#5D68E8' : '#00ffd0') : color} 
           />
         )}
       </View>
       {focused && !isBook && <View style={styles.activeDot} />}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -72,7 +103,7 @@ export default function TabLayout() {
           elevation: 15,
         },
         tabBarLabelStyle: {
-          fontFamily: 'HankenGrotesk_700Bold', // Premium attractive font family
+          fontFamily: 'HankenGrotesk_500Medium', // Premium attractive regular font
           fontSize: 8.8, // Slightly reduced to fit "TOURNAMENT" fully on all devices
           letterSpacing: 0.5,
           textTransform: 'uppercase',
@@ -102,7 +133,21 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Book',
+          tabBarLabel: ({ focused }) => (
+            <ThemedText 
+              style={{ 
+                color: focused ? '#00ffd0' : '#a7f3d0', 
+                fontFamily: focused ? 'HankenGrotesk_800ExtraBold' : 'HankenGrotesk_700Bold', 
+                fontSize: 8.8, 
+                letterSpacing: 0.5, 
+                textTransform: 'uppercase', 
+                marginTop: 4,
+                textAlign: 'center'
+              }}
+            >
+              Turf Book
+            </ThemedText>
+          ),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon 
               focused={focused} 
@@ -124,9 +169,30 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="network"
+        options={{
+          href: role === 'Player' ? undefined : null,
+          title: 'Connect',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon focused={focused} color={color} iconName="share-social" />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="club"
+        options={{
+          href: role === 'Organizer' ? undefined : null,
+          title: 'Club',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon focused={focused} color={color} iconName="shield-checkmark" />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="coach"
         options={{
-          title: role === 'Owner' ? 'Turf Book' : 'Coach',
+          href: (role === 'Owner' || role === 'Coach') ? undefined : null,
+          title: role === 'Owner' ? 'Add Turf' : 'Coach',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon
               focused={focused}
@@ -166,19 +232,19 @@ const styles = StyleSheet.create({
     height: 50,
     width: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)', // Semi-transparent white
+    backgroundColor: 'rgba(0, 255, 208, 0.15)', // Semi-transparent neon green
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+    borderColor: 'rgba(0, 255, 208, 0.4)',
     // Shadow for premium floating look
-    shadowColor: '#000000',
+    shadowColor: '#00ffd0',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
   iconWrapperBookActive: {
-    backgroundColor: '#ffffff',
-    borderColor: '#ffffff',
+    backgroundColor: '#00ffd0',
+    borderColor: '#00ffd0',
   },
   activeDot: {
     position: 'absolute',

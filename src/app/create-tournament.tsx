@@ -236,9 +236,24 @@ export default function CreateTournamentScreen() {
 
   const handlePublish = () => {
     // Validation check
-    if (!form.name || !form.organizerName) {
-      triggerToast('Please fill out Name and Organizer fields.');
-      setCurrentStep(0); // Go to step 1
+    if (!form.name.trim()) {
+      triggerToast('Tournament name is required.');
+      setCurrentStep(0);
+      return;
+    }
+    if (!form.organizerName.trim()) {
+      triggerToast('Organizer name is required.');
+      setCurrentStep(0);
+      return;
+    }
+    if (form.organizerContact && !/^[+0-9 \-()]+$/.test(form.organizerContact)) {
+      triggerToast('Organizer contact must be a valid phone number (digits only).');
+      setCurrentStep(0);
+      return;
+    }
+    if (form.organizerContact && form.organizerContact.replace(/[^0-9]/g, '').length < 7) {
+      triggerToast('Organizer contact must be at least 7 digits.');
+      setCurrentStep(0);
       return;
     }
 
@@ -451,13 +466,21 @@ export default function CreateTournamentScreen() {
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Organizer contact</ThemedText>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'organizerContact' ? theme.primary : theme.outlineVariant + '44' }]}
-                placeholder="e.g. organizer@apexsports.com"
+                placeholder="e.g. +44 7900 000000"
                 placeholderTextColor={theme.textSecondary + '80'}
+                keyboardType="phone-pad"
                 value={form.organizerContact}
-                onChangeText={(v) => updateField('organizerContact', v)}
+                onChangeText={(v) => {
+                  // Strip all non-numeric characters except +, spaces, dashes, parentheses
+                  const cleaned = v.replace(/[^0-9+\s\-()]/g, '');
+                  updateField('organizerContact', cleaned);
+                }}
                 onFocus={() => setFocusedField('organizerContact')}
                 onBlur={() => setFocusedField(null)}
               />
+              {form.organizerContact !== '' && form.organizerContact.replace(/[^0-9]/g, '').length < 7 && (
+                <ThemedText style={{ color: '#ef4444', fontSize: 11, marginTop: 3 }}>Enter a valid phone number (min 7 digits)</ThemedText>
+              )}
             </View>
           </View>
         );
@@ -1001,7 +1024,7 @@ export default function CreateTournamentScreen() {
               <View style={styles.modalEmptyState}>
                 <Ionicons name="folder-open-outline" size={48} color={theme.textSecondary + '44'} />
                 <ThemedText style={{ color: theme.textSecondary, marginTop: 12, textAlign: 'center', fontSize: 13 }}>
-                  No drafts saved yet. Create a tournament and click "Save Draft" to keep it here.
+                  No drafts saved yet. Create a tournament and click {"\"Save Draft\""} to keep it here.
                 </ThemedText>
               </View>
             ) : (
@@ -1493,7 +1516,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: BorderRadius.full,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },

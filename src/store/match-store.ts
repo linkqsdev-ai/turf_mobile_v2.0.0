@@ -21,6 +21,7 @@ export interface Team {
   wins: number;
   losses: number;
   draws: number;
+  isFavourite?: boolean;
   createdAt: string;
 }
 

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, TextInput, Pressable, FlatList, Image } from 'react-native';
+import { View, StyleSheet, TextInput, Pressable, FlatList } from 'react-native';
+import { Image } from 'expo-image';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
@@ -16,10 +17,10 @@ type Coach = {
 };
 
 const COACHES: Coach[] = [
-  { id: 'c1', name: 'Rohan Patel', sport: 'Cricket', rating: 4.8, classes: ['Training', 'Summer Class'], image: require('@/assets/images/illustrations/cricket_player.png') },
-  { id: 'c2', name: 'Maya Singh', sport: 'Football', rating: 4.6, classes: ['Training'], image: require('@/assets/images/illustrations/football_player.png') },
-  { id: 'c3', name: 'Vikram Rao', sport: 'Badminton', rating: 4.4, classes: ['Summer Class'], image: require('@/assets/images/illustrations/athletes.png') },
-  { id: 'c4', name: 'Sara Lee', sport: 'Tennis', rating: 4.9, classes: ['Training', 'Summer Class'], image: require('@/assets/images/illustrations/tennis_player.png') },
+  { id: 'apex', name: 'Coach Apex', sport: 'Football', rating: 4.9, classes: ['Training', 'Summer Class'], image: 'https://randomuser.me/api/portraits/men/32.jpg' },
+  { id: 'vanguard', name: 'Coach Vanguard', sport: 'Cricket', rating: 4.7, classes: ['Training'], image: 'https://randomuser.me/api/portraits/men/44.jpg' },
+  { id: 'volt', name: 'Coach Volt', sport: 'Athletics', rating: 5.0, classes: ['Summer Class'], image: 'https://randomuser.me/api/portraits/men/55.jpg' },
+  { id: 'pro_badminton', name: 'Coach Elevate', sport: 'Badminton', rating: 4.8, classes: ['Training', 'Summer Class'], image: 'https://randomuser.me/api/portraits/women/68.jpg' },
 ];
 
 export default function CoachList() {
@@ -71,8 +72,8 @@ export default function CoachList() {
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: 20 }}
         renderItem={({ item }) => (
-          <Pressable style={[styles.card, { backgroundColor: theme.surfaceLowest }]} onPress={() => router.push({ pathname: '/coach/[id]', params: { id: item.id } })}>
-            <Image source={item.image} style={styles.avatar} />
+          <Pressable style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderWidth: 1 }]} onPress={() => router.push({ pathname: '/coach/[id]', params: { id: item.id } })}>
+            <Image source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={styles.avatar} contentFit="cover" />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <ThemedText type="headlineSm">{item.name}</ThemedText>
               <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>{item.sport}</ThemedText>

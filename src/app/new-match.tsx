@@ -35,9 +35,10 @@ export default function NewMatchScreen() {
             </ThemedText>
           </View>
           <View style={styles.headerRight}>
-            <Pressable style={styles.iconBtn} onPress={() => router.push('/network')}>
+            {/* Temporarily Hidden Network Activity Icon */}
+            {/* <Pressable style={styles.iconBtn} onPress={() => router.push('/network')}>
               <Ionicons name="pulse" size={20} color={theme.secondary} />
-            </Pressable>
+            </Pressable> */}
             <Pressable style={styles.iconBtn}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
             </Pressable>

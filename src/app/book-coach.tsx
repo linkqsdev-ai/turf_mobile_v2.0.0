@@ -113,7 +113,7 @@ export default function BookCoachScreen() {
           <View style={styles.section}>
             <View style={[styles.heroCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
               <View style={styles.heroRow}>
-                <Image source={{ uri: coachAvatar }} style={styles.heroAvatar} contentFit="cover" />
+                <Image source={typeof coachAvatar === 'string' && !/^\d+$/.test(coachAvatar) ? { uri: coachAvatar } : (typeof coachAvatar === 'number' ? coachAvatar : parseInt(coachAvatar, 10))} style={styles.heroAvatar} contentFit="cover" />
                 <View style={styles.heroDetails}>
                   <ThemedText type="labelSm" style={{ color: theme.secondary, letterSpacing: 0.5 }}>COACH SESSION</ThemedText>
                   <ThemedText type="headlineMd" style={{ color: theme.text, marginTop: 4 }}>{coachName}</ThemedText>

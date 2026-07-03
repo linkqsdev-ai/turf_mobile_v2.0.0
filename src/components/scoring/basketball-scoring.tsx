@@ -4,6 +4,9 @@ import {
   View,
   ScrollView,
   Pressable,
+  Alert,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -29,21 +32,17 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
   const [quarter, setQuarter] = useState(1);
 
   // Score state
-  const [scoreA, setScoreA] = useState(64);
-  const [scoreB, setScoreB] = useState(58);
+  const [scoreA, setScoreA] = useState(0);
+  const [scoreB, setScoreB] = useState(0);
 
   // Stats state
-  const [foulsA, setFoulsA] = useState(4);
-  const [foulsB, setFoulsB] = useState(3);
-  const [timeoutsA, setTimeoutsA] = useState(2);
-  const [timeoutsB, setTimeoutsB] = useState(3);
+  const [foulsA, setFoulsA] = useState(0);
+  const [foulsB, setFoulsB] = useState(0);
+  const [timeoutsA, setTimeoutsA] = useState(0);
+  const [timeoutsB, setTimeoutsB] = useState(0);
 
   // Event log
-  const [events, setEvents] = useState<PointsEvent[]>([
-    { quarter: 3, time: '02:14', team: 'A', type: 'threePointer', points: 3, playerName: 'J. Butler' },
-    { quarter: 3, time: '01:50', team: 'B', type: 'fieldGoal', points: 2, playerName: 'L. James' },
-    { quarter: 3, time: '00:44', team: 'A', type: 'freeThrow', points: 1, playerName: 'B. Adebayo' },
-  ]);
+  const [events, setEvents] = useState<PointsEvent[]>([]);
 
   // Undo History
   const [history, setHistory] = useState<any[]>([]);
@@ -114,6 +113,18 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
     ]);
   };
 
+  const [isSyncing, setIsSyncing] = useState(false);
+  const handleEndMatch = () => {
+    Alert.alert(
+      'End Match',
+      'Are you sure you want to end this match?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'End Match', style: 'destructive', onPress: () => console.log('Match ended') }
+      ]
+    );
+  };
+
   const addFoul = (team: 'A' | 'B') => {
     saveHistory();
     if (team === 'A') setFoulsA(prev => prev + 1);
@@ -121,7 +132,8 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
   };
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
       {/* Live Timer / Quarter Banner */}
       <View style={styles.bannerWrapper}>
         <View style={[styles.timerBanner, { backgroundColor: theme.primaryContainer }]}>
@@ -261,17 +273,7 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
         </View>
       </View>
 
-      {/* Undo Button */}
-      <View style={styles.section}>
-        <Pressable
-          onPress={handleUndo}
-          disabled={history.length === 0}
-          style={[styles.undoBtn, { backgroundColor: theme.primaryContainer }, history.length === 0 && { opacity: 0.5 }]}
-        >
-          <Ionicons name="arrow-undo" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Undo Score Record</ThemedText>
-        </Pressable>
-      </View>
+      {/* Undo Button moved to sticky footer */}
 
       {/* Scoring Timeline */}
       <View style={[styles.section, { paddingBottom: 120 }]}>
@@ -299,12 +301,43 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
         </View>
       </View>
     </ScrollView>
+
+      {/* Action Buttons: Undo & End Match (Sticky Bottom) */}
+      <View style={[styles.stickyBottomBar, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '22' }]}>
+        <Pressable
+          onPress={handleUndo}
+          disabled={history.length === 0}
+          style={[styles.undoBtn, { flex: 1, backgroundColor: theme.primaryContainer }, history.length === 0 && { opacity: 0.5 }]}
+        >
+          <Ionicons name="arrow-undo" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Undo</ThemedText>
+        </Pressable>
+
+        <Pressable
+          onPress={handleEndMatch}
+          disabled={isSyncing}
+          style={[styles.endMatchBtn, { flex: 1, backgroundColor: theme.error }, isSyncing && { opacity: 0.7 }]}
+        >
+          {isSyncing ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <>
+              <Ionicons name="checkmark-done" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+              <ThemedText type="labelMd" style={{ color: '#ffffff' }}>End Match</ThemedText>
+            </>
+          )}
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   bannerWrapper: {
     paddingHorizontal: Spacing.containerMargin,
@@ -398,7 +431,31 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.level2,
+  },
+  endMatchBtn: {
+    flexDirection: 'row',
+    height: 40,
+    borderRadius: BorderRadius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stickyBottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.containerMargin,
+    paddingTop: Spacing.sm,
+    paddingBottom: Platform.OS === 'ios' ? 24 : Spacing.md,
+    borderTopWidth: 1,
+    zIndex: 100,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 10,
   },
   logContainer: {
     gap: Spacing.sm,

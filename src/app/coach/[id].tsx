@@ -4,6 +4,7 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -94,7 +95,7 @@ export default function CoachDetail() {
 
             {/* Avatar */}
             <View style={styles.avatarWrapper}>
-              <Image source={{ uri: avatar }} style={styles.avatar} contentFit="cover" />
+              <Image source={typeof avatar === 'string' && !/^\d+$/.test(avatar) ? { uri: avatar } : (typeof avatar === 'number' ? avatar : parseInt(avatar as string, 10))} style={styles.avatar} contentFit="cover" />
               <View style={[styles.onlineDot, { borderColor: theme.primaryContainer }]} />
             </View>
 
@@ -257,12 +258,24 @@ export default function CoachDetail() {
             <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Session Rate</ThemedText>
             <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'HankenGrotesk_800ExtraBold' }}>{rate}</ThemedText>
           </View>
-          <Pressable style={[styles.bookBtn, { backgroundColor: theme.primary }]} onPress={navigateToBooking}>
-            <Ionicons name="calendar-outline" size={18} color="#ffffff" style={{ marginRight: 8 }} />
-            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 }}>
-              Book a Session
-            </ThemedText>
-          </Pressable>
+          {badge === 'OWNER' ? (
+            <Pressable 
+              style={[styles.bookBtn, { backgroundColor: theme.secondaryContainer }]} 
+              onPress={() => Alert.alert('Manage Class', 'This is your own published coaching class.')}
+            >
+              <Ionicons name="settings-outline" size={18} color={theme.secondary} style={{ marginRight: 8 }} />
+              <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 }}>
+                Manage Class
+              </ThemedText>
+            </Pressable>
+          ) : (
+            <Pressable style={[styles.bookBtn, { backgroundColor: theme.primary }]} onPress={navigateToBooking}>
+              <Ionicons name="calendar-outline" size={18} color="#ffffff" style={{ marginRight: 8 }} />
+              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 }}>
+                Book a Session
+              </ThemedText>
+            </Pressable>
+          )}
         </View>
       </SafeAreaView>
     </GradientContainer>
@@ -402,7 +415,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: BorderRadius.full,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
   },
   achRow: {

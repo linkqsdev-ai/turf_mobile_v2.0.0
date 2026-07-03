@@ -358,8 +358,11 @@ export default function CreateTurfScreen() {
         <ThemedText style={styles.fieldLabel}>Contact Number</ThemedText>
         <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}>
           <Ionicons name="call-outline" size={16} color={theme.textSecondary} style={{ marginRight: 8 }} />
-          <TextInput value={contactNumber} onChangeText={setContactNumber} placeholder="e.g. +91 98765 43210" placeholderTextColor={theme.textSecondary + '77'} keyboardType="phone-pad" style={[styles.inputRowInner, { color: theme.text }, WEB_INPUT]} />
+          <TextInput value={contactNumber} onChangeText={(t) => setContactNumber(t.replace(/[^0-9+\s\-()]/g, ''))} placeholder="e.g. +91 98765 43210" placeholderTextColor={theme.textSecondary + '77'} keyboardType="phone-pad" style={[styles.inputRowInner, { color: theme.text }, WEB_INPUT]} />
         </View>
+        {contactNumber !== '' && contactNumber.replace(/[^0-9]/g, '').length < 7 && (
+          <ThemedText style={{ color: '#ef4444', fontSize: 11, marginTop: 4 }}>Enter a valid phone number (min 7 digits)</ThemedText>
+        )}
       </View>
 
       <View style={styles.fieldGroup}>

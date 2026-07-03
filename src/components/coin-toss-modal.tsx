@@ -10,12 +10,19 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
+let Audio: any = null;
+try {
+  Audio = require('expo-av').Audio;
+} catch (e) {
+  console.warn('expo-av is not available in this environment');
+}
 import { ThemedText } from './themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { SPORTS_LIST } from '@/constants/sports';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useMatchStore } from '@/store/app-store';
 
 interface CoinTossModalProps {
   visible: boolean;
@@ -25,9 +32,10 @@ interface CoinTossModalProps {
 export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
   const theme = useTheme();
   const router = useRouter();
+  const { teams, addTeam } = useMatchStore();
 
   // Setup states
-  const [selectedSport, setSelectedSport] = useState('Football');
+  const [selectedSport, setSelectedSport] = useState('Cricket');
   const [teamAName, setTeamAName] = useState('Lions FC');
   const [teamBName, setTeamBName] = useState('Titans Utd');
   const [tossCaller, setTossCaller] = useState<'A' | 'B'>('A');
@@ -39,9 +47,124 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
   
   const [displaySide, setDisplaySide] = useState<'HEADS' | 'TAILS'>('HEADS');
   const [spinAnim] = useState(() => new Animated.Value(0));
+  const [activeField, setActiveField] = useState<'A' | 'B' | null>(null);
+
+  const getSuggestions = (query: string) => {
+    const sportTeams = teams.filter(t => t.sport.toLowerCase() === selectedSport.toLowerCase());
+    if (!query.trim()) return sportTeams.slice(0, 5);
+    return sportTeams.filter(t => t.name.toLowerCase().includes(query.toLowerCase()));
+  };
+
+  const hasExactMatch = (query: string, suggestions: any[]) => {
+    return suggestions.some(s => s.name.toLowerCase() === query.trim().toLowerCase());
+  };
+
+  const handleAddNewTeam = (name: string, field: 'A' | 'B') => {
+    const cleanName = name.trim();
+    if (!cleanName) return;
+    const newTeam = addTeam({
+      name: cleanName,
+      sport: selectedSport.toLowerCase(),
+      players: [],
+    });
+    if (field === 'A') {
+      setTeamAName(newTeam.name);
+    } else {
+      setTeamBName(newTeam.name);
+    }
+    setActiveField(null);
+  };
+
+  const renderSuggestions = (field: 'A' | 'B') => {
+    if (activeField !== field) return null;
+    const query = field === 'A' ? teamAName : teamBName;
+    const suggestions = getSuggestions(query);
+    const exactMatch = hasExactMatch(query, suggestions);
+    
+    return (
+      <View style={[
+        styles.suggestionsContainer, 
+        { 
+          backgroundColor: theme.surfaceLowest, 
+          borderColor: theme.outlineVariant + '66',
+        }
+      ]}>
+        <ScrollView nestedScrollEnabled style={{ maxHeight: 120 }}>
+          {suggestions.map((t) => (
+            <Pressable
+              key={t.id}
+              style={({ pressed }) => [
+                styles.suggestionItem,
+                pressed && { backgroundColor: theme.surfaceLow }
+              ]}
+              onPress={() => {
+                if (field === 'A') {
+                  setTeamAName(t.name);
+                } else {
+                  setTeamBName(t.name);
+                }
+                setActiveField(null);
+              }}
+            >
+              <Ionicons name="shield" size={12} color={theme.primary} style={{ marginRight: 6 }} />
+              <ThemedText style={[styles.suggestionText, { color: theme.text }]} numberOfLines={1}>
+                {t.name}
+              </ThemedText>
+            </Pressable>
+          ))}
+          
+          {query.trim().length > 0 && !exactMatch && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.suggestionItem,
+                styles.addNewSuggestionItem,
+                pressed && { backgroundColor: theme.primary + '11' }
+              ]}
+              onPress={() => handleAddNewTeam(query, field)}
+            >
+              <Ionicons name="add-circle" size={14} color={theme.primary} style={{ marginRight: 6 }} />
+              <ThemedText style={[styles.suggestionText, { color: theme.primary, fontFamily: 'HankenGrotesk_700Bold' }]} numberOfLines={1}>
+                Add "{query.trim()}"
+              </ThemedText>
+            </Pressable>
+          )}
+          
+          {suggestions.length === 0 && (!query.trim() || exactMatch) && (
+            <View style={{ padding: 10, alignItems: 'center' }}>
+              <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>
+                No teams found. Type to add!
+              </ThemedText>
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  const playCoinSound = async () => {
+    try {
+      if (!Audio || !Audio.Sound) {
+        console.log('Audio playing skipped (expo-av not available)');
+        return;
+      }
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../assets/coin.mp3')
+      );
+      await sound.playAsync();
+      sound.setOnPlaybackStatusUpdate((status: any) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+        }
+      });
+    } catch (error) {
+      console.error('Failed to play coin flip sound', error);
+    }
+  };
 
   const handleToss = () => {
     if (isFlipping) return;
+
+    playCoinSound();
 
     setIsFlipping(true);
     setResult(null);
@@ -177,8 +300,8 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
             </View>
 
             {/* Team details input */}
-            <View style={[styles.vsRow, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}>
-              <View style={styles.teamInputCol}>
+            <View style={[styles.vsRow, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44', zIndex: 10 }]}>
+              <View style={[styles.teamInputCol, { zIndex: 20 }]}>
                 <View style={[styles.shieldWrap, { backgroundColor: theme.background, borderColor: theme.outlineVariant }]}>
                   <ThemedText style={[styles.shieldText, { color: theme.primary }]}>
                     {teamAName ? teamAName.substring(0, 3).toUpperCase() : 'T1'}
@@ -192,15 +315,20 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                     setResult(null);
                     setTossDecision('');
                   }}
+                  onFocus={() => setActiveField('A')}
+                  onBlur={() => {
+                    setTimeout(() => setActiveField(null), 200);
+                  }}
                   placeholder="Team A"
                   placeholderTextColor={theme.textSecondary + '70'}
                   maxLength={15}
                 />
+                {renderSuggestions('A')}
               </View>
 
               <ThemedText style={[styles.vsCenterText, { color: theme.textSecondary + '70' }]}>VS</ThemedText>
 
-              <View style={styles.teamInputCol}>
+              <View style={[styles.teamInputCol, { zIndex: 20 }]}>
                 <View style={[styles.shieldWrap, { backgroundColor: theme.background, borderColor: theme.outlineVariant }]}>
                   <ThemedText style={[styles.shieldText, { color: theme.primary }]}>
                     {teamBName ? teamBName.substring(0, 3).toUpperCase() : 'T2'}
@@ -214,10 +342,15 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                     setResult(null);
                     setTossDecision('');
                   }}
+                  onFocus={() => setActiveField('B')}
+                  onBlur={() => {
+                    setTimeout(() => setActiveField(null), 200);
+                  }}
                   placeholder="Team B"
                   placeholderTextColor={theme.textSecondary + '70'}
                   maxLength={15}
                 />
+                {renderSuggestions('B')}
               </View>
             </View>
 
@@ -655,5 +788,35 @@ const styles = StyleSheet.create({
     fontFamily: 'HankenGrotesk_800ExtraBold',
     fontSize: 13,
     letterSpacing: 0.5,
+  },
+  suggestionsContainer: {
+    position: 'absolute',
+    top: '105%',
+    left: -20,
+    right: -20,
+    zIndex: 100,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    marginTop: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  addNewSuggestionItem: {
+    borderBottomWidth: 0,
+  },
+  suggestionText: {
+    fontSize: 11,
+    fontFamily: 'HankenGrotesk_500Medium',
   },
 });

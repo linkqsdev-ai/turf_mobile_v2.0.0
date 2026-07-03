@@ -33,25 +33,26 @@ export default function LiveScoringScreen() {
   const params = useLocalSearchParams<{ matchId: string; sport: string; teamA?: string; teamB?: string }>();
 
   // Determine initial sport from route params (defaults to Cricket)
-  const paramSport = params.sport || 'cricket';
-  const initialSport = paramSport.charAt(0).toUpperCase() + paramSport.slice(1);
+  const rawSport = Array.isArray(params.sport) ? params.sport[0] : params.sport;
+  const paramSport = rawSport || 'cricket';
+  const initialSport = paramSport.charAt(0).toUpperCase() + paramSport.slice(1).toLowerCase();
   const [selectedSport, setSelectedSport] = useState<string>(initialSport);
 
   const renderScoringConsole = () => {
     switch (selectedSport.toLowerCase()) {
       case 'football':
-        return <FootballScoring teamA={params.teamA} teamB={params.teamB} />;
+        return <FootballScoring matchId={params.matchId} teamA={params.teamA} teamB={params.teamB} />;
       case 'basketball':
-        return <BasketballScoring teamA={params.teamA} teamB={params.teamB} />;
+        return <BasketballScoring matchId={params.matchId} teamA={params.teamA} teamB={params.teamB} />;
       case 'tennis':
-        return <TennisScoring teamA={params.teamA} teamB={params.teamB} />;
+        return <TennisScoring matchId={params.matchId} teamA={params.teamA} teamB={params.teamB} />;
       case 'badminton':
-        return <BadmintonScoring teamA={params.teamA} teamB={params.teamB} />;
+        return <BadmintonScoring matchId={params.matchId} teamA={params.teamA} teamB={params.teamB} />;
       case 'volleyball':
-        return <VolleyballScoring teamA={params.teamA} teamB={params.teamB} />;
+        return <VolleyballScoring matchId={params.matchId} teamA={params.teamA} teamB={params.teamB} />;
       case 'cricket':
       default:
-        return <CricketScoring teamA={params.teamA} teamB={params.teamB} />;
+        return <CricketScoring matchId={params.matchId} teamA={params.teamA} teamB={params.teamB} />;
     }
   };
 
@@ -79,14 +80,7 @@ export default function LiveScoringScreen() {
             </ThemedText>
           </View>
           <View style={styles.headerRight}>
-            <Image
-              source={require('@/assets/images/illustrations/trophy.png')}
-              style={styles.headerTrophy}
-              contentFit="contain"
-            />
-            <Pressable style={[styles.infoButton, { backgroundColor: theme.primary }]}>
-              <ThemedText type="labelMd" style={{ color: theme.onPrimary }}>MATCH INFO</ThemedText>
-            </Pressable>
+            {/* Trophy icon removed as per request */}
           </View>
         </View>
 
@@ -111,7 +105,7 @@ export default function LiveScoringScreen() {
                 >
                   <MaterialIcons
                     name={sport.icon as any}
-                    size={15}
+                    size={12}
                     color={isActive ? '#ffffff' : theme.textSecondary}
                     style={{ marginRight: 4 }}
                   />
@@ -119,7 +113,8 @@ export default function LiveScoringScreen() {
                     type="labelMd"
                     style={{
                       color: isActive ? '#ffffff' : theme.textSecondary,
-                      fontFamily: 'HankenGrotesk_700Bold',
+                      fontFamily: 'HankenGrotesk_600SemiBold',
+                      fontSize: 10,
                     }}
                   >
                     {sport.name}
@@ -194,10 +189,12 @@ const styles = StyleSheet.create({
   switcherChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
+    height: 30,
+    justifyContent: 'center',
   },
   consoleBody: {
     flex: 1,

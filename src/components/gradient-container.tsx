@@ -58,8 +58,8 @@ export function GradientContainer({ children, screenName, style }: GradientConta
         colors = ['#0d1d26', '#08131a'];
     }
   } else {
-    // Light & Blue Themes: Premium light gray gradient for all screens background
-    colors = ['#ffffff', '#f5f6fa', '#e4e7eb'];
+    // Light & Blue Themes: Creamy double color gradient light white color
+    colors = ['#FDFCF7', '#F3EFE6'];
   }
 
   return (

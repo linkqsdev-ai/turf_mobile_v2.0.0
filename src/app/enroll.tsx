@@ -27,7 +27,7 @@ export default function EnrollScreen() {
   const priceRaw = (params.price as string) || '4999';
   const dates = (params.dates as string) || 'Summer 2024';
   const location = (params.location as string) || 'TBD';
-  const image = (params.image as string) || 'https://images.unsplash.com/photo-1528702748617-c64d49f918af?auto=format&fit=crop&w=600&q=80';
+  const image = params.image || require('@/assets/images/illustrations/coaching_class_premium.png');
   const themeColor = (params.themeColor as string) || '#fbbf24';
   const badgeText = (params.badgeText as string) || 'SUMMER CLASS';
   const badgeIcon = (params.badgeIcon as any) || 'sunny';
@@ -81,7 +81,11 @@ export default function EnrollScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {/* Hero Banner */}
           <View style={styles.heroCard}>
-            <Image source={{ uri: image }} style={styles.heroImage} contentFit="cover" />
+            <Image 
+              source={typeof image === 'string' && /^\d+$/.test(image) ? parseInt(image, 10) : (typeof image === 'string' ? { uri: image } : image)} 
+              style={styles.heroImage} 
+              contentFit="cover" 
+            />
             <View style={styles.heroOverlay}>
               <View style={[styles.badge, { backgroundColor: themeColor + '33', borderColor: themeColor + '66' }]}>
                 <Ionicons name={badgeIcon} size={12} color={themeColor} />
@@ -131,7 +135,7 @@ export default function EnrollScreen() {
                     placeholderTextColor={theme.textSecondary + '80'}
                     keyboardType="numeric"
                     value={age}
-                    onChangeText={setAge}
+                    onChangeText={(t) => setAge(t.replace(/[^0-9]/g, ''))}
                   />
                 </View>
                 <View style={[styles.inputGroup, { flex: 2 }]}>
@@ -142,7 +146,7 @@ export default function EnrollScreen() {
                     placeholderTextColor={theme.textSecondary + '80'}
                     keyboardType="phone-pad"
                     value={phone}
-                    onChangeText={setPhone}
+                    onChangeText={(t) => setPhone(t.replace(/[^0-9+\s\-()]/g, ''))}
                   />
                 </View>
               </View>

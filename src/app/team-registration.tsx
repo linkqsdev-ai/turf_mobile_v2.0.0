@@ -37,7 +37,7 @@ interface AdminTeam {
   payment: string;
   paymentMethod: string;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Changes Requested';
-  logo: string;
+  logo: any;
   requestDate: string;
 }
 
@@ -79,7 +79,7 @@ export default function TeamRegistrationScreen() {
       paymentMethod: 'Card', 
       status: 'Pending', 
       requestDate: '10m ago', 
-      logo: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=120&q=80' 
+      logo: require('@/assets/images/mascots/bear.png') 
     },
     { 
       id: 'at2', 
@@ -92,7 +92,7 @@ export default function TeamRegistrationScreen() {
       paymentMethod: 'ApplePay', 
       status: 'Approved', 
       requestDate: '2h ago', 
-      logo: 'https://images.unsplash.com/photo-1531415080290-bc98545ab3ef?auto=format&fit=crop&w=120&q=80' 
+      logo: require('@/assets/images/mascots/stallion.png') 
     },
     { 
       id: 'at3', 
@@ -105,7 +105,7 @@ export default function TeamRegistrationScreen() {
       paymentMethod: 'None', 
       status: 'Changes Requested', 
       requestDate: '1d ago', 
-      logo: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=120&q=80' 
+      logo: require('@/assets/images/mascots/eagle.png') 
     },
     { 
       id: 'at4', 
@@ -118,7 +118,7 @@ export default function TeamRegistrationScreen() {
       paymentMethod: 'Transfer', 
       status: 'Pending', 
       requestDate: '3d ago', 
-      logo: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=120&q=80' 
+      logo: require('@/assets/images/mascots/cobra.png'),
     },
   ]);
 
@@ -292,7 +292,7 @@ export default function TeamRegistrationScreen() {
                 {/* HERO BANNER */}
                 <View style={styles.heroBannerContainer}>
                   <Image 
-                    source="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80" 
+                    source={require('@/assets/images/illustrations/tournament_cover.png')} 
                     style={styles.heroBannerImage}
                     contentFit="cover"
                   />
@@ -480,7 +480,7 @@ export default function TeamRegistrationScreen() {
             {/* HERO BANNER */}
             <View style={styles.heroBannerContainer}>
               <Image 
-                source="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80" 
+                source={require('@/assets/images/illustrations/tournament_cover.png')} 
                 style={styles.heroBannerImage}
                 contentFit="cover"
               />
@@ -518,7 +518,7 @@ export default function TeamRegistrationScreen() {
                     {/* Header: Team name left, status label right */}
                     <View style={styles.mockHeaderRow}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                        <Image source={t.logo} style={styles.adminTeamLogo} contentFit="cover" />
+                        <Image source={typeof t.logo === 'string' ? { uri: t.logo } : t.logo} style={styles.adminTeamLogo} contentFit="cover" />
                         <ThemedText style={styles.mockTitleText} numberOfLines={1}>
                           {t.name}
                         </ThemedText>

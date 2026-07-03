@@ -109,7 +109,7 @@ export default function EditProfileScreen() {
           <View style={styles.section}>
             <View style={[styles.portraitCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
               <View style={styles.avatarWrapper}>
-                <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+                <Image source={typeof profile.avatarUrl === 'string' && !/^\d+$/.test(profile.avatarUrl) ? { uri: profile.avatarUrl } : (typeof profile.avatarUrl === 'number' ? profile.avatarUrl : parseInt(profile.avatarUrl, 10))} style={styles.avatarImage} />
                 <View style={[styles.editIconBadge, { backgroundColor: theme.secondaryContainer }]}>
                   <Ionicons name="camera" size={14} color={theme.onSecondaryContainer} />
                 </View>
