@@ -30,17 +30,6 @@ export default function ClubScreen() {
         />
 
         <View style={styles.content}>
-          {/* PRO Badge */}
-          <LinearGradient
-            colors={['#ffe259', '#ffa751']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.proBadge}
-          >
-            <Ionicons name="sparkles" size={12} color="#000000" style={{ marginRight: 4 }} />
-            <ThemedText style={styles.proBadgeText}>PRO EXCLUSIVE</ThemedText>
-          </LinearGradient>
-
           {/* Central Illustration container */}
           <View style={styles.illustrationContainer}>
             <View style={styles.shieldWrapper}>
@@ -54,16 +43,8 @@ export default function ClubScreen() {
           </ThemedText>
 
           <ThemedText style={styles.subtitle}>
-            Organize matches, manage team rosters, and compete in localized leaderboards.
+            Organize matches, manage team squads, and compete in localized leaderboards.
           </ThemedText>
-
-          {/* Release status card */}
-          <View style={styles.statusCard}>
-            <Ionicons name="time" size={18} color="#ffa751" style={{ marginRight: 8 }} />
-            <ThemedText style={styles.statusText}>
-              RELEASING SOON
-            </ThemedText>
-          </View>
 
           {/* Back button */}
           <Pressable
@@ -104,20 +85,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
   },
-  proBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    marginBottom: Spacing.lg,
-  },
-  proBadgeText: {
-    color: '#000000',
-    fontSize: 10,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    letterSpacing: 1,
-  },
   illustrationContainer: {
     marginBottom: Spacing.md,
   },
@@ -139,34 +106,17 @@ const styles = StyleSheet.create({
   title: {
     color: '#ffffff',
     fontSize: 28,
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     textAlign: 'center',
     marginBottom: Spacing.sm,
   },
   subtitle: {
     color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 14,
-    fontFamily: 'PlusJakartaSans_500Medium',
+    fontFamily: 'Sora_500Medium',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: Spacing.xl,
-  },
-  statusCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 167, 81, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 167, 81, 0.3)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.lg,
-    marginBottom: Spacing.xxl,
-  },
-  statusText: {
-    color: '#ffa751',
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    letterSpacing: 1.5,
   },
   actionButton: {
     backgroundColor: '#ffffff',
@@ -179,6 +129,6 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: '#0d0e15',
     fontSize: 14,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Sora_700Bold',
   },
 });

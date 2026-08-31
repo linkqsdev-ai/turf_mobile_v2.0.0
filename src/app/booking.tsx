@@ -5,6 +5,8 @@ import {
   ScrollView,
   Pressable,
   TextInput,
+  Platform,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -16,24 +18,34 @@ import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useToast } from '@/context/ToastContext';
+import { useNotifications } from '@/context/NotificationContext';
 import { PromoBanner } from '@/components/promo-banner';
-import { useBookings, useWalletStore } from '@/store/app-store';
-import { getCalendarGrid, formatDateFull, formatDateISO, MONTH_NAMES, advanceMonth } from '@/utils/date-utils';
+import { useBookings, useWalletStore, useClassStore, useTurfStore } from '@/store/app-store';
+import { getCalendarGrid, formatDateFull, formatDateShort, formatDateISO, MONTH_NAMES, advanceMonth, isTimeSlotPassed, formatSlotsRange } from '@/utils/date-utils';
+import { turfApi } from '@/services/turf-api';
+import { cleanLocation } from '@/utils/location';
 
-// Slots details
+// Slots details (Full 6 AM - 11 PM range in 12-hour AM/PM format)
 const TIME_SLOTS = [
-  { time: '08:00', icon: 'sunny-outline', disabled: false },
-  { time: '09:00', icon: 'sunny-outline', disabled: false },
-  { time: '10:00', icon: 'sunny-outline', disabled: false },
-  { time: '11:00', icon: 'sunny-outline', disabled: false },
-  { time: '12:00', icon: 'sunny', disabled: false },
-  { time: '13:00', icon: 'sunny', disabled: false },
-  { time: '14:00', icon: 'sunny', disabled: false },
-  { time: '15:00', icon: 'sunny', disabled: false },
-  { time: '16:00', icon: 'sunny', disabled: true },
-  { time: '17:00', icon: 'sunny', disabled: true },
-  { time: '18:00', icon: 'sunny', disabled: true },
-  { time: '19:00', icon: 'moon', disabled: true },
+  { time: '06:00 AM', icon: 'sunny-outline', disabled: false },
+  { time: '07:00 AM', icon: 'sunny-outline', disabled: false },
+  { time: '08:00 AM', icon: 'sunny-outline', disabled: false },
+  { time: '09:00 AM', icon: 'sunny-outline', disabled: false },
+  { time: '10:00 AM', icon: 'sunny-outline', disabled: false },
+  { time: '11:00 AM', icon: 'sunny-outline', disabled: false },
+  { time: '12:00 PM', icon: 'sunny', disabled: false },
+  { time: '01:00 PM', icon: 'sunny', disabled: false },
+  { time: '02:00 PM', icon: 'sunny', disabled: false },
+  { time: '03:00 PM', icon: 'sunny', disabled: false },
+  { time: '04:00 PM', icon: 'sunny', disabled: false },
+  { time: '05:00 PM', icon: 'sunny', disabled: false },
+  { time: '06:00 PM', icon: 'moon-outline', disabled: false },
+  { time: '07:00 PM', icon: 'moon-outline', disabled: false },
+  { time: '08:00 PM', icon: 'moon', disabled: false },
+  { time: '09:00 PM', icon: 'moon', disabled: false },
+  { time: '10:00 PM', icon: 'moon', disabled: false },
+  { time: '11:00 PM', icon: 'moon', disabled: false },
 ];
 
 const DAYS_OF_WEEK = [
@@ -97,19 +109,86 @@ const VENUE_LOOKUP: Record<string, {
 export default function BookingConfigurationScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id?: string; name?: string; price?: string; date?: string }>();
   const { addBooking } = useBookings();
   const { walletBalance, addWalletFunds, deductWalletFunds } = useWalletStore();
+  const { classes } = useClassStore();
+  const { ownedTurfs } = useTurfStore();
+  const { showSuccess, showError } = useToast();
+  const { addNotification } = useNotifications();
 
-  // Lookup details
-  const venueId = params.id && VENUE_LOOKUP[params.id] ? params.id : 'lords';
-  const venue = VENUE_LOOKUP[venueId];
+  const [remoteTurf, setRemoteTurf] = React.useState<any>(null);
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const fetchTurf = React.useCallback(async () => {
+    if (params.id) {
+      try {
+        const t = await turfApi.getTurfDetails(params.id);
+        if (t) setRemoteTurf(t);
+      } catch {}
+    }
+  }, [params.id]);
+
+  React.useEffect(() => {
+    fetchTurf();
+  }, [fetchTurf]);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchTurf();
+    setTimeout(() => setRefreshing(false), 600);
+  }, [fetchTurf]);
+
+  // Dynamic Venue lookup with robust fallbacks
+  const userTurf = remoteTurf || (ownedTurfs || []).find(t => t.id === params.id);
+  const venue = userTurf ? {
+    name: userTurf.name,
+    location: cleanLocation(userTurf.address || 'Local Arena'),
+    rating: `${userTurf.rating || 5.0}`,
+    reviews: '12 Reviews',
+    image: userTurf.thumbnailImage || (userTurf.images && userTurf.images[0]) || require('@/assets/images/sports/sport_football.png'),
+    basePrice: Number(userTurf.pricePerSlot) || 120,
+  } : (params.id && VENUE_LOOKUP[params.id] ? {
+    ...VENUE_LOOKUP[params.id],
+    location: cleanLocation(VENUE_LOOKUP[params.id].location),
+  } : {
+    name: params.name || "Lord's View Pavillion",
+    location: cleanLocation('St John\'s Wood, London'),
+    rating: '4.9',
+    reviews: '248 Reviews',
+    image: require('@/assets/images/sports/sport_cricket.png'),
+    basePrice: params.price ? Number(String(params.price).replace(/[^0-9.]/g, '')) || 120 : 120,
+  });
+
+  const galleryImages = React.useMemo(() => {
+    const list: (string | any)[] = [];
+    if (userTurf) {
+      if (Array.isArray(userTurf.images) && userTurf.images.length > 0) {
+        userTurf.images.forEach((img: any) => {
+          const uri = typeof img === 'string' ? img : img?.uri;
+          if (uri && !list.includes(uri)) list.push(uri);
+        });
+      }
+      if (userTurf.thumbnailImage && !list.includes(userTurf.thumbnailImage)) {
+        list.unshift(userTurf.thumbnailImage);
+      }
+    }
+    if (list.length === 0) {
+      if (venue.image) list.push(venue.image);
+    }
+    return list;
+  }, [userTurf, venue.image]);
+
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [heroCardWidth, setHeroCardWidth] = useState(0);
+
+  const venueId = params.id || 'lords';
 
   // Calendar state — real date aware
   const today = new Date();
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<string>(
     today.toLocaleDateString('en-US', { weekday: 'long' })
   );
@@ -136,7 +215,11 @@ export default function BookingConfigurationScreen() {
   };
 
   // Booking states
-  const [selectedSlots, setSelectedSlots] = useState<string[]>(['12:00', '13:00']);
+  const [selectedSlots, setSelectedSlots] = useState<string[]>(() => {
+    const upcoming = TIME_SLOTS.find(s => !isTimeSlotPassed(s.time, new Date()));
+    return upcoming ? [upcoming.time] : [];
+  });
+  const [isSlotsExpanded, setIsSlotsExpanded] = useState<boolean>(true);
   const [coachAdded, setCoachAdded] = useState(false);
   const [recordingAdded, setRecordingAdded] = useState(false);
   const [advancePct, setAdvancePct] = useState<number>(100); // 25 | 50 | 100
@@ -214,6 +297,8 @@ export default function BookingConfigurationScreen() {
   const remainingAmount = total - advanceAmount;
 
   const toggleSlot = (time: string) => {
+    const effectiveDate = selectedDate || selectedDayOfWeek;
+    if (isTimeSlotPassed(time, effectiveDate)) return;
     if (selectedSlots.includes(time)) {
       setSelectedSlots(selectedSlots.filter(s => s !== time));
     } else {
@@ -250,6 +335,24 @@ export default function BookingConfigurationScreen() {
       paymentMethod: finalPayable === 0 ? 'wallet' : paymentMethod,
       coachAdded,
       recordingAdded,
+    });
+
+    // Show attractive success toast
+    showSuccess('Booking Confirmed! 🎉', `Ref: ${booking.bookingRef} at ${venue.name}`);
+
+    // Trigger role-targeted notifications
+    addNotification({
+      title: 'Booking Confirmed!',
+      body: `Your booking at ${venue.name} for ${formatDateFull(selectedDate)} is confirmed. Ref: ${booking.bookingRef}`,
+      targetRole: 'Player',
+      type: 'booking',
+    });
+
+    addNotification({
+      title: `New Booking at ${venue.name}`,
+      body: `A slot was booked for ${formatDateFull(selectedDate)}. ₹${finalPayable.toFixed(2)} received.`,
+      targetRole: 'Owner',
+      type: 'booking',
     });
 
     // Navigate to confirmation screen with cashback parameters
@@ -290,11 +393,79 @@ export default function BookingConfigurationScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+          }
+        >
           {/* Hero Card */}
           <View style={styles.heroWrapper}>
-            <View style={[styles.heroCard, { backgroundColor: theme.primaryContainer }]}>
-              <Image source={venue.image} style={styles.heroImage} contentFit="cover" />
+            <View 
+              style={[styles.heroCard, { backgroundColor: theme.primaryContainer }]}
+              onLayout={(e) => {
+                const { width } = e.nativeEvent.layout;
+                if (width > 0) setHeroCardWidth(width);
+              }}
+            >
+              {galleryImages.length > 1 ? (
+                <ScrollView
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onMomentumScrollEnd={(e) => {
+                    const w = heroCardWidth || 1;
+                    const page = Math.round(e.nativeEvent.contentOffset.x / w);
+                    setActiveImageIndex(page);
+                  }}
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  {galleryImages.map((img, idx) => (
+                    <Image
+                      key={idx}
+                      source={
+                        typeof img === 'string' && !/^\d+$/.test(img)
+                          ? { uri: img }
+                          : typeof img === 'number'
+                          ? img
+                          : typeof img === 'string'
+                          ? parseInt(img, 10)
+                          : img?.uri ? { uri: img.uri } : venue.image
+                      }
+                      style={{ width: heroCardWidth || '100%', height: '100%' }}
+                      contentFit="cover"
+                    />
+                  ))}
+                </ScrollView>
+              ) : (
+                <Image
+                  source={
+                    typeof venue.image === 'string' && !/^\d+$/.test(venue.image)
+                      ? { uri: venue.image }
+                      : typeof venue.image === 'number'
+                      ? venue.image
+                      : parseInt(venue.image || '1', 10)
+                  }
+                  style={styles.heroImage}
+                  contentFit="cover"
+                />
+              )}
+
+              {/* Pagination Dots & Counter when multiple images exist */}
+              {galleryImages.length > 1 && (
+                <View style={[styles.sliderDotsRow, { bottom: 90 }]}>
+                  {galleryImages.map((_, idx) => (
+                    <View
+                      key={idx}
+                      style={[
+                        styles.sliderDot,
+                        idx === activeImageIndex && styles.sliderDotActive,
+                      ]}
+                    />
+                  ))}
+                </View>
+              )}
               
               {/* Fav Button top right */}
               <Pressable style={[styles.favFab, { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8 }]}>
@@ -302,9 +473,6 @@ export default function BookingConfigurationScreen() {
               </Pressable>
 
               <View style={styles.heroOverlay}>
-                <View style={[styles.badgeContainer, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                  <ThemedText type="labelSm" style={[styles.badgeText, { color: '#ffffff' }]}>PREMIUM VENUE</ThemedText>
-                </View>
                 <ThemedText type="headlineLg" style={styles.heroTitle}>
                   {venue.name}
                 </ThemedText>
@@ -312,13 +480,13 @@ export default function BookingConfigurationScreen() {
                   <View style={styles.heroSubItem}>
                     <Ionicons name="location-outline" size={14} color="#ffffffaa" />
                     <ThemedText type="bodySm" style={styles.heroSubText}>
-                      {venue.location.split(',')[0]}
+                      {(venue.location || 'Local Arena').split(',')[0]}
                     </ThemedText>
                   </View>
                   <View style={[styles.heroSubItem, { borderLeftWidth: 1, borderLeftColor: '#ffffff22', paddingLeft: 12, marginLeft: 12 }]}>
                     <Ionicons name="star" size={14} color="#ffffff" />
                     <ThemedText type="bodySm" style={[styles.heroSubText, { color: '#ffffff', fontWeight: 'bold' }]}>
-                      {venue.rating} <ThemedText type="labelSm" style={{ color: '#ffffffaa' }}>({venue.reviews.split(' ')[0]})</ThemedText>
+                      {venue.rating || '5.0'} <ThemedText type="labelSm" style={{ color: '#ffffffaa' }}>({(venue.reviews || '10+').split(' ')[0]})</ThemedText>
                     </ThemedText>
                   </View>
                 </View>
@@ -326,19 +494,27 @@ export default function BookingConfigurationScreen() {
             </View>
           </View>
 
-          {/* Gift Card Promo Banner */}
-          <View style={styles.section}>
-            <PromoBanner 
-              title="Gift a Game"
-              subtitle="Know someone who loves playing here? Get them a gift card!"
-              buttonText="Buy Gift Card"
-              badgeText="GIFT CARDS"
-              backgroundColor="#0b4d24"
-              buttonBackgroundColor="#a3e635"
-              buttonTextColor="#064e3b"
-              backgroundImage={require("@/assets/images/illustrations/gift_card_banner_bg.png")}
-            />
-          </View>
+
+
+          {/* Published Class Advertisement Promo Banner */}
+          {classes && classes.length > 0 && (
+            <View style={styles.section}>
+              <PromoBanner
+                title={classes[0].className || 'Featured Coaching Class'}
+                subtitle={`Join ${classes[0].sportType || 'Sports'} Batch • ${classes[0].classType || 'Regular Class'} at ${classes[0].venue || 'Local Turf'}`}
+                buttonText="Enroll in Class →"
+                onPress={() => router.push('/(tabs)/coach')}
+                isGradient={true}
+                gradientColors={['rgba(16, 185, 129, 0.7)', 'rgba(5, 150, 105, 0.9)']}
+                borderColor="rgba(16, 185, 129, 0.3)"
+                titleColor="#ffffff"
+                subtitleColor="rgba(255, 255, 255, 0.92)"
+                buttonBackgroundColor="#ffffff"
+                buttonTextColor="#059669"
+                backgroundImage={require("@/assets/images/illustrations/coaching_class_premium.png")}
+              />
+            </View>
+          )}
 
           {/* Date Picker Grid */}
           <View style={styles.section}>
@@ -361,7 +537,7 @@ export default function BookingConfigurationScreen() {
               {!selectedDate && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 4, backgroundColor: theme.error + '15', borderRadius: 8, padding: 8 }}>
                   <Ionicons name="calendar-outline" size={13} color={theme.error} />
-                  <ThemedText style={{ fontSize: 11, color: theme.error, fontFamily: 'HankenGrotesk_600SemiBold' }}>Please select a date to continue</ThemedText>
+                  <ThemedText style={{ fontSize: 11, color: theme.error, fontFamily: 'Sora_600SemiBold' }}>Please select a date to continue</ThemedText>
                 </View>
               )}
 
@@ -394,6 +570,7 @@ export default function BookingConfigurationScreen() {
                         if (item.date) {
                           setSelectedDate(item.date);
                           setSelectedDayOfWeek(item.date.toLocaleDateString('en-US', { weekday: 'long' }));
+                          setSelectedSlots(prev => prev.filter(s => !isTimeSlotPassed(s, item.date)));
                         }
                       }}
                       style={[
@@ -406,7 +583,7 @@ export default function BookingConfigurationScreen() {
                         type="bodyMd"
                         style={{
                           color: isSelected ? theme.onSecondaryContainer : isPast ? theme.textSecondary : isToday ? theme.primary : theme.text,
-                          fontFamily: isSelected ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_400Regular',
+                          fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_400Regular',
                           opacity: isPast ? 0.35 : 1,
                         }}
                       >
@@ -422,144 +599,206 @@ export default function BookingConfigurationScreen() {
           {/* Time & Duration Config */}
           <View style={styles.section}>
             <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
-              {/* Day Selector — Short names (Mon-Sun) in one row, no scroll */}
-              <View style={styles.daySelectorGrid}>
-                {DAYS_OF_WEEK.map((d) => {
-                  const isActive = d.full === selectedDayOfWeek;
-                  return (
-                    <Pressable
-                      key={d.full}
-                      onPress={() => {
-                        setSelectedDayOfWeek(d.full);
-                        const matched = calendarGrid.find(cell => 
-                          cell.date && cell.date.toLocaleDateString('en-US', { weekday: 'long' }) === d.full
-                        );
-                        if (matched && matched.date) {
-                          setSelectedDate(matched.date);
-                        }
-                      }}
-                      style={[
-                        styles.daySelectorTab,
-                        isActive
-                          ? [styles.daySelectorTabActive, { backgroundColor: theme.secondaryContainer, borderColor: theme.secondary + '44' }]
-                          : { backgroundColor: theme.surfaceLow, borderColor: 'transparent' },
-                      ]}
-                    >
-                      <ThemedText
-                        type="labelMd"
-                        style={{
-                          color: isActive ? theme.onSecondaryContainer : theme.textSecondary,
-                          fontFamily: isActive ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_600SemiBold',
-                          fontSize: 11.5,
-                          letterSpacing: 0.1,
-                        }}
-                      >
-                        {d.short}
-                      </ThemedText>
-                    </Pressable>
-                  );
-                })}
+              {/* Collapse/Expand Section Header */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="time" size={15} color={theme.primary} />
+                  <ThemedText type="labelMd" style={{ fontSize: 12.5, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                    Select Day & Time Slot
+                  </ThemedText>
+                </View>
+                <Pressable
+                  onPress={() => setIsSlotsExpanded(!isSlotsExpanded)}
+                  style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary + '15', justifyContent: 'center', alignItems: 'center' }}
+                  hitSlop={8}
+                >
+                  <Ionicons 
+                    name={isSlotsExpanded ? "chevron-up" : "chevron-down"} 
+                    size={16} 
+                    color={theme.primary} 
+                  />
+                </Pressable>
               </View>
 
-              {/* Time Slots Grid */}
-              <View style={styles.slotsGrid}>
-                {TIME_SLOTS.map((slot) => {
-                  const isSelected = selectedSlots.includes(slot.time);
-                  const isDisabled = slot.disabled;
-                  
-                  return (
-                    <Pressable
-                      key={slot.time}
-                      disabled={isDisabled}
-                      onPress={() => toggleSlot(slot.time)}
-                      style={[
-                        styles.slotItem,
-                        { backgroundColor: theme.surfaceLow },
-                        isSelected && { backgroundColor: theme.primary },
-                        isDisabled && { opacity: 0.4 },
-                      ]}
-                    >
-                      <Ionicons
-                        name={slot.icon as any}
-                        size={14}
-                        color={isSelected ? '#ffffff' : isDisabled ? theme.textSecondary + '40' : theme.textSecondary}
-                      />
-                      <ThemedText
-                        type="bodyMd"
-                        style={{
-                          color: isSelected ? '#ffffff' : isDisabled ? theme.textSecondary + '60' : theme.text,
-                          fontFamily: 'HankenGrotesk_700Bold',
-                          marginLeft: 4,
-                        }}
-                      >
-                        {slot.time}
-                      </ThemedText>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              {isSlotsExpanded ? (
+                <>
+                  {/* Day Selector — Short names (Mon-Sun) in one row */}
+                  <View style={styles.daySelectorGrid}>
+                    {DAYS_OF_WEEK.map((d, dayIdx) => {
+                      const isActive = d.full === selectedDayOfWeek;
+                      const todayIndex = (new Date().getDay() + 6) % 7; // Mon=0 ... Sun=6
+                      const isPastDay = dayIdx < todayIndex;
 
-              {/* Notice */}
-              <View style={styles.noticeRow}>
-                <Ionicons name="information-circle-outline" size={16} color={theme.textSecondary} />
-                <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 4, flex: 1 }}>
-                  The time slots are in local time. Free cancellation up to 24h before.
-                </ThemedText>
-              </View>
+                      return (
+                        <Pressable
+                          key={d.full}
+                          disabled={isPastDay}
+                          onPress={() => {
+                            if (isPastDay) return;
+                            setSelectedDayOfWeek(d.full);
+                            const matched = calendarGrid.find(cell => 
+                              cell.date && cell.date.toLocaleDateString('en-US', { weekday: 'long' }) === d.full
+                            );
+                            if (matched && matched.date) {
+                              setSelectedDate(matched.date);
+                              setSelectedSlots(prev => prev.filter(s => !isTimeSlotPassed(s, matched.date)));
+                            } else {
+                              setSelectedSlots(prev => prev.filter(s => !isTimeSlotPassed(s, d.full)));
+                            }
+                          }}
+                          style={[
+                            styles.daySelectorTab,
+                            isActive
+                              ? [styles.daySelectorTabActive, { backgroundColor: theme.secondaryContainer, borderColor: theme.secondary + '44' }]
+                              : { backgroundColor: theme.surfaceLow, borderColor: 'transparent' },
+                            isPastDay && { opacity: 0.35, backgroundColor: theme.surfaceLow + '80' },
+                          ]}
+                        >
+                          <ThemedText
+                            type="labelMd"
+                            style={{
+                              color: isActive ? theme.onSecondaryContainer : isPastDay ? theme.textSecondary : theme.textSecondary,
+                              fontFamily: isActive ? 'Sora_700Bold' : 'Sora_600SemiBold',
+                              fontSize: 11.5,
+                              letterSpacing: 0.1,
+                            }}
+                          >
+                            {d.short}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {/* Time Slots Grid */}
+                  <View style={styles.slotsGrid}>
+                    {TIME_SLOTS.map((slot) => {
+                      const effectiveDate = selectedDate || selectedDayOfWeek;
+                      const isPassed = isTimeSlotPassed(slot.time, effectiveDate);
+                      const isSelected = selectedSlots.includes(slot.time);
+                      const isDisabled = slot.disabled || isPassed;
+                      
+                      return (
+                        <Pressable
+                          key={slot.time}
+                          disabled={isDisabled}
+                          onPress={() => toggleSlot(slot.time)}
+                          style={[
+                            styles.slotItem,
+                            { backgroundColor: theme.surfaceLow },
+                            isSelected && { backgroundColor: theme.primary },
+                            isDisabled && { opacity: 0.35, backgroundColor: theme.surfaceLow + '60' },
+                          ]}
+                        >
+                          <Ionicons
+                            name={slot.icon as any}
+                            size={14}
+                            color={isSelected ? '#ffffff' : isDisabled ? theme.textSecondary + '40' : theme.textSecondary}
+                          />
+                          <ThemedText
+                            type="bodyMd"
+                            style={{
+                              color: isSelected ? '#ffffff' : isDisabled ? theme.textSecondary + '60' : theme.text,
+                              fontFamily: 'Sora_700Bold',
+                              fontSize: 11,
+                              marginLeft: 3,
+                              textDecorationLine: isDisabled ? 'line-through' : 'none',
+                            }}
+                          >
+                            {slot.time}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {/* Notice */}
+                  <View style={styles.noticeRow}>
+                    <Ionicons name="information-circle-outline" size={16} color={theme.textSecondary} />
+                    <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 4, flex: 1 }}>
+                      The time slots are in local time. Free cancellation up to 24h before.
+                    </ThemedText>
+                  </View>
+                </>
+              ) : (
+                <Pressable onPress={() => setIsSlotsExpanded(true)} style={{ padding: 10, backgroundColor: theme.primary + '0A', borderRadius: BorderRadius.lg, alignItems: 'center' }}>
+                  <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_700Bold', fontSize: 12 }}>
+                    📅 {selectedDayOfWeek} • {selectedSlots.length > 0 ? `${selectedSlots.length} slot(s) selected (${selectedSlots[0]})` : 'Tap to select slot'}
+                  </ThemedText>
+                </Pressable>
+              )}
             </View>
           </View>
 
-          {/* Additional Services */}
+          {/* Additional Services (Disabled Gray State - Pro Plan Required) */}
           <View style={styles.section}>
-            <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.sm, letterSpacing: 0.5 }}>
-              PROFESSIONAL SERVICES
-            </ThemedText>
-
-            <View style={[styles.serviceRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-              <View style={styles.serviceLeft}>
-                <View style={[styles.serviceIconWrap, { backgroundColor: theme.secondaryContainer + '1a' }]}>
-                  <Ionicons name="fitness" size={18} color={theme.secondaryContainer} />
-                </View>
-                <View style={{ marginLeft: Spacing.sm }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Pro Net Coach</ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>+₹45.00 / Session</ThemedText>
-                </View>
-              </View>
-              <Pressable
-                onPress={() => setCoachAdded(!coachAdded)}
-                style={[
-                  styles.serviceAddBtn,
-                  coachAdded ? { backgroundColor: theme.primary } : { backgroundColor: theme.secondaryContainer }
-                ]}
-              >
-                <ThemedText type="labelMd" style={{ color: coachAdded ? '#ffffff' : theme.onSecondaryContainer }}>
-                  {coachAdded ? 'ADDED' : '+ ADD'}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                  PROFESSIONAL SERVICES
                 </ThemedText>
-              </Pressable>
+              </View>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, opacity: 0.7 }}>Disabled in Free Plan</ThemedText>
             </View>
 
-            <View style={[styles.serviceRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', marginTop: Spacing.sm }]}>
+            {/* Pro Net Coach Card (Disabled State) */}
+            <Pressable
+              disabled={true}
+              onPress={() => showError('🔒 Pro Plan Required: Upgrade to Pro Plan to enable Trainer Coaching.')}
+              style={[
+                styles.serviceRow,
+                {
+                  backgroundColor: theme.surfaceLow,
+                  borderColor: theme.outlineVariant + '25',
+                  borderWidth: 1,
+                  opacity: 0.5,
+                }
+              ]}
+            >
               <View style={styles.serviceLeft}>
-                <View style={[styles.serviceIconWrap, { backgroundColor: theme.secondaryContainer + '1a' }]}>
-                  <Ionicons name="videocam" size={18} color={theme.secondaryContainer} />
+                <View style={[styles.serviceIconWrap, { backgroundColor: theme.outlineVariant + '20' }]}>
+                  <Ionicons name="fitness" size={20} color={theme.textSecondary} />
                 </View>
                 <View style={{ marginLeft: Spacing.sm }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>HD Match Recording</ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>+₹25.00 / Session</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold', fontSize: 14, color: theme.textSecondary }}>
+                    Pro Net Coach
+                  </ThemedText>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 2, fontSize: 10 }}>
+                    Included with Pro Plan (Disabled)
+                  </ThemedText>
                 </View>
               </View>
-              <Pressable
-                onPress={() => setRecordingAdded(!recordingAdded)}
-                style={[
-                  styles.serviceAddBtn,
-                  recordingAdded ? { backgroundColor: theme.primary } : { backgroundColor: theme.secondaryContainer }
-                ]}
-              >
-                <ThemedText type="labelMd" style={{ color: recordingAdded ? '#ffffff' : theme.onSecondaryContainer }}>
-                  {recordingAdded ? 'ADDED' : '+ ADD'}
-                </ThemedText>
-              </Pressable>
-            </View>
+            </Pressable>
+
+            {/* HD Match Recording Card (Disabled State) */}
+            <Pressable
+              disabled={true}
+              onPress={() => showError('🔒 Pro Plan Required: Upgrade to Pro Plan for 4K Match Recording.')}
+              style={[
+                styles.serviceRow,
+                {
+                  backgroundColor: theme.surfaceLow,
+                  borderColor: theme.outlineVariant + '25',
+                  borderWidth: 1,
+                  marginTop: Spacing.xs,
+                  opacity: 0.5,
+                }
+              ]}
+            >
+              <View style={styles.serviceLeft}>
+                <View style={[styles.serviceIconWrap, { backgroundColor: theme.outlineVariant + '20' }]}>
+                  <Ionicons name="videocam" size={20} color={theme.textSecondary} />
+                </View>
+                <View style={{ marginLeft: Spacing.sm }}>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold', fontSize: 14, color: theme.textSecondary }}>
+                    HD Match Recording
+                  </ThemedText>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 2, fontSize: 10 }}>
+                    Included with Pro Plan (Disabled)
+                  </ThemedText>
+                </View>
+              </View>
+            </Pressable>
           </View>
 
           {/* ── Advance Pay Option ── */}
@@ -574,11 +813,11 @@ export default function BookingConfigurationScreen() {
                     <Ionicons name="cash" size={18} color="#5D68E8" />
                   </View>
                   <View style={{ marginLeft: Spacing.sm }}>
-                    <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>Pay in Advance</ThemedText>
+                    <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>Pay in Advance</ThemedText>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Remaining due at venue</ThemedText>
                   </View>
                 </View>
-                <ThemedText type="headlineSm" style={{ color: '#5D68E8', fontFamily: 'HankenGrotesk_800ExtraBold' }}>
+                <ThemedText type="headlineSm" style={{ color: '#5D68E8', fontFamily: 'Sora_800ExtraBold' }}>
                   ₹{advanceAmount}
                 </ThemedText>
               </View>
@@ -600,7 +839,7 @@ export default function BookingConfigurationScreen() {
                     >
                       <ThemedText style={{
                         color: isActive ? '#05151e' : theme.textSecondary,
-                        fontFamily: 'HankenGrotesk_700Bold',
+                        fontFamily: 'Sora_700Bold',
                         fontSize: 12,
                       }}>{opt.label}</ThemedText>
                     </Pressable>
@@ -636,7 +875,7 @@ export default function BookingConfigurationScreen() {
                 <Ionicons name="gift" size={16} color="#10B981" />
               </View>
               <View style={{ flex: 1 }}>
-                <ThemedText style={{ fontSize: 12.5, fontFamily: 'PlusJakartaSans_700Bold', color: '#10B981' }}>
+                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_700Bold', color: '#10B981' }}>
                   Cashback Offer Activated!
                 </ThemedText>
                 <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 1 }}>
@@ -652,7 +891,7 @@ export default function BookingConfigurationScreen() {
                   <Ionicons name="wallet-outline" size={20} color={theme.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <ThemedText style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>
                     Pay with Wallet Balance
                   </ThemedText>
                   <ThemedText style={{ fontSize: 11, color: theme.textSecondary }}>
@@ -663,9 +902,9 @@ export default function BookingConfigurationScreen() {
               {walletBalance > 0 ? (
                 <Pressable 
                   onPress={() => setUseWallet(!useWallet)}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: useWallet ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: useWallet ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 }}
                 >
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'PlusJakartaSans_700Bold', color: useWallet ? '#ffffff' : theme.textSecondary }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: useWallet ? '#ffffff' : theme.textSecondary }}>
                     {useWallet ? 'Applied' : 'Apply'}
                   </ThemedText>
                   <Ionicons name={useWallet ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={useWallet ? '#ffffff' : theme.textSecondary} />
@@ -680,7 +919,7 @@ export default function BookingConfigurationScreen() {
             {finalPayable === 0 ? (
               <View style={{ backgroundColor: theme.primary + '10', padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: theme.primary + '22', alignItems: 'center', marginVertical: Spacing.sm }}>
                 <Ionicons name="shield-checkmark-outline" size={32} color={theme.primary} />
-                <ThemedText style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text, marginTop: 8 }}>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text, marginTop: 8 }}>
                   Wallet Balance Applied Fully
                 </ThemedText>
                 <ThemedText style={{ fontSize: 11, color: theme.textSecondary, textAlign: 'center', marginTop: 4, paddingHorizontal: Spacing.md }}>
@@ -718,18 +957,18 @@ export default function BookingConfigurationScreen() {
                         <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignSelf: 'stretch' }}>
                           <TextInput 
                             placeholder="Card Number" 
-                            placeholderTextColor={theme.onPrimaryContainer}
+                            placeholderTextColor="#94a3b8"
                             style={{ backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, marginBottom: Spacing.sm, alignSelf: 'stretch' }} 
                           />
                           <View style={{ flexDirection: 'row', gap: Spacing.sm, alignSelf: 'stretch' }}>
                             <TextInput 
                               placeholder="MM/YY" 
-                              placeholderTextColor={theme.onPrimaryContainer}
+                              placeholderTextColor="#94a3b8"
                               style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }} 
                             />
                             <TextInput 
                               placeholder="CVV" 
-                              placeholderTextColor={theme.onPrimaryContainer}
+                              placeholderTextColor="#94a3b8"
                               style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }} 
                               secureTextEntry
                             />
@@ -763,7 +1002,7 @@ export default function BookingConfigurationScreen() {
             <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.lg, padding: 16, ...Shadows.level1 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md }}>
                 <View style={{ flex: 1, marginRight: 8 }}>
-                  <ThemedText style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_700Bold', color: theme.text }}>
                     Split Cost among Players
                   </ThemedText>
                   <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
@@ -772,9 +1011,9 @@ export default function BookingConfigurationScreen() {
                 </View>
                 <Pressable 
                   onPress={() => setIsSplitEnabled(!isSplitEnabled)}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: isSplitEnabled ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: isSplitEnabled ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 }}
                 >
-                  <ThemedText style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: isSplitEnabled ? '#ffffff' : theme.textSecondary }}>
+                  <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: isSplitEnabled ? '#ffffff' : theme.textSecondary }}>
                     {isSplitEnabled ? 'Active' : 'Enable'}
                   </ThemedText>
                   <Ionicons name={isSplitEnabled ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={isSplitEnabled ? '#ffffff' : theme.textSecondary} />
@@ -793,7 +1032,7 @@ export default function BookingConfigurationScreen() {
                       return (
                         <View key={player.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '15' }}>
                           <View style={{ flex: 1 }}>
-                            <ThemedText style={{ fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                            <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>
                               {player.name}
                             </ThemedText>
                             <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 1 }}>
@@ -817,7 +1056,7 @@ export default function BookingConfigurationScreen() {
                               <Ionicons name={player.hours > 1 ? "remove" : "trash-outline"} size={14} color={theme.text} />
                             </Pressable>
 
-                            <ThemedText style={{ width: 32, textAlign: 'center', fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: theme.text }}>
+                            <ThemedText style={{ width: 32, textAlign: 'center', fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>
                               {player.hours} {player.hours === 1 ? 'hr' : 'hrs'}
                             </ThemedText>
 
@@ -841,7 +1080,7 @@ export default function BookingConfigurationScreen() {
                       value={newPlayerName}
                       onChangeText={setNewPlayerName}
                       placeholder="Enter player/friend's name..."
-                      placeholderTextColor={theme.textSecondary + 'aa'}
+                      placeholderTextColor="#94a3b8"
                       style={[{ flex: 1, backgroundColor: theme.surfaceLow, color: theme.text, paddingHorizontal: 12, height: 38, borderRadius: BorderRadius.md, fontSize: 12.5 }, ...({ outlineStyle: 'none' } as any)]}
                     />
                     <Pressable
@@ -857,7 +1096,7 @@ export default function BookingConfigurationScreen() {
                       }}
                       style={{ backgroundColor: theme.primary, height: 38, paddingHorizontal: 14, borderRadius: BorderRadius.md, justifyContent: 'center', alignItems: 'center' }}
                     >
-                      <ThemedText style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#ffffff' }}>
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
                         + Add
                       </ThemedText>
                     </Pressable>
@@ -867,7 +1106,7 @@ export default function BookingConfigurationScreen() {
                   <View style={{ backgroundColor: theme.primary + '10', borderRadius: BorderRadius.md, padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
                     <Ionicons name="calculator-outline" size={16} color={theme.primary} style={{ marginTop: 1 }} />
                     <View style={{ flex: 1 }}>
-                      <ThemedText style={{ fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: theme.primary }}>
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.primary }}>
                         Proportional Split Calculation
                       </ThemedText>
                       <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 3, lineHeight: 15 }}>
@@ -903,20 +1142,15 @@ export default function BookingConfigurationScreen() {
 
               {/* Middle Section: Details grid */}
               <View style={styles.ticketMiddleSection}>
-                {/* Chip & Bookmark icon */}
-                <View style={styles.ticketChipAndActionRow}>
-                  <View style={[styles.ticketChip, { backgroundColor: theme.primary + '15' }]}>
-                    <ThemedText type="labelSm" style={{ color: theme.primary, fontWeight: '700', fontSize: 10, textTransform: 'uppercase' }}>
-                      Court Booking
-                    </ThemedText>
-                  </View>
+                {/* Bookmark icon */}
+                <View style={[styles.ticketChipAndActionRow, { justifyContent: 'flex-end' }]}>
                   <Pressable style={[styles.ticketBookmarkBtn, { borderColor: theme.outlineVariant + '33' }]}>
                     <Ionicons name="bookmark-outline" size={14} color={theme.textSecondary} />
                   </Pressable>
                 </View>
 
                 {/* Bold title & location */}
-                <ThemedText type="bodyLg" style={{ color: theme.text, marginTop: 10, fontFamily: 'HankenGrotesk_700Bold' }}>
+                <ThemedText type="bodyLg" style={{ color: theme.text, marginTop: 10, fontFamily: 'Sora_700Bold' }}>
                   {venue.name}
                 </ThemedText>
                 <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 2 }}>
@@ -932,13 +1166,13 @@ export default function BookingConfigurationScreen() {
                     <View style={styles.ticketGridCol}>
                       <ThemedText style={styles.ticketGridLabel}>Date</ThemedText>
                       <ThemedText style={[styles.ticketGridValue, { color: theme.text }]}>
-                        {selectedDayOfMonth} Feb. 2024
+                        {formatDateShort(selectedDate || today)}
                       </ThemedText>
                     </View>
                     <View style={styles.ticketGridCol}>
                       <ThemedText style={styles.ticketGridLabel}>Time</ThemedText>
                       <ThemedText style={[styles.ticketGridValue, { color: theme.text }]}>
-                        {selectedSlots.length > 0 ? `${selectedSlots[0]} - ${selectedSlots[selectedSlots.length - 1]}` : 'TBD'}
+                        {formatSlotsRange(selectedSlots)}
                       </ThemedText>
                     </View>
                   </View>
@@ -989,7 +1223,7 @@ export default function BookingConfigurationScreen() {
                 <View style={[styles.couponSection, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                     <Ionicons name="pricetag" size={14} color={theme.primary} />
-                    <ThemedText style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', fontSize: 13 }}>Coupon & Offers</ThemedText>
+                    <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 13 }}>Coupon & Offers</ThemedText>
                   </View>
 
                   {couponApplied ? (
@@ -998,7 +1232,7 @@ export default function BookingConfigurationScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
                         <View>
-                          <ThemedText style={{ color: '#15803d', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 }}>{couponCode} applied!</ThemedText>
+                          <ThemedText style={{ color: '#15803d', fontFamily: 'Sora_700Bold', fontSize: 12 }}>{couponCode} applied!</ThemedText>
                           <ThemedText style={{ color: '#16a34a', fontSize: 10, marginTop: 2 }}>You save ₹{couponDiscount}</ThemedText>
                         </View>
                       </View>
@@ -1015,7 +1249,7 @@ export default function BookingConfigurationScreen() {
                           { backgroundColor: theme.surfaceLowest, color: theme.text, borderColor: couponError ? '#ef4444' : theme.outlineVariant + '44' }
                         ]}
                         placeholder="Enter promo / coupon code"
-                        placeholderTextColor={theme.textSecondary + '80'}
+                        placeholderTextColor="#94a3b8"
                         value={couponInput}
                         onChangeText={(t) => { setCouponInput(t.toUpperCase()); setCouponError(''); }}
                         autoCapitalize="characters"
@@ -1026,7 +1260,7 @@ export default function BookingConfigurationScreen() {
                         onPress={applyCoupon}
                         style={[styles.couponApplyBtn, { backgroundColor: theme.primary }]}
                       >
-                        <ThemedText style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 }}>Apply</ThemedText>
+                        <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 12 }}>Apply</ThemedText>
                       </Pressable>
                     </View>
                   )}
@@ -1039,7 +1273,7 @@ export default function BookingConfigurationScreen() {
                   {cashbackOffer && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#eff6ff', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginTop: 8 }}>
                       <Ionicons name="wallet" size={14} color="#2563eb" />
-                      <ThemedText style={{ color: '#1d4ed8', fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold', flex: 1 }}>
+                      <ThemedText style={{ color: '#1d4ed8', fontSize: 10, fontFamily: 'Sora_600SemiBold', flex: 1 }}>
                         🎉 Cashback ₹{cashbackOffer.cashback} will be credited to your wallet after booking!
                       </ThemedText>
                     </View>
@@ -1052,7 +1286,7 @@ export default function BookingConfigurationScreen() {
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                         {[{ code: 'YAWAH30', label: '30% OFF + ₹50 cashback' }, { code: 'FIRST50', label: '₹50 flat + ₹100 cashback' }, { code: 'TURF20', label: '20% OFF' }].map(({ code, label }) => (
                           <Pressable key={code} onPress={() => { setCouponInput(code); setCouponError(''); }} style={[styles.offerPill, { borderColor: theme.primary + '44', backgroundColor: theme.primary + '0a' }]}>
-                            <ThemedText style={{ color: theme.primary, fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold' }}>{code}</ThemedText>
+                            <ThemedText style={{ color: theme.primary, fontSize: 9, fontFamily: 'Sora_700Bold' }}>{code}</ThemedText>
                             <ThemedText style={{ color: theme.textSecondary, fontSize: 8 }}>{label}</ThemedText>
                           </Pressable>
                         ))}
@@ -1127,40 +1361,41 @@ export default function BookingConfigurationScreen() {
                     ))}
                   </View>
                   <ThemedText style={[styles.barcodeSubText, { color: theme.textSecondary }]}>
-                    BK-{(venueId + selectedDayOfMonth).toUpperCase()}-2024
+                    BK-{(venueId + selectedDayOfMonth).toUpperCase()}-{new Date().getFullYear()}
                   </ThemedText>
                 </View>
-
-                {/* Secure Confirm Booking Button */}
-                <Pressable
-                  onPress={handleConfirmBooking}
-                  disabled={selectedSlots.length === 0}
-                  style={[
-                    styles.ticketConfirmBtn,
-                    { backgroundColor: theme.primary },
-                    selectedSlots.length === 0 && { opacity: 0.45 }
-                  ]}
-                >
-                  <View style={styles.ticketConfirmBtnIconWrap}>
-                    <Ionicons name="shield-checkmark" size={18} color={theme.primary} />
-                  </View>
-                  <View style={{ flex: 1, paddingLeft: 8 }}>
-                    <ThemedText style={styles.ticketConfirmBtnTitle}>CONFIRM BOOKING</ThemedText>
-                    <ThemedText style={styles.ticketConfirmBtnSub}>
-                      ₹{finalPayable.toFixed(2)} via {finalPayable === 0 ? 'Wallet Balance' : (PAYMENT_METHODS.find(p => p.id === paymentMethod)?.label ?? 'Apple Pay')}
-                    </ThemedText>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color="#ffffff" />
-                </Pressable>
-
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 10 }}>
-                  🔒 Secure payment · Free cancellation 24h before
-                </ThemedText>
               </View>
-
             </View>
           </View>
         </ScrollView>
+
+        {/* Sticky Fixed Bottom Action Bar */}
+        <View style={[styles.fixedBottomBar, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '22' }, Shadows.level3]}>
+          <Pressable
+            onPress={handleConfirmBooking}
+            disabled={selectedSlots.length === 0}
+            style={[
+              styles.ticketConfirmBtn,
+              { backgroundColor: theme.primary },
+              selectedSlots.length === 0 && { opacity: 0.45 }
+            ]}
+          >
+            <View style={styles.ticketConfirmBtnIconWrap}>
+              <Ionicons name="shield-checkmark" size={18} color={theme.primary} />
+            </View>
+            <View style={{ flex: 1, paddingLeft: 8 }}>
+              <ThemedText style={styles.ticketConfirmBtnTitle}>CONFIRM BOOKING</ThemedText>
+              <ThemedText style={styles.ticketConfirmBtnSub}>
+                ₹{finalPayable.toFixed(2)} via {finalPayable === 0 ? 'Wallet Balance' : (PAYMENT_METHODS.find(p => p.id === paymentMethod)?.label ?? 'Apple Pay')}
+              </ThemedText>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#ffffff" />
+          </Pressable>
+
+          <ThemedText type="labelSm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 6, fontSize: 10 }}>
+            🔒 Secure payment · Free cancellation 24h before
+          </ThemedText>
+        </View>
       </SafeAreaView>
     </GradientContainer>
   );
@@ -1187,11 +1422,22 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   headerTitle: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 16,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 110,
+  },
+  fixedBottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: Spacing.containerMargin,
+    paddingTop: Spacing.xs,
+    paddingBottom: Platform.OS === 'ios' ? 24 : Spacing.md,
+    borderTopWidth: 1,
+    zIndex: 100,
   },
   heroWrapper: {
     paddingHorizontal: Spacing.containerMargin,
@@ -1215,22 +1461,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     padding: Spacing.md,
   },
-  badgeContainer: {
-    backgroundColor: '#5D68E8',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.full,
-    marginBottom: Spacing.xs,
-  },
-  badgeText: {
-    color: '#6b4500',
-    fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 10,
-  },
   heroTitle: {
     color: '#ffffff',
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     fontSize: 20,
     lineHeight: 24,
   },
@@ -1316,16 +1549,17 @@ const styles = StyleSheet.create({
   slotsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.xs,
+    gap: 8,
     marginTop: Spacing.md,
   },
   slotItem: {
-    width: '23%',
-    height: 48,
-    borderRadius: BorderRadius.xl,
+    width: '31%',
+    height: 44,
+    borderRadius: BorderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
+    paddingHorizontal: 4,
   },
   noticeRow: {
     flexDirection: 'row',
@@ -1336,24 +1570,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.premium,
+    padding: 14,
+    borderRadius: 16,
   },
   serviceLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   serviceIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  serviceAddBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.default,
   },
   ticketContainer: {
     borderRadius: BorderRadius.premium,
@@ -1379,7 +1609,7 @@ const styles = StyleSheet.create({
   },
   ticketHeroTitle: {
     color: '#ffffff',
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     fontSize: 20,
   },
   ticketDottedLineContainer: {
@@ -1422,11 +1652,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  ticketChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.sm,
-  },
   ticketBookmarkBtn: {
     width: 28,
     height: 28,
@@ -1453,13 +1678,13 @@ const styles = StyleSheet.create({
   ticketGridLabel: {
     color: 'rgba(128, 128, 128, 0.6)',
     fontSize: 10,
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   ticketGridValue: {
     fontSize: 12.5,
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     marginTop: 2,
   },
   ticketBottomSection: {
@@ -1480,11 +1705,11 @@ const styles = StyleSheet.create({
   ticketPriceLabel: {
     color: 'rgba(128, 128, 128, 0.7)',
     fontSize: 12,
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
   },
   ticketPriceValue: {
     fontSize: 12,
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
   },
   ticketPriceTotalRow: {
     flexDirection: 'row',
@@ -1497,11 +1722,11 @@ const styles = StyleSheet.create({
   },
   ticketPriceTotalLabel: {
     fontSize: 14,
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
   },
   ticketPriceTotalVal: {
     fontSize: 16,
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
   },
   barcodeWrapper: {
     alignItems: 'center',
@@ -1516,7 +1741,7 @@ const styles = StyleSheet.create({
   },
   barcodeSubText: {
     fontSize: 10,
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     marginTop: 4,
     letterSpacing: 1.5,
   },
@@ -1543,13 +1768,13 @@ const styles = StyleSheet.create({
   },
   ticketConfirmBtnTitle: {
     color: '#ffffff',
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     fontSize: 13,
     letterSpacing: 0.5,
   },
   ticketConfirmBtnSub: {
     color: 'rgba(255, 255, 255, 0.7)',
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 10,
     marginTop: 1,
   },
@@ -1638,7 +1863,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   couponSection: {
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     padding: 12,
     marginBottom: 12,
@@ -1650,7 +1875,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     fontSize: 12,
-    fontFamily: 'PlusJakartaSans_500Medium',
+    fontFamily: 'Sora_500Medium',
   },
   couponApplyBtn: {
     justifyContent: 'center',
@@ -1667,5 +1892,28 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  sliderDotsRow: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    zIndex: 10,
+  },
+  sliderDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+  },
+  sliderDotActive: {
+    width: 16,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
   },
 });

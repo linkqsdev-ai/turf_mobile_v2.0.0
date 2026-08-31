@@ -31,4 +31,9 @@ export const turfApi = {
     const response = await apiClient.post('/turfs', data);
     return response.turf;
   },
+
+  updateTurf: async (id: string, data: any) => {
+    const response = await apiClient.put(`/turfs/${id}`, data);
+    return response.turf;
+  },
 };

@@ -13,6 +13,7 @@ export interface PublishedTurf {
   id: string;
   name: string;
   sportType: string;
+  surfaceType?: string;
   address: string;
   pricePerSlot: number;
   contactNumber: string;

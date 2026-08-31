@@ -7,18 +7,29 @@ import {
   TextInput,
   Alert,
   Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useUserProfile, UserProfile } from '@/hooks/use-user-profile';
+import { AVATAR_IMAGES, AVATAR_KEYS, getAvatarSource } from '@/constants/avatars';
+import { getCurrentGPSLocation } from '@/utils/location';
+
+const SKILL_LEVELS: NonNullable<UserProfile['skillLevel']>[] = ['Beginner', 'Intermediate', 'Advanced', 'Pro'];
+
+// Lets a user switch their own role (Player / Coach / Owner / Organizer /
+// Super Admin) from Edit Profile. Hidden for now — flip to `true` to bring the
+// picker back. The role itself is still loaded from the profile and saved
+// unchanged while this is off, so hiding it never rewrites anyone's role.
+const SHOW_ROLE_SWITCHER = false;
 
 export default function EditProfileScreen() {
   const theme = useTheme();
@@ -26,13 +37,70 @@ export default function EditProfileScreen() {
   const { profile, updateProfile } = useUserProfile();
 
   // Local state initialized with current profile
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl);
   const [name, setName] = useState(profile.name);
+  const [email, setEmail] = useState(profile.email ?? '');
+  const [phone, setPhone] = useState(profile.phone ?? '');
   const [position, setPosition] = useState(profile.position);
   const [location, setLocation] = useState(profile.location);
   const [bio, setBio] = useState(profile.bio);
   const [preferredFoot, setPreferredFoot] = useState(profile.preferredFoot);
   const [playingStyle, setPlayingStyle] = useState(profile.playingStyle);
+  const [jerseyNumber, setJerseyNumber] = useState(profile.jerseyNumber !== undefined ? String(profile.jerseyNumber) : '');
+  const [skillLevel, setSkillLevel] = useState<NonNullable<UserProfile['skillLevel']>>(profile.skillLevel ?? 'Intermediate');
   const [role, setRole] = useState(profile.role || 'Player');
+  const [isLocating, setIsLocating] = useState(false);
+  const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
+
+  const handleDetectGPSLocation = async () => {
+    setIsLocating(true);
+    const result = await getCurrentGPSLocation();
+    setIsLocating(false);
+    if (result.error) {
+      Alert.alert('Location Error', result.error);
+    } else {
+      setLocation(result.address);
+    }
+  };
+
+  const pickFromCamera = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission Required', 'Camera access is needed to take a photo.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+      if (!result.canceled && result.assets?.length) {
+        setAvatarUrl(result.assets[0].uri);
+        setAvatarPickerVisible(false);
+      }
+    } catch (err) {
+      console.error('EditProfile: Failed to capture photo', err);
+    }
+  };
+
+  const pickFromGallery = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission Required', 'Gallery access is needed to pick a photo.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.length) {
+        setAvatarUrl(result.assets[0].uri);
+        setAvatarPickerVisible(false);
+      }
+    } catch (err) {
+      console.error('EditProfile: Failed to pick gallery image', err);
+    }
+  };
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -44,13 +112,20 @@ export default function EditProfileScreen() {
       return;
     }
 
+    const parsedJersey = jerseyNumber.trim() ? parseInt(jerseyNumber.trim(), 10) : undefined;
+
     updateProfile({
+      avatarUrl,
       name,
+      email: email.trim(),
+      phone: phone.trim(),
       position,
       location,
       bio,
       preferredFoot,
       playingStyle,
+      jerseyNumber: parsedJersey !== undefined && !isNaN(parsedJersey) ? parsedJersey : undefined,
+      skillLevel,
       role,
     });
 
@@ -86,14 +161,14 @@ export default function EditProfileScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Navigation Header */}
         <View style={[styles.header, { backgroundColor: 'transparent' }]}>
-          <Pressable 
+          <Pressable
             onPress={() => {
               if (router.canGoBack()) {
                 router.back();
               } else {
                 router.replace('/profile');
               }
-            }} 
+            }}
             style={styles.backButton}
           >
             <Ionicons name="arrow-back" size={24} color={theme.text} />
@@ -105,20 +180,23 @@ export default function EditProfileScreen() {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {/* Section 1: Portrait */}
+          {/* Section 1: Portrait — hero treatment, avatar picker now actually works */}
           <View style={styles.section}>
             <View style={[styles.portraitCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-              <View style={styles.avatarWrapper}>
-                <Image source={typeof profile.avatarUrl === 'string' && !/^\d+$/.test(profile.avatarUrl) ? { uri: profile.avatarUrl } : (typeof profile.avatarUrl === 'number' ? profile.avatarUrl : parseInt(profile.avatarUrl, 10))} style={styles.avatarImage} />
-                <View style={[styles.editIconBadge, { backgroundColor: theme.secondaryContainer }]}>
-                  <Ionicons name="camera" size={14} color={theme.onSecondaryContainer} />
+              <Pressable style={styles.avatarWrapper} onPress={() => setAvatarPickerVisible(true)}>
+                <Image source={getAvatarSource(avatarUrl)} style={[styles.avatarImage, { borderColor: theme.primary + '55' }]} />
+                <View style={[styles.editIconBadge, { backgroundColor: theme.primary }]}>
+                  <Ionicons name="camera" size={14} color="#ffffff" />
                 </View>
-              </View>
+              </Pressable>
               <View style={styles.portraitTextCol}>
                 <ThemedText type="headlineSm">Player Portrait</ThemedText>
                 <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 2 }}>
-                  JPG or PNG, Max 5MB size limit.
+                  Pick a preset avatar or upload your own photo.
                 </ThemedText>
+                <Pressable style={[styles.changePhotoBtn, { backgroundColor: theme.primary + '15' }]} onPress={() => setAvatarPickerVisible(true)}>
+                  <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_700Bold' }}>Change Photo</ThemedText>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -140,41 +218,71 @@ export default function EditProfileScreen() {
                   onChangeText={setName}
                   style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
                   placeholder="e.g. Rahul S. Dravid"
-                  placeholderTextColor={theme.textSecondary + '77'}
+                  placeholderTextColor="#94a3b8"
                 />
               </View>
 
-              <View style={styles.inputContainer}>
-                <ThemedText type="labelMd" style={styles.inputLabel}>USER ROLE</ThemedText>
-                <View style={styles.segmentedRow}>
-                  {['Player', 'Coach', 'Owner', 'Organizer'].map((r) => {
-                    const isSelected = role === r;
-                    return (
-                      <Pressable
-                        key={r}
-                        onPress={() => setRole(r as any)}
-                        style={[
-                          styles.segmentedBtn,
-                          {
-                            borderColor: isSelected ? theme.secondaryContainer : theme.outlineVariant + '33',
-                            backgroundColor: isSelected ? theme.secondaryContainer + '15' : 'transparent',
-                          },
-                        ]}
-                      >
-                        <ThemedText
-                          type="labelMd"
-                          style={{
-                            color: isSelected ? theme.secondary : theme.textSecondary,
-                            fontFamily: isSelected ? 'PlusJakartaSans_700Bold' : 'PlusJakartaSans_500Medium',
-                          }}
-                        >
-                          {r}
-                        </ThemedText>
-                      </Pressable>
-                    );
-                  })}
+              <View style={styles.rowPair}>
+                <View style={[styles.inputContainer, { flex: 1 }]}>
+                  <ThemedText type="labelMd" style={styles.inputLabel}>EMAIL</ThemedText>
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
+                    placeholder="you@example.com"
+                    placeholderTextColor="#94a3b8"
+                  />
                 </View>
               </View>
+
+              <View style={styles.inputContainer}>
+                <ThemedText type="labelMd" style={styles.inputLabel}>PHONE NUMBER</ThemedText>
+                <TextInput
+                  value={phone}
+                  onChangeText={(t) => setPhone(t.replace(/[^0-9+\s-]/g, ''))}
+                  keyboardType="phone-pad"
+                  style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
+                  placeholder="10-digit mobile number"
+                  placeholderTextColor="#94a3b8"
+                />
+              </View>
+
+              {SHOW_ROLE_SWITCHER && (
+                <View style={styles.inputContainer}>
+                  <ThemedText type="labelMd" style={styles.inputLabel}>USER ROLE</ThemedText>
+                  <View style={styles.segmentedRow}>
+                    {['Player', 'Coach', 'Owner', 'Organizer', 'Super Admin'].map((r) => {
+                      const isSelected = role === r;
+                      return (
+                        <Pressable
+                          key={r}
+                          onPress={() => setRole(r as any)}
+                          style={[
+                            styles.segmentedBtn,
+                            {
+                              borderColor: isSelected ? theme.secondaryContainer : theme.outlineVariant + '33',
+                              backgroundColor: isSelected ? theme.secondaryContainer + '15' : 'transparent',
+                            },
+                          ]}
+                        >
+                          <ThemedText
+                            type="labelMd"
+                            style={{
+                              color: isSelected ? theme.secondary : theme.textSecondary,
+                              fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium',
+                            }}
+                          >
+                            {r}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
 
               <View style={styles.inputContainer}>
                 <ThemedText type="labelMd" style={styles.inputLabel}>PLAYING POSITION</ThemedText>
@@ -183,18 +291,30 @@ export default function EditProfileScreen() {
                   onChangeText={setPosition}
                   style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
                   placeholder="e.g. Forward, Midfielder"
-                  placeholderTextColor={theme.textSecondary + '77'}
+                  placeholderTextColor="#94a3b8"
                 />
               </View>
 
-              <View style={styles.inputContainer}>
-                <ThemedText type="labelMd" style={styles.inputLabel}>LOCATION</ThemedText>
+              <View style={[styles.inputContainer, { marginBottom: 0 }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xs }}>
+                  <ThemedText type="labelMd" style={styles.inputLabel}>LOCATION</ThemedText>
+                  <Pressable
+                    onPress={handleDetectGPSLocation}
+                    disabled={isLocating}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, backgroundColor: theme.primary + '18' }}
+                  >
+                    <Ionicons name="locate" size={11} color={theme.primary} />
+                    <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
+                      {isLocating ? 'Fetching GPS...' : 'GPS Auto-Detect'}
+                    </ThemedText>
+                  </Pressable>
+                </View>
                 <TextInput
                   value={location}
                   onChangeText={setLocation}
                   style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
                   placeholder="e.g. London, UK"
-                  placeholderTextColor={theme.textSecondary + '77'}
+                  placeholderTextColor="#94a3b8"
                 />
               </View>
             </View>
@@ -210,15 +330,49 @@ export default function EditProfileScreen() {
             </View>
 
             <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-              <View style={styles.inputContainer}>
-                <ThemedText type="labelMd" style={styles.inputLabel}>PREFERRED FOOT</ThemedText>
+              <View style={styles.rowPair}>
+                <View style={{ flex: 1 }}>
+                  <ThemedText type="labelMd" style={styles.inputLabel}>PREFERRED FOOT</ThemedText>
+                  <View style={styles.segmentedRow}>
+                    {['Right', 'Left', 'Both'].map((foot) => {
+                      const isSelected = preferredFoot === foot;
+                      return (
+                        <Pressable
+                          key={foot}
+                          onPress={() => setPreferredFoot(foot)}
+                          style={[
+                            styles.segmentedBtn,
+                            {
+                              borderColor: isSelected ? theme.secondaryContainer : theme.outlineVariant + '33',
+                              backgroundColor: isSelected ? theme.secondaryContainer + '15' : 'transparent',
+                            },
+                          ]}
+                        >
+                          <ThemedText
+                            type="labelMd"
+                            style={{
+                              color: isSelected ? theme.secondary : theme.textSecondary,
+                              fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium',
+                            }}
+                          >
+                            {foot}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              </View>
+
+              <View style={[styles.inputContainer, { marginTop: Spacing.md }]}>
+                <ThemedText type="labelMd" style={styles.inputLabel}>SKILL LEVEL</ThemedText>
                 <View style={styles.segmentedRow}>
-                  {['Right', 'Left', 'Both'].map((foot) => {
-                    const isSelected = preferredFoot === foot;
+                  {SKILL_LEVELS.map((lvl) => {
+                    const isSelected = skillLevel === lvl;
                     return (
                       <Pressable
-                        key={foot}
-                        onPress={() => setPreferredFoot(foot)}
+                        key={lvl}
+                        onPress={() => setSkillLevel(lvl)}
                         style={[
                           styles.segmentedBtn,
                           {
@@ -228,13 +382,14 @@ export default function EditProfileScreen() {
                         ]}
                       >
                         <ThemedText
-                          type="labelMd"
+                          type="labelSm"
                           style={{
                             color: isSelected ? theme.secondary : theme.textSecondary,
-                            fontFamily: isSelected ? 'PlusJakartaSans_700Bold' : 'PlusJakartaSans_500Medium',
+                            fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium',
+                            fontSize: 10,
                           }}
                         >
-                          {foot}
+                          {lvl}
                         </ThemedText>
                       </Pressable>
                     );
@@ -242,15 +397,28 @@ export default function EditProfileScreen() {
                 </View>
               </View>
 
-              <View style={styles.inputContainer}>
-                <ThemedText type="labelMd" style={styles.inputLabel}>PLAYING STYLE</ThemedText>
-                <TextInput
-                  value={playingStyle}
-                  onChangeText={setPlayingStyle}
-                  style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
-                  placeholder="e.g. Target Man / Poacher"
-                  placeholderTextColor={theme.textSecondary + '77'}
-                />
+              <View style={styles.rowPair}>
+                <View style={[styles.inputContainer, { flex: 1 }]}>
+                  <ThemedText type="labelMd" style={styles.inputLabel}>JERSEY NUMBER</ThemedText>
+                  <TextInput
+                    value={jerseyNumber}
+                    onChangeText={(t) => setJerseyNumber(t.replace(/\D/g, '').slice(0, 3))}
+                    keyboardType="number-pad"
+                    style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
+                    placeholder="e.g. 7"
+                    placeholderTextColor="#94a3b8"
+                  />
+                </View>
+                <View style={[styles.inputContainer, { flex: 1.6 }]}>
+                  <ThemedText type="labelMd" style={styles.inputLabel}>PLAYING STYLE</ThemedText>
+                  <TextInput
+                    value={playingStyle}
+                    onChangeText={setPlayingStyle}
+                    style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
+                    placeholder="e.g. Target Man / Poacher"
+                    placeholderTextColor="#94a3b8"
+                  />
+                </View>
               </View>
             </View>
           </View>
@@ -265,7 +433,7 @@ export default function EditProfileScreen() {
             </View>
 
             <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, { marginBottom: 0 }]}>
                 <ThemedText type="labelMd" style={styles.inputLabel}>BIO DESCRIPTION</ThemedText>
                 <TextInput
                   value={bio}
@@ -274,7 +442,7 @@ export default function EditProfileScreen() {
                   numberOfLines={4}
                   style={[styles.textInput, styles.multilineInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
                   placeholder="Tell us about your sporting focus..."
-                  placeholderTextColor={theme.textSecondary + '77'}
+                  placeholderTextColor="#94a3b8"
                 />
               </View>
             </View>
@@ -285,7 +453,7 @@ export default function EditProfileScreen() {
         {/* Actions buttons Fixed at Bottom */}
         <View style={[styles.actionSection, { paddingBottom: Spacing.md }]}>
           <Pressable onPress={handleSave} style={[styles.primaryActionBtn, { backgroundColor: theme.primary }]}>
-            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold' }}>
+            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
               SAVE CHANGES
             </ThemedText>
           </Pressable>
@@ -300,12 +468,62 @@ export default function EditProfileScreen() {
             }}
             style={[styles.secondaryActionBtn, { borderColor: theme.outline }]}
           >
-            <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'PlusJakartaSans_700Bold' }}>
+            <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
               CANCEL
             </ThemedText>
           </Pressable>
         </View>
       </SafeAreaView>
+
+      {/* Avatar Picker Sheet */}
+      <Modal visible={avatarPickerVisible} transparent animationType="slide" onRequestClose={() => setAvatarPickerVisible(false)}>
+        <Pressable style={styles.pickerBackdrop} onPress={() => setAvatarPickerVisible(false)}>
+          <Pressable style={[styles.pickerSheet, { backgroundColor: theme.surfaceLowest }]} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.pickerHandle} />
+            <View style={styles.pickerHeaderRow}>
+              <ThemedText type="headlineSm" style={{ color: theme.text }}>Change Photo</ThemedText>
+              <Pressable onPress={() => setAvatarPickerVisible(false)} hitSlop={8}>
+                <Ionicons name="close" size={22} color={theme.text} />
+              </Pressable>
+            </View>
+
+            <View style={styles.pickerActionsRow}>
+              <Pressable style={[styles.pickerActionBtn, { backgroundColor: theme.surfaceLow }]} onPress={pickFromCamera}>
+                <Ionicons name="camera-outline" size={18} color={theme.primary} />
+                <ThemedText style={{ color: theme.text, fontSize: 12, fontFamily: 'Sora_600SemiBold', marginLeft: 8 }}>Take Photo</ThemedText>
+              </Pressable>
+              <Pressable style={[styles.pickerActionBtn, { backgroundColor: theme.surfaceLow }]} onPress={pickFromGallery}>
+                <Ionicons name="image-outline" size={18} color={theme.primary} />
+                <ThemedText style={{ color: theme.text, fontSize: 12, fontFamily: 'Sora_600SemiBold', marginLeft: 8 }}>Choose from Gallery</ThemedText>
+              </Pressable>
+            </View>
+
+            <ThemedText type="labelMd" style={[styles.inputLabel, { marginTop: Spacing.md, marginBottom: Spacing.sm }]}>OR PICK A PRESET AVATAR</ThemedText>
+            <ScrollView contentContainerStyle={styles.presetGrid} showsVerticalScrollIndicator={false}>
+              {AVATAR_KEYS.map((key) => {
+                const isSelected = avatarUrl === key;
+                return (
+                  <Pressable
+                    key={key}
+                    onPress={() => { setAvatarUrl(key); setAvatarPickerVisible(false); }}
+                    style={[
+                      styles.presetAvatarWrap,
+                      { borderColor: isSelected ? theme.primary : 'transparent', backgroundColor: theme.surfaceLow },
+                    ]}
+                  >
+                    <Image source={AVATAR_IMAGES[key]} style={styles.presetAvatarImage} />
+                    {isSelected && (
+                      <View style={[styles.presetCheckBadge, { backgroundColor: theme.primary }]}>
+                        <Ionicons name="checkmark" size={10} color="#ffffff" />
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </GradientContainer>
   );
 }
@@ -331,7 +549,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   headerTitle: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 16,
   },
   scrollContent: {
@@ -352,27 +570,33 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatarImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 2,
-    borderColor: '#ffffff',
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 2.5,
   },
   editIconBadge: {
     position: 'absolute',
-    bottom: -4,
-    right: -4,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    bottom: -2,
+    right: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#ffffff',
   },
   portraitTextCol: {
     flex: 1,
     marginLeft: Spacing.md,
+  },
+  changePhotoBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -381,7 +605,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   sectionTitleText: {
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Sora_700Bold',
     letterSpacing: 1,
     fontSize: 10,
   },
@@ -393,8 +617,12 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginBottom: Spacing.md,
   },
+  rowPair: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
   inputLabel: {
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 9,
     letterSpacing: 0.5,
     color: '#73787b',
@@ -450,5 +678,76 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  // Avatar picker sheet
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(5, 21, 30, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheet: {
+    borderTopLeftRadius: BorderRadius.premium,
+    borderTopRightRadius: BorderRadius.premium,
+    padding: Spacing.lg,
+    maxHeight: '75%',
+  },
+  pickerHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#00000022',
+    alignSelf: 'center',
+    marginBottom: Spacing.sm,
+  },
+  pickerHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  pickerActionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  pickerActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 46,
+    borderRadius: BorderRadius.lg,
+  },
+  presetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingBottom: Spacing.md,
+  },
+  presetAvatarWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  presetAvatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  presetCheckBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
   },
 });

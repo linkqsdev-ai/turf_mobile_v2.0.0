@@ -200,7 +200,7 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
               <ThemedText type="labelSm" style={{ color: '#ffffffaa', letterSpacing: 1 }}>
                 Match Time
               </ThemedText>
-              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 40, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 4 }}>
+              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 40, fontFamily: 'Sora_800ExtraBold', marginTop: 4 }}>
                 {String(Math.floor(seconds / 60)).padStart(2, '0')}:{String(seconds % 60).padStart(2, '0')}
               </ThemedText>
             </View>
@@ -232,10 +232,6 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
             <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5 }}>
               Scores & Goals
             </ThemedText>
-            <View style={styles.liveBadgeAbsolute}>
-              <View style={styles.liveDotRed} />
-              <ThemedText style={styles.liveText}>Live</ThemedText>
-            </View>
           </View>
           <View style={styles.teamsRow}>
             {/* Team A Goal Button */}
@@ -291,8 +287,8 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
           {/* Possession Bar */}
           <View style={styles.statAdjusterRow}>
             <View style={styles.statLabelRow}>
-              <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Possession</ThemedText>
-              <ThemedText type="bodyMd" style={{ color: theme.secondaryContainer, fontFamily: 'HankenGrotesk_700Bold' }}>{possessionA}% - {100 - possessionA}%</ThemedText>
+              <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>Possession</ThemedText>
+              <ThemedText type="bodyMd" style={{ color: theme.secondaryContainer, fontFamily: 'Sora_700Bold' }}>{possessionA}% - {100 - possessionA}%</ThemedText>
             </View>
             <View style={styles.sliderButtons}>
               <Pressable
@@ -322,7 +318,7 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
                 <Pressable onPress={() => setShotsA(prev => Math.max(0, prev - 1))} style={styles.iconBtn}>
                   <Ionicons name="remove-circle-outline" size={16} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold' }}>{shotsA}|{shotsB}</ThemedText>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold' }}>{shotsA}|{shotsB}</ThemedText>
                 <Pressable onPress={() => setShotsB(prev => prev + 1)} style={styles.iconBtn}>
                   <Ionicons name="add-circle-outline" size={16} color={theme.text} />
                 </Pressable>
@@ -339,7 +335,7 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
                 <Pressable onPress={() => setCornersA(prev => Math.max(0, prev - 1))} style={styles.iconBtn}>
                   <Ionicons name="remove-circle-outline" size={16} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold' }}>{cornersA}|{cornersB}</ThemedText>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold' }}>{cornersA}|{cornersB}</ThemedText>
                 <Pressable onPress={() => setCornersB(prev => prev + 1)} style={styles.iconBtn}>
                   <Ionicons name="add-circle-outline" size={16} color={theme.text} />
                 </Pressable>
@@ -356,7 +352,7 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
                 <Pressable onPress={() => setFoulsA(prev => Math.max(0, prev - 1))} style={styles.iconBtn}>
                   <Ionicons name="remove-circle-outline" size={16} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, fontFamily: 'HankenGrotesk_700Bold' }}>{foulsA}|{foulsB}</ThemedText>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold' }}>{foulsA}|{foulsB}</ThemedText>
                 <Pressable onPress={() => setFoulsB(prev => prev + 1)} style={styles.iconBtn}>
                   <Ionicons name="add-circle-outline" size={16} color={theme.text} />
                 </Pressable>
@@ -436,7 +432,7 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
                     />
                   </View>
                   <View style={styles.timelineDescCol}>
-                    <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>
+                    <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>
                       {isGoal ? 'GOAL!' : event.type === 'yellow' ? 'Yellow Card' : 'Red Card'}
                     </ThemedText>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
@@ -686,27 +682,5 @@ const styles = StyleSheet.create({
   },
   timelineDescCol: {
     flex: 1,
-  },
-  liveBadgeAbsolute: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ff1744',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    gap: 4,
-  },
-  liveDotRed: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#ffffff',
-  },
-  liveText: {
-    color: '#ffffff',
-    fontSize: 8,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
   },
 });

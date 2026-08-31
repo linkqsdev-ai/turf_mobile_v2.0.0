@@ -1,16 +1,39 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// In development, change 'localhost' to your local network IP (e.g. '192.168.1.100')
-// if testing on a physical mobile device.
-const LOCAL_IP = '192.168.1.38';
+// Live Production VPS Backend (Secure HTTPS on Hostinger VPS)
+const PRODUCTION_VPS_URL = 'https://srv1939048.hstgr.cloud/api';
 
-export const API_BASE_URL = Platform.select({
-  android: `http://${LOCAL_IP}:3000/api`,
-  ios: `http://${LOCAL_IP}:3000/api`,
-  web: `http://localhost:3000/api`,
-  default: `http://${LOCAL_IP}:3000/api`,
-});
+export const API_BASE_URL = PRODUCTION_VPS_URL;
+
+// Dynamically discover Metro dev machine IP for Expo Go on physical phones
+function getCandidateBaseUrls(): string[] {
+  const debuggerHost =
+    Constants.expoConfig?.hostUri ||
+    (Constants as any)?.manifest2?.extra?.expoGo?.debuggerHost ||
+    (Constants as any)?.manifest?.debuggerHost;
+
+  const devMachineIp = debuggerHost ? debuggerHost.split(':')[0] : '192.168.1.12';
+
+  const urls: string[] = [];
+
+  // In development, prefer the live local backend (running port 5070 with latest OTP routes)
+  if (__DEV__) {
+    if (devMachineIp) {
+      urls.push(`http://${devMachineIp}:5070/api`);
+    }
+    if (Platform.OS === 'web') {
+      urls.push('http://localhost:5070/api');
+    }
+    urls.push('http://192.168.1.12:5070/api');
+  }
+
+  // Live Production VPS
+  urls.push(PRODUCTION_VPS_URL);
+
+  return [...new Set(urls)];
+}
 
 const TOKEN_KEY = '@turf_auth_token';
 
@@ -22,7 +45,7 @@ export async function setAuthToken(token: string | null) {
       await AsyncStorage.removeItem(TOKEN_KEY);
     }
   } catch (error) {
-    console.error('API Client: Error saving auth token', error);
+    console.warn('API Client: Error saving auth token', error);
   }
 }
 
@@ -30,7 +53,7 @@ export async function getAuthToken(): Promise<string | null> {
   try {
     return await AsyncStorage.getItem(TOKEN_KEY);
   } catch (error) {
-    console.error('API Client: Error getting auth token', error);
+    console.warn('API Client: Error getting auth token', error);
     return null;
   }
 }
@@ -48,38 +71,49 @@ async function request(endpoint: string, options: FetchOptions = {}) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  let url = `${API_BASE_URL}${endpoint}`;
-  if (options.params) {
-    const searchParams = new URLSearchParams(options.params);
-    url += `?${searchParams.toString()}`;
-  }
+  const queryParams = options.params ? `?${new URLSearchParams(options.params).toString()}` : '';
 
   const config: RequestInit = {
     ...options,
     headers,
   };
 
-  try {
-    console.log(`[API Request] ${config.method || 'GET'} ${url}`);
-    const response = await fetch(url, config);
-    const text = await response.text();
-    let data;
+  let lastError: any = null;
+  const candidates = getCandidateBaseUrls();
+
+  // Try candidate URLs with resilient fallback
+  for (const baseUrl of candidates) {
+    const fullUrl = `${baseUrl}${endpoint}${queryParams}`;
     try {
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      data = { message: text };
-    }
+      console.log(`[API Request] ${config.method || 'GET'} ${fullUrl}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-    if (!response.ok) {
-      console.error(`[API Error] ${response.status} - ${data.message || response.statusText}`);
-      throw new Error(data.message || `Request failed with status ${response.status}`);
-    }
+      const response = await fetch(fullUrl, { ...config, signal: controller.signal });
+      clearTimeout(timeoutId);
 
-    return data;
-  } catch (error: any) {
-    console.error(`[API Network Error] ${error.message}`);
-    throw error;
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { message: text };
+      }
+
+      if (!response.ok) {
+        console.warn(`[API Error] ${response.status} - ${data.message || response.statusText}`);
+        throw new Error(data.message || `Request failed with status ${response.status}`);
+      }
+
+      return data;
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[API Candidate Failed] (${fullUrl}): ${err.message}. Trying next candidate...`);
+    }
   }
+
+  console.warn(`[API Network Exhausted] Endpoint: ${endpoint} failed on all candidates: ${lastError?.message}`);
+  throw lastError || new Error('Network connection failed on all backend candidates');
 }
 
 export const apiClient = {

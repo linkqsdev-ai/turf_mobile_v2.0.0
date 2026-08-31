@@ -75,6 +75,9 @@ export default function CreateClassScreen() {
 
   // Step 1 — Class Info
   const [className, setClassName] = useState('');
+  const [certificates, setCertificates] = useState<string[]>(['BWF Certified Level 2']);
+  const [newCertInput, setNewCertInput] = useState('');
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>(['Water Station', 'Training Gear Provided', 'Locker & Shower']);
   const [sportType, setSportType] = useState('');
   const [classType, setClassType] = useState('');
   const [ageGroup, setAgeGroup] = useState('');
@@ -174,18 +177,80 @@ export default function CreateClassScreen() {
     })();
   }, []);
 
-  const toggleSessionTime = (time: string) => {
-    if (!sessionTime) {
-      setSessionTime(time);
-      return;
+  const getFormattedSessionTime = (rawSessionTime: string): string => {
+    if (!rawSessionTime) return '';
+    const selectedList = rawSessionTime.split(',').map(s => s.trim()).filter(Boolean);
+    if (selectedList.length === 0) return '';
+
+    const results: string[] = [];
+
+    for (const [groupName, groupTimes] of Object.entries(SESSION_GROUPS)) {
+      const categoryName = groupName.replace(' Session', '');
+      const inGroup = groupTimes.filter(t => selectedList.includes(t));
+      if (inGroup.length === 0) continue;
+
+      if (inGroup.length === 1) {
+        results.push(`${categoryName} ${inGroup[0]}`);
+      } else {
+        const first = inGroup[0];
+        const last = inGroup[inGroup.length - 1];
+        results.push(`${categoryName} ${first} - ${last}`);
+      }
     }
-    const times = sessionTime.split(',').map(s => s.trim()).filter(Boolean);
-    if (times.includes(time)) {
-      const nextTimes = times.filter(t => t !== time);
-      setSessionTime(nextTimes.join(', '));
+
+    return results.join(', ');
+  };
+
+  const getSlotCountFromDuration = (dur: string): number => {
+    if (dur.includes('180') || dur.includes('3')) return 3;
+    if (dur.includes('120') || dur.includes('2') || dur.includes('90') || dur.includes('1.5')) return 2;
+    return 1;
+  };
+
+  const handleSelectSessionTime = (time: string, groupName: string) => {
+    const currentTimes = sessionTime.split(',').map(s => s.trim()).filter(Boolean);
+    let updatedTimes: string[];
+
+    if (currentTimes.includes(time)) {
+      // Toggle off slot
+      updatedTimes = currentTimes.filter(t => t !== time);
     } else {
-      const nextTimes = [...times, time];
-      setSessionTime(nextTimes.join(', '));
+      // Toggle on slot
+      updatedTimes = [...currentTimes, time];
+    }
+
+    setSessionTime(updatedTimes.join(', '));
+
+    // Automatically update session duration matching total 1-hr slots selected!
+    const totalSlots = updatedTimes.length;
+    if (totalSlots === 1) setSessionDuration('60 min');
+    else if (totalSlots === 2) setSessionDuration('120 min');
+    else if (totalSlots >= 3) setSessionDuration('180 min');
+  };
+
+  const handleDurationSelect = (dur: string) => {
+    setSessionDuration(dur);
+    const targetSlotsCount = getSlotCountFromDuration(dur);
+    const currentTimes = sessionTime.split(',').map(s => s.trim()).filter(Boolean);
+
+    if (currentTimes.length === 0) return;
+
+    if (currentTimes.length === targetSlotsCount) return;
+
+    if (currentTimes.length < targetSlotsCount) {
+      const firstTime = currentTimes[0];
+      for (const [groupName, groupTimes] of Object.entries(SESSION_GROUPS)) {
+        if (groupTimes.includes(firstTime)) {
+          const startIndex = groupTimes.indexOf(firstTime);
+          if (startIndex !== -1) {
+            const nextSlots = groupTimes.slice(startIndex, Math.min(startIndex + targetSlotsCount, groupTimes.length));
+            setSessionTime(nextSlots.join(', '));
+          }
+          break;
+        }
+      }
+    } else if (currentTimes.length > targetSlotsCount) {
+      setSessionTime(currentTimes.slice(0, targetSlotsCount).join(', '));
     }
   };
 
@@ -205,30 +270,93 @@ export default function CreateClassScreen() {
     return `${dd}/${mm}/${yyyy}`;
   };
 
+  const parseDateString = (dateStr: string): Date | null => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+    const d = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const y = parseInt(parts[2], 10);
+    const res = new Date(y, m, d);
+    res.setHours(0, 0, 0, 0);
+    return isNaN(res.getTime()) ? null : res;
+  };
+
+  // Step 0 validation: Class Name (3 to 40 chars), Sport, Class Type are mandatory
+  const isStepZeroValid = useMemo(() => {
+    const validName = className.trim().length >= 3 && className.trim().length <= 40;
+    return Boolean(validName && sportType.trim() && classType.trim());
+  }, [className, sportType, classType]);
+
+  // Step 1 validation: Start Date, End Date (must be >= Start Date), Recurring Days, Session Time, Venue (>= 3 chars)
+  const isStepOneValid = useMemo(() => {
+    const startD = parseDateString(startDate);
+    const endD = parseDateString(endDate);
+    const validDates = Boolean(startD && endD && endD.getTime() >= startD.getTime());
+    const hasDays = Object.values(selectedDays).some(Boolean);
+    const validVenue = venue.trim().length >= 3;
+    return Boolean(validDates && hasDays && sessionTime.trim() && validVenue);
+  }, [startDate, endDate, selectedDays, sessionTime, venue]);
+
+  // Step 2 validation: Fee Type, Fee Amount (> 0)
+  const isStepTwoValid = useMemo(() => {
+    const validAmount = Boolean(feeAmount.trim()) && !isNaN(parseFloat(feeAmount)) && parseFloat(feeAmount) > 0;
+    return Boolean(feeType.trim() && validAmount);
+  }, [feeType, feeAmount]);
+
+  const handleStepHeaderPress = (targetIdx: number) => {
+    if (targetIdx === currentStep) return;
+    if (targetIdx > currentStep) {
+      if (currentStep === 0 && !isStepZeroValid) {
+        if (className.trim().length > 0 && className.trim().length < 3) {
+          triggerToast('⚠️ Class Name must be at least 3 characters long.');
+        } else {
+          triggerToast('⚠️ Please fill required fields (*): Class Name, Sport, Class Type');
+        }
+        return;
+      }
+      if (currentStep === 1 && !isStepOneValid) {
+        const startD = parseDateString(startDate);
+        const endD = parseDateString(endDate);
+        if (startD && endD && endD.getTime() < startD.getTime()) {
+          triggerToast(`⚠️ End Date (${endDate}) cannot be earlier than Start Date (${startDate})`);
+          return;
+        }
+        triggerToast('⚠️ Please fill required fields (*): Dates, Recurring Days, Session Time, Venue');
+        return;
+      }
+      if (targetIdx === 2 && (!isStepZeroValid || !isStepOneValid)) {
+        triggerToast('⚠️ Please complete all previous mandatory fields first (*)');
+        return;
+      }
+    }
+    setCurrentStep(targetIdx);
+  };
+
   const handleNext = () => {
-    if (currentStep === 0 && (!className || !sportType || !classType)) {
-      triggerToast('Please fill all required fields: Class Name, Sport, Class Type.');
-      return;
+    if (currentStep === 0) {
+      if (className.trim().length > 0 && className.trim().length < 3) {
+        triggerToast('⚠️ Class Name must be at least 3 characters long.');
+        return;
+      }
+      if (!isStepZeroValid) {
+        triggerToast('⚠️ Please fill required fields (*): Class Name, Sport, Class Type');
+        return;
+      }
+      setCurrentStep(1);
+    } else if (currentStep === 1) {
+      const startD = parseDateString(startDate);
+      const endD = parseDateString(endDate);
+      if (startD && endD && endD.getTime() < startD.getTime()) {
+        triggerToast(`⚠️ End Date (${endDate}) cannot be earlier than Start Date (${startDate})`);
+        return;
+      }
+      if (!isStepOneValid) {
+        triggerToast('⚠️ Please fill required fields (*): Dates, Recurring Days, Session Time, Venue');
+        return;
+      }
+      setCurrentStep(2);
     }
-    if (currentStep === 1) {
-      if (!startDate || !endDate) {
-        triggerToast('Please select start and end dates.');
-        return;
-      }
-      if (Object.values(selectedDays).every(v => !v)) {
-        triggerToast('Please select at least one recurring day.');
-        return;
-      }
-      if (!sessionTime) {
-        triggerToast('Please select a session time.');
-        return;
-      }
-      if (!venue) {
-        triggerToast('Please specify a venue.');
-        return;
-      }
-    }
-    if (currentStep < STEPS.length - 1) setCurrentStep(currentStep + 1);
   };
 
   const handleBack = () => {
@@ -241,8 +369,8 @@ export default function CreateClassScreen() {
 
   const handlePublish = () => {
     if (isPublishing) return;
-    if (!feeType || !feeAmount) {
-      triggerToast('Please fill all required fields: Fee Structure, Fee Amount.');
+    if (!isStepZeroValid || !isStepOneValid || !isStepTwoValid) {
+      triggerToast('⚠️ Please fill all required fields before publishing (*): Fee Structure & Fee Amount');
       return;
     }
 
@@ -342,20 +470,35 @@ export default function CreateClassScreen() {
       <View style={[styles.formCard, { backgroundColor: theme.surface, borderRadius: BorderRadius.lg, padding: Spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }]}>
       {/* Class Name */}
       <View style={styles.fieldGroup}>
-        <ThemedText style={styles.fieldLabel}>Class Name <ThemedText style={{ color: '#ef4444' }}>*</ThemedText></ThemedText>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <ThemedText style={styles.fieldLabel}>Class Name <ThemedText style={{ color: '#ef4444' }}>*</ThemedText></ThemedText>
+          <ThemedText style={{ fontSize: 10, color: className.length >= 40 ? '#ef4444' : theme.textSecondary, fontFamily: 'Sora_700Bold' }}>
+            {className.length}/40
+          </ThemedText>
+        </View>
         <TextInput
           value={className}
-          onChangeText={setClassName}
-          placeholder="e.g. Elite Football Academy U16"
-          placeholderTextColor={theme.textSecondary + '77'}
-          style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: theme.outlineVariant + '44' }]}
+          onChangeText={text => setClassName(text.replace(/[^a-zA-Z\s]/g, ''))}
+          maxLength={40}
+          placeholder="e.g. Elite Football Academy"
+          placeholderTextColor="#94a3b8"
+          style={[
+            styles.input,
+            { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: theme.outlineVariant + '44' },
+            className.length > 0 && className.length < 3 && { borderColor: '#ef4444' }
+          ]}
         />
+        {className.length > 0 && className.length < 3 && (
+          <ThemedText style={{ fontSize: 10, color: '#ef4444', marginTop: 3 }}>
+            Class name must contain only letters (at least 3 chars).
+          </ThemedText>
+        )}
       </View>
 
       {/* Sport Type */}
       <View style={styles.fieldGroup}>
         <ThemedText style={styles.fieldLabel}>Sport <ThemedText style={{ color: '#ef4444' }}>*</ThemedText></ThemedText>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
           {SPORTS_LIST.map(sport => {
             const isActive = sportType === sport.name;
             return (
@@ -363,7 +506,7 @@ export default function CreateClassScreen() {
                 key={sport.name}
                 onPress={() => setSportType(sport.name)}
                 style={[
-                  styles.chip,
+                  styles.filterChip,
                   { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
                   isActive && { backgroundColor: theme.primary, borderColor: theme.primary }
                 ]}
@@ -374,7 +517,14 @@ export default function CreateClassScreen() {
                   color={isActive ? '#ffffff' : theme.textSecondary}
                   style={{ marginRight: 4 }}
                 />
-                <ThemedText style={[styles.chipText, { color: isActive ? '#fff' : theme.textSecondary }]}>{sport.name}</ThemedText>
+                <ThemedText style={{
+                  color: isActive ? '#ffffff' : theme.textSecondary,
+                  fontFamily: isActive ? 'Sora_700Bold' : 'Sora_600SemiBold',
+                  fontSize: 10,
+                  letterSpacing: 0.2,
+                }}>
+                  {sport.name}
+                </ThemedText>
               </Pressable>
             );
           })}
@@ -435,9 +585,9 @@ export default function CreateClassScreen() {
                 }
               ]}
             >
-              <Ionicons name={s.icon as any} size={15} color={skillLevel === s.key ? theme.primary : theme.textSecondary} />
+              <Ionicons name={s.icon as any} size={12} color={skillLevel === s.key ? theme.primary : theme.textSecondary} />
               <ThemedText style={[styles.skillText, { color: skillLevel === s.key ? theme.primary : theme.text }]}>{s.label}</ThemedText>
-              {skillLevel === s.key && <Ionicons name="checkmark-circle" size={12} color={theme.primary} />}
+              {skillLevel === s.key && <Ionicons name="checkmark-circle" size={10} color={theme.primary} />}
             </Pressable>
           ))}
         </ScrollView>
@@ -448,12 +598,138 @@ export default function CreateClassScreen() {
         <ThemedText style={styles.fieldLabel}>Max Students</ThemedText>
         <TextInput
           value={maxStudents}
-          onChangeText={setMaxStudents}
+          onChangeText={text => setMaxStudents(text.replace(/[^0-9]/g, ''))}
           keyboardType="number-pad"
           placeholder="e.g. 20"
-          placeholderTextColor={theme.textSecondary + '77'}
+          placeholderTextColor="#94a3b8"
           style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: theme.outlineVariant + '44' }]}
         />
+      </View>
+
+      {/* Multiple Certificates / Accreditations Selector */}
+      <View style={styles.fieldGroup}>
+        <ThemedText style={styles.fieldLabel}>Coach Certificates & Accreditations</ThemedText>
+        
+        {/* Input + Add button */}
+        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
+          <TextInput
+            value={newCertInput}
+            onChangeText={setNewCertInput}
+            placeholder="Type cert (e.g. BWF Level 2) & tap + Add"
+            placeholderTextColor="#94a3b8"
+            style={[styles.input, { flex: 1, backgroundColor: theme.surfaceLow, color: theme.text, borderColor: theme.outlineVariant + '44' }]}
+          />
+          <Pressable
+            onPress={() => {
+              if (newCertInput.trim() && !certificates.includes(newCertInput.trim())) {
+                setCertificates(prev => [...prev, newCertInput.trim()]);
+                setNewCertInput('');
+              }
+            }}
+            style={{
+              backgroundColor: theme.primary,
+              paddingHorizontal: 12,
+              borderRadius: BorderRadius.md,
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: 38,
+            }}
+          >
+            <ThemedText style={{ color: '#fff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>+ Add</ThemedText>
+          </Pressable>
+        </View>
+
+        {/* Selected Certificates Tag Chips */}
+        {certificates.length > 0 && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+            {certificates.map((cert, idx) => (
+              <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.primary + '18', borderColor: theme.primary + '44', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full }}>
+                <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_700Bold', marginRight: 4 }}>
+                  🏅 {cert}
+                </ThemedText>
+                <Pressable onPress={() => setCertificates(prev => prev.filter((_, i) => i !== idx))}>
+                  <Ionicons name="close-circle" size={13} color={theme.primary} />
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Quick Presets */}
+        <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginBottom: 4, fontFamily: 'Sora_700Bold' }}>
+          QUICK ADD PRESETS:
+        </ThemedText>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 5 }}>
+          {['BWF Level 2', 'UEFA B License', 'USPTA Elite', 'CPR Certified', 'National Coach'].map(preset => {
+            const isAdded = certificates.includes(preset);
+            return (
+              <Pressable
+                key={preset}
+                onPress={() => {
+                  if (isAdded) setCertificates(prev => prev.filter(c => c !== preset));
+                  else setCertificates(prev => [...prev, preset]);
+                }}
+                style={{
+                  backgroundColor: isAdded ? theme.primary : theme.surfaceLow,
+                  borderColor: isAdded ? theme.primary : theme.outlineVariant + '44',
+                  borderWidth: 1,
+                  paddingHorizontal: 8,
+                  paddingVertical: 3.5,
+                  borderRadius: BorderRadius.full,
+                }}
+              >
+                <ThemedText style={{ fontSize: 9.5, color: isAdded ? '#ffffff' : theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>
+                  {isAdded ? `✓ ${preset}` : `+ ${preset}`}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Amenities & Facilities Selection */}
+      <View style={[styles.fieldGroup, { marginTop: 8 }]}>
+        <ThemedText style={styles.fieldLabel}>Class Amenities & Facilities</ThemedText>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
+          {[
+            { id: 'water', label: 'Water Station', icon: 'water-outline' },
+            { id: 'gear', label: 'Training Gear Provided', icon: 'football-outline' },
+            { id: 'locker', label: 'Locker & Shower', icon: 'lock-closed-outline' },
+            { id: 'parking', label: 'Parking Available', icon: 'car-outline' },
+            { id: 'lights', label: 'Night Floodlights', icon: 'flash-outline' },
+            { id: 'firstaid', label: 'First Aid Kit', icon: 'medkit-outline' },
+            { id: 'wifi', label: 'Free Wi-Fi', icon: 'wifi-outline' },
+            { id: 'cafe', label: 'Refreshments & Cafe', icon: 'cafe-outline' },
+          ].map(a => {
+            const isSelected = selectedAmenities.includes(a.label);
+            return (
+              <Pressable
+                key={a.id}
+                onPress={() => {
+                  setSelectedAmenities(prev =>
+                    prev.includes(a.label) ? prev.filter(item => item !== a.label) : [...prev, a.label]
+                  );
+                }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 8,
+                  paddingVertical: 4.5,
+                  borderRadius: BorderRadius.full,
+                  borderWidth: 1,
+                  backgroundColor: isSelected ? theme.primary + '18' : theme.surfaceLow,
+                  borderColor: isSelected ? theme.primary : theme.outlineVariant + '44',
+                }}
+              >
+                <Ionicons name={a.icon as any} size={11.5} color={isSelected ? theme.primary : theme.textSecondary} style={{ marginRight: 3.5 }} />
+                <ThemedText style={{ fontSize: 9.5, color: isSelected ? theme.primary : theme.textSecondary, fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium' }}>
+                  {a.label}
+                </ThemedText>
+                {isSelected && <Ionicons name="checkmark" size={10} color={theme.primary} style={{ marginLeft: 3 }} />}
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
       </View>
     </ScrollView>
@@ -528,23 +804,43 @@ export default function CreateClassScreen() {
 
       {/* Session Time */}
       <View style={styles.fieldGroup}>
-        <ThemedText style={styles.fieldLabel}>Session Time <ThemedText style={{ color: '#ef4444' }}>*</ThemedText></ThemedText>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <ThemedText style={styles.fieldLabel}>Session Time <ThemedText style={{ color: '#ef4444' }}>*</ThemedText></ThemedText>
+        </View>
+        {sessionTime ? (
+          <View style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.md, marginBottom: 8, alignSelf: 'flex-start' }}>
+            <ThemedText style={{ fontSize: 10.5, color: theme.primary, fontFamily: 'Sora_700Bold' }}>
+              Selected: {getFormattedSessionTime(sessionTime)}
+            </ThemedText>
+          </View>
+        ) : null}
         {Object.entries(SESSION_GROUPS).map(([groupName, times]) => (
-          <View key={groupName} style={{ marginBottom: Spacing.sm }}>
-            <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 4, textTransform: 'none' }]}>{groupName}</ThemedText>
-            <View style={styles.chipRow}>
-              {times.map(t => (
-                <Pressable
-                  key={t}
-                  onPress={() => toggleSessionTime(t)}
-                  style={[
-                    styles.sessionChip,
-                    { backgroundColor: isSessionTimeSelected(t) ? theme.primary : theme.surfaceLow, borderColor: isSessionTimeSelected(t) ? theme.primary : theme.outlineVariant + '44' }
-                  ]}
-                >
-                  <ThemedText style={[styles.sessionChipText, { color: isSessionTimeSelected(t) ? '#fff' : theme.textSecondary }]}>{t}</ThemedText>
-                </Pressable>
-              ))}
+          <View key={groupName} style={{ marginBottom: 8 }}>
+            <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 4, textTransform: 'none', fontSize: 10.5 }]}>{groupName}</ThemedText>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
+              {times.map(t => {
+                const isSelected = isSessionTimeSelected(t);
+                return (
+                  <Pressable
+                    key={t}
+                    onPress={() => handleSelectSessionTime(t, groupName)}
+                    style={[
+                      styles.sessionChipNoScroll,
+                      {
+                        backgroundColor: isSelected ? theme.primary : theme.surfaceLow,
+                        borderColor: isSelected ? theme.primary : theme.outlineVariant + '44'
+                      }
+                    ]}
+                  >
+                    <ThemedText style={[
+                      styles.sessionChipText,
+                      { color: isSelected ? '#ffffff' : theme.textSecondary, fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium' }
+                    ]}>
+                      {t}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
         ))}
@@ -557,7 +853,7 @@ export default function CreateClassScreen() {
           {DURATIONS.map(d => (
             <Pressable
               key={d}
-              onPress={() => setSessionDuration(d)}
+              onPress={() => handleDurationSelect(d)}
               style={[
                 styles.chip,
                 { backgroundColor: sessionDuration === d ? theme.primary : theme.surfaceLow, borderColor: sessionDuration === d ? theme.primary : theme.outlineVariant + '44' }
@@ -576,7 +872,7 @@ export default function CreateClassScreen() {
           value={venue}
           onChangeText={setVenue}
           placeholder="e.g. Wembley Training Grounds, London"
-          placeholderTextColor={theme.textSecondary + '77'}
+          placeholderTextColor="#94a3b8"
           style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: theme.outlineVariant + '44' }]}
         />
       </View>
@@ -597,9 +893,18 @@ export default function CreateClassScreen() {
             <ThemedText style={styles.previewName} numberOfLines={2}>
               {className || 'Untitled Class'}
             </ThemedText>
-          </View>
-          <View style={[styles.previewBadge, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-            <ThemedText style={styles.previewBadgeText}>{sportType || '—'}</ThemedText>
+            {certificates.length > 0 ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                {certificates.map((cert, i) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="ribbon-outline" size={11} color="#ffffff" style={{ marginRight: 3 }} />
+                    <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                      {cert}
+                    </ThemedText>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </View>
         </View>
         <View style={styles.previewMetaRow}>
@@ -613,7 +918,7 @@ export default function CreateClassScreen() {
           </View>
           <View style={styles.previewMetaItem}>
             <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.7)" />
-            <ThemedText style={styles.previewMetaText}>{sessionTime || '—'} · {sessionDuration}</ThemedText>
+            <ThemedText style={styles.previewMetaText}>{getFormattedSessionTime(sessionTime) || sessionTime || '—'} · {sessionDuration}</ThemedText>
           </View>
         </View>
       </View>
@@ -644,7 +949,7 @@ export default function CreateClassScreen() {
           onChangeText={setFeeAmount}
           keyboardType="decimal-pad"
           placeholder="e.g. 2500"
-          placeholderTextColor={theme.textSecondary + '77'}
+          placeholderTextColor="#94a3b8"
           style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: theme.outlineVariant + '44' }]}
         />
       </View>
@@ -656,7 +961,7 @@ export default function CreateClassScreen() {
           value={description}
           onChangeText={setDescription}
           placeholder="Describe the class — training focus, what students will learn, requirements..."
-          placeholderTextColor={theme.textSecondary + '77'}
+          placeholderTextColor="#94a3b8"
           multiline
           numberOfLines={4}
           style={[
@@ -709,11 +1014,6 @@ export default function CreateClassScreen() {
           >
             <Ionicons name="document-text-outline" size={18} color="#111c2c" />
           </Pressable>
-          <View style={[styles.stepBadge, { backgroundColor: theme.primary + '15' }]}>
-            <ThemedText style={[styles.stepBadgeText, { color: theme.primary }]}>
-              Step {currentStep + 1}/{STEPS.length}
-            </ThemedText>
-          </View>
         </View>
 
         {/* Step Progress Tracker */}
@@ -724,7 +1024,7 @@ export default function CreateClassScreen() {
               const isDone = idx < currentStep;
               return (
                 <React.Fragment key={step.title}>
-                  <Pressable style={styles.stepItem} onPress={() => setCurrentStep(idx)}>
+                  <Pressable style={styles.stepItem} onPress={() => handleStepHeaderPress(idx)}>
                     <View style={[
                       styles.stepCircle,
                       isDone
@@ -741,7 +1041,7 @@ export default function CreateClassScreen() {
                     <ThemedText style={[
                       styles.stepLabel,
                       { color: isActive ? theme.primary : isDone ? theme.text : theme.textSecondary,
-                        fontFamily: isActive ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_500Medium' }
+                        fontFamily: isActive ? 'Sora_700Bold' : 'Sora_500Medium' }
                     ]}>
                       {step.title}
                     </ThemedText>
@@ -768,11 +1068,21 @@ export default function CreateClassScreen() {
             {currentStep > 0 && (
               <Pressable onPress={() => setCurrentStep(currentStep - 1)} style={[styles.navBtnOutline, { borderColor: theme.outlineVariant }]}>
                 <Ionicons name="chevron-back" size={16} color={theme.text} />
-                <ThemedText style={{ color: theme.text, fontFamily: 'HankenGrotesk_600SemiBold', fontSize: 13, marginLeft: 4 }}>Back</ThemedText>
+                <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13, marginLeft: 4 }}>Back</ThemedText>
               </Pressable>
             )}
-            <Pressable onPress={handleNext} style={[styles.navBtnFill, { backgroundColor: theme.primary, marginLeft: currentStep > 0 ? Spacing.sm : 0 }]}>
-              <ThemedText style={{ color: '#fff', fontFamily: 'HankenGrotesk_700Bold', fontSize: 13, marginRight: 4 }}>
+            <Pressable
+              onPress={handleNext}
+              style={[
+                styles.navBtnFill,
+                {
+                  backgroundColor: theme.primary,
+                  marginLeft: currentStep > 0 ? Spacing.sm : 0,
+                  opacity: (currentStep === 0 ? isStepZeroValid : isStepOneValid) ? 1 : 0.55,
+                }
+              ]}
+            >
+              <ThemedText style={{ color: '#fff', fontFamily: 'Sora_700Bold', fontSize: 13, marginRight: 4 }}>
                 {currentStep === 1 ? 'Preview & Publish' : 'Next'}
               </ThemedText>
               <Ionicons name="chevron-forward" size={16} color="#fff" />
@@ -783,7 +1093,7 @@ export default function CreateClassScreen() {
         {/* Toast */}
         {toastMsg && (
           <Animated.View style={[styles.toast, { opacity: toastOpacity, backgroundColor: theme.primaryContainer }]}>
-            <ThemedText style={{ color: '#fff', fontSize: 12, fontFamily: 'HankenGrotesk_600SemiBold' }}>{toastMsg}</ThemedText>
+            <ThemedText style={{ color: '#fff', fontSize: 12, fontFamily: 'Sora_600SemiBold' }}>{toastMsg}</ThemedText>
           </Animated.View>
         )}
 
@@ -812,7 +1122,7 @@ export default function CreateClassScreen() {
                 <Pressable onPress={() => setPickerDate(new Date(pickerDate.getFullYear(), pickerDate.getMonth() - 1, 1))} style={{ padding: 6 }}>
                   <Ionicons name="chevron-back" size={20} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', fontSize: 14 }}>
+                <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 14 }}>
                   {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][pickerDate.getMonth()]} {pickerDate.getFullYear()}
                 </ThemedText>
                 <Pressable onPress={() => setPickerDate(new Date(pickerDate.getFullYear(), pickerDate.getMonth() + 1, 1))} style={{ padding: 6 }}>
@@ -859,16 +1169,31 @@ export default function CreateClassScreen() {
                         }
                         
                         const dObj = new Date(year, month, cell.day);
-                        const isSelected = (datePickerField === 'start' && startDate === formatSelectedDate(dObj)) ||
-                                           (datePickerField === 'end' && endDate === formatSelectedDate(dObj));
+                        dObj.setHours(0, 0, 0, 0);
+                        const formatted = formatSelectedDate(dObj);
+                        const isSelected = (datePickerField === 'start' && startDate === formatted) ||
+                                           (datePickerField === 'end' && endDate === formatted);
                         
+                        const startD = parseDateString(startDate);
+                        const isBeforeStart = datePickerField === 'end' && Boolean(startD && dObj.getTime() < startD.getTime());
+
                         return (
                           <Pressable
                             key={cIdx}
+                            disabled={isBeforeStart}
                             onPress={() => {
-                              const formatted = formatSelectedDate(dObj);
+                              if (isBeforeStart) {
+                                triggerToast(`⚠️ End Date cannot be earlier than Start Date (${startDate})`);
+                                return;
+                              }
                               if (datePickerField === 'start') {
                                 setStartDate(formatted);
+                                const newStart = parseDateString(formatted);
+                                const currEnd = parseDateString(endDate);
+                                if (newStart && currEnd && currEnd.getTime() < newStart.getTime()) {
+                                  setEndDate(formatted);
+                                  triggerToast('End Date updated to match Start Date 📅');
+                                }
                               } else if (datePickerField === 'end') {
                                 setEndDate(formatted);
                               }
@@ -876,10 +1201,16 @@ export default function CreateClassScreen() {
                             }}
                             style={[
                               { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+                              isBeforeStart && { opacity: 0.25 },
                               isSelected && { backgroundColor: theme.primary }
                             ]}
                           >
-                            <ThemedText style={{ color: isSelected ? '#ffffff' : theme.text, fontSize: 13, fontFamily: isSelected ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_400Regular' }}>
+                            <ThemedText style={{
+                              color: isBeforeStart ? theme.textSecondary : isSelected ? '#ffffff' : theme.text,
+                              fontSize: 13,
+                              fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_400Regular',
+                              textDecorationLine: isBeforeStart ? 'line-through' : 'none'
+                            }}>
                               {cell.day}
                             </ThemedText>
                           </Pressable>
@@ -910,11 +1241,11 @@ export default function CreateClassScreen() {
                 <View style={{ backgroundColor: theme.primary + '15', padding: 12, borderRadius: BorderRadius.full, marginBottom: 12 }}>
                   <Ionicons name="document-text" size={36} color={theme.primary} />
                 </View>
-                <ThemedText type="headlineSm" style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text, textAlign: 'center' }}>
+                <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_700Bold', color: theme.text, textAlign: 'center' }}>
                   Resume Draft? 📝
                 </ThemedText>
                 <ThemedText type="bodyMd" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>
-                  We found a saved draft for <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>&quot;{pendingResumeDraft?.className || 'Untitled Class'}&quot;</ThemedText>. Would you like to resume editing?
+                  We found a saved draft for <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>&quot;{pendingResumeDraft?.className || 'Untitled Class'}&quot;</ThemedText>. Would you like to resume editing?
                 </ThemedText>
               </View>
  
@@ -926,7 +1257,7 @@ export default function CreateClassScreen() {
                     setPendingResumeDraft(null);
                   }}
                 >
-                  <ThemedText style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', fontSize: 13 }}>
+                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 13 }}>
                     Discard
                   </ThemedText>
                 </Pressable>
@@ -940,7 +1271,7 @@ export default function CreateClassScreen() {
                     setPendingResumeDraft(null);
                   }}
                 >
-                  <ThemedText style={{ color: '#fff', fontFamily: 'HankenGrotesk_700Bold', fontSize: 13 }}>
+                  <ThemedText style={{ color: '#fff', fontFamily: 'Sora_700Bold', fontSize: 13 }}>
                     Resume
                   </ThemedText>
                 </Pressable>
@@ -990,7 +1321,7 @@ export default function CreateClassScreen() {
                       }}
                     >
                       <View style={{ flex: 1 }}>
-                        <ThemedText style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', fontSize: 13 }}>
+                        <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 13 }}>
                           {draft.className}
                         </ThemedText>
                         <ThemedText style={{ color: theme.textSecondary, fontSize: 10, marginTop: 2 }}>
@@ -1001,7 +1332,7 @@ export default function CreateClassScreen() {
                         onPress={() => loadDraft(draft)}
                         style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: theme.primary, borderRadius: BorderRadius.sm, marginRight: 6 }}
                       >
-                        <ThemedText style={{ color: '#fff', fontSize: 11, fontFamily: 'HankenGrotesk_700Bold' }}>Load</ThemedText>
+                        <ThemedText style={{ color: '#fff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>Load</ThemedText>
                       </Pressable>
                       <Pressable 
                         onPress={() => deleteDraft(draft.id)}
@@ -1022,7 +1353,7 @@ export default function CreateClassScreen() {
                 }}
               >
                 <Ionicons name="save-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
-                <ThemedText style={{ color: '#fff', fontFamily: 'HankenGrotesk_700Bold', fontSize: 13 }}>Save Current Form as Draft</ThemedText>
+                <ThemedText style={{ color: '#fff', fontFamily: 'Sora_700Bold', fontSize: 13 }}>Save Current Form as Draft</ThemedText>
               </Pressable>
             </View>
           </View>
@@ -1056,15 +1387,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  stepBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-  },
-  stepBadgeText: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 11,
   },
   progressTrackerCard: {
     marginHorizontal: Spacing.containerMargin,
@@ -1113,8 +1435,8 @@ const styles = StyleSheet.create({
   formCard: {
     marginHorizontal: Spacing.containerMargin,
     backgroundColor: '#ffffff',
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -1123,25 +1445,25 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   fieldGroup: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   fieldLabel: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 10,
-    letterSpacing: 0.7,
-    marginBottom: Spacing.xs,
+    fontFamily: 'Sora_700Bold',
+    fontSize: 9.5,
+    letterSpacing: 0.5,
+    marginBottom: 4,
     color: '#81919c',
   },
   input: {
-    height: 48,
+    height: 38,
     borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.md,
-    fontSize: 14,
+    paddingHorizontal: 12,
+    fontSize: 12.5,
     borderWidth: 1,
-    fontFamily: 'HankenGrotesk_500Medium',
+    fontFamily: 'Sora_500Medium',
   },
   dateInput: {
-    height: 42,
+    height: 38,
   },
   textArea: {
     height: 96,
@@ -1165,16 +1487,16 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4.5,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    marginRight: 6,
-    marginBottom: 6,
+    marginRight: 5,
+    marginBottom: 5,
   },
   chipText: {
-    fontFamily: 'HankenGrotesk_600SemiBold',
-    fontSize: 11,
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 10,
   },
   skillRow: {
     flexDirection: 'row',
@@ -1184,17 +1506,17 @@ const styles = StyleSheet.create({
   skillCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 4,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    marginRight: 5,
-    marginBottom: 5,
+    marginRight: 4,
+    marginBottom: 4,
   },
   skillText: {
-    fontFamily: 'HankenGrotesk_600SemiBold',
-    fontSize: 10,
-    marginHorizontal: 3,
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 9.5,
+    marginHorizontal: 2,
   },
   dayRow: {
     flexDirection: 'row',
@@ -1209,22 +1531,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   dayChipText: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 11,
   },
-  sessionChip: {
+  filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 6,
     borderWidth: 1,
-    marginRight: 6,
-    marginBottom: 6,
+  },
+  sessionChipNoScroll: {
+    width: '18.5%',
+    paddingVertical: 5,
+    paddingHorizontal: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sessionChipText: {
-    fontFamily: 'HankenGrotesk_600SemiBold',
-    fontSize: 10,
+    fontSize: 9.5,
+    textAlign: 'center',
   },
   previewCard: {
     borderRadius: BorderRadius['2xl'],
@@ -1238,26 +1567,16 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   previewLabel: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 9,
     letterSpacing: 0.6,
     marginBottom: 4,
   },
   previewName: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 20,
     color: '#ffffff',
     lineHeight: 26,
-  },
-  previewBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-  },
-  previewBadgeText: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 11,
-    color: '#ffffff',
   },
   previewMetaRow: {
     gap: Spacing.xs,
@@ -1268,7 +1587,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   previewMetaText: {
-    fontFamily: 'HankenGrotesk_500Medium',
+    fontFamily: 'Sora_500Medium',
     fontSize: 11,
     color: 'rgba(255,255,255,0.8)',
   },
@@ -1289,7 +1608,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   draftBtnText: {
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 13,
   },
   publishBtn: {
@@ -1302,7 +1621,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   publishBtnText: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 13,
     color: '#ffffff',
   },

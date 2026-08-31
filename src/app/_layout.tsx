@@ -2,18 +2,52 @@ import { Stack, ThemeProvider, DarkTheme, DefaultTheme, useRouter, useSegments }
 import { ActivityIndicator, View, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AppStoreProvider } from '@/store/app-store';
+import { ToastProvider } from '@/context/ToastContext';
+import { NotificationProvider } from '@/context/NotificationContext';
+import { NotificationModal } from '@/components/ui/NotificationModal';
 import {
   useFonts,
-  PlusJakartaSans_400Regular,
-  PlusJakartaSans_500Medium,
-  PlusJakartaSans_600SemiBold,
-  PlusJakartaSans_700Bold,
-  PlusJakartaSans_800ExtraBold,
-} from '@expo-google-fonts/plus-jakarta-sans';
+  Sora_400Regular,
+  Sora_500Medium,
+  Sora_600SemiBold,
+  Sora_700Bold,
+  Sora_800ExtraBold,
+} from '@expo-google-fonts/sora';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUserProfile } from '@/hooks/use-user-profile';
+
+// ── Globally remove all browser focus blue outlines on web for inputs, dropdowns, buttons, controls ──
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const existing = document.getElementById('global-no-focus-outline');
+  if (!existing) {
+    const style = document.createElement('style');
+    style.id = 'global-no-focus-outline';
+    style.textContent = `
+      *, *:focus, *:focus-visible, *:focus-within {
+        outline: none !important;
+        outline-width: 0 !important;
+        outline-style: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+      }
+      input, textarea, select, button, [tabindex], [role="button"], [role="checkbox"], [role="combobox"], [contenteditable] {
+        outline: none !important;
+        outline-width: 0 !important;
+        outline-style: none !important;
+        box-shadow: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+      }
+      input:focus, textarea:focus, select:focus, button:focus, [tabindex]:focus {
+        outline: none !important;
+        outline-width: 0 !important;
+        outline-style: none !important;
+        box-shadow: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
 
 // ── Nested layout navigation component with auth gating ─────────────────────────
 function RootNavigation() {
@@ -31,11 +65,14 @@ function RootNavigation() {
         if (userProfileStr) {
           try {
             const storedUser = JSON.parse(userProfileStr);
+            // Restore the whole saved profile (theme, notification prefs, etc.)
+            // rather than just the auth-essential fields — settings used to
+            // silently reset on every app restart because only these four
+            // fields were ever rehydrated here.
             updateProfile({
-              name: storedUser.name,
-              role: storedUser.role,
+              ...storedUser,
               location: storedUser.location || 'London, UK',
-              avatarUrl: storedUser.avatarUrl || require('@/assets/images/avatars/avatar_1.png'),
+              avatarUrl: storedUser.avatarUrl || 'avatar_1',
             });
           } catch (err) {
             console.error('RootNavigation: Failed to parse user profile', err);
@@ -162,19 +199,40 @@ function RootNavigation() {
           presentation: 'card' 
         }} 
       />
-      <Stack.Screen 
-        name="team-management" 
-        options={{ 
-          animation: 'slide_from_right', 
-          presentation: 'card' 
-        }} 
+      <Stack.Screen
+        name="team-management"
+        options={{
+          animation: 'slide_from_right',
+          presentation: 'card'
+        }}
       />
-      <Stack.Screen 
-        name="fixture-management" 
-        options={{ 
-          animation: 'slide_from_right', 
-          presentation: 'card' 
-        }} 
+      <Stack.Screen
+        name="settings"
+        options={{
+          animation: 'slide_from_right',
+          presentation: 'card'
+        }}
+      />
+      <Stack.Screen
+        name="fixture-management"
+        options={{
+          animation: 'slide_from_right',
+          presentation: 'card'
+        }}
+      />
+      <Stack.Screen
+        name="owner-offers"
+        options={{
+          animation: 'slide_from_right',
+          presentation: 'card'
+        }}
+      />
+      <Stack.Screen
+        name="voucher-redeem"
+        options={{
+          animation: 'slide_from_right',
+          presentation: 'card'
+        }}
       />
     </Stack>
   );
@@ -206,21 +264,11 @@ export default function RootLayout() {
   }, []);
 
   const [fontsLoaded] = useFonts({
-    PlusJakartaSans_400Regular,
-    PlusJakartaSans_500Medium,
-    PlusJakartaSans_600SemiBold,
-    PlusJakartaSans_700Bold,
-    PlusJakartaSans_800ExtraBold,
-    HankenGrotesk_400Regular: PlusJakartaSans_400Regular,
-    HankenGrotesk_500Medium: PlusJakartaSans_500Medium,
-    HankenGrotesk_600SemiBold: PlusJakartaSans_600SemiBold,
-    HankenGrotesk_700Bold: PlusJakartaSans_700Bold,
-    HankenGrotesk_800ExtraBold: PlusJakartaSans_800ExtraBold,
-    Figtree_400Regular: PlusJakartaSans_400Regular,
-    Figtree_500Medium: PlusJakartaSans_500Medium,
-    Figtree_600SemiBold: PlusJakartaSans_600SemiBold,
-    Figtree_700Bold: PlusJakartaSans_700Bold,
-    Figtree_800ExtraBold: PlusJakartaSans_800ExtraBold,
+    Sora_400Regular,
+    Sora_500Medium,
+    Sora_600SemiBold,
+    Sora_700Bold,
+    Sora_800ExtraBold,
   });
 
   if (!fontsLoaded) {
@@ -275,11 +323,15 @@ export default function RootLayout() {
 
   return (
     <AppStoreProvider>
-      <ThemeProvider value={activeNavigationTheme}>
-        <StatusBar style={isDark ? "light" : "dark"} />
-        <RootNavigation />
-      </ThemeProvider>
+      <ToastProvider>
+        <NotificationProvider>
+          <ThemeProvider value={activeNavigationTheme}>
+            <StatusBar style={isDark ? "light" : "dark"} animated />
+            <RootNavigation />
+            <NotificationModal />
+          </ThemeProvider>
+        </NotificationProvider>
+      </ToastProvider>
     </AppStoreProvider>
   );
 }
-

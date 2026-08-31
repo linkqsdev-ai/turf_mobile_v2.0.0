@@ -1,9 +1,13 @@
 {
   "expo": {
     "name": "turf_mobile_app_v2.0.0",
-    "slug": "turf_mobile_app_v2.0.0",
+    "slug": "turf_mobile_app_v200",
     "version": "1.0.0",
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "turfmobileappv200",
@@ -18,7 +22,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.linkqsdev.turf_mobile_app_v2.x0.x0"
     },
     "web": {
       "output": "static",
@@ -35,11 +40,20 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-web-browser",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "afe44461-a385-4522-bd4f-9dda56bb2e8d"
+      }
+    },
+    "owner": "linkqsdev"
   }
 }

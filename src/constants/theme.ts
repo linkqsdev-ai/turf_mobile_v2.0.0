@@ -26,6 +26,7 @@ export const Colors = {
 
     outline: '#94a3b8',
     outlineVariant: '#cbd5e1',
+    placeholder: '#94a3b8',
     error: '#FF9500', // Accent Orange (Alerts/Status)
     errorContainer: '#ffe6cc',
   },
@@ -54,6 +55,7 @@ export const Colors = {
 
     outline: '#64748b',
     outlineVariant: '#475569',
+    placeholder: '#94a3b8',
     error: '#cf6679',
     errorContainer: '#400009',
   },
@@ -61,6 +63,7 @@ export const Colors = {
     background: '#FDFCF7', // App background
     text: '#2D2D2D', // Primary text
     textSecondary: '#64748b', // Secondary text
+    placeholder: '#94a3b8',
 
     backgroundElement: '#FFFFFF',
     backgroundSelected: '#EAEAFF', // Soft brand blue tint
@@ -91,67 +94,67 @@ export type ThemeColor = keyof typeof Colors.light;
 
 export const Typography = {
   fontFamilies: {
-    hankenRegular: 'PlusJakartaSans_400Regular',
-    hankenMedium: 'PlusJakartaSans_500Medium',
-    hankenSemiBold: 'PlusJakartaSans_600SemiBold',
-    hankenBold: 'PlusJakartaSans_700Bold',
-    hankenExtraBold: 'PlusJakartaSans_800ExtraBold',
-    jakartaMedium: 'PlusJakartaSans_500Medium',
-    jakartaBold: 'PlusJakartaSans_700Bold',
+    hankenRegular: 'Sora_400Regular',
+    hankenMedium: 'Sora_500Medium',
+    hankenSemiBold: 'Sora_600SemiBold',
+    hankenBold: 'Sora_700Bold',
+    hankenExtraBold: 'Sora_800ExtraBold',
+    jakartaMedium: 'Sora_500Medium',
+    jakartaBold: 'Sora_700Bold',
   },
   // Scale styles mapped from DESIGN.md
   displayLg: {
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     fontSize: 28,
     lineHeight: 34,
     letterSpacing: -0.56,
   },
   displayLgMobile: {
-    fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 22,
-    lineHeight: 26,
-    letterSpacing: -0.44,
+    fontFamily: 'Sora_700Bold',
+    fontSize: 17,
+    lineHeight: 22,
+    letterSpacing: -0.3,
   },
   headlineLg: {
-    fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 24,
-    lineHeight: 30,
-    letterSpacing: -0.24,
-  },
-  headlineMd: {
-    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 16,
     lineHeight: 22,
-    letterSpacing: -0.16,
+    letterSpacing: -0.2,
+  },
+  headlineMd: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 13.5,
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   headlineSm: {
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    fontSize: 14,
-    lineHeight: 18,
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 11.5,
+    lineHeight: 16,
   },
   bodyLg: {
-    fontFamily: 'PlusJakartaSans_400Regular',
+    fontFamily: 'Sora_400Regular',
     fontSize: 13,
     lineHeight: 18,
   },
   bodyMd: {
-    fontFamily: 'PlusJakartaSans_400Regular',
+    fontFamily: 'Sora_400Regular',
     fontSize: 11,
     lineHeight: 15,
   },
   bodySm: {
-    fontFamily: 'PlusJakartaSans_400Regular',
+    fontFamily: 'Sora_400Regular',
     fontSize: 11,
     lineHeight: 15,
   },
   labelMd: {
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 9,
     lineHeight: 12,
     letterSpacing: 0.45,
   },
   labelSm: {
-    fontFamily: 'PlusJakartaSans_500Medium',
+    fontFamily: 'Sora_500Medium',
     fontSize: 8,
     lineHeight: 10,
   },
@@ -228,14 +231,15 @@ export const Spacing = {
 };
 
 export const BorderRadius = {
-  sm: 2,
-  default: 4,
-  md: 6,
-  lg: 8,
-  xl: 16,      // Upgraded to 16px
-  '2xl': 24,   // Upgraded to 24px (Mockup visual styling)
-  premium: 32, // Rounded-3xl in Tailwind
-  full: 9999,
+  xs: 3,
+  sm: 4,
+  default: 6,
+  md: 6,       // Standardized selections & badge radius (6px)
+  lg: 8,       // Standardized button & input radius (8px)
+  xl: 8,       // Standardized action button radius (8px)
+  '2xl': 10,   // Standardized card radius (10px)
+  premium: 12, // Standardized container & modal radius (12px)
+  full: 6,     // Standardized selection chips & pills to 6px
 };
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;

@@ -8,38 +8,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-
-const SPORT_ICON_MAP: Record<string, { icon: string; lib: 'ionicons' | 'mci'; color: string; label: string }> = {
-  football:   { icon: 'football',   lib: 'ionicons', color: '#2e7d32', label: 'Football'   },
-  cricket:    { icon: 'cricket',    lib: 'mci',      color: '#bf360c', label: 'Cricket'    },
-  basketball: { icon: 'basketball', lib: 'ionicons', color: '#e65100', label: 'Basketball' },
-  tennis:     { icon: 'tennisball', lib: 'ionicons', color: '#6a1b9a', label: 'Tennis'     },
-  badminton:  { icon: 'badminton',  lib: 'mci',      color: '#1565c0', label: 'Badminton'  },
-  fitness:    { icon: 'barbell',    lib: 'ionicons', color: '#c62828', label: 'Fitness'    },
-  swimming:   { icon: 'water',      lib: 'ionicons', color: '#0277bd', label: 'Swimming'   },
-};
-
-function SportChip({ sport }: { sport: string }) {
-  const def = SPORT_ICON_MAP[sport];
-  if (!def) return null;
-  const Icon = def.lib === 'mci'
-    ? <MaterialCommunityIcons name={def.icon as any} size={13} color={def.color} />
-    : <Ionicons name={def.icon as any} size={13} color={def.color} />;
-  return (
-    <View style={[styles.sportChip, { backgroundColor: def.color + '18', borderColor: def.color + '44' }]}>
-      {Icon}
-      <ThemedText type="labelSm" style={{ color: def.color, fontSize: 11, marginLeft: 5, fontFamily: 'HankenGrotesk_600SemiBold' }}>
-        {def.label}
-      </ThemedText>
-    </View>
-  );
-}
 
 export default function CoachDetail() {
   const theme = useTheme();
@@ -54,12 +28,11 @@ export default function CoachDetail() {
   const reviews   = (params.reviews as string)   || '50';
   const rate      = (params.rate as string)      || '₹500/hr';
   const location  = (params.location as string)  || 'India';
-  const match     = (params.match as string)     || '';
-  const sportsRaw = (params.sports as string)    || 'fitness';
   const avatar    = (params.avatar as string)    || '';
   const badge     = (params.badge as string)     || '';
 
-  const sports = sportsRaw.split(',').filter(Boolean);
+  const [activeTab, setActiveTab] = React.useState<'class' | 'profile'>('class');
+
   const ratingNum = parseFloat(rating);
 
   const navigateToBooking = () => router.push({
@@ -72,18 +45,18 @@ export default function CoachDetail() {
     },
   });
 
+  const navigateToEditClass = () => router.push('/create-class');
+
   return (
     <GradientContainer screenName="coach" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Top Bar */}
         <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/coach')} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={theme.text} />
           </Pressable>
-          <ThemedText type="headlineSm" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Coach Profile</ThemedText>
-          <Pressable style={styles.shareBtn}>
-            <Ionicons name="share-outline" size={22} color={theme.text} />
-          </Pressable>
+          <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_700Bold' }}>Coach Profile</ThemedText>
+          <View style={{ width: 22 }} />
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -96,25 +69,14 @@ export default function CoachDetail() {
             {/* Avatar */}
             <View style={styles.avatarWrapper}>
               <Image source={typeof avatar === 'string' && !/^\d+$/.test(avatar) ? { uri: avatar } : (typeof avatar === 'number' ? avatar : parseInt(avatar as string, 10))} style={styles.avatar} contentFit="cover" />
-              <View style={[styles.onlineDot, { borderColor: theme.primaryContainer }]} />
             </View>
 
-            {/* Name + Badge */}
-            <View style={styles.heroNameRow}>
-              <ThemedText type="headlineMd" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_800ExtraBold' }}>
-                {name}
-              </ThemedText>
-              {badge ? (
-                <View style={styles.heroBadge}>
-                  <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                    {badge}
-                  </ThemedText>
-                </View>
-              ) : null}
-            </View>
+            <ThemedText type="headlineMd" style={{ color: '#ffffff', fontFamily: 'Sora_800ExtraBold' }}>
+              {name}
+            </ThemedText>
 
             {/* Specialty */}
-            <ThemedText type="bodySm" style={{ color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
+            <ThemedText type="bodySm" style={{ color: 'rgba(255,255,255,0.85)', marginTop: 5, fontFamily: 'Sora_600SemiBold' }}>
               {specialty}
             </ThemedText>
 
@@ -128,151 +90,300 @@ export default function CoachDetail() {
                   color="#fbbf24"
                 />
               ))}
-              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold', marginLeft: 6 }}>
+              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', marginLeft: 6 }}>
                 {rating}
               </ThemedText>
-              <ThemedText type="labelSm" style={{ color: 'rgba(255,255,255,0.65)', marginLeft: 4 }}>
+              <ThemedText type="labelSm" style={{ color: 'rgba(255,255,255,0.75)', marginLeft: 4 }}>
                 ({reviews} reviews)
               </ThemedText>
             </View>
-
-            {/* AI Match badge */}
-            {match ? (
-              <View style={styles.matchBadge}>
-                <Ionicons name="flash" size={12} color="#fbbf24" />
-                <ThemedText type="labelSm" style={{ color: '#fbbf24', fontFamily: 'PlusJakartaSans_700Bold', marginLeft: 4, fontSize: 11 }}>
-                  {match}
-                </ThemedText>
-              </View>
-            ) : null}
           </View>
 
           {/* Stats Row */}
           <View style={[styles.statsRow, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
             <View style={styles.statItem}>
-              <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'HankenGrotesk_800ExtraBold' }}>
+              <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'Sora_800ExtraBold' }}>
                 {trainees}
               </ThemedText>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 2 }}>Trainees</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 5 }}>Trainees</ThemedText>
             </View>
             <View style={[styles.statDivider, { backgroundColor: theme.outlineVariant + '44' }]} />
             <View style={styles.statItem}>
-              <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'HankenGrotesk_800ExtraBold' }}>
+              <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'Sora_800ExtraBold' }}>
                 {reviews}
               </ThemedText>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 2 }}>Reviews</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 5 }}>Reviews</ThemedText>
             </View>
             <View style={[styles.statDivider, { backgroundColor: theme.outlineVariant + '44' }]} />
             <View style={styles.statItem}>
-              <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'HankenGrotesk_800ExtraBold' }}>
+              <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'Sora_800ExtraBold' }}>
                 {rating}⭐
               </ThemedText>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 2 }}>Rating</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 5 }}>Rating</ThemedText>
             </View>
           </View>
 
-          {/* Info Card */}
-          <View style={[styles.infoCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-            <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, marginBottom: Spacing.md }}>
-              DETAILS
-            </ThemedText>
-
-            <View style={styles.infoRow}>
-              <View style={[styles.infoIcon, { backgroundColor: theme.primary + '18' }]}>
-                <Ionicons name="person-outline" size={16} color={theme.primary} />
-              </View>
-              <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Experience</ThemedText>
-                <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'HankenGrotesk_600SemiBold' }}>{experience}</ThemedText>
-              </View>
-            </View>
-
-            <View style={[styles.infoRow, { marginTop: Spacing.md }]}>
-              <View style={[styles.infoIcon, { backgroundColor: theme.secondary + '18' }]}>
-                <Ionicons name="location-outline" size={16} color={theme.secondary} />
-              </View>
-              <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Location</ThemedText>
-                <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'HankenGrotesk_600SemiBold' }}>{location}</ThemedText>
-              </View>
-            </View>
-
-            <View style={[styles.infoRow, { marginTop: Spacing.md }]}>
-              <View style={[styles.infoIcon, { backgroundColor: '#2e7d3218' }]}>
-                <Ionicons name="cash-outline" size={16} color="#2e7d32" />
-              </View>
-              <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Session Rate</ThemedText>
-                <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold' }}>{rate}</ThemedText>
-              </View>
-            </View>
-          </View>
-
-          {/* Sports */}
-          <View style={[styles.sectionCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-            <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, marginBottom: Spacing.md }}>
-              SPORTS OFFERED
-            </ThemedText>
-            <View style={styles.sportsRow}>
-              {sports.map(sport => <SportChip key={sport} sport={sport} />)}
-            </View>
-          </View>
-
-          {/* Bio */}
-          <View style={[styles.sectionCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-            <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, marginBottom: Spacing.md }}>
-              ABOUT COACH
-            </ThemedText>
-            <ThemedText type="bodyMd" style={{ color: theme.text, lineHeight: 22 }}>
-              {`${name} is a highly experienced sports coach specializing in ${specialty}. With ${experience} of hands-on coaching, they have mentored ${trainees} active trainees across multiple disciplines, earning a stellar ${rating}-star reputation from ${reviews} verified reviews.\n\nKnown for their personalized training approach, ${name} focuses on technical mastery, mental toughness, and physical conditioning — ensuring every athlete reaches their peak performance.`}
-            </ThemedText>
-          </View>
-
-          {/* Achievements */}
-          <View style={[styles.sectionCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', marginBottom: 20 }, Shadows.level1]}>
-            <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, marginBottom: Spacing.md }}>
-              ACHIEVEMENTS
-            </ThemedText>
-            {[
-              { icon: 'trophy', color: '#f59e0b', text: 'Certified National Level Coach' },
-              { icon: 'medal', color: '#6366f1', text: 'Best Youth Trainer Award 2023' },
-              { icon: 'ribbon', color: '#10b981', text: '95% Trainee Improvement Rate' },
-              { icon: 'star', color: '#f97316', text: 'Featured on Sports India Magazine' },
-            ].map((ach, i) => (
-              <View key={i} style={[styles.achRow, i > 0 && { marginTop: Spacing.sm }]}>
-                <View style={[styles.achIcon, { backgroundColor: ach.color + '18' }]}>
-                  <Ionicons name={ach.icon as any} size={16} color={ach.color} />
-                </View>
-                <ThemedText type="bodyMd" style={{ color: theme.text, marginLeft: Spacing.md, flex: 1 }}>
-                  {ach.text}
+          {/* Coach Role Owner Banner */}
+          {badge === 'OWNER' && (
+            <View style={{ backgroundColor: theme.primary + '15', borderColor: theme.primary + '44', borderWidth: 1, padding: 12, borderRadius: BorderRadius.lg, marginTop: Spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <Ionicons name="shield-checkmark" size={16} color={theme.primary} style={{ marginRight: 6 }} />
+                <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_700Bold', fontSize: 12 }}>
+                  YOUR PUBLISHED COACH CLASS
                 </ThemedText>
               </View>
-            ))}
+              <ThemedText style={{ fontSize: 11, color: theme.textSecondary, lineHeight: 16 }}>
+                You are viewing your own class listing. Tap 'Manage Class' below to edit class info, slots, or fees.
+              </ThemedText>
+            </View>
+          )}
+
+          {/* Segmented Section Switcher Tab */}
+          <View style={{ flexDirection: 'row', backgroundColor: theme.surfaceLow, padding: 4, borderRadius: BorderRadius.full, marginTop: Spacing.md, marginBottom: Spacing.sm }}>
+            <Pressable
+              onPress={() => setActiveTab('class')}
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: BorderRadius.full,
+                backgroundColor: activeTab === 'class' ? theme.primary : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                gap: 6,
+              }}
+            >
+              <Ionicons name="school-outline" size={15} color={activeTab === 'class' ? '#ffffff' : theme.textSecondary} />
+              <ThemedText style={{ color: activeTab === 'class' ? '#ffffff' : theme.textSecondary, fontFamily: 'Sora_700Bold', fontSize: 12 }}>
+                Class Details
+              </ThemedText>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setActiveTab('profile')}
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: BorderRadius.full,
+                backgroundColor: activeTab === 'profile' ? theme.primary : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                gap: 6,
+              }}
+            >
+              <Ionicons name="person-outline" size={15} color={activeTab === 'profile' ? '#ffffff' : theme.textSecondary} />
+              <ThemedText style={{ color: activeTab === 'profile' ? '#ffffff' : theme.textSecondary, fontFamily: 'Sora_700Bold', fontSize: 12 }}>
+                Coach Credentials
+              </ThemedText>
+            </Pressable>
           </View>
+
+          {/* TAB 1: CLASS DETAILS VIEW */}
+          {activeTab === 'class' ? (
+            <>
+              {/* Class Overview & Capacity */}
+              <View style={[styles.infoCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+                <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, marginBottom: Spacing.md }}>
+                  CLASS OVERVIEW & CAPACITY
+                </ThemedText>
+
+                <View style={styles.infoRow}>
+                  <View style={[styles.infoIcon, { backgroundColor: theme.primary + '18' }]}>
+                    <Ionicons name="ribbon-outline" size={16} color={theme.primary} />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: Spacing.md }}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Class Type & Target</ThemedText>
+                    <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>Regular Coaching • All Age Groups</ThemedText>
+                  </View>
+                </View>
+
+                <View style={[styles.infoRow, { marginTop: Spacing.md }]}>
+                  <View style={[styles.infoIcon, { backgroundColor: '#10b98118' }]}>
+                    <Ionicons name="people-outline" size={16} color="#10b981" />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: Spacing.md }}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Batch Capacity</ThemedText>
+                    <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
+                      20 Students Max <ThemedText style={{ color: '#10b981', fontSize: 11, fontFamily: 'Sora_700Bold' }}>(5 Seats Left)</ThemedText>
+                    </ThemedText>
+                  </View>
+                </View>
+
+                <View style={[styles.infoRow, { marginTop: Spacing.md }]}>
+                  <View style={[styles.infoIcon, { backgroundColor: theme.secondary + '18' }]}>
+                    <Ionicons name="location-outline" size={16} color={theme.secondary} />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: Spacing.md }}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Venue & Turf Location</ThemedText>
+                    <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>{location}</ThemedText>
+                  </View>
+                </View>
+
+                <View style={[styles.infoRow, { marginTop: Spacing.md }]}>
+                  <View style={[styles.infoIcon, { backgroundColor: '#f59e0b18' }]}>
+                    <Ionicons name="ribbon-outline" size={16} color="#f59e0b" />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: Spacing.md }}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Coach Accreditation & Certificate</ThemedText>
+                    <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
+                      🏅 BWF Level 2 Certified • UEFA B License
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+
+              {/* Schedule & Timing */}
+              <View style={[styles.sectionCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+                <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, marginBottom: Spacing.md }}>
+                  SCHEDULE & SESSION TIMINGS
+                </ThemedText>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                  <Ionicons name="calendar" size={16} color={theme.primary} style={{ marginRight: 8 }} />
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                    Weekly Batches: Mon, Wed, Fri
+                  </ThemedText>
+                </View>
+
+                <View style={{ backgroundColor: theme.surfaceLow, padding: 10, borderRadius: BorderRadius.md, gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <ThemedText style={{ fontSize: 11, color: theme.textSecondary }}>☀️ Morning Slot:</ThemedText>
+                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: theme.text }}>7.00 AM - 9.00 AM</ThemedText>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <ThemedText style={{ fontSize: 11, color: theme.textSecondary }}>🌙 Evening Slot:</ThemedText>
+                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: theme.text }}>7.00 PM - 9.00 PM</ThemedText>
+                  </View>
+                </View>
+              </View>
+
+              {/* Inclusions */}
+              <View style={[styles.sectionCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', marginBottom: 20 }, Shadows.level1]}>
+                <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, marginBottom: Spacing.md }}>
+                  CLASS INCLUSIONS & AMENITIES
+                </ThemedText>
+                {[
+                  'Professional Gear & Balls Provided',
+                  'Water & Hydration Station Access',
+                  'Locker Room & Shower Facilities',
+                  '1-on-1 Performance Progress Reports',
+                ].map((inc, i) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginTop: i > 0 ? 8 : 0 }}>
+                    <Ionicons name="checkmark-circle" size={15} color="#10b981" style={{ marginRight: 8 }} />
+                    <ThemedText style={{ fontSize: 12, color: theme.text, fontFamily: 'Sora_500Medium' }}>
+                      {inc}
+                    </ThemedText>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : (
+            /* TAB 2: COACH CREDENTIALS & PROFILE VIEW */
+            <>
+              {/* Certifications & Accreditation Card */}
+              <View style={[styles.sectionCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+                <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, marginBottom: Spacing.md }}>
+                  CERTIFICATIONS & ACCREDITATIONS
+                </ThemedText>
+                {[
+                  { title: 'Level 2 Certified Professional Coach', org: 'National Sports Academy', year: '2024' },
+                  { title: 'Advanced Youth Athletic Development', org: 'ISCA International', year: '2023' },
+                  { title: 'First Aid & CPR Certified', org: 'Red Cross Sports Safety', year: '2025' },
+                ].map((cert, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginTop: idx > 0 ? 10 : 0 }}>
+                    <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#10b98118', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                      <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                        {cert.title}
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>
+                        {cert.org} • {cert.year}
+                      </ThemedText>
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              {/* Bio */}
+              <View style={[styles.sectionCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+                <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, marginBottom: Spacing.md }}>
+                  ABOUT COACH
+                </ThemedText>
+                <ThemedText type="bodyMd" style={{ color: theme.text, lineHeight: 22 }}>
+                  {`${name} is a highly experienced sports coach specializing in ${specialty}. With ${experience} of hands-on coaching, they have mentored ${trainees} active trainees across multiple disciplines, earning a stellar ${rating}-star reputation from ${reviews} verified reviews.\n\nKnown for their personalized training approach, ${name} focuses on technical mastery, mental toughness, and physical conditioning — ensuring every athlete reaches their peak performance.`}
+                </ThemedText>
+              </View>
+
+              {/* Trainee Testimonial Review Card */}
+              <View style={[styles.sectionCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+                <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, marginBottom: Spacing.md }}>
+                  VERIFIED TRAINEE REVIEWS
+                </ThemedText>
+                <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: BorderRadius.lg }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <ThemedText style={{ fontFamily: 'Sora_700Bold', fontSize: 12, color: theme.text }}>
+                      Rahul S. (Senior Trainee)
+                    </ThemedText>
+                    <ThemedText style={{ color: '#fbbf24', fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                      ⭐⭐⭐⭐⭐ 5.0
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontStyle: 'italic', lineHeight: 16 }}>
+                    "{name}'s training drills completely elevated my game within 3 weeks. Highly disciplined and structured session plans!"
+                  </ThemedText>
+                </View>
+              </View>
+
+              {/* Achievements */}
+              <View style={[styles.sectionCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', marginBottom: 20 }, Shadows.level1]}>
+                <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, marginBottom: Spacing.md }}>
+                  ACHIEVEMENTS
+                </ThemedText>
+                {[
+                  { icon: 'trophy', color: '#f59e0b', text: 'Certified National Level Coach' },
+                  { icon: 'medal', color: '#6366f1', text: 'Best Youth Trainer Award 2023' },
+                  { icon: 'ribbon', color: '#10b981', text: '95% Trainee Improvement Rate' },
+                  { icon: 'star', color: '#f97316', text: 'Featured on Sports India Magazine' },
+                ].map((ach, i) => (
+                  <View key={i} style={[styles.achRow, i > 0 && { marginTop: Spacing.sm }]}>
+                    <View style={[styles.achIcon, { backgroundColor: ach.color + '18' }]}>
+                      <Ionicons name={ach.icon as any} size={16} color={ach.color} />
+                    </View>
+                    <ThemedText type="bodyMd" style={{ color: theme.text, marginLeft: Spacing.md, flex: 1 }}>
+                      {ach.text}
+                    </ThemedText>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
 
         </ScrollView>
 
-        {/* Sticky Book Button */}
+        {/* Sticky Action Footer */}
         <View style={[styles.stickyFooter, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '22' }]}>
           <View style={styles.footerRate}>
             <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Session Rate</ThemedText>
-            <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'HankenGrotesk_800ExtraBold' }}>{rate}</ThemedText>
+            <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'Sora_800ExtraBold' }}>{rate}</ThemedText>
           </View>
           {badge === 'OWNER' ? (
             <Pressable 
-              style={[styles.bookBtn, { backgroundColor: theme.secondaryContainer }]} 
-              onPress={() => Alert.alert('Manage Class', 'This is your own published coaching class.')}
+              style={[styles.bookBtn, { backgroundColor: theme.primary }]} 
+              onPress={navigateToEditClass}
             >
-              <Ionicons name="settings-outline" size={18} color={theme.secondary} style={{ marginRight: 8 }} />
-              <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 }}>
-                Manage Class
+              <Ionicons name="create-outline" size={18} color="#ffffff" style={{ marginRight: 8 }} />
+              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 15 }}>
+                Edit Coach Class
               </ThemedText>
             </Pressable>
           ) : (
             <Pressable style={[styles.bookBtn, { backgroundColor: theme.primary }]} onPress={navigateToBooking}>
-              <Ionicons name="calendar-outline" size={18} color="#ffffff" style={{ marginRight: 8 }} />
-              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 }}>
-                Book a Session
+              <Ionicons name="flash" size={18} color="#ffffff" style={{ marginRight: 8 }} />
+              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 15 }}>
+                Book & Pay Now
               </ThemedText>
             </Pressable>
           )}
@@ -326,44 +437,10 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: 'rgba(255,255,255,0.4)',
   },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#4caf50',
-    borderWidth: 3,
-  },
-  heroNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  heroBadge: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-  },
   heroRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: Spacing.sm,
-  },
-  matchBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: Spacing.md,
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.4)',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
   },
   statsRow: {
     flexDirection: 'row',
@@ -403,19 +480,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     marginTop: Spacing.md,
-    borderWidth: 1,
-  },
-  sportsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  sportChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.md,
     borderWidth: 1,
   },
   achRow: {

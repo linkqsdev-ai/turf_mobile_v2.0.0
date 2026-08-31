@@ -7,24 +7,28 @@ import {
   TextInput,
   Animated,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
-interface RosterPlayer {
+interface SquadPlayer {
   id: string;
   name: string;
   role: string;
   idUploaded: boolean;
+  idType?: string;
 }
 
 interface AdminTeam {
@@ -41,24 +45,44 @@ interface AdminTeam {
   requestDate: string;
 }
 
+const PAYMENT_METHODS = [
+  { id: 'apple',  label: 'Apple Pay',   icon: 'logo-apple',   family: 'Ionicons', color: '#000000' },
+  { id: 'gpay',   label: 'Google Pay',  icon: 'logo-google',  family: 'Ionicons', color: '#ea4335' },
+  { id: 'credit', label: 'Credit Card', icon: 'card',         family: 'Ionicons', color: '#ff5722' },
+  { id: 'debit',  label: 'Debit Card',  icon: 'card-outline', family: 'Ionicons', color: '#0f9d58' },
+  { id: 'transfer', label: 'Bank Transfer', icon: 'business-outline', family: 'Ionicons', color: '#5D68E8' },
+];
+
 export default function TeamRegistrationScreen() {
   const theme = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { profile } = useUserProfile();
+  const role = profile.role || 'Player';
 
   // Mode state: 'user' or 'admin'
   const [viewMode, setViewMode] = useState<'user' | 'admin'>('user');
 
-  // Form State
+  // Mandatory Form Fields & Input States
   const [teamName, setTeamName] = useState('');
   const [managerName, setManagerName] = useState('John Doe');
   const [managerPhone, setManagerPhone] = useState('+44 7911 123456');
   const [managerEmail, setManagerEmail] = useState('john.doe@example.com');
-  const [paymentMethod, setPaymentMethod] = useState<'Card' | 'ApplePay' | 'Transfer'>('Card');
-  
-  // Roster players state
-  const [roster, setRoster] = useState<RosterPlayer[]>([
-    { id: 'p1', name: 'Marcus Vance', role: 'Captain / Forward', idUploaded: true },
+
+  // Error state for mandatory fields
+  const [errors, setErrors] = useState<{ teamName?: boolean; managerName?: boolean; managerPhone?: boolean }>({});
+
+  // Payment Options (matching booking.tsx)
+  const [useWallet, setUseWallet] = useState(false);
+  const walletBalance = 50.0;
+  const [paymentMethod, setPaymentMethod] = useState<string>('apple');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+
+  // Squad Players state (Each item = 1 Person)
+  const [squad, setSquad] = useState<SquadPlayer[]>([
+    { id: 'p1', name: 'Marcus Vance', role: 'Captain / Forward', idUploaded: true, idType: 'Driving License' },
     { id: 'p2', name: 'Rob Miller', role: 'Goalkeeper', idUploaded: false },
   ]);
 
@@ -76,7 +100,7 @@ export default function TeamRegistrationScreen() {
       email: 'john.doe@example.com', 
       rosterCount: 8, 
       payment: 'Paid (₹175)', 
-      paymentMethod: 'Card', 
+      paymentMethod: 'Credit Card', 
       status: 'Pending', 
       requestDate: '10m ago', 
       logo: require('@/assets/images/mascots/bear.png') 
@@ -89,7 +113,7 @@ export default function TeamRegistrationScreen() {
       email: 'marcus.vance@example.com', 
       rosterCount: 7, 
       payment: 'Paid (₹175)', 
-      paymentMethod: 'ApplePay', 
+      paymentMethod: 'Apple Pay', 
       status: 'Approved', 
       requestDate: '2h ago', 
       logo: require('@/assets/images/mascots/stallion.png') 
@@ -115,7 +139,7 @@ export default function TeamRegistrationScreen() {
       email: 'sam.wilson@example.com', 
       rosterCount: 11, 
       payment: 'Paid (₹175)', 
-      paymentMethod: 'Transfer', 
+      paymentMethod: 'Bank Transfer', 
       status: 'Pending', 
       requestDate: '3d ago', 
       logo: require('@/assets/images/mascots/cobra.png'),
@@ -134,7 +158,7 @@ export default function TeamRegistrationScreen() {
         duration: 250,
         useNativeDriver: true,
       }),
-      Animated.delay(1800),
+      Animated.delay(2200),
       Animated.timing(toastOpacity, {
         toValue: 0,
         duration: 250,
@@ -143,39 +167,97 @@ export default function TeamRegistrationScreen() {
     ]).start(() => setToastMsg(null));
   };
 
+  // Field Input Sanitizers & Constraints
+  const handleTeamNameChange = (text: string) => {
+    // Characters/letters & spaces ONLY up to 30 chars
+    const sanitized = text.replace(/[^a-zA-Z\s]/g, '').slice(0, 30);
+    setTeamName(sanitized);
+    if (sanitized.trim()) setErrors(prev => ({ ...prev, teamName: false }));
+  };
+
+  const handleManagerNameChange = (text: string) => {
+    // Characters/letters & spaces ONLY up to 40 chars
+    const sanitized = text.replace(/[^a-zA-Z\s]/g, '').slice(0, 40);
+    setManagerName(sanitized);
+    if (sanitized.trim()) setErrors(prev => ({ ...prev, managerName: false }));
+  };
+
+  const handleManagerPhoneChange = (text: string) => {
+    // Numbers and leading '+' only up to 15 chars
+    const sanitized = text.replace(/[^\d+]/g, '').slice(0, 15);
+    setManagerPhone(sanitized);
+    if (sanitized.trim()) setErrors(prev => ({ ...prev, managerPhone: false }));
+  };
+
+  const handleManagerEmailChange = (text: string) => {
+    // Max 50 chars, no spaces
+    const sanitized = text.replace(/\s/g, '').slice(0, 50);
+    setManagerEmail(sanitized);
+  };
+
   const handleAddPlayer = () => {
     const newId = `p_${Date.now()}`;
-    setRoster([...roster, { id: newId, name: '', role: 'Player', idUploaded: false }]);
+    setSquad([...squad, { id: newId, name: '', role: 'Player', idUploaded: false }]);
   };
 
   const handleRemovePlayer = (id: string) => {
-    setRoster(roster.filter(p => p.id !== id));
+    setSquad(squad.filter(p => p.id !== id));
   };
 
   const updatePlayerName = (id: string, name: string) => {
-    setRoster(roster.map(p => p.id === id ? { ...p, name } : p));
+    // Characters/letters & spaces ONLY up to 40 chars
+    const sanitized = name.replace(/[^a-zA-Z\s]/g, '').slice(0, 40);
+    setSquad(squad.map(p => p.id === id ? { ...p, name: sanitized } : p));
   };
 
   const updatePlayerRole = (id: string, role: string) => {
-    setRoster(roster.map(p => p.id === id ? { ...p, role } : p));
+    // Alphanumeric, spaces, slashes up to 30 chars
+    const sanitized = role.replace(/[^a-zA-Z0-9\s/]/g, '').slice(0, 30);
+    setSquad(squad.map(p => p.id === id ? { ...p, role: sanitized } : p));
   };
 
   const handleUploadId = (id: string) => {
-    setRoster(roster.map(p => p.id === id ? { ...p, idUploaded: true } : p));
-    triggerToast('Player ID Document uploaded successfully!');
+    setSquad(squad.map(p => p.id === id ? { ...p, idUploaded: true, idType: 'National ID / Driving License' } : p));
+    triggerToast('✅ Player ID Document attached successfully!');
   };
 
+  // Pricing Calculations
+  const entryFee = 150.00;
+  const processingFee = 25.00;
+  const subtotal = entryFee + processingFee;
+  const discount = useWallet ? Math.min(walletBalance, subtotal) : 0;
+  const finalPayable = subtotal - discount;
+
   const handlePayment = () => {
-    if (!teamName) {
-      triggerToast('Please enter a Team Name.');
+    const newErrors: { teamName?: boolean; managerName?: boolean; managerPhone?: boolean } = {};
+
+    if (!teamName.trim()) newErrors.teamName = true;
+    if (!managerName.trim()) newErrors.managerName = true;
+    if (!managerPhone.trim()) newErrors.managerPhone = true;
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      triggerToast('⚠️ Please fill in all mandatory fields (*)');
       return;
     }
+
+    if (managerPhone.trim().replace(/[^\d]/g, '').length < 7) {
+      setErrors(prev => ({ ...prev, managerPhone: true }));
+      triggerToast('⚠️ Please enter a valid phone number (min 7 digits)');
+      return;
+    }
+
+    if (managerEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(managerEmail.trim())) {
+      triggerToast('⚠️ Please enter a valid email address');
+      return;
+    }
+
     setIsPaying(true);
-    // Simulate payment api latency
+    // Simulate payment API latency
     setTimeout(() => {
       setIsPaying(false);
       setPaySuccess(true);
-      triggerToast('Payment & Registration Successful!');
+      triggerToast('🎉 Payment & Registration Successful!');
     }, 2000);
   };
 
@@ -193,41 +275,43 @@ export default function TeamRegistrationScreen() {
 
   return (
     <GradientContainer screenName="team-registration" style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         {/* Header Stack Bar */}
         <View style={styles.header}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Pressable style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/tournaments')}>
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </Pressable>
-          <ThemedText type="headlineMd" numberOfLines={1} style={{ color: theme.text, flex: 1, marginLeft: 12 }}>
+          <ThemedText numberOfLines={1} style={{ color: theme.text, flex: 1, marginLeft: 12, fontSize: 13, fontFamily: 'Sora_700Bold' }}>
             Register for {tournamentName}
           </ThemedText>
         </View>
 
         {/* User / Admin View Swapper HUD */}
-        <View style={[styles.modeSwapper, { backgroundColor: theme.primaryContainer }]}>
-          <Pressable 
-            style={[styles.modeBtn, viewMode === 'user' && { backgroundColor: '#ffffff' }]}
-            onPress={() => setViewMode('user')}
-          >
-            <Ionicons name="create-outline" size={16} color={viewMode === 'user' ? theme.primary : '#ffffff'} style={{ marginRight: 6 }} />
-            <ThemedText type="labelSm" style={{ color: viewMode === 'user' ? theme.primary : '#ffffff', fontWeight: 'bold' }}>Register Team</ThemedText>
-          </Pressable>
+        {(role === 'Organizer' || role === 'Super Admin') && (
+          <View style={[styles.modeSwapper, { backgroundColor: theme.primaryContainer }]}>
+            <Pressable 
+              style={[styles.modeBtn, viewMode === 'user' && { backgroundColor: '#ffffff' }]}
+              onPress={() => setViewMode('user')}
+            >
+              <Ionicons name="create-outline" size={16} color={viewMode === 'user' ? theme.primary : '#ffffff'} style={{ marginRight: 6 }} />
+              <ThemedText type="labelSm" style={{ color: viewMode === 'user' ? theme.primary : '#ffffff', fontWeight: 'bold' }}>Register Team</ThemedText>
+            </Pressable>
 
-          <Pressable 
-            style={[styles.modeBtn, viewMode === 'admin' && { backgroundColor: '#ffffff' }]}
-            onPress={() => setViewMode('admin')}
-          >
-            <Ionicons name="shield-checkmark-outline" size={16} color={viewMode === 'admin' ? theme.primary : '#ffffff'} style={{ marginRight: 6 }} />
-            <ThemedText type="labelSm" style={{ color: viewMode === 'admin' ? theme.primary : '#ffffff', fontWeight: 'bold' }}>Admin Console</ThemedText>
-          </Pressable>
-        </View>
+            <Pressable 
+              style={[styles.modeBtn, viewMode === 'admin' && { backgroundColor: '#ffffff' }]}
+              onPress={() => setViewMode('admin')}
+            >
+              <Ionicons name="shield-checkmark-outline" size={16} color={viewMode === 'admin' ? theme.primary : '#ffffff'} style={{ marginRight: 6 }} />
+              <ThemedText type="labelSm" style={{ color: viewMode === 'admin' ? theme.primary : '#ffffff', fontWeight: 'bold' }}>Admin Console</ThemedText>
+            </Pressable>
+          </View>
+        )}
 
         {viewMode === 'user' ? (
-          // USER REGISTRATION FLOW
+          <>
+          {/* USER REGISTRATION FLOW */}
           <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
             {paySuccess ? (
-              // Success Screen
               <View style={styles.successContainer}>
                 {/* Layered Trophy Illustration */}
                 <View style={styles.trophyIllustrationContainer}>
@@ -256,7 +340,7 @@ export default function TeamRegistrationScreen() {
                   Registration Confirmed!
                 </ThemedText>
                 <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 8, paddingHorizontal: 20 }}>
-                  Your team, <ThemedText type="bodySm" style={{ fontWeight: 'bold', color: theme.text }}>{teamName}</ThemedText>, is registered for {tournamentName}. You can now view fixtures and manage your team roster.
+                  Your team, <ThemedText type="bodySm" style={{ fontWeight: 'bold', color: theme.text }}>{teamName}</ThemedText>, is registered for {tournamentName}. You can now view fixtures and manage your team squad.
                 </ThemedText>
 
                 <View style={[styles.invoiceMock, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant }]}>
@@ -287,9 +371,8 @@ export default function TeamRegistrationScreen() {
                 </Pressable>
               </View>
             ) : (
-              // Registration Fields Form
               <View>
-                {/* HERO BANNER */}
+                {/* REDESIGNED HERO BANNER */}
                 <View style={styles.heroBannerContainer}>
                   <Image 
                     source={require('@/assets/images/illustrations/tournament_cover.png')} 
@@ -297,21 +380,18 @@ export default function TeamRegistrationScreen() {
                     contentFit="cover"
                   />
                   <LinearGradient
-                    colors={['rgba(5, 21, 30, 0.1)', 'rgba(5, 21, 30, 0.85)']}
+                    colors={['rgba(15, 23, 42, 0.15)', 'rgba(15, 23, 42, 0.65)', 'rgba(15, 23, 42, 0.9)']}
                     style={StyleSheet.absoluteFill}
                   />
                   <View style={styles.heroContent}>
-                    <View style={styles.heroBadge}>
-                      <ThemedText style={styles.heroBadgeText}>TOURNAMENT REGISTRATION</ThemedText>
-                    </View>
                     <ThemedText style={styles.heroTitle}>{tournamentName}</ThemedText>
                     <View style={styles.heroRow}>
-                      <View style={styles.heroMetaItem}>
-                        <Ionicons name="calendar-outline" size={12} color="#5D68E8" style={{ marginRight: 4 }} />
+                      <View style={styles.heroMetaPill}>
+                        <Ionicons name="calendar-outline" size={11} color="#A5B4FC" style={{ marginRight: 4 }} />
                         <ThemedText style={styles.heroMetaText}>Starts July 15, 2026</ThemedText>
                       </View>
-                      <View style={styles.heroMetaItem}>
-                        <Ionicons name="location-outline" size={12} color="#5D68E8" style={{ marginRight: 4 }} />
+                      <View style={styles.heroMetaPill}>
+                        <Ionicons name="location-outline" size={11} color="#A5B4FC" style={{ marginRight: 4 }} />
                         <ThemedText style={styles.heroMetaText}>London Arena</ThemedText>
                       </View>
                     </View>
@@ -320,164 +400,273 @@ export default function TeamRegistrationScreen() {
 
                 <ThemedText type="headlineSm" style={styles.sectionTitle}>1. Team Details</ThemedText>
                 <View style={styles.inputGroup}>
-                  <ThemedText type="labelSm" style={styles.inputLabel}>Team name *</ThemedText>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <ThemedText type="labelSm" style={styles.inputLabel}>
+                      Team name <ThemedText style={{ color: theme.error, fontWeight: 'bold' }}>*</ThemedText>
+                    </ThemedText>
+                    {errors.teamName && (
+                      <ThemedText type="labelSm" style={{ color: theme.error, fontSize: 10 }}>Required</ThemedText>
+                    )}
+                  </View>
                   <TextInput
-                    style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
+                    style={[
+                      styles.textInput,
+                      { borderColor: errors.teamName ? theme.error : '#00000033', color: theme.text }
+                    ]}
                     placeholder="Enter team name"
-                    placeholderTextColor={theme.textSecondary}
+                    placeholderTextColor="#94a3b8"
                     value={teamName}
-                    onChangeText={setTeamName}
+                    onChangeText={handleTeamNameChange}
+                    maxLength={30}
                   />
                 </View>
 
-                <ThemedText type="headlineSm" style={[styles.sectionTitle, { marginTop: Spacing.md }]}>2. Manager Credentials</ThemedText>
+                <ThemedText type="headlineSm" style={[styles.sectionTitle, { marginTop: Spacing.md }]}>2. Captain / Manager Details</ThemedText>
                 <View style={styles.inputGroup}>
-                  <ThemedText type="labelSm" style={styles.inputLabel}>Manager full name</ThemedText>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <ThemedText type="labelSm" style={styles.inputLabel}>
+                      Captain / Manager full name <ThemedText style={{ color: theme.error, fontWeight: 'bold' }}>*</ThemedText>
+                    </ThemedText>
+                    {errors.managerName && (
+                      <ThemedText type="labelSm" style={{ color: theme.error, fontSize: 10 }}>Required</ThemedText>
+                    )}
+                  </View>
                   <TextInput
-                    style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                    placeholder="Manager Name"
+                    style={[
+                      styles.textInput,
+                      { borderColor: errors.managerName ? theme.error : '#00000033', color: theme.text }
+                    ]}
+                    placeholder="Enter full name"
+                    placeholderTextColor="#94a3b8"
                     value={managerName}
-                    onChangeText={setManagerName}
+                    onChangeText={handleManagerNameChange}
+                    maxLength={40}
                   />
                 </View>
+
                 <View style={styles.rowBetween}>
                   <View style={[styles.inputGroup, { width: '48%' }]}>
-                    <ThemedText type="labelSm" style={styles.inputLabel}>Manager phone</ThemedText>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <ThemedText type="labelSm" style={styles.inputLabel}>
+                        Phone <ThemedText style={{ color: theme.error, fontWeight: 'bold' }}>*</ThemedText>
+                      </ThemedText>
+                      {errors.managerPhone && (
+                        <ThemedText type="labelSm" style={{ color: theme.error, fontSize: 10 }}>Required</ThemedText>
+                      )}
+                    </View>
                     <TextInput
-                      style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                      placeholder="Phone"
+                      style={[
+                        styles.textInput,
+                        { borderColor: errors.managerPhone ? theme.error : '#00000033', color: theme.text }
+                      ]}
+                      placeholder="+44 7911 123456"
+                      placeholderTextColor="#94a3b8"
+                      keyboardType="phone-pad"
                       value={managerPhone}
-                      onChangeText={setManagerPhone}
+                      onChangeText={handleManagerPhoneChange}
+                      maxLength={15}
                     />
                   </View>
                   <View style={[styles.inputGroup, { width: '48%' }]}>
-                    <ThemedText type="labelSm" style={styles.inputLabel}>Manager email</ThemedText>
+                    <ThemedText type="labelSm" style={styles.inputLabel}>Email (Optional)</ThemedText>
                     <TextInput
-                      style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                      placeholder="Email"
+                      style={[styles.textInput, { borderColor: '#00000033', color: theme.text }]}
+                      placeholder="john.doe@example.com"
+                      placeholderTextColor="#94a3b8"
+                      keyboardType="email-address"
                       value={managerEmail}
-                      onChangeText={setManagerEmail}
+                      onChangeText={handleManagerEmailChange}
+                      maxLength={50}
                     />
                   </View>
                 </View>
 
-                <ThemedText type="headlineSm" style={[styles.sectionTitle, { marginTop: Spacing.md }]}>3. Member Roster</ThemedText>
-                <View style={styles.rosterSection}>
-                  {roster.map((player, idx) => (
-                    <View key={player.id} style={[styles.playerFormCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '22' }, Shadows.level1]}>
-                      <View style={styles.rowBetween}>
-                        <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: 'bold' }}>Player #{idx + 1}</ThemedText>
-                        <Pressable onPress={() => handleRemovePlayer(player.id)}>
-                          <Ionicons name="trash-outline" size={16} color={theme.error} />
-                        </Pressable>
-                      </View>
-                      
-                      <View style={styles.playerInputRow}>
-                        <TextInput
-                          style={[styles.playerInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                          placeholder="Player Full Name"
-                          placeholderTextColor={theme.textSecondary}
-                          value={player.name}
-                          onChangeText={(v) => updatePlayerName(player.id, v)}
-                        />
-                        <TextInput
-                          style={[styles.playerInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                          placeholder="Role (e.g. Forward)"
-                          placeholderTextColor={theme.textSecondary}
-                          value={player.role}
-                          onChangeText={(v) => updatePlayerRole(player.id, v)}
-                        />
-                      </View>
-
-                      {/* Mock Upload Document Button */}
-                      <Pressable 
-                        style={[
-                          styles.uploadBtn, 
-                          { backgroundColor: theme.surfaceLow },
-                          player.idUploaded && { backgroundColor: '#e2f9ec' }
-                        ]}
-                        onPress={() => handleUploadId(player.id)}
-                      >
-                        <Ionicons 
-                          name={player.idUploaded ? 'checkmark-circle' : 'cloud-upload-outline'} 
-                          size={14} 
-                          color={player.idUploaded ? '#0f9f58' : theme.text} 
-                          style={{ marginRight: 6 }} 
-                        />
-                        <ThemedText type="labelSm" style={{ color: player.idUploaded ? '#0f9f58' : theme.text, fontSize: 10 }}>
-                          {player.idUploaded ? 'ID Verification Uploaded' : 'Upload ID Verification'}
-                        </ThemedText>
-                      </Pressable>
+                {/* 3. FEES AND PAYMENTS (Matching booking.tsx) */}
+                <ThemedText type="headlineSm" style={[styles.sectionTitle, { marginTop: Spacing.lg }]}>3. Fees & Payments</ThemedText>
+                <View style={[styles.paymentPortal, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+                  
+                  {/* Cashback Offer Activation Card */}
+                  <View style={styles.cashbackCard}>
+                    <View style={styles.cashbackIconBg}>
+                      <Ionicons name="gift" size={18} color="#10B981" />
                     </View>
-                  ))}
-
-                  <Pressable style={[styles.addPlayerBtn, { borderColor: theme.outlineVariant }]} onPress={handleAddPlayer}>
-                    <Ionicons name="add" size={16} color={theme.text} />
-                    <ThemedText type="labelSm" style={{ color: theme.text, marginLeft: 4 }}>Add roster player</ThemedText>
-                  </Pressable>
-                </View>
-
-                <ThemedText type="headlineSm" style={[styles.sectionTitle, { marginTop: Spacing.md }]}>4. Fees & Payments</ThemedText>
-                <View style={[styles.paymentPortal, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }, Shadows.level1]}>
-                  <View style={styles.rowBetween}>
-                    <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Entry Fee</ThemedText>
-                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹150.00</ThemedText>
-                  </View>
-                  <View style={styles.rowBetween}>
-                    <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Processing</ThemedText>
-                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹25.00</ThemedText>
-                  </View>
-                  <View style={[styles.rowBetween, { borderTopWidth: 1, borderTopColor: theme.outlineVariant + '33', marginTop: 12, paddingTop: 8 }]}>
-                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>Total Due</ThemedText>
-                    <ThemedText type="bodyLg" style={{ color: theme.secondaryContainer, fontWeight: 'bold' }}>₹175.00</ThemedText>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={styles.cashbackTitle}>Cashback Offer Activated!</ThemedText>
+                      <ThemedText style={styles.cashbackSubtitle}>
+                        Get ₹25.00 Cashback credited instantly to your Turf Wallet upon registration.
+                      </ThemedText>
+                    </View>
                   </View>
 
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: Spacing.md, marginBottom: 8 }}>Select payment method</ThemedText>
-                  <View style={styles.paymentMethodsRow}>
-                    {[
-                      { id: 'Card', name: 'Credit Card', icon: 'card-outline' },
-                      { id: 'ApplePay', name: 'Apple Pay', icon: 'logo-apple' },
-                      { id: 'Transfer', name: 'Bank Trans.', icon: 'business-outline' },
-                    ].map(method => (
-                      <Pressable
-                        key={method.id}
-                        style={[
-                          styles.payMethodCard,
-                          { borderColor: theme.outlineVariant },
-                          paymentMethod === method.id && { backgroundColor: theme.primary, borderColor: theme.primary }
-                        ]}
-                        onPress={() => setPaymentMethod(method.id as any)}
-                      >
-                        <Ionicons name={method.icon as any} size={16} color={paymentMethod === method.id ? '#ffffff' : theme.text} />
-                        <ThemedText type="labelSm" style={{ color: paymentMethod === method.id ? '#ffffff' : theme.text, fontSize: 10, marginTop: 4 }}>
-                          {method.name}
-                        </ThemedText>
-                      </Pressable>
-                    ))}
-                  </View>
-
-                  {isPaying ? (
-                    <ActivityIndicator size="small" color={theme.secondaryContainer} style={{ marginTop: 20 }} />
-                  ) : (
-                    <Pressable onPress={handlePayment} style={Shadows.level2}>
-                      <LinearGradient
-                        colors={['#5D68E8', '#ff8c00']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.paySubmitBtnGradient}
-                      >
-                        <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: 'bold' }}>PAY & SUBMIT REGISTRATION</ThemedText>
-                      </LinearGradient>
+                  {/* Wallet Option Card */}
+                  <View style={[styles.walletCard, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
+                    <View style={styles.walletIconCircle}>
+                      <Ionicons name="wallet-outline" size={18} color={theme.primary} />
+                    </View>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <ThemedText style={{ fontSize: 13, fontWeight: 'bold', color: theme.text }}>
+                        Pay with Wallet Balance
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 1 }}>
+                        Available Balance: ₹{walletBalance.toFixed(2)}
+                      </ThemedText>
+                    </View>
+                    <Pressable 
+                      onPress={() => setUseWallet(!useWallet)}
+                      style={[styles.applyWalletBtn, { backgroundColor: useWallet ? theme.primary : theme.surfaceLowest }]}
+                    >
+                      <ThemedText style={{ fontSize: 11, fontWeight: 'bold', color: useWallet ? '#ffffff' : theme.text }}>
+                        {useWallet ? 'Applied (-₹50)' : 'Apply'}
+                      </ThemedText>
+                      <Ionicons name={useWallet ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={useWallet ? '#ffffff' : theme.textSecondary} />
                     </Pressable>
-                  )}
+                  </View>
+
+                  {/* Payment Methods Selection Grid */}
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 8, marginTop: 4, fontWeight: '500', fontSize: 10 }}>Select Payment Method</ThemedText>
+                  <View style={{ gap: 10 }}>
+                    {PAYMENT_METHODS.map(pm => {
+                      const isSelected = paymentMethod === pm.id;
+                      return (
+                        <Pressable
+                          key={pm.id}
+                          onPress={() => setPaymentMethod(pm.id)}
+                          style={[
+                            styles.payMethodCard,
+                            { borderColor: theme.outlineVariant + '40', backgroundColor: theme.surfaceLowest },
+                            isSelected && { borderColor: theme.primary, backgroundColor: theme.primaryContainer + '20' }
+                          ]}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                              {pm.id === 'gpay' ? (
+                                <Ionicons name="logo-google" size={20} color="#ea4335" style={{ width: 28, textAlign: 'center' }} />
+                              ) : pm.family === 'Ionicons' ? (
+                                <Ionicons name={pm.icon as any} size={20} color={isSelected ? theme.primary : pm.color} style={{ width: 28, textAlign: 'center' }} />
+                              ) : (
+                                <FontAwesome5 name={pm.icon as any} size={18} color={isSelected ? theme.primary : pm.color} style={{ width: 28, textAlign: 'center' }} />
+                              )}
+                              <ThemedText type="bodySm" style={{ marginLeft: 10, fontWeight: isSelected ? 'bold' : '500', color: theme.text, fontSize: 13 }}>
+                                {pm.label}
+                              </ThemedText>
+                            </View>
+                            <View style={[styles.radioOuter, isSelected && { borderColor: theme.primary }]}>
+                              {isSelected && <View style={[styles.radioInner, { backgroundColor: theme.primary }]} />}
+                            </View>
+                          </View>
+
+                          {/* Expanded Card Form for Credit & Debit Card */}
+                          {isSelected && (pm.id === 'credit' || pm.id === 'debit') && (
+                            <View style={styles.cardInputGroup}>
+                              <TextInput 
+                                placeholder="Card Number (4000 1234 5678 9010)" 
+                                placeholderTextColor="#94a3b8"
+                                style={[styles.cardTextInput, { borderColor: '#00000033', color: theme.text }]} 
+                                keyboardType="number-pad"
+                                value={cardNumber}
+                                onChangeText={setCardNumber}
+                                maxLength={19}
+                              />
+                              <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                                <TextInput 
+                                  placeholder="MM/YY" 
+                                  placeholderTextColor="#94a3b8"
+                                  style={[styles.cardTextInput, { flex: 1, borderColor: '#00000033', color: theme.text }]} 
+                                  value={cardExpiry}
+                                  onChangeText={setCardExpiry}
+                                  maxLength={5}
+                                />
+                                <TextInput 
+                                  placeholder="CVV" 
+                                  placeholderTextColor="#94a3b8"
+                                  style={[styles.cardTextInput, { flex: 1, borderColor: '#00000033', color: theme.text }]} 
+                                  keyboardType="number-pad"
+                                  secureTextEntry
+                                  value={cardCvv}
+                                  onChangeText={setCardCvv}
+                                  maxLength={4}
+                                />
+                              </View>
+                            </View>
+                          )}
+
+                          {isSelected && (pm.id === 'apple' || pm.id === 'gpay') && (
+                            <View style={styles.payRedirectNote}>
+                              <Ionicons name="shield-checkmark" size={14} color="#10B981" style={{ marginRight: 6 }} />
+                              <ThemedText style={{ fontSize: 11, color: theme.textSecondary, flex: 1 }}>
+                                Fast 1-Touch Checkout via {pm.label}. Authenticate with Touch/Face ID.
+                              </ThemedText>
+                            </View>
+                          )}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {/* Fee Breakdown Summary */}
+                  <View style={[styles.feeBreakdown, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}>
+                    <View style={styles.rowBetween}>
+                      <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Tournament Entry Fee</ThemedText>
+                      <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹{entryFee.toFixed(2)}</ThemedText>
+                    </View>
+                    <View style={[styles.rowBetween, { marginTop: 8 }]}>
+                      <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Admin & Processing Fee</ThemedText>
+                      <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹{processingFee.toFixed(2)}</ThemedText>
+                    </View>
+                    {useWallet && (
+                      <View style={[styles.rowBetween, { marginTop: 8 }]}>
+                        <ThemedText type="bodySm" style={{ color: '#10B981', fontWeight: 'bold' }}>Wallet Balance Applied</ThemedText>
+                        <ThemedText type="bodySm" style={{ color: '#10B981', fontWeight: 'bold' }}>-₹{discount.toFixed(2)}</ThemedText>
+                      </View>
+                    )}
+                    <View style={[styles.rowBetween, { borderTopWidth: 1, borderTopColor: theme.outlineVariant + '33', marginTop: 12, paddingTop: 10 }]}>
+                      <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>Total Payable Amount</ThemedText>
+                      <ThemedText type="bodyLg" style={{ color: theme.secondaryContainer, fontWeight: 'bold', fontSize: 16 }}>₹{finalPayable.toFixed(2)}</ThemedText>
+                    </View>
+                  </View>
+
+                  <View style={styles.securityBadge}>
+                    <Ionicons name="lock-closed" size={12} color="#10B981" style={{ marginRight: 6 }} />
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary }}>
+                      256-Bit SSL Encrypted Payment · Official League Authorization
+                    </ThemedText>
+                  </View>
+
                 </View>
               </View>
             )}
           </ScrollView>
+
+          {/* Sticky Bottom Footer for Pay & Submit Registration */}
+          {!paySuccess && (
+            <View style={[styles.fixedSubmitFooter, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10 }}>Total Payable</ThemedText>
+                <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer, fontWeight: 'bold' }}>₹{finalPayable.toFixed(2)}</ThemedText>
+              </View>
+
+              {isPaying ? (
+                <View style={[styles.paySubmitBtnGradient, { justifyContent: 'center', width: 220 }]}>
+                  <ActivityIndicator size="small" color="#ffffff" />
+                </View>
+              ) : (
+                <Pressable onPress={handlePayment} style={[Shadows.level2, { width: 220 }]}>
+                  <LinearGradient
+                    colors={['#5D68E8', '#ff8c00']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.paySubmitBtnGradient}
+                  >
+                    <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 12, letterSpacing: 0.5 }}>PAY & SUBMIT REGISTRATION</ThemedText>
+                  </LinearGradient>
+                </Pressable>
+              )}
+            </View>
+          )}
+        </>
         ) : (
-          // ADMIN CONTROL PANEL
           <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
-            {/* HERO BANNER */}
+            {/* REDESIGNED HERO BANNER & ADMIN CONTROL PANEL */}
             <View style={styles.heroBannerContainer}>
               <Image 
                 source={require('@/assets/images/illustrations/tournament_cover.png')} 
@@ -485,17 +674,14 @@ export default function TeamRegistrationScreen() {
                 contentFit="cover"
               />
               <LinearGradient
-                colors={['rgba(5, 21, 30, 0.1)', 'rgba(5, 21, 30, 0.85)']}
+                colors={['rgba(15, 23, 42, 0.15)', 'rgba(15, 23, 42, 0.65)', 'rgba(15, 23, 42, 0.9)']}
                 style={StyleSheet.absoluteFill}
               />
               <View style={styles.heroContent}>
-                <View style={styles.heroBadge}>
-                  <ThemedText style={styles.heroBadgeText}>ADMIN CONTROL PANEL</ThemedText>
-                </View>
                 <ThemedText style={styles.heroTitle}>{tournamentName}</ThemedText>
                 <View style={styles.heroRow}>
-                  <View style={styles.heroMetaItem}>
-                    <Ionicons name="shield-checkmark-outline" size={12} color="#5D68E8" style={{ marginRight: 4 }} />
+                  <View style={styles.heroMetaPill}>
+                    <Ionicons name="shield-checkmark-outline" size={11} color="#A5B4FC" style={{ marginRight: 4 }} />
                     <ThemedText style={styles.heroMetaText}>Requests Management</ThemedText>
                   </View>
                 </View>
@@ -524,23 +710,6 @@ export default function TeamRegistrationScreen() {
                         </ThemedText>
                       </View>
                       
-                      <View style={[
-                        styles.statusLabel,
-                        t.status === 'Pending' && { backgroundColor: '#fff4e5' },
-                        t.status === 'Approved' && { backgroundColor: '#e2f9ec' },
-                        t.status === 'Rejected' && { backgroundColor: '#ffdad6' },
-                        t.status === 'Changes Requested' && { backgroundColor: '#e6f0fa' }
-                      ]}>
-                        <ThemedText type="labelSm" style={[
-                          { fontSize: 8, fontWeight: '800' },
-                          t.status === 'Pending' && { color: '#e67e22' },
-                          t.status === 'Approved' && { color: '#0f9f58' },
-                          t.status === 'Rejected' && { color: '#ba1a1a' },
-                          t.status === 'Changes Requested' && { color: '#2980b9' }
-                        ]}>
-                          {t.status.toUpperCase()}
-                        </ThemedText>
-                      </View>
                     </View>
 
                     {/* Subheader: REGISTRATION INFO left, time right (like + Add Session) */}
@@ -559,12 +728,12 @@ export default function TeamRegistrationScreen() {
                     {/* Thin separator line */}
                     <View style={[styles.mockSeparator, { backgroundColor: theme.outlineVariant + '22' }]} />
 
-                    {/* Main Row: (8) Roster Players left, Manager right */}
+                    {/* Main Row: (8) Squad Players left, Manager right */}
                     <View style={styles.mockMainRow}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Ionicons name="people-outline" size={14} color={theme.text} style={{ marginRight: 6 }} />
                         <ThemedText style={styles.mockMainLeftText}>
-                          ({(t.rosterCount !== undefined ? t.rosterCount : 8)}) Roster Players
+                          ({(t.rosterCount !== undefined ? t.rosterCount : 8)}) Squad Players
                         </ThemedText>
                       </View>
                       <ThemedText style={styles.mockMainRightText}>
@@ -698,22 +867,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.containerMargin,
   },
   sectionTitle: {
-    fontWeight: 'bold',
-    marginBottom: Spacing.sm,
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 10.5,
+    marginBottom: 4,
+    color: '#64748b',
+    letterSpacing: 0.3,
   },
   inputGroup: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm + 2,
   },
   inputLabel: {
-    marginBottom: 6,
+    marginBottom: 3,
+    fontSize: 9,
+    fontFamily: 'Sora_500Medium',
+    color: '#64748b',
+    letterSpacing: 0.1,
   },
   textInput: {
     borderWidth: 1,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing.md,
-    height: 48,
-    fontSize: 14,
-    fontFamily: 'HankenGrotesk_400Regular',
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: 10,
+    height: 35,
+    fontSize: 11.5,
+    fontFamily: 'Sora_400Regular',
   },
   rowBetween: {
     flexDirection: 'row',
@@ -747,7 +923,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     height: 40,
     fontSize: 12,
-    fontFamily: 'HankenGrotesk_400Regular',
+    fontFamily: 'Sora_400Regular',
   },
   uploadBtn: {
     flexDirection: 'row',
@@ -786,11 +962,12 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   payMethodCard: {
-    flex: 1,
+    width: '100%',
     borderWidth: 1,
-    borderRadius: BorderRadius.lg,
-    alignItems: 'center',
-    paddingVertical: 10,
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    alignSelf: 'stretch',
   },
   paySubmitBtn: {
     height: 48,
@@ -848,11 +1025,6 @@ const styles = StyleSheet.create({
     elevation: 5,
     backgroundColor: '#ffffff',
     marginBottom: 16,
-  },
-  statusLabel: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.md,
   },
   adminTeamLogo: {
     width: 44,
@@ -999,7 +1171,7 @@ const styles = StyleSheet.create({
   mockFullWidthBtnText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#6b4500',
+    color: '#ffffff',
   },
   mockFullWidthBtnContainer: {
     marginHorizontal: 16,
@@ -1033,60 +1205,54 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   heroBannerContainer: {
-    height: 150,
-    borderRadius: 24,
+    height: 160,
+    borderRadius: 20,
     overflow: 'hidden',
-    marginBottom: 20,
+    marginBottom: 16,
     position: 'relative',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(226, 232, 240, 0.8)',
+    width: '100%',
   },
   heroBannerImage: {
     width: '100%',
     height: '100%',
     position: 'absolute',
+    borderRadius: 20,
   },
   heroContent: {
     flex: 1,
     justifyContent: 'flex-end',
-    padding: 16,
-  },
-  heroBadge: {
-    backgroundColor: '#5D68E8',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.sm,
-    alignSelf: 'flex-start',
-    marginBottom: 6,
-  },
-  heroBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#6b4500',
-    letterSpacing: 0.5,
+    padding: 14,
   },
   heroTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 19,
+    fontWeight: '700',
     color: '#ffffff',
-    fontFamily: 'HankenGrotesk_700Bold',
-    marginBottom: 4,
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    fontFamily: 'Sora_700Bold',
+    marginBottom: 6,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 4,
   },
   heroRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
-  heroMetaItem: {
+  heroMetaPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 14,
   },
   heroMetaText: {
-    fontSize: 11,
-    color: '#dee8ff',
+    fontSize: 10.5,
+    color: '#ffffff',
     fontWeight: '500',
   },
   trophyIllustrationContainer: {
@@ -1128,5 +1294,123 @@ const styles = StyleSheet.create({
   },
   sparkle: {
     position: 'absolute',
+  },
+  cashbackCard: {
+    backgroundColor: '#10B98115',
+    borderColor: '#10B98133',
+    borderWidth: 1,
+    borderRadius: BorderRadius.lg,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: Spacing.md,
+  },
+  cashbackIconBg: {
+    backgroundColor: '#10B98125',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cashbackTitle: {
+    fontSize: 12.5,
+    fontFamily: 'Sora_700Bold',
+    color: '#10B981',
+  },
+  cashbackSubtitle: {
+    fontSize: 10.5,
+    color: '#64748b',
+    marginTop: 1,
+  },
+  walletCard: {
+    borderRadius: BorderRadius.lg,
+    padding: 12,
+    marginBottom: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+  },
+  walletIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(93, 104, 232, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  applyWalletBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(93, 104, 232, 0.3)',
+  },
+  radioOuter: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#cbd5e1',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioInner: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+  },
+  cardInputGroup: {
+    width: '100%',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.08)',
+  },
+  cardTextInput: {
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    fontSize: 12,
+    fontFamily: 'Sora_400Regular',
+  },
+  payRedirectNote: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  feeBreakdown: {
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginTop: Spacing.md,
+    borderWidth: 1,
+  },
+  securityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  fixedSubmitFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.containerMargin,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 12,
   },
 });

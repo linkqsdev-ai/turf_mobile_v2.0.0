@@ -15,6 +15,7 @@ import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { isTimeSlotPassed } from '@/utils/date-utils';
 
 // Predefined coach sessions
 const COACH_SESSIONS = [
@@ -54,9 +55,16 @@ export default function BookCoachScreen() {
   const baseRate = rateMatch ? parseInt(rateMatch[0].replace(',', ''), 10) : 1200;
 
   // Booking states
-  const [selectedDayOfMonth, setSelectedDayOfMonth] = useState<number>(14);
-  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<string>('Wednesday');
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>('s1');
+  const today = new Date();
+  const [selectedDayOfMonth, setSelectedDayOfMonth] = useState<number>(today.getDate());
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<string>(
+    today.toLocaleDateString('en-US', { weekday: 'long' })
+  );
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(() => {
+    const todayWeekday = today.toLocaleDateString('en-US', { weekday: 'long' });
+    const firstValid = COACH_SESSIONS.find(s => !s.disabled && !isTimeSlotPassed(s.time, todayWeekday));
+    return firstValid ? firstValid.id : null;
+  });
   
   // Add-ons
   const [videoAnalysis, setVideoAnalysis] = useState(false);
@@ -99,7 +107,7 @@ export default function BookCoachScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Top App Bar */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/coach')} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </Pressable>
           <ThemedText type="headlineSm" style={styles.headerTitle}>
@@ -167,7 +175,7 @@ export default function BookCoachScreen() {
                         type="bodyMd"
                         style={{
                           color: isSelected ? theme.onSecondaryContainer : isCurrent ? theme.textSecondary : theme.text,
-                          fontFamily: isSelected ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_400Regular',
+                          fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_400Regular',
                         }}
                       >
                         {item.dayNumber}
@@ -183,24 +191,39 @@ export default function BookCoachScreen() {
           <View style={styles.section}>
             <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
               <View style={styles.daySelectorGrid}>
-                {DAYS_OF_WEEK.map((d) => {
+                {DAYS_OF_WEEK.map((d, dayIdx) => {
                   const isActive = d.full === selectedDayOfWeek;
+                  const todayIndex = (new Date().getDay() + 6) % 7; // Mon=0 ... Sun=6
+                  const isPastDay = dayIdx < todayIndex;
+
                   return (
                     <Pressable
                       key={d.full}
-                      onPress={() => setSelectedDayOfWeek(d.full)}
+                      disabled={isPastDay}
+                      onPress={() => {
+                        setSelectedDayOfWeek(d.full);
+                        // Check if current selected session is past on the new day
+                        if (selectedSessionId) {
+                          const currentSession = COACH_SESSIONS.find(s => s.id === selectedSessionId);
+                          if (currentSession && isTimeSlotPassed(currentSession.time, d.full)) {
+                            const firstValid = COACH_SESSIONS.find(s => !s.disabled && !isTimeSlotPassed(s.time, d.full));
+                            setSelectedSessionId(firstValid ? firstValid.id : null);
+                          }
+                        }
+                      }}
                       style={[
                         styles.daySelectorTab,
                         isActive
                           ? [styles.daySelectorTabActive, { backgroundColor: theme.secondaryContainer, borderColor: theme.secondary + '44' }]
                           : { backgroundColor: theme.surfaceLow, borderColor: 'transparent' },
+                        isPastDay && { opacity: 0.35, backgroundColor: theme.surfaceLow + '80' },
                       ]}
                     >
                       <ThemedText
                         type="labelMd"
                         style={{
-                          color: isActive ? theme.onSecondaryContainer : theme.textSecondary,
-                          fontFamily: isActive ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_600SemiBold',
+                          color: isActive ? theme.onSecondaryContainer : isPastDay ? theme.textSecondary : theme.textSecondary,
+                          fontFamily: isActive ? 'Sora_700Bold' : 'Sora_600SemiBold',
                           fontSize: 11.5,
                         }}
                       >
@@ -213,8 +236,9 @@ export default function BookCoachScreen() {
 
               <View style={styles.sessionsList}>
                 {COACH_SESSIONS.map((session) => {
+                  const isPassed = isTimeSlotPassed(session.time, selectedDayOfWeek);
                   const isSelected = selectedSessionId === session.id;
-                  const isDisabled = session.disabled;
+                  const isDisabled = session.disabled || isPassed;
                   
                   return (
                     <Pressable
@@ -225,22 +249,40 @@ export default function BookCoachScreen() {
                         styles.sessionItem,
                         { backgroundColor: theme.surfaceLow },
                         isSelected && { backgroundColor: theme.primary, borderColor: theme.primary },
-                        isDisabled && { opacity: 0.4 },
+                        isDisabled && { opacity: 0.35, backgroundColor: theme.surfaceLow + '60' },
                       ]}
                     >
                       <View style={styles.sessionItemLeft}>
-                        <ThemedText type="headlineSm" style={{ color: isSelected ? '#ffffff' : theme.text, fontSize: 15 }}>
+                        <ThemedText
+                          type="headlineSm"
+                          style={{
+                            color: isSelected ? '#ffffff' : isDisabled ? theme.textSecondary : theme.text,
+                            fontSize: 15,
+                            textDecorationLine: isDisabled ? 'line-through' : 'none',
+                          }}
+                        >
                           {session.title}
                         </ThemedText>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                          <Ionicons name="time-outline" size={14} color={isSelected ? '#ffffffcc' : theme.textSecondary} />
-                          <ThemedText type="labelSm" style={{ color: isSelected ? '#ffffffcc' : theme.textSecondary, marginLeft: 4 }}>
+                          <Ionicons
+                            name="time-outline"
+                            size={14}
+                            color={isSelected ? '#ffffffcc' : isDisabled ? theme.textSecondary + '60' : theme.textSecondary}
+                          />
+                          <ThemedText
+                            type="labelSm"
+                            style={{
+                              color: isSelected ? '#ffffffcc' : isDisabled ? theme.textSecondary + '60' : theme.textSecondary,
+                              marginLeft: 4,
+                              textDecorationLine: isDisabled ? 'line-through' : 'none',
+                            }}
+                          >
                             {session.time}
                           </ThemedText>
                         </View>
                       </View>
                       
-                      <View style={[styles.radioCircle, isSelected && { borderColor: '#ffffff' }]}>
+                      <View style={[styles.radioCircle, isSelected && { borderColor: '#ffffff' }, isDisabled && { opacity: 0.3 }]}>
                         {isSelected && <View style={styles.radioInner} />}
                       </View>
                     </Pressable>
@@ -269,7 +311,7 @@ export default function BookCoachScreen() {
                   <Ionicons name="videocam" size={18} color={theme.secondaryContainer} />
                 </View>
                 <View style={{ marginLeft: Spacing.sm }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Detailed Video Analysis</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>Detailed Video Analysis</ThemedText>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>+₹500 / Session</ThemedText>
                 </View>
               </View>
@@ -292,7 +334,7 @@ export default function BookCoachScreen() {
                   <Ionicons name="nutrition" size={18} color={theme.secondaryContainer} />
                 </View>
                 <View style={{ marginLeft: Spacing.sm }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Personalized Diet Plan</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>Personalized Diet Plan</ThemedText>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>+₹300</ThemedText>
                 </View>
               </View>
@@ -345,7 +387,7 @@ export default function BookCoachScreen() {
         <View style={[styles.stickyFooter, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '22' }, Shadows.level3]}>
           <View style={styles.footerLeft}>
             <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Total Due</ThemedText>
-            <ThemedText type="headlineMd" style={{ color: theme.primary, fontFamily: 'HankenGrotesk_800ExtraBold' }}>
+            <ThemedText type="headlineMd" style={{ color: theme.primary, fontFamily: 'Sora_800ExtraBold' }}>
               ₹{total.toLocaleString()}
             </ThemedText>
           </View>
@@ -354,7 +396,7 @@ export default function BookCoachScreen() {
             onPress={handleConfirmBooking}
             disabled={!selectedSessionId}
           >
-            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14 }}>
+            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 14 }}>
               Confirm Booking
             </ThemedText>
             <Ionicons name="chevron-forward" size={16} color="#ffffff" style={{ marginLeft: 4 }} />
@@ -377,7 +419,7 @@ const styles = StyleSheet.create({
     height: 56,
   },
   backButton: { padding: 6 },
-  headerTitle: { fontFamily: 'HankenGrotesk_700Bold', fontSize: 16 },
+  headerTitle: { fontFamily: 'Sora_700Bold', fontSize: 16 },
   scrollContent: { paddingBottom: 40 },
   section: {
     marginTop: Spacing.lg,

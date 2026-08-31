@@ -226,10 +226,6 @@ export default function TournamentDetailsScreen() {
         <View style={[styles.liveScoreCard, { backgroundColor: theme.primaryContainer }]}>
           <View style={styles.rowBetween}>
             <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Pitch A • London</ThemedText>
-            <View style={styles.liveBadgeCompact}>
-              <View style={styles.liveDotRed} />
-              <ThemedText style={styles.liveText}>Live Cricket</ThemedText>
-            </View>
           </View>
 
           <View style={styles.cricketScores}>
@@ -262,10 +258,6 @@ export default function TournamentDetailsScreen() {
         <View style={[styles.liveScoreCard, { backgroundColor: theme.primaryContainer }]}>
           <View style={styles.rowBetween}>
             <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>{"85' Second Half"}</ThemedText>
-            <View style={styles.liveBadgeCompact}>
-              <View style={styles.liveDotRed} />
-              <ThemedText style={styles.liveText}>Live Football</ThemedText>
-            </View>
           </View>
 
           <View style={styles.footballScores}>
@@ -306,11 +298,8 @@ export default function TournamentDetailsScreen() {
           { rank: 4, name: 'Alex Smith', team: 'Apex Warriors', value: '3 Goals', rating: '8.1' },
         ].map((p, idx) => (
           <View key={idx} style={[styles.statRowCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-            <View style={[styles.rankBadge, { backgroundColor: theme.surfaceLow }]}>
-              <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: 'bold' }}>#{p.rank}</ThemedText>
-            </View>
-            <View style={{ marginLeft: 12, flex: 1 }}>
-              <ThemedText type="bodySm" style={{ fontWeight: 'bold', color: theme.text }}>{p.name}</ThemedText>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="bodySm" numberOfLines={1} style={{ fontWeight: 'bold', color: theme.text }}>{p.name}</ThemedText>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10 }}>{p.team}</ThemedText>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
@@ -387,7 +376,7 @@ export default function TournamentDetailsScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Detail Header Navigation */}
         <View style={styles.header}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Pressable style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/tournaments')}>
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </Pressable>
           <ThemedText type="headlineMd" numberOfLines={1} style={{ color: theme.text, flex: 1, marginLeft: 12 }}>
@@ -474,8 +463,8 @@ export default function TournamentDetailsScreen() {
               params: { id: params.id || 't1', name: tournamentName }
             })}
           >
-            <Ionicons name="medal" size={20} color="#6b4500" style={{ marginRight: 8 }} />
-            <ThemedText type="labelMd" style={{ color: '#6b4500', fontWeight: 'bold' }}>Register Team Now</ThemedText>
+            <Ionicons name="medal" size={20} color="#ffffff" style={{ marginRight: 8 }} />
+            <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: 'bold' }}>Register Team Now</ThemedText>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -675,22 +664,6 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     marginTop: Spacing.sm,
   },
-  liveBadgeCompact: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  liveDotRed: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#ff1744',
-  },
-  liveText: {
-    color: '#ff1744',
-    fontSize: 10,
-    fontFamily: 'HankenGrotesk_700Bold',
-  },
   cricketScores: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -732,13 +705,6 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
-  },
-  rankBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   sponsorsGrid: {
     flexDirection: 'row',

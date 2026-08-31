@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -20,6 +20,18 @@ import { useTheme } from '@/hooks/use-theme';
 export default function PlayerProfileScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    name?: string;
+    role?: string;
+    notes?: string;
+    rating?: string;
+    focus?: string;
+  }>();
+
+  const playerName = params.name || 'Marcus Vance';
+  const playerRole = params.role || 'Forward • Level 10';
+  const playerNotes = params.notes || 'Excellent explosive speed';
+  const playerFocus = params.focus || 'TACTICAL DEPLOY';
 
   // Interactivity state
   const [following, setFollowing] = useState(false);
@@ -40,14 +52,14 @@ export default function PlayerProfileScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Navigation TopAppBar */}
         <View style={[styles.header, { backgroundColor: 'transparent' }]}>
-          <Pressable 
+          <Pressable
             onPress={() => {
               if (router.canGoBack()) {
                 router.back();
               } else {
                 router.replace('/(tabs)');
               }
-            }} 
+            }}
             style={styles.backButton}
           >
             <Ionicons name="arrow-back" size={24} color={theme.text} />
@@ -61,7 +73,7 @@ export default function PlayerProfileScreen() {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          
+
           {/* Hero Profile Card */}
           <View style={styles.section}>
             <View style={[styles.heroCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}>
@@ -70,41 +82,39 @@ export default function PlayerProfileScreen() {
                   source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuArAOIUhE03Lj1tb66WvRYbrDl7KgoGi5vi2XdzpRBJZXrgyquUa_Wcq1_1Xw_y_rivR86-gT3hvD_AMDC0AToCv2TlfFvJkAEgCCRIzrnuCYHY1x2qNK5KPcaR0rKKYurjgdOgv-arR6X5hantltjIX11HyFp-SaPyvvlS4_TamcTrufMiKMYoe3DFI6op6vuXrM76Hm-3wwSxa3XmAFKyPN_IHA9hYsDChsVIawl-XafxniTDyhS1p3Bw61Jtfdp7r-0TBw35WHI' }}
                   style={styles.avatarImage}
                 />
-                <View style={[styles.proBadge, { backgroundColor: theme.secondaryContainer }]}>
-                  <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 9 }}>
-                    VERIFIED PRO
-                  </ThemedText>
-                </View>
               </View>
 
               <View style={styles.heroInfo}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                  <ThemedText type="headlineLg" style={{ color: theme.text }}>Marcus V.</ThemedText>
-                  <Ionicons name="checkmark-circle" size={18} color={theme.secondaryContainer} style={{ marginLeft: 6 }} />
+                  <ThemedText type="headlineLg" style={{ color: theme.text }}>{playerName}</ThemedText>
                 </View>
-                
+
                 <View style={styles.locationRow}>
-                  <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
-                  <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 4 }}>
-                    London, United Kingdom
+                  <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
+                    {playerRole}
                   </ThemedText>
                   <View style={[styles.dot, { backgroundColor: theme.outlineVariant }]} />
                   <ThemedText type="labelMd" style={{ color: theme.secondary }}>
-                    ELITE TIER
+                    {playerFocus}
                   </ThemedText>
                 </View>
+                {playerNotes ? (
+                  <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontStyle: 'italic', textAlign: 'center', marginTop: 4 }}>
+                    "{playerNotes}"
+                  </ThemedText>
+                ) : null}
 
                 {/* Follower Stats */}
                 <View style={styles.statsRow}>
                   <View style={styles.statCol}>
-                    <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold' }}>
+                    <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
                       {(followersCount / 1000).toFixed(1)}k
                     </ThemedText>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Followers</ThemedText>
                   </View>
                   <View style={[styles.statsDivider, { backgroundColor: theme.outlineVariant + '33' }]} />
                   <View style={styles.statCol}>
-                    <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold' }}>
+                    <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
                       842
                     </ThemedText>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Following</ThemedText>
@@ -144,18 +154,12 @@ export default function PlayerProfileScreen() {
                   <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.7)', letterSpacing: 0.5, marginBottom: Spacing.sm }}>
                     AI SKILL RATING
                   </ThemedText>
-                  
+
                   <View style={styles.circularProgressContainer}>
                     {/* Ring circles using nested views */}
                     <View style={styles.circularProgressTrack} />
                     <View style={styles.circularProgressFill} />
                     <ThemedText style={styles.circularProgressText}>94</ThemedText>
-                  </View>
-
-                  <View style={[styles.optimalBadge, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
-                    <ThemedText type="labelSm" style={{ color: theme.secondaryContainer, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                      PEAK PERFORMANCE
-                    </ThemedText>
                   </View>
                 </View>
 
@@ -248,7 +252,7 @@ export default function PlayerProfileScreen() {
                 <View style={[styles.achievementIconContainer, { backgroundColor: theme.secondaryContainer + '22' }]}>
                   <Ionicons name="trophy" size={24} color={theme.secondaryContainer} />
                 </View>
-                <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'HankenGrotesk_700Bold', color: theme.text, fontSize: 9 }}>
+                <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_700Bold', color: theme.text, fontSize: 9 }}>
                   MVP 2024
                 </ThemedText>
               </View>
@@ -257,7 +261,7 @@ export default function PlayerProfileScreen() {
                 <View style={[styles.achievementIconContainer, { backgroundColor: theme.secondaryContainer + '22' }]}>
                   <Ionicons name="ribbon" size={24} color={theme.secondaryContainer} />
                 </View>
-                <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'HankenGrotesk_700Bold', color: theme.text, fontSize: 9 }}>
+                <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_700Bold', color: theme.text, fontSize: 9 }}>
                   CENTURY CLUB
                 </ThemedText>
               </View>
@@ -266,7 +270,7 @@ export default function PlayerProfileScreen() {
                 <View style={[styles.achievementIconContainer, { backgroundColor: theme.secondaryContainer + '22' }]}>
                   <Ionicons name="medal" size={24} color={theme.secondaryContainer} />
                 </View>
-                <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'HankenGrotesk_700Bold', color: theme.text, fontSize: 9 }}>
+                <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_700Bold', color: theme.text, fontSize: 9 }}>
                   TOP BOWLER
                 </ThemedText>
               </View>
@@ -276,7 +280,7 @@ export default function PlayerProfileScreen() {
           {/* Match History */}
           <View style={[styles.section, { paddingBottom: 60 }]}>
             <ThemedText type="headlineSm" style={{ marginBottom: Spacing.md }}>Match History</ThemedText>
-            
+
             <View style={[styles.historyCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
               {/* History Item 1 */}
               <View style={styles.historyRow}>
@@ -284,11 +288,11 @@ export default function PlayerProfileScreen() {
                   <ThemedText style={{ color: theme.secondaryContainer, fontWeight: '700', fontSize: 11 }}>LL</ThemedText>
                 </View>
                 <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>London Lions vs Kent Kings</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>London Lions vs Kent Kings</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>T20 Blast • 12 Feb 2024</ThemedText>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>42 Runs (28b)</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>42 Runs (28b)</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>1 Wicket (2/18)</ThemedText>
                 </View>
               </View>
@@ -301,11 +305,11 @@ export default function PlayerProfileScreen() {
                   <ThemedText style={{ color: theme.text, fontWeight: '700', fontSize: 11 }}>KS</ThemedText>
                 </View>
                 <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Kent Kings vs Sussex Sharks</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>Kent Kings vs Sussex Sharks</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>One Day Cup • 08 Feb 2024</ThemedText>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>15 Runs (12b)</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>15 Runs (12b)</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>3 Wickets (3/42)</ThemedText>
                 </View>
               </View>
@@ -318,11 +322,11 @@ export default function PlayerProfileScreen() {
                   <ThemedText style={{ color: theme.secondaryContainer, fontWeight: '700', fontSize: 11 }}>LL</ThemedText>
                 </View>
                 <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>London Lions vs Yorkshire Vikings</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>London Lions vs Yorkshire Vikings</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>T20 Blast • 05 Feb 2024</ThemedText>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold', color: theme.secondaryContainer }}>112* Runs (54b)</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold', color: theme.secondaryContainer }}>112* Runs (54b)</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>0 Wickets (0/24)</ThemedText>
                 </View>
               </View>
@@ -356,7 +360,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   headerTitle: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 16,
   },
   iconButton: {
@@ -383,16 +387,6 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 48,
     borderWidth: 3,
-    borderColor: '#ffffff',
-  },
-  proBadge: {
-    position: 'absolute',
-    bottom: -6,
-    alignSelf: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
     borderColor: '#ffffff',
   },
   heroInfo: {
@@ -488,7 +482,7 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 18,
     marginTop: 2,
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
   },
   skillRatingCell: {
     flex: 1,
@@ -528,13 +522,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
     color: '#ffffff',
-    fontFamily: 'HankenGrotesk_800ExtraBold',
-  },
-  optimalBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-    marginTop: Spacing.sm,
+    fontFamily: 'Sora_800ExtraBold',
   },
   actionBanner: {
     borderRadius: BorderRadius.xl,

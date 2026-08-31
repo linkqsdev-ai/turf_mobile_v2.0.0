@@ -141,14 +141,10 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
             <ThemedText type="labelSm" style={{ color: '#ffffffaa', letterSpacing: 1 }}>
               Quarter {quarter} Timer
             </ThemedText>
-            <View style={styles.liveBadgeAbsolute}>
-              <View style={styles.liveDotRed} />
-              <ThemedText style={styles.liveText}>Live</ThemedText>
-            </View>
           </View>
           <View style={styles.timerRow}>
             <View style={styles.timerBlock}>
-              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 38, fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 4 }}>
+              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 38, fontFamily: 'Sora_800ExtraBold', marginTop: 4 }}>
                 {formatTimer()}
               </ThemedText>
             </View>
@@ -181,7 +177,7 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
           <View style={styles.scoreboardRow}>
             <View style={styles.teamScoreSection}>
               <ThemedText type="headlineSm">{teamA}</ThemedText>
-              <ThemedText type="displayLg" style={{ fontSize: 50, fontFamily: 'HankenGrotesk_800ExtraBold', marginVertical: Spacing.sm }}>
+              <ThemedText type="displayLg" style={{ fontSize: 50, fontFamily: 'Sora_800ExtraBold', marginVertical: Spacing.sm }}>
                 {scoreA}
               </ThemedText>
               <View style={styles.scoreButtonsRow}>
@@ -201,7 +197,7 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
 
             <View style={styles.teamScoreSection}>
               <ThemedText type="headlineSm">{teamB}</ThemedText>
-              <ThemedText type="displayLg" style={{ fontSize: 50, fontFamily: 'HankenGrotesk_800ExtraBold', marginVertical: Spacing.sm }}>
+              <ThemedText type="displayLg" style={{ fontSize: 50, fontFamily: 'Sora_800ExtraBold', marginVertical: Spacing.sm }}>
                 {scoreB}
               </ThemedText>
               <View style={styles.scoreButtonsRow}>
@@ -288,7 +284,7 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Q{event.quarter} - {event.time}</ThemedText>
                 </View>
                 <View style={styles.logDescCol}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>
                     {event.points > 0 ? `+${event.points} PTS` : 'FOUL'} - {event.playerName}
                   </ThemedText>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>
@@ -472,27 +468,5 @@ const styles = StyleSheet.create({
   },
   logDescCol: {
     flex: 1,
-  },
-  liveBadgeAbsolute: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ff1744',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    gap: 4,
-  },
-  liveDotRed: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#ffffff',
-  },
-  liveText: {
-    color: '#ffffff',
-    fontSize: 8,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
   },
 });

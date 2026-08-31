@@ -340,7 +340,7 @@ export default function FixtureManagementScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header stack navigation */}
         <View style={styles.header}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Pressable style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/tournaments')}>
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </Pressable>
           <ThemedText type="headlineMd" style={{ color: theme.text, flex: 1, marginLeft: 12 }}>
@@ -474,7 +474,7 @@ export default function FixtureManagementScreen() {
               </View>
 
               <Pressable style={[styles.modalSaveBtn, { backgroundColor: theme.secondaryContainer }]} onPress={saveFixtureEdits}>
-                <ThemedText type="labelSm" style={{ color: '#6b4500', fontWeight: 'bold' }}>Save Changes</ThemedText>
+                <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: 'bold' }}>Save Changes</ThemedText>
               </Pressable>
             </View>
           </View>

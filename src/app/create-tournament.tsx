@@ -7,6 +7,7 @@ import {
   TextInput,
   Animated,
   Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -261,17 +262,17 @@ export default function CreateTournamentScreen() {
     addTournament({
       id: generateTournamentId(),
       name: form.name,
-      sport: form.sport || 'Football',
-      type: form.format || 'Knockout',
-      location: form.venue || form.location || 'TBD',
-      startDate: form.startDate || '',
-      endDate: form.endDate || '',
-      prizePool: form.prizeAmount ? `₹${form.prizeAmount}` : 'TBD',
-      prizePoolAmount: parseInt(form.prizeAmount || '0', 10),
+      sport: form.sportType || 'Football',
+      type: form.tournamentType || 'Knockout',
+      location: form.selectedGround || 'TBD',
+      startDate: form.tournStart || '',
+      endDate: form.tournEnd || '',
+      prizePool: form.winnerPrize ? `₹${form.winnerPrize}` : 'TBD',
+      prizePoolAmount: parseInt(form.winnerPrize || '0', 10),
       entryFee: parseInt(form.entryFee || '0', 10),
-      maxTeams: parseInt(form.maxTeams || '16', 10),
+      maxTeams: 16,
       teamsCount: 0,
-      banner: form.coverImage || null,
+      banner: form.banner || null,
       organizerName: form.organizerName,
       status: 'Registering',
       createdAt: new Date().toISOString(),
@@ -300,7 +301,7 @@ export default function CreateTournamentScreen() {
             <View style={styles.inputGroup}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Tournament name *</ThemedText>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'name' ? theme.primary : theme.outlineVariant + '44' }]}
+                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'name' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. London Summer Slam"
                 placeholderTextColor={theme.textSecondary + '80'}
                 value={form.name}
@@ -313,7 +314,7 @@ export default function CreateTournamentScreen() {
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Description</ThemedText>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'description' ? theme.primary : theme.outlineVariant + '44', height: 80, paddingVertical: 10, textAlignVertical: 'top' }]}
+                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'description' ? theme.primary : '#00000033', height: 80, paddingVertical: 10, textAlignVertical: 'top' }]}
                 placeholder="Describe your tournament, match timings, general guidelines..."
                 placeholderTextColor={theme.textSecondary + '80'}
                 multiline
@@ -338,7 +339,7 @@ export default function CreateTournamentScreen() {
                   style={[
                     styles.coverPresetCard,
                     { 
-                      borderColor: (typeof form.banner === 'object' && form.banner && 'uri' in form.banner) ? theme.primary : theme.outlineVariant + '44', 
+                      borderColor: (typeof form.banner === 'object' && form.banner && 'uri' in form.banner) ? theme.primary : '#00000033', 
                       backgroundColor: theme.surfaceLow 
                     }
                   ]}
@@ -368,7 +369,7 @@ export default function CreateTournamentScreen() {
                       onPress={() => updateField('banner', preset.source)}
                       style={[
                         styles.coverPresetCard,
-                        { borderColor: isSelected ? theme.primary : theme.outlineVariant + '44', backgroundColor: theme.surfaceLow }
+                        { borderColor: isSelected ? theme.primary : '#00000033', backgroundColor: theme.surfaceLow }
                       ]}
                     >
                       <Image source={preset.source} style={styles.coverPresetThumb} contentFit="cover" />
@@ -399,7 +400,7 @@ export default function CreateTournamentScreen() {
                         onPress={() => updateField('sportType', s)}
                         style={[
                           styles.sportChip,
-                          { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+                          { backgroundColor: 'transparent', borderColor: '#00000033' },
                           isActive && { backgroundColor: theme.primary, borderColor: theme.primary }
                         ]}
                       >
@@ -430,7 +431,7 @@ export default function CreateTournamentScreen() {
                         onPress={() => updateField('tournamentType', t)}
                         style={[
                           styles.sportChip,
-                          { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+                          { backgroundColor: 'transparent', borderColor: '#00000033' },
                           isActive && { backgroundColor: theme.primary, borderColor: theme.primary }
                         ]}
                       >
@@ -452,7 +453,7 @@ export default function CreateTournamentScreen() {
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Organizer name *</ThemedText>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'organizerName' ? theme.primary : theme.outlineVariant + '44' }]}
+                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'organizerName' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. Apex Sports Club"
                 placeholderTextColor={theme.textSecondary + '80'}
                 value={form.organizerName}
@@ -465,7 +466,7 @@ export default function CreateTournamentScreen() {
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Organizer contact</ThemedText>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'organizerContact' ? theme.primary : theme.outlineVariant + '44' }]}
+                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'organizerContact' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. +44 7900 000000"
                 placeholderTextColor={theme.textSecondary + '80'}
                 keyboardType="phone-pad"
@@ -496,7 +497,7 @@ export default function CreateTournamentScreen() {
                     const parsed = form.regStart ? new Date(form.regStart) : new Date(2026, 5, 23);
                     setPickerDate(isNaN(parsed.getTime()) ? new Date(2026, 5, 23) : parsed);
                   }}
-                  style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44', justifyContent: 'center', position: 'relative' }]}
+                  style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: '#00000033', justifyContent: 'center', position: 'relative' }]}
                 >
                   <ThemedText style={{ color: form.regStart ? theme.text : theme.textSecondary + '80', fontSize: 13 }}>
                     {form.regStart || 'YYYY-MM-DD'}
@@ -513,7 +514,7 @@ export default function CreateTournamentScreen() {
                     const parsed = form.regEnd ? new Date(form.regEnd) : new Date(2026, 5, 25);
                     setPickerDate(isNaN(parsed.getTime()) ? new Date(2026, 5, 25) : parsed);
                   }}
-                  style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44', justifyContent: 'center', position: 'relative' }]}
+                  style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: '#00000033', justifyContent: 'center', position: 'relative' }]}
                 >
                   <ThemedText style={{ color: form.regEnd ? theme.text : theme.textSecondary + '80', fontSize: 13 }}>
                     {form.regEnd || 'YYYY-MM-DD'}
@@ -532,7 +533,7 @@ export default function CreateTournamentScreen() {
                     const parsed = form.tournStart ? new Date(form.tournStart) : new Date(2026, 6, 1);
                     setPickerDate(isNaN(parsed.getTime()) ? new Date(2026, 6, 1) : parsed);
                   }}
-                  style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44', justifyContent: 'center', position: 'relative' }]}
+                  style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: '#00000033', justifyContent: 'center', position: 'relative' }]}
                 >
                   <ThemedText style={{ color: form.tournStart ? theme.text : theme.textSecondary + '80', fontSize: 13 }}>
                     {form.tournStart || 'YYYY-MM-DD'}
@@ -549,7 +550,7 @@ export default function CreateTournamentScreen() {
                     const parsed = form.tournEnd ? new Date(form.tournEnd) : new Date(2026, 6, 15);
                     setPickerDate(isNaN(parsed.getTime()) ? new Date(2026, 6, 15) : parsed);
                   }}
-                  style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44', justifyContent: 'center', position: 'relative' }]}
+                  style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: '#00000033', justifyContent: 'center', position: 'relative' }]}
                 >
                   <ThemedText style={{ color: form.tournEnd ? theme.text : theme.textSecondary + '80', fontSize: 13 }}>
                     {form.tournEnd || 'YYYY-MM-DD'}
@@ -572,11 +573,11 @@ export default function CreateTournamentScreen() {
                     onPress={() => updateField('selectedGround', g)}
                     style={[
                       styles.verticalSelectBtn,
-                      { backgroundColor: theme.surfaceLow, borderColor: form.selectedGround === g ? theme.primary : theme.outlineVariant + '44' }
+                      { backgroundColor: theme.surfaceLow, borderColor: form.selectedGround === g ? theme.primary : '#00000033' }
                     ]}
                   >
                     <Ionicons name={form.selectedGround === g ? "checkmark-circle" : "ellipse-outline"} size={16} color={form.selectedGround === g ? theme.primary : theme.textSecondary} />
-                    <ThemedText style={{ marginLeft: 8, color: theme.text, fontFamily: 'HankenGrotesk_600SemiBold', fontSize: 13 }}>{g}</ThemedText>
+                    <ThemedText style={{ marginLeft: 8, color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>{g}</ThemedText>
                   </Pressable>
                 ))}
               </View>
@@ -585,7 +586,7 @@ export default function CreateTournamentScreen() {
             <View style={styles.inputGroup}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Detailed address</ThemedText>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'address' ? theme.primary : theme.outlineVariant + '44' }]}
+                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'address' ? theme.primary : '#00000033' }]}
                 value={form.address}
                 onChangeText={(v) => updateField('address', v)}
                 onFocus={() => setFocusedField('address')}
@@ -594,7 +595,7 @@ export default function CreateTournamentScreen() {
             </View>
 
             {/* Map Mock Graphic */}
-            <View style={[styles.mapMockContainer, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}>
+            <View style={[styles.mapMockContainer, { backgroundColor: theme.surfaceLow, borderColor: '#00000033' }]}>
               <View style={styles.mapGridOverlay}>
                 {[...Array(6)].map((_, i) => (
                   <View key={i} style={styles.mapGridRow} />
@@ -602,10 +603,6 @@ export default function CreateTournamentScreen() {
               </View>
               <View style={[styles.mapMarker, { backgroundColor: theme.secondaryContainer }]}>
                 <Ionicons name="location" size={24} color="#ffffff" />
-              </View>
-              <View style={styles.mapBadge}>
-                <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 10 }}>MAP LOCATION PREVIEW</ThemedText>
-                <ThemedText type="labelSm" style={{ color: theme.secondaryContainer, fontSize: 9, fontWeight: 'bold' }}>{form.latLng}</ThemedText>
               </View>
             </View>
           </View>
@@ -617,7 +614,7 @@ export default function CreateTournamentScreen() {
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Match duration</ThemedText>
                 <TextInput
-                  style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'matchDuration' ? theme.primary : theme.outlineVariant + '44' }]}
+                  style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'matchDuration' ? theme.primary : '#00000033' }]}
                   placeholder="e.g. 90 mins"
                   placeholderTextColor={theme.textSecondary + '80'}
                   value={form.matchDuration}
@@ -629,7 +626,7 @@ export default function CreateTournamentScreen() {
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Team size</ThemedText>
                 <TextInput
-                  style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'teamSize' ? theme.primary : theme.outlineVariant + '44' }]}
+                  style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'teamSize' ? theme.primary : '#00000033' }]}
                   placeholder="e.g. 11 players"
                   placeholderTextColor={theme.textSecondary + '80'}
                   value={form.teamSize}
@@ -643,7 +640,7 @@ export default function CreateTournamentScreen() {
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Overs / format rules (if cricket)</ThemedText>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'overs' ? theme.primary : theme.outlineVariant + '44' }]}
+                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'overs' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. 20 Overs, Max 4 overs per bowler"
                 placeholderTextColor={theme.textSecondary + '80'}
                 value={form.overs}
@@ -656,7 +653,7 @@ export default function CreateTournamentScreen() {
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Points / qualification rules</ThemedText>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'pointSystem' ? theme.primary : theme.outlineVariant + '44' }]}
+                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'pointSystem' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. 3 pts for Win, 1 pt Draw"
                 placeholderTextColor={theme.textSecondary + '80'}
                 value={form.pointSystem}
@@ -673,7 +670,7 @@ export default function CreateTournamentScreen() {
             <View style={styles.inputGroup}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Entry fee (per team)</ThemedText>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'entryFee' ? theme.primary : theme.outlineVariant + '44' }]}
+                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'entryFee' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. ₹150"
                 placeholderTextColor={theme.textSecondary + '80'}
                 value={form.entryFee}
@@ -687,7 +684,7 @@ export default function CreateTournamentScreen() {
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Admin / reg fee</ThemedText>
                 <TextInput
-                  style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'registrationFee' ? theme.primary : theme.outlineVariant + '44' }]}
+                  style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'registrationFee' ? theme.primary : '#00000033' }]}
                   placeholder="e.g. ₹25"
                   placeholderTextColor={theme.textSecondary + '80'}
                   value={form.registrationFee}
@@ -699,7 +696,7 @@ export default function CreateTournamentScreen() {
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Security deposit</ThemedText>
                 <TextInput
-                  style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'deposit' ? theme.primary : theme.outlineVariant + '44' }]}
+                  style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'deposit' ? theme.primary : '#00000033' }]}
                   placeholder="e.g. ₹50"
                   placeholderTextColor={theme.textSecondary + '80'}
                   value={form.deposit}
@@ -717,7 +714,7 @@ export default function CreateTournamentScreen() {
             <View style={styles.inputGroup}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>First prize (winner)</ThemedText>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'winnerPrize' ? theme.primary : theme.outlineVariant + '44' }]}
+                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'winnerPrize' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. ₹2,500 + Cup"
                 placeholderTextColor={theme.textSecondary + '80'}
                 value={form.winnerPrize}
@@ -730,7 +727,7 @@ export default function CreateTournamentScreen() {
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Runner-up prize</ThemedText>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'runnerPrize' ? theme.primary : theme.outlineVariant + '44' }]}
+                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'runnerPrize' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. ₹1,000 + Medals"
                 placeholderTextColor={theme.textSecondary + '80'}
                 value={form.runnerPrize}
@@ -743,7 +740,7 @@ export default function CreateTournamentScreen() {
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Individual MVPs / other awards</ThemedText>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'mvpPrize' ? theme.primary : theme.outlineVariant + '44' }]}
+                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'mvpPrize' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. MVP ₹200, Golden Boot"
                 placeholderTextColor={theme.textSecondary + '80'}
                 value={form.mvpPrize}
@@ -824,7 +821,7 @@ export default function CreateTournamentScreen() {
             </Pressable>
             
             <Pressable style={[styles.draftBtn, { paddingVertical: 4, paddingLeft: 2, paddingRight: 4 }]} onPress={handleSaveDraft}>
-              <ThemedText type="labelSm" style={{ color: theme.secondaryContainer, fontFamily: 'HankenGrotesk_700Bold' }}>Save Draft</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.secondaryContainer, fontFamily: 'Sora_700Bold' }}>Save Draft</ThemedText>
             </Pressable>
           </View>
         </View>
@@ -850,7 +847,7 @@ export default function CreateTournamentScreen() {
                       <Ionicons 
                         name={(isPassed ? 'checkmark' : step.icon) as any} 
                         size={14} 
-                        color={isActive ? '#6b4500' : isPassed ? '#ffffff' : theme.textSecondary} 
+                        color={isActive ? '#ffffff' : isPassed ? '#ffffff' : theme.textSecondary} 
                       />
                     </View>
                   </Pressable>
@@ -908,12 +905,9 @@ export default function CreateTournamentScreen() {
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, marginLeft: 4, fontWeight: '700' }}>
                     {form.sportType.toUpperCase()}
                   </ThemedText>
-                  <View style={[styles.previewStatusBadge, { backgroundColor: '#e2f9ec' }]}>
-                    <ThemedText style={{ fontSize: 7, color: '#0f9f58', fontFamily: 'PlusJakartaSans_800ExtraBold' }}>DRAFT</ThemedText>
-                  </View>
                 </View>
 
-                <ThemedText type="bodyLg" numberOfLines={1} style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', marginTop: 2, fontSize: 13 }}>
+                <ThemedText type="bodyLg" numberOfLines={1} style={{ color: theme.text, fontFamily: 'Sora_700Bold', marginTop: 2, fontSize: 13 }}>
                   {form.name || 'Unnamed Tournament'}
                 </ThemedText>
 
@@ -939,7 +933,7 @@ export default function CreateTournamentScreen() {
               <View style={styles.previewTicketRight}>
                 <View style={{ alignItems: 'center' }}>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 7 }}>Prize Pool</ThemedText>
-                  <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'HankenGrotesk_800ExtraBold', fontSize: 12, marginTop: 1 }}>
+                  <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'Sora_800ExtraBold', fontSize: 12, marginTop: 1 }}>
                     {form.winnerPrize ? form.winnerPrize.split(' ')[0] : 'TBD'}
                   </ThemedText>
                 </View>
@@ -985,8 +979,8 @@ export default function CreateTournamentScreen() {
             </Pressable>
           ) : (
             <Pressable style={[styles.footerNextBtn, { backgroundColor: theme.secondaryContainer }]} onPress={handlePublish}>
-              <Ionicons name="cloud-upload-outline" size={16} color="#6b4500" style={{ marginRight: 4 }} />
-              <ThemedText type="labelSm" style={{ color: '#6b4500', fontWeight: 'bold' }}>Publish Tournament</ThemedText>
+              <Ionicons name="cloud-upload-outline" size={16} color="#ffffff" style={{ marginRight: 4 }} />
+              <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: 'bold' }}>Publish Tournament</ThemedText>
             </Pressable>
           )}
         </View>
@@ -1041,7 +1035,7 @@ export default function CreateTournamentScreen() {
                         {draft.sportType === 'Tennis' && <MaterialCommunityIcons name="tennis" size={16} color={theme.primary} />}
                       </View>
                       <View style={{ flex: 1, marginLeft: 10 }}>
-                        <ThemedText style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', fontSize: 13 }} numberOfLines={1}>
+                        <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 13 }} numberOfLines={1}>
                           {draft.name || 'Untitled Draft'}
                         </ThemedText>
                         <ThemedText style={{ color: theme.textSecondary, fontSize: 10, marginTop: 2 }}>
@@ -1100,7 +1094,7 @@ export default function CreateTournamentScreen() {
               <Pressable onPress={() => setPickerDate(new Date(pickerDate.getFullYear(), pickerDate.getMonth() - 1, 1))} style={{ padding: 6 }}>
                 <Ionicons name="chevron-back" size={20} color={theme.text} />
               </Pressable>
-              <ThemedText style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', fontSize: 14 }}>
+              <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 14 }}>
                 {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][pickerDate.getMonth()]} {pickerDate.getFullYear()}
               </ThemedText>
               <Pressable onPress={() => setPickerDate(new Date(pickerDate.getFullYear(), pickerDate.getMonth() + 1, 1))} style={{ padding: 6 }}>
@@ -1163,7 +1157,7 @@ export default function CreateTournamentScreen() {
                             isSelected && { backgroundColor: theme.primary }
                           ]}
                         >
-                          <ThemedText style={{ color: isSelected ? '#ffffff' : theme.text, fontSize: 13, fontFamily: isSelected ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_400Regular' }}>
+                          <ThemedText style={{ color: isSelected ? '#ffffff' : theme.text, fontSize: 13, fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_400Regular' }}>
                             {cell.day}
                           </ThemedText>
                         </Pressable>
@@ -1253,7 +1247,7 @@ const styles = StyleSheet.create({
   },
   wizardActiveLabel: {
     marginTop: 8,
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     fontSize: 11,
@@ -1284,15 +1278,18 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   inputLabel: {
-    marginBottom: 6,
+    marginBottom: 3,
+    fontSize: 9,
+    fontFamily: 'Sora_500Medium',
+    color: '#64748b',
   },
   textInput: {
     borderWidth: 1,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
-    height: 48,
-    fontSize: 14,
-    fontFamily: 'HankenGrotesk_400Regular',
+    height: 42,
+    fontSize: 12,
+    fontFamily: 'Sora_400Regular',
   },
   textArea: {
     borderWidth: 1,
@@ -1300,7 +1297,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
     fontSize: 14,
-    fontFamily: 'HankenGrotesk_400Regular',
+    fontFamily: 'Sora_400Regular',
     textAlignVertical: 'top',
   },
   rowBetween: {
@@ -1356,15 +1353,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 5,
-  },
-  mapBadge: {
-    position: 'absolute',
-    bottom: 10,
-    backgroundColor: 'rgba(5, 21, 30, 0.85)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.lg,
-    alignItems: 'center',
   },
   footer: {
     flexDirection: 'row',
@@ -1436,12 +1424,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  previewStatusBadge: {
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 2,
-    marginLeft: 6,
-  },
   previewMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1483,26 +1465,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardTitle: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 16,
   },
   cardSubtitle: {
-    fontFamily: 'HankenGrotesk_400Regular',
+    fontFamily: 'Sora_400Regular',
     fontSize: 12,
     marginTop: 2,
   },
   fieldLabel: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 11,
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 12,
     marginBottom: 6,
   },
   input: {
-    height: 44,
-    borderRadius: BorderRadius.md,
+    height: 46,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
     paddingHorizontal: 12,
-    fontFamily: 'HankenGrotesk_500Medium',
-    fontSize: 13,
+    fontFamily: 'Sora_400Regular',
+    fontSize: 12.5,
   },
   sportList: {
     flexDirection: 'row',
@@ -1525,7 +1507,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   sportChipText: {
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 10,
     marginLeft: 4,
   },
@@ -1549,7 +1531,7 @@ const styles = StyleSheet.create({
   },
   coverPresetLabel: {
     fontSize: 9,
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     marginTop: 3,
     textAlign: 'center',
   },

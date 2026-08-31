@@ -6,11 +6,13 @@ import {
   Pressable,
   Platform,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { CoinTossModal } from '@/components/coin-toss-modal';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
@@ -18,8 +20,11 @@ import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useUserProfile } from '@/hooks/use-user-profile';
-import { useClassStore } from '@/store/app-store';
+import { useUserProfile, getShortLocation } from '@/hooks/use-user-profile';
+import { getAvatarSource } from '@/constants/avatars';
+import { useClassStore, useTurfStore } from '@/store/app-store';
+import { turfApi } from '@/services/turf-api';
+import { cleanLocation } from '@/utils/location';
 
 // Mock Players Data
 const PLAYERS = [
@@ -56,47 +61,47 @@ const COACHES = [
     trainees: 12,
     rating: 4.7,
     reviews: 89,
-    rate: '₹650/hr',
+    rate: '₹1200/hr',
     location: 'Chennai, India',
     match: '92% Match',
-    matchStyle: 'primary',
-    sports: ['cricket', 'tennis'],
-    avatar: 'https://randomuser.me/api/portraits/men/44.jpg',
+    matchStyle: 'accent',
+    sports: ['cricket'],
+    avatar: 'https://randomuser.me/api/portraits/men/85.jpg',
+    badge: 'TOP RATED',
+    defaultAction: 'Book Coach',
+  },
+  {
+    id: 'velocity',
+    name: 'Coach Velocity',
+    specialty: 'Badminton & Agility',
+    experience: '5 yrs experience',
+    trainees: 24,
+    rating: 4.8,
+    reviews: 67,
+    rate: '₹600/hr',
+    location: 'Mumbai, India',
+    match: '85% Match',
+    matchStyle: 'accent',
+    sports: ['badminton', 'fitness'],
+    avatar: 'https://randomuser.me/api/portraits/women/68.jpg',
     badge: null,
     defaultAction: 'Book Coach',
   },
   {
-    id: 'volt',
-    name: 'Coach Volt',
-    specialty: 'Athletic Performance',
-    experience: '14 bookings • 1 open slot',
-    trainees: 14,
-    rating: 5.0,
-    reviews: 67,
-    rate: '₹1,200/hr',
-    location: 'Mumbai, India',
-    match: 'Pro Recommended',
-    matchStyle: 'featured',
-    sports: ['football', 'basketball', 'fitness'],
-    avatar: 'https://randomuser.me/api/portraits/men/55.jpg',
-    badge: 'PRO',
-    defaultAction: 'Request Booking',
-  },
-  {
-    id: 'nova',
-    name: 'Coach Nova',
-    specialty: 'Tennis & Agility',
-    experience: '6 yrs experience',
-    trainees: 9,
+    id: 'solaris',
+    name: 'Coach Solaris',
+    specialty: 'Athletics & Swimming',
+    experience: '7 yrs experience',
+    trainees: 30,
     rating: 4.6,
-    reviews: 53,
-    rate: '₹550/hr',
-    location: 'Hyderabad, India',
-    match: '87% Match',
+    reviews: 45,
+    rate: '₹950/hr',
+    location: 'Pune, India',
+    match: '80% Match',
     matchStyle: 'primary',
-    sports: ['tennis', 'badminton'],
-    avatar: 'https://randomuser.me/api/portraits/women/68.jpg',
-    badge: null,
+    sports: ['fitness', 'swimming'],
+    avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
+    badge: 'NEW',
     defaultAction: 'Book Coach',
   },
   {
@@ -135,37 +140,39 @@ const COACHES = [
   },
 ];
 
-// Sport icon mapping
-const SPORT_ICONS: Record<string, { icon: string; lib: 'ionicons' | 'fa5' | 'mci'; color: string; label: string }> = {
-  football:   { icon: 'football',          lib: 'ionicons', color: '#2e7d32', label: 'Football'   },
-  cricket:    { icon: 'cricket',            lib: 'mci',      color: '#bf360c', label: 'Cricket'    },
-  basketball: { icon: 'basketball',         lib: 'ionicons', color: '#e65100', label: 'Basketball' },
-  tennis:     { icon: 'tennisball',         lib: 'ionicons', color: '#6a1b9a', label: 'Tennis'     },
-  badminton:  { icon: 'badminton',          lib: 'mci',      color: '#1565c0', label: 'Badminton'  },
-  fitness:    { icon: 'barbell',            lib: 'ionicons', color: '#c62828', label: 'Fitness'    },
-  swimming:   { icon: 'water',              lib: 'ionicons', color: '#0277bd', label: 'Swimming'   },
-};
-
-function SportIcon({ sport, size = 13, color }: { sport: string; size?: number; color?: string }) {
-  const def = SPORT_ICONS[sport];
-  if (!def) return null;
-  const iconColor = color || def.color;
-  if (def.lib === 'ionicons') {
-    return <Ionicons name={def.icon as any} size={size} color={iconColor} />;
-  }
-  if (def.lib === 'fa5') {
-    return <FontAwesome5 name={def.icon as any} size={size} color={iconColor} />;
-  }
-  return <MaterialCommunityIcons name={def.icon as any} size={size} color={iconColor} />;
-}
-
 export default function CoachTab() {
   const theme = useTheme();
   const router = useRouter();
   const { profile } = useUserProfile();
   const { classes } = useClassStore();
+  const { ownedTurfs } = useTurfStore();
+  const [backendTurfs, setBackendTurfs] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [coinTossVisible, setCoinTossVisible] = useState(false);
   const [coachFilter, setCoachFilter] = useState<'Me' | 'All' | 'Others'>('Me');
+
+  const fetchTurfs = React.useCallback(async () => {
+    try {
+      const data = await turfApi.listTurfs();
+      if (Array.isArray(data)) {
+        setBackendTurfs(data);
+      }
+    } catch (err) {
+      console.log('Failed to fetch backend turfs in coach:', err);
+    }
+  }, []);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchTurfs();
+    setTimeout(() => setRefreshing(false), 600);
+  }, [fetchTurfs]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchTurfs();
+    }, [fetchTurfs])
+  );
 
   // Map our self-created classes to coach cards layout
   const myCreatedCoaches = useMemo(() => {
@@ -182,7 +189,7 @@ export default function CoachTab() {
       match: 'Your Class',
       matchStyle: 'featured',
       sports: [cls.sportType.toLowerCase()],
-      avatar: profile.avatarUrl || require('@/assets/images/avatars/avatar_12.png'),
+      avatar: profile.avatarUrl || 'avatar_12',
       badge: 'OWNER',
       defaultAction: 'Active Class',
     }));
@@ -219,18 +226,9 @@ export default function CoachTab() {
     }, 2000);
   };
 
-  const avatarSource = useMemo(() => {
-    const val = profile.avatarUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuD906cwGePK5tZt4al07polQZxe4OW2sIJ-lhjDewDXct6IJtZetqa2i4lnO9-CMUT1oBiYhGj0BUqSwgzvIHynL-pG1kkY5KzzF9cvL0bxVNlPJEbfv2pHhgwd2mkejpG9vnC4b1XliECQQDedwmy8XfJ0AUw7fpdjFhLXiUdidhARSpLIkMeew198pOXaj0K9g0kbbWaDwJfBtYdJwqD1ztbzBAkeltwyKB0I_eTeM0ksi5qEbR6iQRPKqERd-3DOKAQez21qHyI';
-    if (typeof val === 'string' && !/^\d+$/.test(val)) {
-      return { uri: val };
-    }
-    if (typeof val === 'number') {
-      return val;
-    }
-    return parseInt(val, 10);
-  }, [profile.avatarUrl]);
+  const avatarSource = useMemo(() => getAvatarSource(profile.avatarUrl), [profile.avatarUrl]);
 
-  if (profile.role === 'Owner') {
+  if (profile.role === 'Owner' || profile.role === 'Super Admin') {
     return (
       <GradientContainer screenName="coach-owner" style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -244,13 +242,13 @@ export default function CoachTab() {
                 />
               </Pressable>
               <View style={styles.headerTextGroup}>
-                <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', lineHeight: 18 }}>
-                  {profile.name} (Owner)
+                <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', lineHeight: 18 }}>
+                  {profile.name}
                 </ThemedText>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                  <Ionicons name="business" size={12} color={theme.secondary} />
+                  <Ionicons name="location-sharp" size={12} color={theme.secondary} />
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
-                    Facility Admin
+                    {getShortLocation(profile.location)}
                   </ThemedText>
                 </View>
               </View>
@@ -271,24 +269,96 @@ export default function CoachTab() {
           </View>
 
           <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false} 
+              contentContainerStyle={styles.scrollContent}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+              }
+            >
               
               {/* Bento Stats Row */}
               <View style={styles.section}>
                 <ThemedText type="headlineSm" style={{ marginBottom: Spacing.md }}>
                   My Arena Overview
                 </ThemedText>
-                <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-                  <View style={[styles.rankingCard, { flex: 1, padding: Spacing.md, backgroundColor: theme.primaryContainer }]}>
-                    <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, fontSize: 9 }}>TOTAL TURFS</ThemedText>
-                    <ThemedText type="headlineMd" style={{ color: '#ffffff', marginTop: Spacing.xs }}>2 Managed</ThemedText>
+                <View style={{ gap: Spacing.sm }}>
+                  <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+                    <View style={[styles.rankingCard, { flex: 1, padding: Spacing.md, backgroundColor: theme.primaryContainer }]}>
+                      <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer, fontSize: 9 }}>TOTAL TURFS</ThemedText>
+                      <ThemedText type="headlineMd" style={{ color: '#ffffff', marginTop: Spacing.xs }}>{2 + (ownedTurfs?.length || 0)} Managed</ThemedText>
+                    </View>
+                    <View style={[styles.rankingCard, { flex: 1, padding: Spacing.md, backgroundColor: theme.secondaryContainer }]}>
+                      <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontSize: 9 }}>PEAK OCCUPANCY</ThemedText>
+                      <ThemedText type="headlineMd" style={{ color: '#ffffff', marginTop: Spacing.xs }}>82% Booked</ThemedText>
+                    </View>
                   </View>
-                  <View style={[styles.rankingCard, { flex: 1, padding: Spacing.md, backgroundColor: theme.secondaryContainer }]}>
-                    <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontSize: 9 }}>PEAK OCCUPANCY</ThemedText>
-                    <ThemedText type="headlineMd" style={{ color: theme.text, marginTop: Spacing.xs }}>82% Booked</ThemedText>
+
+                  <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+                    <View style={[styles.rankingCard, { flex: 1, padding: Spacing.md, backgroundColor: '#10b981' }]}>
+                      <ThemedText type="labelSm" style={{ color: '#d1fae5', fontSize: 9 }}>TODAY'S REVENUE</ThemedText>
+                      <ThemedText type="headlineMd" style={{ color: '#ffffff', marginTop: Spacing.xs }}>₹18,500</ThemedText>
+                    </View>
+                    <View style={[styles.rankingCard, { flex: 1, padding: Spacing.md, backgroundColor: '#8b5cf6' }]}>
+                      <ThemedText type="labelSm" style={{ color: '#ede9fe', fontSize: 9 }}>ACTIVE BOOKINGS</ThemedText>
+                      <ThemedText type="headlineMd" style={{ color: '#ffffff', marginTop: Spacing.xs }}>34 Slots</ThemedText>
+                    </View>
                   </View>
                 </View>
               </View>
+
+              {/* My Active Published Coaching Batches */}
+              {classes && classes.length > 0 && (
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <View>
+                      <ThemedText type="headlineSm">My Published Coaching Batches ({classes.length})</ThemedText>
+                      <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
+                        Active classes live on the platform
+                      </ThemedText>
+                    </View>
+                    <Pressable onPress={() => router.push('/coach-students')}>
+                      <ThemedText type="labelMd" style={{ color: theme.secondary }}>
+                        STUDENTS DIRECTORY →
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginTop: 8 }}>
+                    {classes.map((cls: any, i: number) => (
+                      <View
+                        key={cls.id || i}
+                        style={[
+                          styles.teamCard,
+                          {
+                            width: 240,
+                            backgroundColor: theme.surfaceLowest,
+                            borderColor: theme.primary + '30',
+                            borderWidth: 1,
+                            padding: 12,
+                            borderRadius: BorderRadius.lg,
+                          },
+                          Shadows.level2
+                        ]}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 6 }}>
+                          <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                            {cls.feeAmount ? `₹${cls.feeAmount}` : 'Free'}
+                          </ThemedText>
+                        </View>
+                        <ThemedText type="headlineSm" style={{ fontSize: 14, color: theme.text }} numberOfLines={1}>
+                          {cls.className}
+                        </ThemedText>
+                        <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
+                          {cls.sportType} • {cls.classType}
+                        </ThemedText>
+                        <ThemedText style={{ color: theme.textSecondary, fontSize: 10, marginTop: 4 }} numberOfLines={1}>
+                          📍 {cls.venue || 'Main Pitch'}
+                        </ThemedText>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
 
               {/* My Managed Turfs */}
               <View style={styles.section}>
@@ -302,46 +372,217 @@ export default function CoachTab() {
                 </View>
 
                 <View style={[styles.teamGrid, { marginTop: Spacing.sm }]}>
-                  {[
-                    {
-                      id: 'skyline',
-                      name: 'Skyline Arena Elite',
-                      location: 'Canary Wharf, East London',
-                      pitch: '5G Rubber Infill Turf',
-                      slots: '8/12 active slots today',
-                      rate: '₹25/hr',
-                      image: 'https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?auto=format&fit=crop&w=600&q=80',
-                    },
-                    {
-                      id: 'the-grid',
-                      name: 'The Grid Multisport',
-                      location: 'Stratford Central, London',
-                      pitch: 'Indoor Woodcourt',
-                      slots: '4/12 active slots today',
-                      rate: '₹18/hr',
-                      image: 'https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=600&q=80',
-                    }
-                  ].map((turf) => (
-                    <View key={turf.id} style={[styles.teamCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderWidth: 1, flexDirection: 'row', padding: Spacing.md, gap: Spacing.md }, Shadows.level2]}>
-                      <Image source={{ uri: turf.image }} style={{ width: 80, height: 80, borderRadius: BorderRadius.lg }} contentFit="cover" />
-                      <View style={{ flex: 1, justifyContent: 'space-between' }}>
-                        <View>
-                          <ThemedText type="headlineSm" style={{ fontSize: 14 }}>{turf.name}</ThemedText>
-                          <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11, marginTop: 2 }}>{turf.pitch}</ThemedText>
-                          <ThemedText type="labelSm" style={{ color: theme.secondary, fontSize: 10, marginTop: 4 }}>{turf.slots}</ThemedText>
+                  {(() => {
+                    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    const currentToday = daysOfWeek[new Date().getDay()];
+
+                    const backendTurfsFormatted = (backendTurfs || []).map((t: any) => {
+                      const todayAvailable = t.slots && t.slots.length > 0
+                        ? t.slots.filter((s: any) => s.day === currentToday && s.status === 'available').length
+                        : 8;
+                      const todayTotal = t.slots && t.slots.filter((s: any) => s.day === currentToday).length > 0
+                        ? t.slots.filter((s: any) => s.day === currentToday).length
+                        : 12;
+                      const todayBooked = Math.max(0, todayTotal - todayAvailable);
+                      const occupancyPct = Math.round((todayBooked / todayTotal) * 100);
+
+                      return {
+                        id: t.id,
+                        name: t.name,
+                        location: cleanLocation(t.address || 'Local Arena'),
+                        sport: t.sportType || 'Football',
+                        pitch: t.surfaceType || 'Artificial Turf',
+                        slotsText: `${todayBooked}/${todayTotal} slots booked today (${todayAvailable} active)`,
+                        todayBooked,
+                        todayTotal,
+                        todayAvailable,
+                        occupancyPct,
+                        rate: `₹${t.pricePerSlot}/hr`,
+                        image: t.thumbnailImage || t.images?.[0] || 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
+                        createdAt: t.createdAt || new Date().toISOString(),
+                      };
+                    });
+
+                    const userTurfsFormatted = (ownedTurfs || []).map(t => {
+                      const todayAvailable = t.slots && t.slots.length > 0
+                        ? t.slots.filter(s => s.day === currentToday && s.status === 'available').length
+                        : 8;
+                      const todayTotal = t.slots && t.slots.filter(s => s.day === currentToday).length > 0
+                        ? t.slots.filter(s => s.day === currentToday).length
+                        : 12;
+                      const todayBooked = Math.max(0, todayTotal - todayAvailable);
+                      const occupancyPct = Math.round((todayBooked / todayTotal) * 100);
+
+                      return {
+                        id: t.id,
+                        name: t.name,
+                        location: cleanLocation(t.address || 'Local Arena'),
+                        sport: t.sportType || 'Football',
+                        pitch: t.surfaceType || 'Artificial Turf',
+                        slotsText: `${todayBooked}/${todayTotal} slots booked today (${todayAvailable} active)`,
+                        todayBooked,
+                        todayTotal,
+                        todayAvailable,
+                        occupancyPct,
+                        rate: `₹${t.pricePerSlot}/hr`,
+                        image: t.thumbnailImage || t.images?.[0] || 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
+                        createdAt: (t as any).createdAt || new Date().toISOString(),
+                      };
+                    });
+
+                    const STATIC_MANAGED_TURFS = [
+                      {
+                        id: 'skyline',
+                        name: 'Skyline Arena Elite',
+                        location: 'Canary Wharf, East London',
+                        sport: 'Football',
+                        pitch: '5G Rubber Infill Turf',
+                        slotsText: '4/12 slots booked today (8 active)',
+                        todayBooked: 4,
+                        todayTotal: 12,
+                        todayAvailable: 8,
+                        occupancyPct: 33,
+                        rate: '₹25/hr',
+                        image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
+                        createdAt: '2025-01-01T00:00:00.000Z',
+                      },
+                      {
+                        id: 'the-grid',
+                        name: 'The Grid Multisport',
+                        location: 'Stratford Central, London',
+                        sport: 'Multi-Sport',
+                        pitch: 'Indoor Woodcourt',
+                        slotsText: '8/12 slots booked today (4 active)',
+                        todayBooked: 8,
+                        todayTotal: 12,
+                        todayAvailable: 4,
+                        occupancyPct: 67,
+                        rate: '₹18/hr',
+                        image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=600&q=80',
+                        createdAt: '2025-01-02T00:00:00.000Z',
+                      }
+                    ];
+
+                    const seenManagedIds = new Set<string>();
+                    const ALL_MANAGED: any[] = [];
+                    // Place newly added user & backend turfs first, followed by static
+                    [...backendTurfsFormatted, ...userTurfsFormatted, ...STATIC_MANAGED_TURFS].forEach(t => {
+                      if (t && t.id && !seenManagedIds.has(t.id)) {
+                        seenManagedIds.add(t.id);
+                        ALL_MANAGED.push(t);
+                      }
+                    });
+
+                    // Sort newest turfs to the very top
+                    ALL_MANAGED.sort((a, b) => {
+                      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : (a.id?.startsWith('turf-') ? parseInt(a.id.replace('turf-', '')) || 0 : 0);
+                      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : (b.id?.startsWith('turf-') ? parseInt(b.id.replace('turf-', '')) || 0 : 0);
+                      return bTime - aTime;
+                    });
+
+                    return ALL_MANAGED.map((turf) => (
+                      <View 
+                        key={turf.id} 
+                        style={[
+                          styles.teamCard, 
+                          { 
+                            backgroundColor: theme.surfaceLowest, 
+                            borderColor: theme.outlineVariant + '35', 
+                            borderWidth: 1, 
+                            padding: Spacing.md, 
+                            borderRadius: BorderRadius.xl,
+                            gap: Spacing.xs 
+                          }, 
+                          Shadows.level2
+                        ]}
+                      >
+                        {/* Top Main Row */}
+                        <View style={{ flexDirection: 'row', gap: Spacing.md }}>
+                          {/* Turf Thumbnail */}
+                          <Image
+                            source={typeof turf.image === 'string' ? { uri: turf.image } : turf.image}
+                            style={{ width: 90, height: 90, borderRadius: BorderRadius.lg }}
+                            contentFit="cover"
+                          />
+
+                          {/* Info Block */}
+                          <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                            <View>
+                              <ThemedText type="headlineSm" style={{ fontSize: 15, fontFamily: 'Sora_700Bold' }} numberOfLines={1}>
+                                {turf.name}
+                              </ThemedText>
+
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                                <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                                <ThemedText style={{ color: theme.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                                  {turf.location}
+                                </ThemedText>
+                              </View>
+
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                                <ThemedText style={{ color: theme.textSecondary, fontSize: 10.5 }}>
+                                  {turf.pitch}
+                                </ThemedText>
+                              </View>
+                            </View>
+
+                            {/* Rate */}
+                            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}>
+                              <ThemedText type="headlineSm" style={{ fontSize: 15, color: theme.primary, fontFamily: 'Sora_700Bold' }}>
+                                {turf.rate}
+                              </ThemedText>
+                              <ThemedText style={{ fontSize: 10, color: theme.textSecondary, marginLeft: 2 }}>
+                                (Standard Rate)
+                              </ThemedText>
+                            </View>
+                          </View>
                         </View>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.sm }}>
-                          <ThemedText type="headlineSm" style={{ fontSize: 14, color: theme.text }}>{turf.rate}</ThemedText>
+
+                        {/* Slot Occupancy Bar & Status */}
+                        <View style={{ backgroundColor: theme.surfaceLow, borderRadius: BorderRadius.md, padding: 8, marginTop: 4 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                              Today's Slot Occupancy
+                            </ThemedText>
+                            <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.secondary }}>
+                              {turf.slotsText}
+                            </ThemedText>
+                          </View>
+
+                          {/* Visual occupancy bar */}
+                          <View style={{ height: 5, borderRadius: 2.5, backgroundColor: theme.outlineVariant + '30', overflow: 'hidden' }}>
+                            <View 
+                              style={{ 
+                                height: '100%', 
+                                width: `${Math.max(8, turf.occupancyPct)}%`, 
+                                backgroundColor: turf.occupancyPct > 50 ? '#10b981' : theme.primary, 
+                                borderRadius: 2.5 
+                              }} 
+                            />
+                          </View>
+                        </View>
+
+                        {/* Action Buttons Row */}
+                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
                           <Pressable 
-                            style={[styles.skillBadge, { backgroundColor: theme.secondaryContainer, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BorderRadius.full }]}
-                            onPress={() => router.push('/create-turf')}
+                            style={[{ flex: 1, backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '40', borderWidth: 1, paddingVertical: 8, borderRadius: BorderRadius.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 }]}
+                            onPress={() => router.push({ pathname: '/details', params: { id: turf.id, name: turf.name } })}
                           >
-                            <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontFamily: 'HankenGrotesk_700Bold', fontSize: 10 }}>Update Details</ThemedText>
+                            <Ionicons name="eye-outline" size={13} color={theme.text} />
+                            <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 11 }}>View Arena</ThemedText>
+                          </Pressable>
+
+                          <Pressable 
+                            style={[{ flex: 1, backgroundColor: theme.primary, paddingVertical: 8, borderRadius: BorderRadius.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 }, Shadows.level1]}
+                            onPress={() => router.push({ pathname: '/create-turf', params: { editId: turf.id } })}
+                          >
+                            <Ionicons name="settings-outline" size={13} color="#ffffff" />
+                            <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 11 }}>Manage Pitch</ThemedText>
                           </Pressable>
                         </View>
                       </View>
-                    </View>
-                  ))}
+                    ));
+                  })()}
                 </View>
               </View>
 
@@ -350,10 +591,20 @@ export default function CoachTab() {
 
           {/* FAB for New Slot */}
           <Pressable
-            style={[styles.fabTop, { backgroundColor: 'rgb(16, 185, 129)', shadowColor: 'rgb(16, 185, 129)' }]}
+            style={({ pressed }) => [
+              styles.fabTop,
+              pressed && { transform: [{ scale: 0.92 }] },
+            ]}
             onPress={() => router.push('/create-turf')}
           >
-            <MaterialCommunityIcons name="stadium-outline" size={24} color="#fff" />
+            <LinearGradient
+              colors={['#10b981', '#047857']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.fabGradient}
+            >
+              <MaterialCommunityIcons name="stadium-outline" size={24} color="#fff" />
+            </LinearGradient>
           </Pressable>
 
           <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
@@ -375,13 +626,13 @@ export default function CoachTab() {
               />
             </Pressable>
             <View style={styles.headerTextGroup}>
-              <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', lineHeight: 18 }}>
+              <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', lineHeight: 18 }}>
                 {profile.name}
               </ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                 <Ionicons name="location-sharp" size={12} color={theme.secondary} />
                 <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
-                  {profile.location}
+                  {getShortLocation(profile.location)}
                 </ThemedText>
               </View>
             </View>
@@ -405,7 +656,13 @@ export default function CoachTab() {
         </View>
 
         <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+            }
+          >
             {/* User Analytics / Personal Ranking Bento Grid */}
             <View style={styles.section}>
               <View style={styles.rankingGrid}>
@@ -421,26 +678,18 @@ export default function CoachTab() {
                       Elite Division • #428
                     </ThemedText>
                     
-                    <View style={styles.badgeWrapper}>
-                      <View style={[styles.skillBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                        <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold' }}>
-                          Top 5% Skill Level
-                        </ThemedText>
-                      </View>
-                    </View>
-
                     <View style={styles.statsRow}>
                       <View>
                         <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Win Rate</ThemedText>
-                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>78.4%</ThemedText>
+                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>78.4%</ThemedText>
                       </View>
                       <View>
                         <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Avg Score</ThemedText>
-                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>24.5</ThemedText>
+                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>24.5</ThemedText>
                       </View>
                       <View>
                         <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Matches</ThemedText>
-                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>112</ThemedText>
+                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>112</ThemedText>
                       </View>
                     </View>
                   </View>
@@ -451,11 +700,6 @@ export default function CoachTab() {
                   <View style={styles.matcherAvatarContainer}>
                     <View style={[styles.matcherAvatarRing, { borderColor: theme.secondaryContainer }]}>
                       <Ionicons name="star" size={24} color={theme.primary} />
-                    </View>
-                    <View style={[styles.levelBadge, { backgroundColor: theme.secondary }]}>
-                      <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 9 }}>
-                        LVL 12
-                      </ThemedText>
                     </View>
                   </View>
                   <ThemedText type="headlineSm" style={{ color: theme.text, marginTop: Spacing.sm }}>
@@ -469,6 +713,45 @@ export default function CoachTab() {
               </View>
             </View>
 
+            {/* Registered Students Directory Banner / Navigation Link */}
+            <View style={[styles.section, { marginBottom: Spacing.sm }]}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.studentDirectoryCard,
+                  {
+                    backgroundColor: theme.surfaceLowest,
+                    borderColor: theme.primary + '30',
+                  },
+                  Shadows.level2,
+                  pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] }
+                ]}
+                onPress={() => router.push('/coach-students')}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10 }}>
+                    <View style={[styles.studentCardIconWrap, { backgroundColor: theme.primaryContainer + '20' }]}>
+                      <Ionicons name="people" size={20} color={theme.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 13 }}>
+                          Registered Students List
+                        </ThemedText>
+                      </View>
+                      <ThemedText style={{ color: theme.textSecondary, fontSize: 10, lineHeight: 14, marginTop: 2 }} numberOfLines={1}>
+                        View enrolled students, attendance %, dues & batch details
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={[styles.studentCardBtn, { backgroundColor: theme.primary }]}>
+                    <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                      View Students →
+                    </ThemedText>
+                  </View>
+                </View>
+              </Pressable>
+            </View>
+
             {/* Top Coaches for You */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -479,9 +762,9 @@ export default function CoachTab() {
                   </ThemedText>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                  <Pressable>
+                  <Pressable onPress={() => router.push('/coach-students')}>
                     <ThemedText type="labelMd" style={{ color: theme.secondary, letterSpacing: 0.5 }}>
-                      SEE ALL
+                      STUDENTS LIST
                     </ThemedText>
                   </Pressable>
                 </View>
@@ -512,11 +795,19 @@ export default function CoachTab() {
               {/* Coach Cards */}
               <View style={styles.teamGrid}>
                 {visibleCoaches.length === 0 ? (
-                  <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-                    <Ionicons name="school-outline" size={48} color={theme.textSecondary + '77'} style={{ marginBottom: 12 }} />
-                    <ThemedText style={{ color: theme.textSecondary, fontFamily: 'HankenGrotesk_600SemiBold', textAlign: 'center', fontSize: 13, lineHeight: 18 }}>
+                  <View style={{ paddingVertical: 30, alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                    <Ionicons name="school-outline" size={44} color={theme.textSecondary + '77'} style={{ marginBottom: 10 }} />
+                    <ThemedText style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', textAlign: 'center', fontSize: 13, lineHeight: 18 }}>
                       {"No self-created classes yet.\nTap the school icon button at the top right to create one!"}
                     </ThemedText>
+                    <Pressable
+                      style={{ marginTop: 14, backgroundColor: theme.primaryContainer + '20', borderWidth: 1, borderColor: theme.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: BorderRadius.full }}
+                      onPress={() => router.push('/coach-students')}
+                    >
+                      <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_700Bold', fontSize: 12 }}>
+                        🎓 View Registered Academy Students →
+                      </ThemedText>
+                    </Pressable>
                   </View>
                 ) : (
                   visibleCoaches.map((coach: any, index: number) => {
@@ -592,14 +883,10 @@ export default function CoachTab() {
                                 <View style={styles.summerAdOverlay} />
                               </View>
                               <View style={styles.summerAdContent}>
-                                <View style={styles.summerAdBadgeRow}>
-                                  <View style={styles.summerAdBadge}>
-                                    <Ionicons name="sunny" size={11} color="#fbbf24" />
-                                    <ThemedText type="labelSm" style={{ color: '#fbbf24', fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', marginLeft: 4, letterSpacing: 0.8 }}>SUMMER CLASS</ThemedText>
-                                  </View>
+                                <View style={[styles.summerAdBadgeRow, { justifyContent: 'flex-end' }]}>
                                   <ThemedText type="labelSm" style={{ color: '#ffffff99', fontSize: 10 }}>Limited Seats</ThemedText>
                                 </View>
-                                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 6, fontSize: 18 }}>
+                                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_800ExtraBold', marginTop: 6, fontSize: 18 }}>
                                   {'⚽ Football Summer Camp 2024'}
                                 </ThemedText>
                                 <ThemedText type="bodySm" style={{ color: '#ffffffcc', marginTop: 4, lineHeight: 18 }}>
@@ -618,10 +905,10 @@ export default function CoachTab() {
                                 <View style={styles.summerAdFooter}>
                                   <View>
                                     <ThemedText type="labelSm" style={{ color: '#ffffffaa', fontSize: 10 }}>Early Bird Price</ThemedText>
-                                    <ThemedText type="headlineSm" style={{ color: '#fbbf24', fontFamily: 'HankenGrotesk_800ExtraBold' }}>₹4,999</ThemedText>
+                                    <ThemedText type="headlineSm" style={{ color: '#fbbf24', fontFamily: 'Sora_800ExtraBold' }}>₹4,999</ThemedText>
                                   </View>
                                   <View style={styles.summerAdBtn}>
-                                    <ThemedText type="labelMd" style={{ color: '#1a1a2e', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 }}>Enroll Now</ThemedText>
+                                    <ThemedText type="labelMd" style={{ color: '#1a1a2e', fontFamily: 'Sora_700Bold', fontSize: 12 }}>Enroll Now</ThemedText>
                                     <Ionicons name="arrow-forward" size={14} color="#1a1a2e" style={{ marginLeft: 4 }} />
                                   </View>
                                 </View>
@@ -657,14 +944,10 @@ export default function CoachTab() {
                                 <View style={[styles.summerAdOverlay, { backgroundColor: '#0f172aee' }]} />
                               </View>
                               <View style={styles.summerAdContent}>
-                                <View style={styles.summerAdBadgeRow}>
-                                  <View style={[styles.summerAdBadge, { backgroundColor: '#7c3aed33', borderColor: '#7c3aed66' }]}>
-                                    <Ionicons name="tennisball" size={11} color="#a78bfa" />
-                                    <ThemedText type="labelSm" style={{ color: '#a78bfa', fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', marginLeft: 4, letterSpacing: 0.8 }}>SUMMER CLASS</ThemedText>
-                                  </View>
+                                <View style={[styles.summerAdBadgeRow, { justifyContent: 'flex-end' }]}>
                                   <ThemedText type="labelSm" style={{ color: '#ffffff99', fontSize: 10 }}>8 Spots Left</ThemedText>
                                 </View>
-                                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 6, fontSize: 18 }}>
+                                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_800ExtraBold', marginTop: 6, fontSize: 18 }}>
                                   {'🎾 Tennis Masterclass Series'}
                                 </ThemedText>
                                 <ThemedText type="bodySm" style={{ color: '#ffffffcc', marginTop: 4, lineHeight: 18 }}>
@@ -683,10 +966,10 @@ export default function CoachTab() {
                                 <View style={styles.summerAdFooter}>
                                   <View>
                                     <ThemedText type="labelSm" style={{ color: '#ffffffaa', fontSize: 10 }}>Per Session</ThemedText>
-                                    <ThemedText type="headlineSm" style={{ color: '#a78bfa', fontFamily: 'HankenGrotesk_800ExtraBold' }}>₹2,499</ThemedText>
+                                    <ThemedText type="headlineSm" style={{ color: '#a78bfa', fontFamily: 'Sora_800ExtraBold' }}>₹2,499</ThemedText>
                                   </View>
                                   <View style={[styles.summerAdBtn, { backgroundColor: '#7c3aed' }]}>
-                                    <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 }}>Register</ThemedText>
+                                    <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 12 }}>Register</ThemedText>
                                     <Ionicons name="arrow-forward" size={14} color="#ffffff" style={{ marginLeft: 4 }} />
                                   </View>
                                 </View>
@@ -706,7 +989,7 @@ export default function CoachTab() {
                                 : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
                             ]}
                           >
-                            {/* Card Header Row: Avatar (tappable) + Match Badge */}
+                            {/* Card Header Row: Avatar (tappable) */}
                             <View style={styles.teamCardHeader}>
                               {/* Coach Avatar — tapping goes to profile */}
                               <Pressable style={styles.coachAvatarWrapper} onPress={navigateToProfile}>
@@ -715,30 +998,7 @@ export default function CoachTab() {
                                   style={styles.coachAvatar}
                                   contentFit="cover"
                                 />
-                                {/* Online dot */}
-                                <View style={[styles.onlineDot, { backgroundColor: '#4caf50', borderColor: isFeatured ? theme.secondaryContainer : theme.surfaceLowest }]} />
                               </Pressable>
-
-                              {/* Match badge */}
-                              <View style={[
-                                styles.matchPercentage,
-                                isFeatured
-                                  ? { backgroundColor: theme.primary }
-                                  : { backgroundColor: theme.secondaryContainer + '33' },
-                              ]}>
-                                {isFeatured && (
-                                  <Ionicons name="flash" size={11} color="#ffffff" style={{ marginRight: 3 }} />
-                                )}
-                                <ThemedText
-                                  type="labelSm"
-                                  style={{
-                                    color: isFeatured ? '#ffffff' : theme.secondary,
-                                    fontFamily: 'PlusJakartaSans_700Bold',
-                                  }}
-                                >
-                                  {coach.match}
-                                </ThemedText>
-                              </View>
                             </View>
 
                             {/* Coach Name + Specialty — tapping name also goes to profile */}
@@ -750,19 +1010,12 @@ export default function CoachTab() {
                                 >
                                   {coach.name}
                                 </ThemedText>
-                                {coach.badge && (
-                                  <View style={[styles.proBadge, { backgroundColor: theme.primary }]}>
-                                    <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold' }}>
-                                      {coach.badge}
-                                    </ThemedText>
-                                  </View>
-                                )}
                               </View>
 
                               {/* Specialty */}
                               <ThemedText
                                 type="bodySm"
-                                style={{ color: isFeatured ? theme.onSecondaryContainer + 'cc' : theme.secondary, marginTop: 2, fontFamily: 'HankenGrotesk_600SemiBold' }}
+                                style={{ color: isFeatured ? theme.onSecondaryContainer + 'cc' : theme.secondary, marginTop: 2, fontFamily: 'Sora_600SemiBold' }}
                               >
                                 {coach.specialty}
                               </ThemedText>
@@ -770,7 +1023,7 @@ export default function CoachTab() {
                               {/* Rating Row */}
                               <View style={styles.ratingRow}>
                                 <Ionicons name="star" size={13} color="#f59e0b" />
-                                <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.text, fontFamily: 'HankenGrotesk_700Bold', marginLeft: 3 }}>
+                                <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.text, fontFamily: 'Sora_700Bold', marginLeft: 3 }}>
                                   {coach.rating}
                                 </ThemedText>
                                 <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + '88' : theme.textSecondary, marginLeft: 3 }}>
@@ -794,35 +1047,22 @@ export default function CoachTab() {
                                 </View>
                               </View>
 
+                              {/* Certifications */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+                                <Ionicons name="ribbon-outline" size={12} color={isFeatured ? '#ffffff' : '#10b981'} style={{ marginRight: 4 }} />
+                                <ThemedText style={{ color: isFeatured ? '#ffffff' : '#10b981', fontSize: 10, fontFamily: 'Sora_700Bold' }} numberOfLines={1}>
+                                  {coach.certification || 'BWF Level 2 · UEFA Licensed'}
+                                </ThemedText>
+                              </View>
+
                               {/* Rate */}
                               <View style={styles.rateRow}>
                                 <Ionicons name="cash-outline" size={13} color={isFeatured ? theme.onSecondaryContainer + 'aa' : theme.primary} />
-                                <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.primary, fontFamily: 'HankenGrotesk_700Bold', marginLeft: 4 }}>
+                                <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.primary, fontFamily: 'Sora_700Bold', marginLeft: 4 }}>
                                   {coach.rate}
                                 </ThemedText>
                               </View>
 
-                              {/* Sport Icons Row */}
-                              <View style={styles.sportsRow}>
-                                {coach.sports.map((sport: string) => {
-                                  const def = SPORT_ICONS[sport];
-                                  if (!def) return null;
-                                  const chipBg = isFeatured ? 'rgba(255, 255, 255, 0.15)' : def.color + '18';
-                                  const chipBorder = isFeatured ? 'rgba(255, 255, 255, 0.3)' : def.color + '44';
-                                  const chipTextColor = isFeatured ? '#ffffff' : def.color;
-                                  return (
-                                    <View
-                                      key={sport}
-                                      style={[styles.sportChip, { backgroundColor: chipBg, borderColor: chipBorder }]}
-                                    >
-                                      <SportIcon sport={sport} size={12} color={chipTextColor} />
-                                      <ThemedText type="labelSm" style={{ color: chipTextColor, fontSize: 10, marginLeft: 4, fontFamily: 'HankenGrotesk_600SemiBold' }}>
-                                        {def.label}
-                                      </ThemedText>
-                                    </View>
-                                  );
-                                })}
-                              </View>
                             </Pressable>
 
                             {/* Action Buttons */}
@@ -865,9 +1105,6 @@ export default function CoachTab() {
             <View style={[styles.section, { paddingBottom: 100 }]}>
               <View style={styles.sectionHeader}>
                 <ThemedText type="headlineSm">Nearby Players</ThemedText>
-                <View style={[styles.nearbyBadge, { backgroundColor: theme.surfaceHigh }]}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Within 5 miles</ThemedText>
-                </View>
               </View>
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.playersScroll}>
@@ -878,7 +1115,7 @@ export default function CoachTab() {
                     style={[styles.playerCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
                   >
                     <Image source={player.image} style={styles.playerAvatar} contentFit="cover" />
-                    <ThemedText type="labelMd" style={{ marginTop: Spacing.sm, fontFamily: 'HankenGrotesk_700Bold', color: theme.text }}>
+                    <ThemedText type="labelMd" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_700Bold', color: theme.text }}>
                       {player.name}
                     </ThemedText>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10 }}>
@@ -892,7 +1129,7 @@ export default function CoachTab() {
                         inviteStates[player.id] && { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
                       ]}
                     >
-                      <ThemedText type="labelSm" style={{ color: inviteStates[player.id] ? theme.onSecondaryContainer : theme.secondary, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                      <ThemedText type="labelSm" style={{ color: inviteStates[player.id] ? theme.onSecondaryContainer : theme.secondary, fontFamily: 'Sora_700Bold' }}>
                         {inviteStates[player.id] ? 'Invited!' : 'Invite'}
                       </ThemedText>
                     </Pressable>
@@ -904,13 +1141,23 @@ export default function CoachTab() {
           </ScrollView>
         </Reanimated.View>
 
-        {/* FAB for New Class */}
-        {profile.role === 'Coach' && (
+        {/* FAB for New Class – Coach & Super Admin only */}
+        {((profile.role as string) === 'Coach' || (profile.role as string) === 'Super Admin') && (
           <Pressable
-            style={[styles.fabTop, { backgroundColor: 'rgb(16, 185, 129)', shadowColor: 'rgb(16, 185, 129)' }]}
+            style={({ pressed }) => [
+              styles.fabTop,
+              pressed && { transform: [{ scale: 0.92 }] },
+            ]}
             onPress={() => router.push('/create-class')}
           >
-            <Ionicons name="school-outline" size={24} color="#fff" />
+            <LinearGradient
+              colors={['#10b981', '#047857']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.fabGradient}
+            >
+              <Ionicons name="school" size={26} color="#ffffff" />
+            </LinearGradient>
           </Pressable>
         )}
       </SafeAreaView>
@@ -939,7 +1186,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filterTabText: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 11,
   },
   safeArea: {
@@ -1015,16 +1262,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#5D68E8',
     opacity: 0.15,
   },
-  badgeWrapper: {
-    flexDirection: 'row',
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  skillBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-  },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1055,16 +1292,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  levelBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1.5,
-    borderColor: '#ffffff',
-  },
   teamGrid: {
     gap: Spacing.md,
   },
@@ -1088,31 +1315,10 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     borderColor: '#5D68E8',
   },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
-  },
-  matchPercentage: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
-  },
   coachNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  proBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.full,
   },
   ratingRow: {
     flexDirection: 'row',
@@ -1134,20 +1340,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: Spacing.sm,
   },
-  sportsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: Spacing.md,
-  },
-  sportChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-  },
   teamCardActions: {
     flexDirection: 'row',
     marginTop: Spacing.md,
@@ -1168,11 +1360,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  nearbyBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
   },
   playersScroll: {
     gap: Spacing.sm,
@@ -1236,16 +1423,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  summerAdBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fbbf2422',
-    borderWidth: 1,
-    borderColor: '#fbbf2466',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-  },
   summerAdMeta: {
     flexDirection: 'row',
     gap: 16,
@@ -1282,25 +1459,54 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   createPillText: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 11,
     color: '#ffffff',
     letterSpacing: 0.2,
   },
+  // Registered Students Directory Card styles
+  studentDirectoryCard: {
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+  },
+  studentCardIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  studentCardBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   fabTop: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 110 : 90,
+    top: Platform.OS === 'ios' ? 108 : 88,
     right: Spacing.md,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2.5,
+    borderColor: '#ffffff',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 12,
+    zIndex: 999,
+  },
+  fabGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
-    zIndex: 999,
   },
 });
 

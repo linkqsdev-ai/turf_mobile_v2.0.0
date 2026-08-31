@@ -199,10 +199,6 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
               <ThemedText type="labelSm" style={{ color: '#ffffffaa', letterSpacing: 1 }}>
                 Badminton Match Sets (Best of 3)
               </ThemedText>
-              <View style={styles.liveBadgeAbsolute}>
-                <View style={styles.liveDotRed} />
-                <ThemedText style={styles.liveText}>Live</ThemedText>
-              </View>
             </View>
             <View style={styles.setsTable}>
               <View style={styles.setsHeaderRow}>
@@ -222,7 +218,7 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
                     <ThemedText
                       key={idx}
                       type="headlineSm"
-                      style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_400Regular' }}
+                      style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'Sora_700Bold' : 'Sora_400Regular' }}
                     >
                       {isCurrent ? pointsA : val}
                     </ThemedText>
@@ -238,7 +234,7 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
                     <ThemedText
                       key={idx}
                       type="headlineSm"
-                      style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_400Regular' }}
+                      style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'Sora_700Bold' : 'Sora_400Regular' }}
                     >
                       {isCurrent ? pointsB : val}
                     </ThemedText>
@@ -264,7 +260,7 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
                     <MaterialCommunityIcons name="badminton" size={14} color="#ffdd33" style={{ marginLeft: 4 }} />
                   )}
                 </View>
-                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'HankenGrotesk_800ExtraBold', marginVertical: Spacing.sm }}>
+                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'Sora_800ExtraBold', marginVertical: Spacing.sm }}>
                   {pointsA}
                 </ThemedText>
                 <Pressable
@@ -285,7 +281,7 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
                     <MaterialCommunityIcons name="badminton" size={14} color="#ffdd33" style={{ marginLeft: 4 }} />
                   )}
                 </View>
-                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'HankenGrotesk_800ExtraBold', marginVertical: Spacing.sm }}>
+                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'Sora_800ExtraBold', marginVertical: Spacing.sm }}>
                   {pointsB}
                 </ThemedText>
                 <Pressable
@@ -313,7 +309,7 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
                 <Pressable onPress={() => setSmashWinnersA(prev => Math.max(0, prev - 1))} style={styles.adjustBtn}>
                   <Ionicons name="remove" size={14} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'HankenGrotesk_700Bold', flex: 1 }}>
+                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'Sora_700Bold', flex: 1 }}>
                   {smashWinnersA} | {smashWinnersB}
                 </ThemedText>
                 <Pressable onPress={() => setSmashWinnersB(prev => prev + 1)} style={styles.adjustBtn}>
@@ -332,7 +328,7 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
                 <Pressable onPress={() => setServiceErrorsA(prev => Math.max(0, prev - 1))} style={styles.adjustBtn}>
                   <Ionicons name="remove" size={14} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'HankenGrotesk_700Bold', flex: 1 }}>
+                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'Sora_700Bold', flex: 1 }}>
                   {serviceErrorsA} | {serviceErrorsB}
                 </ThemedText>
                 <Pressable onPress={() => setServiceErrorsB(prev => prev + 1)} style={styles.adjustBtn}>
@@ -502,27 +498,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 10,
-  },
-  liveBadgeAbsolute: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ff1744',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    gap: 4,
-  },
-  liveDotRed: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#ffffff',
-  },
-  liveText: {
-    color: '#ffffff',
-    fontSize: 8,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
   },
 });

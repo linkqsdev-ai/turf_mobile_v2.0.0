@@ -6,6 +6,9 @@ import {
   Pressable,
   Platform,
   Modal,
+  Linking,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -16,6 +19,9 @@ import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useTurfStore } from '@/store/app-store';
+import { turfApi } from '@/services/turf-api';
+import { cleanLocation } from '@/utils/location';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 // Mock Data lookup for the venues
@@ -120,11 +126,99 @@ export default function TurfDetailsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; name?: string }>();
-  
-  // Resolve venue details or fallback to skyline
-  const venueId = params.id && VENUE_DETAILS[params.id] ? params.id : 'skyline';
-  const details = VENUE_DETAILS[venueId];
+  const { ownedTurfs } = useTurfStore();
+  const [remoteTurf, setRemoteTurf] = React.useState<any>(null);
+  const [refreshing, setRefreshing] = React.useState(false);
 
+  const fetchTurf = React.useCallback(async () => {
+    if (params.id) {
+      try {
+        const t = await turfApi.getTurfDetails(params.id);
+        if (t) setRemoteTurf(t);
+      } catch {}
+    }
+  }, [params.id]);
+
+  React.useEffect(() => {
+    fetchTurf();
+  }, [fetchTurf]);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchTurf();
+    setTimeout(() => setRefreshing(false), 600);
+  }, [fetchTurf]);
+
+  const userTurf = remoteTurf || (ownedTurfs || []).find(t => t.id === params.id);
+
+  const AMENITY_MAP: Record<string, { icon: string; title: string }> = {
+    floodlights: { icon: 'flashlight-outline', title: 'Floodlights' },
+    parking: { icon: 'car-outline', title: 'Free Parking' },
+    lockers: { icon: 'lock-closed-outline', title: 'Secure Lockers' },
+    showers: { icon: 'water-outline', title: 'Showers & Changing' },
+    bibs: { icon: 'shirt-outline', title: 'Bibs & Balls' },
+    wifi: { icon: 'wifi-outline', title: 'Free Wi-Fi' },
+    firstaid: { icon: 'medical-outline', title: 'First Aid Kit' },
+    canteen: { icon: 'cafe-outline', title: 'Refreshments Bar' },
+  };
+
+  const resolveUserAmenities = (amenitiesObj?: Record<string, boolean>) => {
+    if (!amenitiesObj) {
+      return [{ icon: 'flashlight-outline', title: 'Floodlights' }];
+    }
+    const selectedKeys = Object.keys(amenitiesObj).filter(k => amenitiesObj[k] === true);
+    if (selectedKeys.length === 0) {
+      return [{ icon: 'checkmark-circle-outline', title: 'Standard Pitch Setup' }];
+    }
+    return selectedKeys.map(key => AMENITY_MAP[key.toLowerCase()] || { icon: 'checkmark-circle-outline', title: key.charAt(0).toUpperCase() + key.slice(1) });
+  };
+
+  const rawLocation = userTurf?.address || (params.id && VENUE_DETAILS[params.id]?.location) || 'Tiruchirappalli, Tamil Nadu';
+  const displayLocation = cleanLocation(rawLocation);
+
+  const details = userTurf ? {
+    name: userTurf.name,
+    location: displayLocation,
+    price: `₹${userTurf.pricePerSlot}/slot`,
+    rating: `${userTurf.rating || 5.0}`,
+    reviews: 'NEW TURF',
+    pitch: userTurf.surfaceType || userTurf.sportType || 'Artificial Turf',
+    hours: '6 AM – 11 PM',
+    capacity: '14 Players',
+    image: userTurf.thumbnailImage || (userTurf.images && userTurf.images[0]) || 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=600',
+    about: userTurf.description || `${userTurf.name} is a premier ${userTurf.sportType || 'sports'} arena situated in ${displayLocation}.`,
+    amenities: resolveUserAmenities(userTurf.amenities),
+    sportIcon: 'soccer',
+    sportLibrary: 'MaterialCommunityIcons' as const,
+  } : (params.id && VENUE_DETAILS[params.id] ? {
+    ...VENUE_DETAILS[params.id],
+    location: cleanLocation(VENUE_DETAILS[params.id].location),
+  } : {
+    ...VENUE_DETAILS['skyline'],
+    location: cleanLocation(VENUE_DETAILS['skyline'].location),
+  });
+
+  const galleryImages = React.useMemo(() => {
+    const list: (string | any)[] = [];
+    if (userTurf) {
+      if (Array.isArray(userTurf.images) && userTurf.images.length > 0) {
+        userTurf.images.forEach((img: any) => {
+          const uri = typeof img === 'string' ? img : img?.uri;
+          if (uri && !list.includes(uri)) list.push(uri);
+        });
+      }
+      if (userTurf.thumbnailImage && !list.includes(userTurf.thumbnailImage)) {
+        list.unshift(userTurf.thumbnailImage);
+      }
+    }
+    if (list.length === 0) {
+      if (details.image) list.push(details.image);
+    }
+    return list;
+  }, [userTurf, details.image]);
+
+  const [activeImageIndex, setActiveImageIndex] = React.useState(0);
+  const [heroCardWidth, setHeroCardWidth] = React.useState(0);
   const [reviewsVisible, setReviewsVisible] = React.useState(false);
   const [sessionPickerVisible, setSessionPickerVisible] = React.useState(false);
   const [selectedSessionDate, setSelectedSessionDate] = React.useState('Fri, Oct 24');
@@ -132,7 +226,7 @@ export default function TurfDetailsScreen() {
   const handleBookNow = () => {
     router.push({
       pathname: '/booking',
-      params: { id: venueId, name: details.name, price: details.price, date: selectedSessionDate },
+      params: { id: params.id || 'skyline', name: details.name, price: details.price, date: selectedSessionDate },
     });
   };
 
@@ -141,14 +235,14 @@ export default function TurfDetailsScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Navigation TopAppBar */}
         <View style={[styles.header, { backgroundColor: 'transparent' }]}>
-          <Pressable 
+          <Pressable
             onPress={() => {
               if (router.canGoBack()) {
                 router.back();
               } else {
                 router.replace('/(tabs)');
               }
-            }} 
+            }}
             style={styles.backButton}
           >
             <Ionicons name="arrow-back" size={24} color={theme.text} />
@@ -162,21 +256,72 @@ export default function TurfDetailsScreen() {
         </View>
 
         <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            {/* Hero Image Section */}
+          <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+            }
+          >
+            {/* Hero Image Section - Interactive Slider */}
             <View style={styles.heroContainer}>
-              <View style={[styles.heroCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}>
-                <Image source={details.image} style={styles.heroImage} contentFit="cover" />
-                
-                {/* Premium tag overlayed on top of the image */}
-                <View style={styles.heroOverlayTop}>
-                  <View style={[styles.premiumTag, { backgroundColor: theme.secondaryContainer }]}>
-                    <Ionicons name="sparkles" size={10} color={theme.onSecondaryContainer} style={{ marginRight: 4 }} />
-                    <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontWeight: '800', fontSize: 9 }}>
-                      PREMIUM TURF
-                    </ThemedText>
-                  </View>
-                </View>
+              <View 
+                style={[styles.heroCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
+                onLayout={(e) => {
+                  const { width } = e.nativeEvent.layout;
+                  if (width > 0) setHeroCardWidth(width);
+                }}
+              >
+                {galleryImages.length > 1 ? (
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={(e) => {
+                      const w = heroCardWidth || 1;
+                      const page = Math.round(e.nativeEvent.contentOffset.x / w);
+                      setActiveImageIndex(page);
+                    }}
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    {galleryImages.map((img, idx) => (
+                      <Image
+                        key={idx}
+                        source={typeof img === 'string' ? { uri: img } : img}
+                        style={{ width: heroCardWidth || '100%', height: '100%' }}
+                        contentFit="cover"
+                      />
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <Image 
+                    source={typeof galleryImages[0] === 'string' ? { uri: galleryImages[0] } : galleryImages[0] || details.image} 
+                    style={styles.heroImage} 
+                    contentFit="cover" 
+                  />
+                )}
+
+                {/* Pagination Dots & Counter when multiple images exist */}
+                {galleryImages.length > 1 && (
+                  <>
+                    <View style={styles.sliderDotsRow}>
+                      {galleryImages.map((_, idx) => (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.sliderDot,
+                            idx === activeImageIndex && styles.sliderDotActive,
+                          ]}
+                        />
+                      ))}
+                    </View>
+                    <View style={styles.sliderCounterBadge}>
+                      <ThemedText style={styles.sliderCounterText}>
+                        {activeImageIndex + 1}/{galleryImages.length}
+                      </ThemedText>
+                    </View>
+                  </>
+                )}
 
                 {/* Fav Button top right */}
                 <Pressable style={[styles.favFab, Shadows.level2]}>
@@ -189,25 +334,18 @@ export default function TurfDetailsScreen() {
             <View style={styles.contentSection}>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                <ThemedText type="headlineLg" style={{ color: theme.text, flex: 1, fontFamily: 'HankenGrotesk_700Bold', fontSize: 18 }}>
+                <ThemedText type="headlineLg" style={{ color: theme.text, flex: 1, fontFamily: 'Sora_700Bold', fontSize: 18, lineHeight: 25 }}>
                   {details.name}
                 </ThemedText>
-                <View style={[styles.sportBadge, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
-                  {details.sportLibrary === 'Ionicons' ? (
-                    <Ionicons name={details.sportIcon as any} size={16} color={theme.secondary} />
-                  ) : (
-                    <MaterialCommunityIcons name={details.sportIcon as any} size={16} color={theme.secondary} />
-                  )}
-                </View>
               </View>
 
               <View style={styles.locationRow}>
-                <Ionicons name="location-outline" size={12} color={theme.secondary} />
-                <ThemedText type="bodyMd" style={{ color: theme.textSecondary, marginLeft: 4, fontSize: 11 }}>
+                <Ionicons name="location-outline" size={13} color={theme.secondary} />
+                <ThemedText type="bodyMd" style={{ color: theme.textSecondary, marginLeft: 4, fontSize: 12, lineHeight: 16, flexShrink: 1 }}>
                   {details.location}
                 </ThemedText>
                 <View style={[styles.dot, { backgroundColor: theme.outlineVariant }]} />
-                
+
                 <Pressable onPress={() => setReviewsVisible(true)} style={styles.ratingRow}>
                   <Ionicons name="star" size={12} color="#5D68E8" />
                   <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4, fontWeight: '700', fontSize: 11 }}>
@@ -220,39 +358,31 @@ export default function TurfDetailsScreen() {
               </View>
             </View>
 
-            {/* Bento Quick Stats Grid - Compact Icon-only design */}
+            {/* Bento Quick Stats Grid - Clean Badge-free Design */}
             <View style={styles.bentoGrid}>
               <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-                <View style={[styles.bentoIcon, { backgroundColor: theme.surfaceLow }]}>
-                  <Ionicons name="wallet-outline" size={18} color={theme.secondary} />
-                </View>
+                <Ionicons name="wallet-outline" size={16} color={theme.primary} />
                 <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]}>
                   {details.price}
                 </ThemedText>
               </View>
 
               <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-                <View style={[styles.bentoIcon, { backgroundColor: theme.surfaceLow }]}>
-                  <MaterialCommunityIcons name="grass" size={18} color={theme.secondary} />
-                </View>
+                <MaterialCommunityIcons name="cricket" size={18} color={theme.primary} />
                 <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]} numberOfLines={1}>
                   {details.pitch}
                 </ThemedText>
               </View>
 
               <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-                <View style={[styles.bentoIcon, { backgroundColor: theme.surfaceLow }]}>
-                  <Ionicons name="time-outline" size={18} color={theme.secondary} />
-                </View>
+                <Ionicons name="time-outline" size={16} color={theme.primary} />
                 <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]}>
                   {details.hours.replace(/\s+/g, '')}
                 </ThemedText>
               </View>
 
               <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-                <View style={[styles.bentoIcon, { backgroundColor: theme.surfaceLow }]}>
-                  <Ionicons name="people-outline" size={18} color={theme.secondary} />
-                </View>
+                <Ionicons name="people-outline" size={16} color={theme.primary} />
                 <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]} numberOfLines={1}>
                   {details.capacity.split(' ')[0]} Plrs
                 </ThemedText>
@@ -265,23 +395,39 @@ export default function TurfDetailsScreen() {
                 <ThemedText type="headlineSm" style={styles.cardSectionHeader}>
                   About the Venue
                 </ThemedText>
-                <ThemedText type="bodyLg" style={{ color: theme.textSecondary, lineHeight: 24 }}>
+                <ThemedText type="bodyLg" style={{ color: theme.textSecondary, lineHeight: 22, fontSize: 13 }}>
                   {details.about}
                 </ThemedText>
               </View>
             </View>
 
-            {/* Amenities Section */}
+            {/* Amenities Section - Clean Chip Badges with Icon + Label */}
             <View style={styles.contentSection}>
               <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-                <ThemedText type="headlineSm" style={styles.cardSectionHeader}>
-                  Venue Amenities
-                </ThemedText>
-                <View style={styles.amenitiesGrid}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: Spacing.sm }}>
+                  <ThemedText type="headlineSm" style={[styles.cardSectionHeader, { borderBottomWidth: 0, paddingBottom: 0, marginBottom: 0, flexShrink: 1 }]}>
+                    Venue Amenities
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
+                    {details.amenities.length} {details.amenities.length === 1 ? 'Feature' : 'Features'}
+                  </ThemedText>
+                </View>
+
+                {/* Clean inline chips with icon & label */}
+                <View style={styles.amenityRow}>
                   {details.amenities.map((item, idx) => (
-                    <View key={idx} style={[styles.amenityRow, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '1a' }]}>
-                      <Ionicons name={item.icon as any} size={15} color={theme.secondary} />
-                      <ThemedText type="bodyMd" style={{ marginLeft: 8, fontFamily: 'HankenGrotesk_600SemiBold', color: theme.text, fontSize: 12 }} numberOfLines={1}>
+                    <View
+                      key={idx}
+                      style={[
+                        styles.amenityPill,
+                        {
+                          backgroundColor: theme.surfaceLow,
+                          borderColor: theme.outlineVariant + '33',
+                        },
+                      ]}
+                    >
+                      <Ionicons name={item.icon as any} size={14} color={theme.primary} style={{ marginRight: 6 }} />
+                      <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                         {item.title}
                       </ThemedText>
                     </View>
@@ -296,10 +442,17 @@ export default function TurfDetailsScreen() {
                 <ThemedText type="headlineSm" style={styles.cardSectionHeader}>
                   Location
                 </ThemedText>
-                
-                {/* Map Placeholder Card using grayscale theme */}
-                <View style={styles.mapContainer}>
-                  {/* Grayscale map image */}
+
+                {/* Map Placeholder Card */}
+                <Pressable
+                  onPress={() => {
+                    const query = encodeURIComponent(details.name + ', ' + details.location);
+                    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`).catch(() => {
+                      Alert.alert('Maps Error', 'Could not open Google Maps.');
+                    });
+                  }}
+                  style={styles.mapContainer}
+                >
                   <Image
                     source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAs7ZFxpDuTY0Y20RzzsmBGxAjht8U5AihgJyskprBmTPKVYrEOab08NWaF-4BFy3UjwPr46PMa9oRy0TqoklyqETyaI3T9xbHvBGj0vyYb99qgZn6w5StHhG9_NAMWkvZiyjhoW9QJ4TVDCuUjWD2x6xrp0HlAaAIVRu2xmLKg6V1CrRxUQiNFhiU_n_PBx9V6T9ZF5x3yGwizSIx_I4x5fTWBozUqBJ77o8N5RyeuxUvrf6uWewzXD86IF4X_G5brMzCocIakM-w' }}
                     style={styles.mapImage}
@@ -310,32 +463,39 @@ export default function TurfDetailsScreen() {
                       <Ionicons name="location" size={24} color="#ffffff" />
                     </View>
                   </View>
-                </View>
+                </Pressable>
 
                 <View style={styles.locationFooter}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>
                     {details.location.split(',')[0]}
                   </ThemedText>
-                  <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
-                    {details.location.split(',')[1]}
+                  <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 2 }}>
+                    {details.location.split(',').slice(1).join(',').trim() || details.location}
                   </ThemedText>
-                  
-                  <Pressable style={styles.directionsLink}>
-                    <ThemedText type="labelMd" style={{ color: theme.secondary, fontWeight: '800' }}>
-                      Get Directions
-                    </ThemedText>
-                    <Ionicons name="arrow-forward" size={14} color={theme.secondary} style={{ marginLeft: 4 }} />
-                  </Pressable>
                 </View>
+
+                <Pressable
+                  onPress={() => {
+                    const query = encodeURIComponent(details.name + ', ' + details.location);
+                    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`).catch(() => {
+                      Alert.alert('Maps Error', 'Could not open Google Maps.');
+                    });
+                  }}
+                  style={styles.directionsLink}
+                >
+                  <ThemedText type="labelMd" style={{ color: theme.secondary, fontWeight: '800' }}>
+                    Get Directions
+                  </ThemedText>
+                  <Ionicons name="arrow-forward" size={14} color={theme.secondary} style={{ marginLeft: 4 }} />
+                </Pressable>
               </View>
             </View>
-
           </ScrollView>
         </Reanimated.View>
 
         {/* Sticky Action Footer */}
         <View style={[styles.footerActions, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '33' }]}>
-          <Pressable 
+          <Pressable
             onPress={() => setSessionPickerVisible(true)}
             style={styles.footerInfoCol}
           >
@@ -344,12 +504,12 @@ export default function TurfDetailsScreen() {
               {selectedSessionDate}
             </ThemedText>
           </Pressable>
-          
-          <Pressable 
+
+          <Pressable
             onPress={handleBookNow}
             style={[styles.bookButton, { backgroundColor: theme.primaryContainer }, Shadows.level2]}
           >
-            <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_700Bold' }}>
+            <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
               Book Now
             </ThemedText>
           </Pressable>
@@ -367,7 +527,7 @@ export default function TurfDetailsScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
             <View style={styles.modalHeader}>
-              <ThemedText type="headlineSm" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Customer Reviews</ThemedText>
+              <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_700Bold' }}>Customer Reviews</ThemedText>
               <Pressable onPress={() => setReviewsVisible(false)} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color={theme.text} />
               </Pressable>
@@ -376,7 +536,7 @@ export default function TurfDetailsScreen() {
             {/* Rating Summary & Progress Bar Breakdown */}
             <View style={[styles.ratingSummaryContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
               <View style={styles.ratingSummaryLeft}>
-                <ThemedText style={{ fontSize: 36, fontFamily: 'HankenGrotesk_800ExtraBold', color: theme.text }}>{details.rating}</ThemedText>
+                <ThemedText style={{ fontSize: 36, fontFamily: 'Sora_800ExtraBold', color: theme.text }}>{details.rating}</ThemedText>
                 <View style={{ flexDirection: 'row', gap: 2, marginTop: 4 }}>
                   {[1, 2, 3, 4, 5].map((s) => (
                     <Ionicons key={s} name="star" size={12} color="#5D68E8" />
@@ -443,7 +603,7 @@ export default function TurfDetailsScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.background, maxHeight: 350 }]}>
             <View style={styles.modalHeader}>
-              <ThemedText type="headlineSm" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>Select Booking Date</ThemedText>
+              <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_700Bold' }}>Select Booking Date</ThemedText>
               <Pressable onPress={() => setSessionPickerVisible(false)} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color={theme.text} />
               </Pressable>
@@ -469,18 +629,18 @@ export default function TurfDetailsScreen() {
                     }}
                     style={[
                       styles.sessionOption,
-                      { 
+                      {
                         backgroundColor: isSelected ? theme.secondaryContainer : theme.surfaceLowest,
                         borderColor: isSelected ? theme.secondary : theme.outlineVariant + '33'
                       }
                     ]}
                   >
-                    <ThemedText 
+                    <ThemedText
                       style={[
-                        styles.sessionOptionText, 
-                        { 
+                        styles.sessionOptionText,
+                        {
                           color: isSelected ? theme.onSecondaryContainer : theme.text,
-                          fontFamily: isSelected ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_600SemiBold'
+                          fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_600SemiBold'
                         }
                       ]}
                     >
@@ -523,7 +683,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     textAlign: 'center',
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 16,
     marginHorizontal: Spacing.sm,
   },
@@ -539,8 +699,8 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     width: '100%',
-    aspectRatio: 4/3,
-    borderRadius: BorderRadius.premium,
+    aspectRatio: 4 / 3,
+    borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#c3c7cb33',
@@ -549,6 +709,43 @@ const styles = StyleSheet.create({
   heroImage: {
     width: '100%',
     height: '100%',
+  },
+  sliderDotsRow: {
+    position: 'absolute',
+    bottom: 12,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  sliderDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+  },
+  sliderDotActive: {
+    width: 16,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+  },
+  sliderCounterBadge: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  sliderCounterText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontFamily: 'Sora_700Bold',
   },
   contentSection: {
     marginTop: Spacing.md,
@@ -577,35 +774,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '48%',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.xl,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
     gap: 8,
   },
-  bentoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   bentoValue: {
-    fontSize: 11,
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 12,
+    fontFamily: 'Sora_700Bold',
     flex: 1,
   },
-  sportBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: Spacing.sm,
-  },
   cardContainer: {
-    borderRadius: BorderRadius.premium,
+    borderRadius: 14,
     borderWidth: 1,
     padding: Spacing.md,
     shadowColor: '#001b3d',
@@ -617,30 +798,29 @@ const styles = StyleSheet.create({
   cardSectionHeader: {
     color: '#111c2c',
     fontSize: 13,
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',
     paddingBottom: Spacing.xs,
     marginBottom: Spacing.sm,
   },
-  amenitiesGrid: {
+  amenityRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    justifyContent: 'space-between',
+    marginTop: 4,
   },
-  amenityRow: {
+  amenityPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: BorderRadius.xl,
+    borderRadius: 10,
     borderWidth: 1,
-    width: '48%',
   },
   mapContainer: {
     height: 160,
-    borderRadius: BorderRadius.xl,
+    borderRadius: 12,
     backgroundColor: '#eceef0',
     overflow: 'hidden',
     position: 'relative',
@@ -758,7 +938,7 @@ const styles = StyleSheet.create({
   },
   breakdownLabel: {
     fontSize: 10,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Sora_700Bold',
     width: 22,
   },
   progressBarBg: {
@@ -795,7 +975,7 @@ const styles = StyleSheet.create({
   },
   reviewUser: {
     fontSize: 13,
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
   },
   reviewDate: {
     fontSize: 11,
@@ -822,29 +1002,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  premiumTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  heroOverlayTop: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    zIndex: 10,
-  },
   footerSessionLabel: {
     color: '#81919c',
     fontSize: 9,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Sora_700Bold',
     letterSpacing: 0.8,
   },
   footerSessionDate: {
     color: '#111c2c',
     fontSize: 15,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Sora_700Bold',
     textDecorationLine: 'underline',
     marginTop: 2,
   },

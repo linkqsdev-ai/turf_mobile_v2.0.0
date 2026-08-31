@@ -50,10 +50,6 @@ export function NewMatchTab() {
     >
       {/* ── Page Header Section ────────────────────────── */}
       <View style={styles.headerLabelRow}>
-        <View style={styles.newFixtureBadge}>
-          <Ionicons name="add-circle" size={14} color="#74777f" />
-          <ThemedText style={styles.newFixtureBadgeText}>NEW FIXTURE</ThemedText>
-        </View>
         <ThemedText style={styles.headerTitle}>Configure Match</ThemedText>
       </View>
 
@@ -65,9 +61,6 @@ export function NewMatchTab() {
             <View style={styles.shieldWrap}>
               <Ionicons name="shield-outline" size={16} color="#001b3d" />
             </View>
-            <View style={styles.homeAwayBadge}>
-              <ThemedText style={styles.homeAwayBadgeText}>HOME</ThemedText>
-            </View>
           </View>
           <ThemedText style={styles.teamSubLabel}>TEAM A</ThemedText>
           <TextInput
@@ -76,7 +69,7 @@ export function NewMatchTab() {
               { borderBottomColor: isHomeFocused ? '#001b3d' : '#c4c6cf' }
             ]}
             placeholder="Select Home Team"
-            placeholderTextColor="#74777f80"
+            placeholderTextColor="#94a3b8"
             value={homeTeam}
             onChangeText={setHomeTeam}
             onFocus={() => setIsHomeFocused(true)}
@@ -94,9 +87,6 @@ export function NewMatchTab() {
             <View style={styles.shieldWrap}>
               <Ionicons name="shield-outline" size={16} color="#001b3d" />
             </View>
-            <View style={styles.homeAwayBadge}>
-              <ThemedText style={styles.homeAwayBadgeText}>AWAY</ThemedText>
-            </View>
           </View>
           <ThemedText style={styles.teamSubLabel}>TEAM B</ThemedText>
           <TextInput
@@ -105,7 +95,7 @@ export function NewMatchTab() {
               { borderBottomColor: isAwayFocused ? '#001b3d' : '#c4c6cf' }
             ]}
             placeholder="Select Away Team"
-            placeholderTextColor="#74777f80"
+            placeholderTextColor="#94a3b8"
             value={awayTeam}
             onChangeText={setAwayTeam}
             onFocus={() => setIsAwayFocused(true)}
@@ -162,7 +152,7 @@ export function NewMatchTab() {
                 { color: '#191c1e' }
               ]}
               placeholder="Search Stadium or Ground..."
-              placeholderTextColor="#74777f80"
+              placeholderTextColor="#94a3b8"
               value={venue}
               onChangeText={setVenue}
               onFocus={() => setIsVenueFocused(true)}
@@ -181,7 +171,7 @@ export function NewMatchTab() {
                 { borderBottomColor: isDateFocused ? '#001b3d' : '#c4c6cf' }
               ]}
               placeholder="dd-mm-yyyy"
-              placeholderTextColor="#74777f80"
+              placeholderTextColor="#94a3b8"
               value={matchDate}
               onChangeText={setMatchDate}
               onFocus={() => setIsDateFocused(true)}
@@ -197,7 +187,7 @@ export function NewMatchTab() {
                 { borderBottomColor: isTimeFocused ? '#001b3d' : '#c4c6cf' }
               ]}
               placeholder="hh:mm am/pm"
-              placeholderTextColor="#74777f80"
+              placeholderTextColor="#94a3b8"
               value={tossTime}
               onChangeText={setTossTime}
               onFocus={() => setIsTimeFocused(true)}
@@ -266,7 +256,7 @@ export function NewMatchTab() {
       <View style={styles.proTipCard}>
         <Ionicons name="bulb-outline" size={16} color="#765b00" />
         <ThemedText style={styles.proTipText}>
-          <ThemedText style={{ fontFamily: 'HankenGrotesk_700Bold' }}>PRO TIP:</ThemedText> Use the ODI format for matches longer than 40 overs to enable advanced projection stats.
+          <ThemedText style={{ fontFamily: 'Sora_700Bold' }}>PRO TIP:</ThemedText> Use the ODI format for matches longer than 40 overs to enable advanced projection stats.
         </ThemedText>
       </View>
 
@@ -283,20 +273,8 @@ const styles = StyleSheet.create({
   headerLabelRow: {
     marginBottom: 16,
   },
-  newFixtureBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  newFixtureBadgeText: {
-    fontFamily: 'HankenGrotesk_800ExtraBold',
-    fontSize: 9,
-    letterSpacing: 0.8,
-    color: '#74777f',
-    marginLeft: 4,
-  },
   headerTitle: {
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     fontSize: 22,
     color: '#191c1e',
   },
@@ -329,25 +307,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  homeAwayBadge: {
-    backgroundColor: '#f2f4f6',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  homeAwayBadgeText: {
-    fontFamily: 'HankenGrotesk_800ExtraBold',
-    fontSize: 8,
-    color: '#74777f',
-  },
   teamSubLabel: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 9,
     color: '#74777f',
     marginBottom: 2,
   },
   teamInput: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 13,
     color: '#191c1e',
     paddingVertical: 4,
@@ -363,7 +330,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   teamActionText: {
-    fontFamily: 'HankenGrotesk_500Medium',
+    fontFamily: 'Sora_500Medium',
     fontSize: 10,
     color: '#74777f',
     marginLeft: 4,
@@ -379,7 +346,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   bentoLabel: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 10,
     letterSpacing: 0.8,
     color: '#74777f',
@@ -399,7 +366,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   formatPillText: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 13,
   },
   inputGroup: {
@@ -420,7 +387,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontFamily: 'HankenGrotesk_500Medium',
+    fontFamily: 'Sora_500Medium',
     fontSize: 13,
   },
   twoColumnInputs: {
@@ -429,7 +396,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   underlinedInput: {
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 13,
     color: '#191c1e',
     paddingVertical: 6,
@@ -465,13 +432,13 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   finalizationTitle: {
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     fontSize: 18,
     color: '#ffffff',
     marginBottom: 4,
   },
   finalizationDescription: {
-    fontFamily: 'HankenGrotesk_400Regular',
+    fontFamily: 'Sora_400Regular',
     fontSize: 11,
     lineHeight: 15,
     color: '#cbd5e1e0',
@@ -495,7 +462,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   tossBtnText: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 12,
     color: '#594400',
   },
@@ -508,7 +475,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   reqTitle: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 10,
     letterSpacing: 0.8,
     color: '#191c1e',
@@ -530,7 +497,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reqCheckText: {
-    fontFamily: 'HankenGrotesk_500Medium',
+    fontFamily: 'Sora_500Medium',
     fontSize: 12,
     color: '#191c1e',
   },
@@ -548,7 +515,7 @@ const styles = StyleSheet.create({
   },
   proTipText: {
     flex: 1,
-    fontFamily: 'HankenGrotesk_400Regular',
+    fontFamily: 'Sora_400Regular',
     fontSize: 11,
     lineHeight: 15,
     color: '#6e5400',

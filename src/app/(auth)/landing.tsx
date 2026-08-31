@@ -72,7 +72,7 @@ const onboardingSlides = [
     titleNormal: 'Tournaments',
     titleHighlight: '& Leagues',
     highlightColor: '#fde68a',
-    description: 'Draft active tournament schedules, recruit teams, register rosters, keep match standings updated, and crown champions.',
+    description: 'Draft active tournament schedules, recruit teams, register team squads, keep match standings updated, and crown champions.',
     image: require('@/assets/images/illustrations/tournament_bracket_premium.png'),
     blobColor1: '#fde68a',
     blobColor2: '#c4b5fd',
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 9,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Sora_700Bold',
     letterSpacing: 1.4,
   },
 
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   },
   titleNormal: {
     fontSize: 28,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     color: TEXT_DARK,
     lineHeight: 36,
     letterSpacing: -0.5,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   },
   titleHighlight: {
     fontSize: 28,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     color: TEXT_DARK,
     lineHeight: 36,
     letterSpacing: -0.5,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 21,
     color: TEXT_MID,
-    fontFamily: 'PlusJakartaSans_400Regular',
+    fontFamily: 'Sora_400Regular',
     marginBottom: Spacing.md,
   },
 
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   featurePillText: {
     fontSize: 10,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 0.3,
   },
 
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Sora_700Bold',
     letterSpacing: 1.0,
   },
   secondaryRow: {
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 12,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 0.8,
   },
 });

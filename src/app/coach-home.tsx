@@ -103,7 +103,7 @@ export default function CoachHomeScreen() {
                         type="labelSm"
                         style={{
                           color: isSelected ? '#ffffff' : sport.color,
-                          fontFamily: 'HankenGrotesk_600SemiBold',
+                          fontFamily: 'Sora_600SemiBold',
                           fontSize: 10,
                           letterSpacing: 0.2,
                         }}
@@ -195,9 +195,6 @@ export default function CoachHomeScreen() {
                     onPress={() => router.push({ pathname: '/coach-profile/[id]', params: { id: item.id } })}
                   >
                     <Image source={item.image} style={styles.coachImage} />
-                    <View style={styles.coachBadge}>
-                      <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
-                    </View>
                     <ThemedText type="headlineSm" style={{ marginTop: 8 }}>
                       {item.name}
                     </ThemedText>
@@ -241,7 +238,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 14 },
   filtersSection: { marginVertical: Spacing.md },
   filterScroll: { paddingHorizontal: Spacing.containerMargin, gap: 8 },
-  filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full, borderWidth: 1, height: 30, justifyContent: 'center' },
+  filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, height: 30, justifyContent: 'center' },
   section: { paddingHorizontal: Spacing.containerMargin, marginVertical: Spacing.lg },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   bannerCard: { marginHorizontal: 20, borderRadius: BorderRadius.xl, padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -252,7 +249,6 @@ const styles = StyleSheet.create({
   categoryCard: { width: '31%', aspectRatio: 1, borderRadius: BorderRadius.lg, justifyContent: 'center', alignItems: 'center', padding: 12 },
   coachCard: { width: 160, borderRadius: BorderRadius.xl, padding: 12 },
   coachImage: { width: '100%', height: 120, borderRadius: BorderRadius.lg },
-  coachBadge: { position: 'absolute', top: 20, right: 20 },
   coachMeta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   coachActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
   profileBtn: { flex: 1, paddingVertical: 6, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: '#22c55e', justifyContent: 'center', alignItems: 'center' },

@@ -1,4 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
+import { FavouriteTeamIcon } from '@/components/favourite-team-icon';
 import { Shadows, Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -50,17 +51,59 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
     }
   };
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setCrestImage(result.assets[0].uri);
-    }
+  const pickImage = () => {
+    Alert.alert(
+      'Upload Team Crest',
+      'Choose an option to upload or capture crest picture:',
+      [
+        {
+          text: '📷 Take Photo (Camera)',
+          onPress: async () => {
+            try {
+              const permission = await ImagePicker.requestCameraPermissionsAsync();
+              if (!permission.granted) {
+                Alert.alert('Permission Required', 'Camera access is needed to capture photo.');
+                return;
+              }
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+              if (!result.canceled && result.assets && result.assets.length > 0) {
+                setCrestImage(result.assets[0].uri);
+              }
+            } catch (err) {
+              console.log('Error capturing photo', err);
+            }
+          },
+        },
+        {
+          text: '🖼️ Choose from Gallery',
+          onPress: async () => {
+            try {
+              const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (!permission.granted) {
+                Alert.alert('Permission Required', 'Gallery access is needed to pick photo.');
+                return;
+              }
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+              if (!result.canceled && result.assets && result.assets.length > 0) {
+                setCrestImage(result.assets[0].uri);
+              }
+            } catch (err) {
+              console.log('Error picking gallery image', err);
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   const handleCreateTeam = () => {
@@ -93,7 +136,7 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
         bounces={false}
       >
       {/* ── Vector Illustration Banner ─────────────────────────────── */}
-      <View style={{ width: '100%', height: 200, borderRadius: 16, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: theme.outlineVariant + '33' }}>
+      <View style={{ width: '100%', height: 200, borderRadius: 12, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: theme.outlineVariant + '33' }}>
         <Image
           source={require('@/assets/images/illustrations/team_creation_vector.png')}
           style={{ width: '100%', height: '100%' }}
@@ -102,12 +145,12 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
       </View>
 
       {/* ── Form Body Bento Card ────────────────────────── */}
-      <View style={[styles.bentoCard, Shadows.level2, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }]}>
+      <View style={styles.bentoCard}>
         
         {/* Header */}
         <View style={styles.cardHeader}>
           <View style={[styles.cardIconWrap, { backgroundColor: theme.primary + '11' }]}>
-            <Ionicons name="id-card" size={16} color={theme.primary} />
+            <Ionicons name="id-card" size={13} color={theme.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <ThemedText style={styles.cardTitle}>Identity & Branding</ThemedText>
@@ -127,13 +170,13 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
               borderColor: isFavourite ? '#FFA751' : theme.outlineVariant + '44'
             }}
           >
-            <Ionicons 
-              name={isFavourite ? "star" : "star-outline"} 
-              size={13} 
-              color={isFavourite ? "#FFA751" : theme.textSecondary} 
-            />
+            {isFavourite ? (
+              <FavouriteTeamIcon size={14} />
+            ) : (
+              <Ionicons name="bookmark-outline" size={13} color={theme.textSecondary} />
+            )}
             <ThemedText style={{ 
-              fontFamily: 'HankenGrotesk_700Bold', 
+              fontFamily: 'Sora_700Bold', 
               fontSize: 10, 
               color: isFavourite ? "#FFA751" : theme.textSecondary 
             }}>
@@ -148,14 +191,22 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sportList}>
             {SPORTS_LIST.map((sport) => {
               const isActive = selectedSport === sport.name;
+              const isDisabled = sport.name !== 'Cricket';
               return (
                 <Pressable
                   key={sport.name}
-                  onPress={() => setSelectedSport(sport.name)}
+                  onPress={() => {
+                    if (isDisabled) {
+                      Alert.alert('Cricket Only Mode', `${sport.name} team creation will be enabled in a future update.`);
+                      return;
+                    }
+                    setSelectedSport(sport.name);
+                  }}
                   style={[
                     styles.sportChip,
-                    { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+                    { backgroundColor: 'transparent', borderColor: '#00000033' },
                     isActive && { backgroundColor: theme.primary, borderColor: theme.primary },
+                    isDisabled && { opacity: 0.45 },
                   ]}
                 >
                   <MaterialIcons
@@ -180,7 +231,7 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
 
         {/* Branding top row: Logo + Names */}
         <View style={styles.brandingTopRow}>
-          <Pressable style={[styles.logoDropZone, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]} onPress={pickImage}>
+          <Pressable style={[styles.logoDropZone, { backgroundColor: 'transparent', borderColor: '#00000033' }]} onPress={pickImage}>
             {crestImage ? (
               <Image source={typeof crestImage === 'string' ? { uri: crestImage } : crestImage} style={styles.logoImage} />
             ) : (
@@ -199,10 +250,10 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
             <TextInput
               style={[
                 styles.input,
-                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: teamNameError ? '#ef4444' : isNameFocused ? theme.primary : theme.outlineVariant + '44' }
+                { backgroundColor: 'transparent', color: theme.text, borderColor: teamNameError ? '#ef4444' : isNameFocused ? theme.primary : '#00000033' }
               ]}
               placeholder="e.g. London Strikers"
-              placeholderTextColor={theme.textSecondary + '80'}
+              placeholderTextColor="#94a3b8"
               value={teamName}
               onChangeText={(t) => { setTeamName(t); if (t.trim()) setTeamNameError(''); }}
               onFocus={() => setIsNameFocused(true)}
@@ -220,10 +271,10 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
             <TextInput
               style={[
                 styles.input,
-                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: shortNameError ? '#ef4444' : isShortFocused ? theme.primary : theme.outlineVariant + '44' }
+                { backgroundColor: 'transparent', color: theme.text, borderColor: shortNameError ? '#ef4444' : isShortFocused ? theme.primary : '#00000033' }
               ]}
               placeholder="LSR"
-              placeholderTextColor={theme.textSecondary + '80'}
+              placeholderTextColor="#94a3b8"
               maxLength={4}
               value={shortName}
               onChangeText={(t) => { setShortName(t.toUpperCase()); if (t.trim()) setShortNameError(''); }}
@@ -239,10 +290,10 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
             <TextInput
               style={[
                 styles.input,
-                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: phoneError ? '#ef4444' : isPhoneFocused ? theme.primary : theme.outlineVariant + '44' }
+                { backgroundColor: 'transparent', color: theme.text, borderColor: phoneError ? '#ef4444' : isPhoneFocused ? theme.primary : '#00000033' }
               ]}
               placeholder="+44 7000"
-              placeholderTextColor={theme.textSecondary + '80'}
+              placeholderTextColor="#94a3b8"
               keyboardType="phone-pad"
               value={captainPhone}
               onChangeText={handlePhoneChange}
@@ -280,7 +331,7 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                 onPress={() => setCrestImage(img)} 
                 style={[
                   styles.defaultLogoBtn, 
-                  { borderColor: crestImage === img ? theme.primary : theme.outlineVariant + '44', backgroundColor: theme.surfaceLow }
+                  { borderColor: crestImage === img ? theme.primary : '#00000033', backgroundColor: 'transparent' }
                 ]}
               >
                 <Image source={img} style={styles.defaultLogoImg} contentFit="cover" />
@@ -294,10 +345,10 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
           <TextInput
             style={[
               styles.input,
-              { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isGroundFocused ? theme.primary : theme.outlineVariant + '44' }
+              { backgroundColor: 'transparent', color: theme.text, borderColor: isGroundFocused ? theme.primary : '#00000033' }
             ]}
             placeholder="Apex Arena"
-            placeholderTextColor={theme.textSecondary + '80'}
+            placeholderTextColor="#94a3b8"
             value={homeGround}
             onChangeText={setHomeGround}
             onFocus={() => setIsGroundFocused(true)}
@@ -364,19 +415,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   badgeText: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 10,
     color: '#ffffff',
     letterSpacing: 0.5,
   },
   bannerTitle: {
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     fontSize: 24,
     color: '#ffffff',
     marginBottom: 6,
   },
   bannerSubtitle: {
-    fontFamily: 'HankenGrotesk_500Medium',
+    fontFamily: 'Sora_500Medium',
     fontSize: 13,
     color: '#ffffffe0',
     lineHeight: 18,
@@ -393,38 +444,37 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   featureText: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 12,
     color: '#ffffff',
   },
 
   /* Bento Card Container */
   bentoCard: {
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    padding: 16,
+    padding: 0,
+    marginBottom: 12,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
+    gap: 8,
+    marginBottom: 14,
   },
   cardIconWrap: {
-    width: 32,
-    height: 32,
+    width: 26,
+    height: 26,
     borderRadius: BorderRadius.sm,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cardTitle: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 16,
+    fontFamily: 'Sora_700Bold',
+    fontSize: 12.5,
   },
   cardSubtitle: {
-    fontFamily: 'HankenGrotesk_400Regular',
-    fontSize: 12,
-    marginTop: 2,
+    fontFamily: 'Sora_400Regular',
+    fontSize: 9.5,
+    marginTop: 1,
   },
 
   brandingTopRow: {
@@ -433,8 +483,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   logoDropZone: {
-    width: 80,
-    height: 80,
+    width: 68,
+    height: 68,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderStyle: 'dashed',
@@ -442,14 +492,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoUploadTitle: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 10,
-    marginTop: 4,
-  },
-  logoUploadHint: {
-    fontFamily: 'HankenGrotesk_500Medium',
+    fontFamily: 'Sora_700Bold',
     fontSize: 9,
     marginTop: 2,
+  },
+  logoUploadHint: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 8,
+    marginTop: 1,
   },
   logoImage: {
     width: '100%',
@@ -457,12 +507,12 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   defaultLogosSection: {
-    marginTop: 16,
+    marginTop: 12,
     marginBottom: 4,
   },
   defaultLogoBtn: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     borderRadius: BorderRadius.sm,
     borderWidth: 1.5,
     overflow: 'hidden',
@@ -482,17 +532,19 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   fieldLabel: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 11,
-    marginBottom: 6,
+    fontFamily: 'Sora_500Medium',
+    fontSize: 9,
+    letterSpacing: 0.1,
+    marginBottom: 3,
+    color: '#64748b',
   },
   input: {
-    height: 44,
-    borderRadius: BorderRadius.md,
+    height: 35,
+    borderRadius: BorderRadius.sm,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    fontFamily: 'HankenGrotesk_500Medium',
-    fontSize: 13,
+    paddingHorizontal: 10,
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11.5,
   },
   sportList: {
     flexDirection: 'row',
@@ -510,7 +562,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sportChipText: {
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 10,
     marginLeft: 4,
   },
@@ -536,7 +588,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButtonText: {
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     fontSize: 13,
     color: '#ffffff',
   },

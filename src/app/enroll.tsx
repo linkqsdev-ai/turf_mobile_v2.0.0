@@ -29,8 +29,6 @@ export default function EnrollScreen() {
   const location = (params.location as string) || 'TBD';
   const image = params.image || require('@/assets/images/illustrations/coaching_class_premium.png');
   const themeColor = (params.themeColor as string) || '#fbbf24';
-  const badgeText = (params.badgeText as string) || 'SUMMER CLASS';
-  const badgeIcon = (params.badgeIcon as any) || 'sunny';
 
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -67,7 +65,7 @@ export default function EnrollScreen() {
         {/* Top App Bar */}
         <View style={styles.header}>
           <Pressable 
-            onPress={() => router.back()} 
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} 
             style={styles.backButton}
           >
             <Ionicons name="arrow-back" size={24} color={theme.text} />
@@ -87,13 +85,7 @@ export default function EnrollScreen() {
               contentFit="cover" 
             />
             <View style={styles.heroOverlay}>
-              <View style={[styles.badge, { backgroundColor: themeColor + '33', borderColor: themeColor + '66' }]}>
-                <Ionicons name={badgeIcon} size={12} color={themeColor} />
-                <ThemedText type="labelSm" style={{ color: themeColor, fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', marginLeft: 4, letterSpacing: 0.8 }}>
-                  {badgeText}
-                </ThemedText>
-              </View>
-              <ThemedText type="headlineMd" style={{ color: '#ffffff', fontFamily: 'HankenGrotesk_800ExtraBold', marginTop: 8 }}>
+              <ThemedText type="headlineMd" style={{ color: '#ffffff', fontFamily: 'Sora_800ExtraBold' }}>
                 {title}
               </ThemedText>
               
@@ -165,7 +157,7 @@ export default function EnrollScreen() {
                           isActive ? { backgroundColor: themeColor } : { backgroundColor: theme.surfaceHigh }
                         ]}
                       >
-                        <ThemedText type="labelSm" style={{ color: isActive ? '#000000' : theme.textSecondary, fontFamily: isActive ? 'PlusJakartaSans_700Bold' : 'PlusJakartaSans_500Medium' }}>
+                        <ThemedText type="labelSm" style={{ color: isActive ? '#000000' : theme.textSecondary, fontFamily: isActive ? 'Sora_700Bold' : 'Sora_500Medium' }}>
                           {lvl}
                         </ThemedText>
                       </Pressable>
@@ -183,18 +175,18 @@ export default function EnrollScreen() {
             <View style={[styles.summaryCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }, Shadows.level1]}>
               <View style={styles.summaryRow}>
                 <ThemedText type="bodyMd" style={{ color: theme.textSecondary }}>Enrollment Fee</ThemedText>
-                <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>₹{basePrice}</ThemedText>
+                <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>₹{basePrice}</ThemedText>
               </View>
               <View style={styles.summaryRow}>
                 <ThemedText type="bodyMd" style={{ color: theme.textSecondary }}>Taxes & Service Fee</ThemedText>
-                <ThemedText type="bodyMd" style={{ fontFamily: 'HankenGrotesk_700Bold' }}>₹{serviceFee}</ThemedText>
+                <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>₹{serviceFee}</ThemedText>
               </View>
               
               <View style={[styles.divider, { backgroundColor: theme.outlineVariant + '44' }]} />
               
               <View style={styles.summaryRow}>
                 <ThemedText type="headlineSm">Total Due</ThemedText>
-                <ThemedText type="headlineSm" style={{ color: themeColor === '#fbbf24' ? theme.primary : themeColor, fontFamily: 'HankenGrotesk_800ExtraBold' }}>
+                <ThemedText type="headlineSm" style={{ color: themeColor === '#fbbf24' ? theme.primary : themeColor, fontFamily: 'Sora_800ExtraBold' }}>
                   ₹{total}
                 </ThemedText>
               </View>
@@ -207,14 +199,14 @@ export default function EnrollScreen() {
         <View style={[styles.stickyFooter, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '22' }]}>
           <View style={styles.footerInfo}>
             <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Total (incl. taxes)</ThemedText>
-            <ThemedText type="headlineSm" style={{ fontFamily: 'HankenGrotesk_800ExtraBold' }}>₹{total}</ThemedText>
+            <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_800ExtraBold' }}>₹{total}</ThemedText>
           </View>
           <Pressable 
             onPress={handleEnroll}
             style={[styles.payBtn, { backgroundColor: themeColor === '#fbbf24' ? theme.primary : themeColor }]}
           >
             <Ionicons name="card-outline" size={18} color="#ffffff" style={{ marginRight: 8 }} />
-            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 }}>
+            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 15 }}>
               Pay & Enroll
             </ThemedText>
           </Pressable>
@@ -236,7 +228,7 @@ const styles = StyleSheet.create({
     height: 56,
   },
   backButton: { padding: 6 },
-  headerTitle: { fontFamily: 'HankenGrotesk_700Bold', fontSize: 16 },
+  headerTitle: { fontFamily: 'Sora_700Bold', fontSize: 16 },
   scrollContent: { paddingBottom: 120 },
   heroCard: {
     height: 200,
@@ -253,15 +245,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#00000088',
     padding: Spacing.lg,
     justifyContent: 'flex-end',
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
   },
   heroMetaRow: {
     flexDirection: 'row',
@@ -286,7 +269,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     paddingHorizontal: Spacing.md,
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 15,
   },
   skillRow: { flexDirection: 'row', gap: Spacing.sm },

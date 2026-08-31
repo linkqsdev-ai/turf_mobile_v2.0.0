@@ -75,15 +75,8 @@ export default function CoachList() {
           <Pressable style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderWidth: 1 }]} onPress={() => router.push({ pathname: '/coach/[id]', params: { id: item.id } })}>
             <Image source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={styles.avatar} contentFit="cover" />
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <ThemedText type="headlineSm">{item.name}</ThemedText>
+              <ThemedText type="headlineSm" numberOfLines={1}>{item.name}</ThemedText>
               <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>{item.sport}</ThemedText>
-              <View style={{ flexDirection: 'row', marginTop: 6, gap: 8 }}>
-                {item.classes.map((c) => (
-                  <View key={c} style={styles.classBadge}>
-                    <ThemedText type="labelSm">{c}</ThemedText>
-                  </View>
-                ))}
-              </View>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <ThemedText type="labelMd">{item.rating} ★</ThemedText>
@@ -106,5 +99,4 @@ const styles = StyleSheet.create({
   filterBtnActive: { backgroundColor: '#e6f0ff' },
   card: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10, marginBottom: 12 },
   avatar: { width: 56, height: 56, borderRadius: 28 },
-  classBadge: { paddingHorizontal: 8, paddingVertical: 4, backgroundColor: '#eef5ff', borderRadius: 8 },
 });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 interface GradientContainerProps {
@@ -14,6 +15,7 @@ export function GradientContainer({ children, screenName, style }: GradientConta
 
   // Define gradients per screen and theme
   let colors: [string, string, ...string[]] = ['#ffffff', '#ffffff'];
+  let statusBarStyle: 'light' | 'dark' = theme === 'dark' ? 'light' : 'dark';
 
   if (theme === 'dark') {
     switch (screenName) {
@@ -45,6 +47,7 @@ export function GradientContainer({ children, screenName, style }: GradientConta
       case 'player-profile':
       case 'team-management':
       case 'fixture-management':
+      case 'settings':
         colors = ['#0d1d26', '#0d1d26'];
         break;
       case 'profile':
@@ -58,8 +61,13 @@ export function GradientContainer({ children, screenName, style }: GradientConta
         colors = ['#0d1d26', '#08131a'];
     }
   } else {
-    // Light & Blue Themes: Creamy double color gradient light white color
-    colors = ['#FDFCF7', '#F3EFE6'];
+    // Light & Blue Themes: Creamy double color gradient light top to bottom
+    colors = ['#FFFDF9', '#F4EFE6', '#E9E2D0'];
+    statusBarStyle = 'dark';
+  }
+
+  if (screenName === 'scoring') {
+    statusBarStyle = 'light';
   }
 
   return (
@@ -67,8 +75,9 @@ export function GradientContainer({ children, screenName, style }: GradientConta
       colors={colors}
       style={[styles.container, style]}
       start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      end={{ x: 0, y: 1 }}
     >
+      <StatusBar style={statusBarStyle} animated />
       {children}
     </LinearGradient>
   );

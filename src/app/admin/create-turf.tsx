@@ -23,7 +23,11 @@ export default function CreateTurf() {
   function saveTurf() {
     // For now persist locally (to be replaced with API)
     console.log('Saving turf', { turfName, sportName, slots });
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
   }
 
   return (
@@ -32,7 +36,13 @@ export default function CreateTurf() {
         <ThemedText type="headlineMd">Create New Turf</ThemedText>
 
         <ThemedText type="labelSm" style={{ marginTop: 16 }}>Turf Name</ThemedText>
-        <TextInput value={turfName} onChangeText={setTurfName} placeholder="Enter turf name" style={styles.input} />
+        <TextInput
+          value={turfName}
+          maxLength={30}
+          onChangeText={(t) => setTurfName(t.replace(/[0-9]/g, '').slice(0, 30))}
+          placeholder="Enter turf name (letters only)"
+          style={styles.input}
+        />
 
         <ThemedText type="labelSm" style={{ marginTop: 12 }}>Sport</ThemedText>
         <TextInput value={sportName} onChangeText={setSportName} placeholder="e.g. Football, Cricket" style={styles.input} />

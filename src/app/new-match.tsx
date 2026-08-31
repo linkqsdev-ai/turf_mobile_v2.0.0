@@ -14,6 +14,8 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { QuickMatchTab } from '@/components/matches/QuickMatchTab';
 
+import { StatusBar } from 'expo-status-bar';
+
 export default function NewMatchScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -22,7 +24,7 @@ export default function NewMatchScreen() {
     <GradientContainer screenName="booking" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.outlineVariant + '33' }]}>
           <View style={styles.headerLeft}>
             <Pressable
               onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/matches')}
@@ -30,7 +32,7 @@ export default function NewMatchScreen() {
             >
               <Ionicons name="arrow-back" size={22} color={theme.text} />
             </Pressable>
-            <ThemedText style={styles.headerText}>
+            <ThemedText style={[styles.headerText, { color: theme.text }]}>
               Quick Match
             </ThemedText>
           </View>
@@ -80,10 +82,10 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   headerText: {
-    fontSize: 16,
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 13,
+    fontFamily: 'Sora_700Bold',
     color: '#191c1e',
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   headerRight: {
     flexDirection: 'row',

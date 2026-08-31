@@ -6,11 +6,14 @@ import {
   TextInput,
   Pressable,
   Animated,
+  Platform,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter, useFocusEffect } from 'expo-router';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
@@ -18,22 +21,40 @@ import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useUserProfile } from '@/hooks/use-user-profile';
+import { useUserProfile, getShortLocation } from '@/hooks/use-user-profile';
+import { getAvatarSource } from '@/constants/avatars';
 import { CoinTossModal } from '@/components/coin-toss-modal';
-import { PromoBanner, AutoScrollingHorizontalBanners } from '@/components/promo-banner';
+import { PromoBanner, AutoScrollingHorizontalBanners, BANNER_DESIGNS_10 } from '@/components/promo-banner';
+import { turfApi } from '@/services/turf-api';
 
-// Mock Data for Dates
-const DATES = [
-  { id: '12', day: 'MON', date: '12' },
-  { id: '13', day: 'TUE', date: '13' }, // Active initially
-  { id: '14', day: 'WED', date: '14' },
-  { id: '15', day: 'THU', date: '15' },
-  { id: '16', day: 'FRI', date: '16' },
-  { id: '17', day: 'SAT', date: '17' },
-];
+// Dynamic 14-day rolling generator starting from Today
+const generateRolling14Days = () => {
+  const dates = [];
+  const today = new Date();
+  const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const dayStr = dayNames[d.getDay()];
+    const dateNum = d.getDate().toString().padStart(2, '0');
+    const fullDateStr = d.toISOString().split('T')[0];
+
+    dates.push({
+      id: fullDateStr,
+      day: dayStr,
+      date: dateNum,
+      fullDate: fullDateStr,
+      isToday: i === 0,
+      rawDate: d,
+    });
+  }
+  return dates;
+};
 
 import { SPORTS_LIST } from '@/constants/sports';
 import { useWalletStore, useTurfStore } from '@/store/app-store';
+import { cleanLocation } from '@/utils/location';
 
 export default function ExploreScreen() {
   const theme = useTheme();
@@ -41,9 +62,36 @@ export default function ExploreScreen() {
   const { profile } = useUserProfile();
   const { walletBalance } = useWalletStore();
   const { ownedTurfs } = useTurfStore();
-  
-  const [selectedDate, setSelectedDate] = useState('13');
-  const [selectedSport, setSelectedSport] = useState('All');
+
+  const [backendTurfs, setBackendTurfs] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchTurfs = React.useCallback(async () => {
+    try {
+      const data = await turfApi.listTurfs();
+      if (Array.isArray(data)) {
+        setBackendTurfs(data);
+      }
+    } catch (err) {
+      console.log('Failed to fetch backend turfs:', err);
+    }
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchTurfs();
+    }, [fetchTurfs])
+  );
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchTurfs();
+    setRefreshing(false);
+  }, [fetchTurfs]);
+
+  const rolling14Days = React.useMemo(() => generateRolling14Days(), []);
+  const [selectedSport, setSelectedSport] = useState('Cricket');
+  const [selectedDate, setSelectedDate] = useState(rolling14Days[0].id);
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<Record<string, boolean>>({ 'skyline': false, 'the-grid': false, 'lords': false, 'wembley': false });
   const [coinTossVisible, setCoinTossVisible] = useState(false);
@@ -88,29 +136,29 @@ export default function ExploreScreen() {
           <View style={styles.headerLeft}>
             <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
               <Image
-                source={typeof profile.avatarUrl === 'string' && !/^\d+$/.test(profile.avatarUrl) ? { uri: profile.avatarUrl } : (typeof profile.avatarUrl === 'number' ? profile.avatarUrl : parseInt(profile.avatarUrl, 10))}
+                source={getAvatarSource(profile.avatarUrl)}
                 style={styles.headerAvatar}
               />
             </Pressable>
             <View style={styles.headerTextGroup}>
-              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', lineHeight: 18 }}>
+              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'Sora_700Bold', lineHeight: 18 }}>
                 {profile.name}
               </ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                 <Ionicons name="location-sharp" size={12} color={theme.secondary} />
                 <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
-                  {profile.location}
+                  {getShortLocation(profile.location)}
                 </ThemedText>
               </View>
             </View>
           </View>
           <View style={styles.headerRightActions}>
-            <Pressable 
-              style={[styles.iconButton, { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, backgroundColor: theme.primary + '10', borderRadius: 16, height: 32 }]} 
-              onPress={() => triggerToast(`Wallet Balance: ₹${walletBalance.toFixed(2)}`)}
+            <Pressable
+              style={[styles.iconButton, { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, backgroundColor: theme.primary + '10', borderRadius: 8, height: 32 }]}
+              onPress={() => router.push('/wallet')}
             >
               <Image source={require('@/assets/images/illustrations/wallet_blue.png')} style={{ width: 16, height: 16 }} contentFit="contain" />
-              <ThemedText style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: theme.primary }}>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>
                 ₹{walletBalance.toFixed(0)}
               </ThemedText>
             </Pressable>
@@ -131,345 +179,525 @@ export default function ExploreScreen() {
           </View>
         </View>
 
-      {/* Sticky top Date Selection and Categories Filter Container */}
-      <View style={{ backgroundColor: theme.background, borderBottomWidth: 1, borderColor: theme.outlineVariant + '15', paddingBottom: 4 }}>
-        
-        {/* Compact Calendar Picker Row */}
-        <View style={[styles.section, { marginTop: 4, marginBottom: 4 }]}>
-          <View style={[styles.sectionHeader, { marginBottom: 2 }]}>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
-              FEBRUARY 2024
-            </ThemedText>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.calendarContainer, { paddingVertical: 4 }]}
-          >
-            {DATES.map((item) => {
-              const isActive = item.date === selectedDate;
-              return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => setSelectedDate(item.date)}
-                  style={[
-                    styles.calendarDay,
-                    isActive
-                      ? { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
-                      : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
-                  ]}
-                >
-                  <ThemedText
-                    type="labelSm"
-                    style={{
-                      color: isActive ? theme.onSecondaryContainer : theme.textSecondary,
-                      opacity: isActive ? 0.8 : 1,
-                      fontSize: 8.5,
-                    }}
-                  >
-                    {item.day}
-                  </ThemedText>
-                  <ThemedText
-                    type="headlineSm"
-                    style={{
-                      color: theme.text,
-                      fontFamily: isActive ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_600SemiBold',
-                      marginTop: 2,
-                      fontSize: 11,
-                    }}
-                  >
-                    {item.date}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
+        {/* Sticky top Date Selection and Categories Filter Container */}
+        <View style={{ backgroundColor: theme.background, borderBottomWidth: 1, borderColor: theme.outlineVariant + '15', paddingBottom: 4 }}>
 
-        {/* Search & Filter Category Row */}
-        <View style={[styles.section, { marginTop: 4, marginBottom: 4 }]}>
-          <View style={[styles.searchContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-            <Ionicons name="search" size={16} color={theme.textSecondary} style={{ marginRight: 6 }} />
-            <TextInput
-              style={[styles.searchInput, { color: theme.text }]}
-              placeholder="Search venues or sports..."
-              placeholderTextColor={theme.textSecondary + 'aa'}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.filtersContainer, { paddingVertical: 4 }]}
-            style={{ marginTop: 4 }}
-          >
-            {[{ name: 'All', icon: 'apps', color: theme.textSecondary }, ...SPORTS_LIST].map((sport) => {
-              const isActive = sport.name === selectedSport;
-              return (
-                <Pressable
-                  key={sport.name}
-                  onPress={() => setSelectedSport(sport.name)}
-                  style={[
-                    styles.filterChip,
-                    { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
-                    isActive && { backgroundColor: theme.primary, borderColor: theme.primary },
-                  ]}
-                >
-                  <MaterialIcons
-                    name={sport.icon as any}
-                    size={12}
-                    color={isActive ? '#ffffff' : theme.textSecondary}
-                    style={{ marginRight: 4 }}
-                  />
-                  <ThemedText
-                    type="labelMd"
-                    style={{ 
-                      color: isActive ? '#ffffff' : theme.textSecondary,
-                      fontFamily: 'HankenGrotesk_600SemiBold',
-                      fontSize: 10,
-                      letterSpacing: 0.2,
-                    }}
-                  >
-                    {sport.name}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      </View>
-
-      <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {/* Booking Hero Banner */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, marginBottom: Spacing.xs }}>
-            <View style={{ flex: 1 }}>
-              <ThemedText type="headlineLg" style={{ color: theme.text }}>Book a Turf</ThemedText>
-              <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
-                Find and book the perfect sports turf near you.
+          {/* Compact Calendar Picker Row */}
+          <View style={[styles.section, { marginTop: 4, marginBottom: 4 }]}>
+            <View style={[styles.sectionHeader, { marginBottom: 2 }]}>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
+                {rolling14Days[0].rawDate.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}
               </ThemedText>
             </View>
-            <Image
-              source={require('@/assets/images/illustrations/booking_hero.png')}
-              style={{ width: 100, height: 100 }}
-              contentFit="contain"
-            />
-          </View>
-
-          {/* Offers & Gift Vouchers (Horizontal Card, Auto Scroll, Reduced Width & Gap) */}
-          <View style={[styles.section, { paddingHorizontal: 0 }]}>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary, paddingHorizontal: Spacing.containerMargin, marginBottom: 4, letterSpacing: 0.5 }}>
-              SPECIAL DEALS & VOUCHERS
-            </ThemedText>
-            <AutoScrollingHorizontalBanners 
-              cardWidth={270}
-              gap={12}
-              banners={[
-                {
-                  title: "Gift a Game to Your Loved Ones",
-                  subtitle: "The easiest way to nail a gift for a sports lover",
-                  buttonText: "Buy Gift Card",
-                  badgeText: "GIFT VOUCHER",
-                  backgroundImage: require("@/assets/images/sports/sport_all.png"),
-                  buttonBackgroundColor: "#ffffff",
-                  buttonTextColor: "#1e3a8a",
-                  onPress: () => router.push('/booking'),
-                },
-                {
-                  title: "Summer Turf Festival Offer",
-                  subtitle: "Play under the stars. Special discounts after 9PM.",
-                  buttonText: "Explore Offers",
-                  badgeText: "SPECIAL OFFER",
-                  backgroundImage: require("@/assets/images/sports/sport_booking.png"),
-                  buttonBackgroundColor: "#a3e635",
-                  buttonTextColor: "#064e3b",
-                  onPress: () => router.push('/(tabs)/explore'),
-                },
-                {
-                  title: "YAWAH Turf Special Offer",
-                  subtitle: "Get flat 30% OFF on all bookings. Code: YAWAHTURF",
-                  buttonText: "Book Now",
-                  badgeText: "SPECIAL OFFER",
-                  backgroundImage: require("@/assets/images/sports/sport_booking.png"),
-                  buttonBackgroundColor: "#5D68E8",
-                  buttonTextColor: "#ffffff",
-                  onPress: () => router.push('/(tabs)/explore'),
-                }
-              ]}
-            />
-          </View>
-          {/* Turf List */}
-          <View style={[styles.section, { gap: 22, paddingBottom: 100 }]}>
-            {(() => {
-              const STATIC_TURFS = [
-                {
-                  id: 'skyline',
-                  name: 'Skyline Arena Elite',
-                  location: 'Canary Wharf, East London',
-                  rating: '4.9',
-                  price: 25,
-                  image: require('@/assets/images/sports/skyline_turf.png'),
-                  sports: ['soccer', 'cricket'],
-                  amenities: ['shower', 'car', 'wifi'],
-                  statusText: '🟢 8 slots left today',
-                  favCount: 124,
-                  isAi: true,
-                },
-                {
-                  id: 'the-grid',
-                  name: 'The Grid Multisport',
-                  location: 'Stratford Central',
-                  rating: '4.7',
-                  price: 18,
-                  image: require('@/assets/images/sports/grid_court.png'),
-                  sports: ['soccer', 'cricket'],
-                  amenities: ['shower', 'coffee', 'hanger'],
-                  statusText: '🟢 12 slots left today',
-                  favCount: 89,
-                  isAi: false,
-                },
-                {
-                  id: 'lords',
-                  name: "Lord's View Pavillion",
-                  location: "St John's Wood",
-                  rating: '4.8',
-                  price: 22,
-                  image: require('@/assets/images/sports/lords_nets.png'),
-                  sports: ['cricket', 'tennis'],
-                  amenities: ['car', 'hanger', 'coffee'],
-                  statusText: '🟢 4 slots left today',
-                  favCount: 210,
-                  isAi: false,
-                },
-                {
-                  id: 'wembley',
-                  name: 'Wembley Turf Hub',
-                  location: 'Wembley Park, London',
-                  rating: '4.6',
-                  price: 30,
-                  image: require('@/assets/images/sports/wembley_stadium_turf.png'),
-                  sports: ['soccer'],
-                  amenities: ['shower', 'car', 'coffee'],
-                  statusText: '🔴 Filling Fast - 2 slots left',
-                  favCount: 342,
-                  isAi: false,
-                }
-              ];
-
-              const customTurfs = (ownedTurfs || []).map((t: any) => ({
-                id: t.id,
-                name: t.name,
-                location: t.location,
-                rating: '4.5',
-                price: t.basePrice || 20,
-                image: require('@/assets/images/sports/sport_booking.png'),
-                sports: ['soccer', 'cricket'],
-                amenities: ['shower', 'car'],
-                statusText: '🟢 Slots Available',
-                favCount: 10,
-                isAi: false,
-              }));
-
-              const allTurfs = [...customTurfs, ...STATIC_TURFS];
-
-              return allTurfs.map((turf) => {
-                const isFav = !!favorites[turf.id];
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[styles.calendarContainer, { paddingVertical: 4 }]}
+            >
+              {rolling14Days.map((item) => {
+                const isActive = item.id === selectedDate;
                 return (
                   <Pressable
-                    key={turf.id}
-                    onPress={() => handleTurfSelect(turf.id, turf.name)}
-                    style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
+                    key={item.id}
+                    onPress={() => setSelectedDate(item.id)}
+                    style={[
+                      styles.calendarDay,
+                      isActive
+                        ? { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
+                        : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
+                    ]}
                   >
-                    <View style={styles.imageContainer}>
-                      {turf.isAi && (
-                        <View style={[styles.aiBadge, { backgroundColor: theme.primary }]}>
-                          <Ionicons name="sparkles" size={8} color="#ffffff" />
-                          <ThemedText style={[styles.aiBadgeText, { color: '#ffffff' }]}>AI</ThemedText>
-                        </View>
-                      )}
-                      <Image
-                        source={turf.image}
-                        style={styles.turfImage}
-                        contentFit="cover"
-                      />
-                    </View>
+                    <ThemedText
+                      type="labelSm"
+                      style={{
+                        color: isActive ? '#ffffff' : theme.textSecondary,
+                        fontFamily: 'Sora_700Bold',
+                        fontSize: 9,
+                        letterSpacing: 0.3,
+                      }}
+                    >
+                      {item.day}
+                    </ThemedText>
+                    <ThemedText
+                      type="headlineSm"
+                      style={{
+                        color: isActive ? '#ffffff' : theme.text,
+                        fontFamily: 'Sora_700Bold',
+                        marginTop: 2,
+                        fontSize: 14,
+                      }}
+                    >
+                      {item.date}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
 
-                    <View style={styles.cardInfo}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                        <View style={{ flex: 1, paddingRight: 8 }}>
-                          <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text, marginBottom: 2 }]} numberOfLines={1}>
-                            {turf.name}
-                          </ThemedText>
-                          <View style={styles.locationRow}>
-                            <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
-                            <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
-                              {turf.location}
+          {/* Search & Filter Category Row */}
+          <View style={[styles.section, { marginTop: 4, marginBottom: 4 }]}>
+            <View style={[styles.searchContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+              <Ionicons name="search" size={16} color={theme.textSecondary} style={{ marginRight: 6 }} />
+              <TextInput
+                style={[styles.searchInput, { color: theme.text }]}
+                placeholder="Search venues or sports..."
+                placeholderTextColor="#94a3b8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[styles.filtersContainer, { paddingVertical: 4 }]}
+              style={{ marginTop: 4 }}
+            >
+              {[{ name: 'All', icon: 'apps', color: theme.primary }, ...SPORTS_LIST].map((sport) => {
+                const isActive = sport.name === selectedSport;
+                return (
+                  <Pressable
+                    key={sport.name}
+                    onPress={() => setSelectedSport(sport.name)}
+                    style={[
+                      styles.filterChip,
+                      { backgroundColor: theme.surfaceLow, borderColor: isActive ? theme.primary : theme.outlineVariant + '44' },
+                      isActive && { backgroundColor: theme.primary, borderColor: theme.primary },
+                    ]}
+                  >
+                    <MaterialIcons
+                      name={sport.icon as any}
+                      size={13}
+                      color={isActive ? '#ffffff' : theme.textSecondary}
+                      style={{ marginRight: 4 }}
+                    />
+                    <ThemedText
+                      type="labelMd"
+                      style={{
+                        color: isActive ? '#ffffff' : theme.text,
+                        fontFamily: isActive ? 'Sora_700Bold' : 'Sora_600SemiBold',
+                        fontSize: 10.5,
+                        letterSpacing: 0.2,
+                      }}
+                    >
+                      {sport.name}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+
+        <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+            }
+          >
+            {/* Booking Hero Banner */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, marginBottom: Spacing.xs }}>
+              <View style={{ flex: 1 }}>
+                <ThemedText type="headlineLg" style={{ color: theme.text }}>Book a Turf</ThemedText>
+                <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
+                  Find and book the perfect sports turf near you.
+                </ThemedText>
+              </View>
+              <Image
+                source={require('@/assets/images/illustrations/booking_hero.png')}
+                style={{ width: 100, height: 100 }}
+                contentFit="contain"
+              />
+            </View>
+
+            {/* Offers & Gift Vouchers */}
+            <View style={[styles.section, { paddingHorizontal: 0 }]}>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, paddingHorizontal: Spacing.containerMargin, marginBottom: 8, letterSpacing: 0.5 }}>
+                SPECIAL DEALS & VOUCHERS
+              </ThemedText>
+              <AutoScrollingHorizontalBanners
+                cardWidth={310}
+                gap={14}
+                banners={[
+                  BANNER_DESIGNS_10.EXPLORE_YOUR_WORLD(() => router.push('/booking')),
+                  BANNER_DESIGNS_10.SALE_50_OFF_TURF(() => router.push('/booking')),
+                  BANNER_DESIGNS_10.STUDENT_YOUTH_PASS(() => router.push('/booking')),
+                  BANNER_DESIGNS_10.MIDNIGHT_MADNESS_SLOTS(() => router.push('/booking')),
+                  BANNER_DESIGNS_10.GIFT_GAME_VOUCHER(() => router.push('/wallet')),
+                ]}
+              />
+            </View>
+
+            {/* Turf List */}
+            <View style={[styles.section, { gap: 14, paddingBottom: 110 }]}>
+              {(() => {
+                const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const currentToday = daysOfWeek[new Date().getDay()];
+
+                const resolveAmenityIcons = (amenitiesObj?: Record<string, boolean>) => {
+                  if (!amenitiesObj) return ['flashlight-outline', 'car-outline', 'wifi-outline'];
+                  const map: Record<string, string> = {
+                    floodlights: 'flashlight-outline',
+                    parking: 'car-outline',
+                    lockers: 'lock-closed-outline',
+                    showers: 'water-outline',
+                    bibs: 'shirt-outline',
+                    wifi: 'wifi-outline',
+                    firstaid: 'medical-outline',
+                    canteen: 'cafe-outline',
+                  };
+                  const active = Object.keys(amenitiesObj).filter(k => amenitiesObj[k] === true).map(k => map[k.toLowerCase()]).filter(Boolean);
+                  return active.length > 0 ? active : ['flashlight-outline'];
+                };
+
+                const SPORT_TURF_IMAGES: Record<string, string[]> = {
+                  cricket: [
+                    'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=600&q=80',
+                    'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=600&q=80',
+                  ],
+                  football: [
+                    'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
+                    'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80',
+                  ],
+                  badminton: [
+                    'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=600&q=80',
+                  ],
+                  basketball: [
+                    'https://images.unsplash.com/photo-1505666287802-931dc83948e9?auto=format&fit=crop&w=600&q=80',
+                  ],
+                  tennis: [
+                    'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=600&q=80',
+                  ],
+                  volleyball: [
+                    'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80',
+                  ],
+                };
+
+                const BADGE_POOL = ['🆕 JUST ADDED', '✨ AI PRICED', '🔥 POPULAR', '🏆 PREMIUM', '⭐ 5.0 RATED', '⚡ INSTANT BOOK'];
+
+                const backendFormattedTurfs = (backendTurfs || []).map((t: any, idx: number) => {
+                  const todayAvailableCount = t.slots && t.slots.length > 0
+                    ? t.slots.filter((s: any) => s.day === currentToday && s.status === 'available').length
+                    : 10;
+
+                  const sType = (t.sportType || 'Cricket').toLowerCase();
+                  const pool = SPORT_TURF_IMAGES[sType] || SPORT_TURF_IMAGES.cricket;
+                  const fallbackImgUrl = pool[idx % pool.length];
+                  const turfBadge = BADGE_POOL[idx % BADGE_POOL.length];
+
+                  let resolvedImage: any = { uri: fallbackImgUrl };
+                  if (t.thumbnailImage && typeof t.thumbnailImage === 'string' && (t.thumbnailImage.startsWith('http') || t.thumbnailImage.startsWith('file:'))) {
+                    resolvedImage = { uri: t.thumbnailImage };
+                  } else if (t.images && Array.isArray(t.images) && t.images[0]) {
+                    resolvedImage = { uri: t.images[0] };
+                  }
+
+                  return {
+                    id: t.id,
+                    name: t.name,
+                    location: cleanLocation(t.address || 'Trichy Zone IV, Tiruchirappalli'),
+                    rating: t.rating || 5.0,
+                    favCount: (idx + 1) * 3,
+                    image: resolvedImage,
+                    badge: turfBadge,
+                    sport: t.sportType || 'Cricket',
+                    surfaceType: t.surfaceType || (sType.includes('cricket') ? 'Astro Turf Pitch' : sType.includes('badminton') ? 'Indoor Woodcourt' : '5G Rubber Infill'),
+                    price: t.pricePerSlot || 1000,
+                    availableSlots: todayAvailableCount > 0 ? todayAvailableCount : 10,
+                    amenitiesIcons: resolveAmenityIcons(t.amenities),
+                    createdAt: t.createdAt || new Date().toISOString(),
+                  };
+                });
+
+                const userFormattedTurfs = (ownedTurfs || []).map((t, idx) => {
+                  const todayAvailableCount = t.slots && t.slots.length > 0
+                    ? t.slots.filter(s => s.day === currentToday && s.status === 'available').length
+                    : 10;
+
+                  const sType = (t.sportType || 'Cricket').toLowerCase();
+                  const pool = SPORT_TURF_IMAGES[sType] || SPORT_TURF_IMAGES.cricket;
+                  const fallbackImgUrl = pool[idx % pool.length];
+                  const turfBadge = BADGE_POOL[idx % BADGE_POOL.length];
+
+                  let resolvedImage: any = { uri: fallbackImgUrl };
+                  if (t.thumbnailImage && typeof t.thumbnailImage === 'string' && (t.thumbnailImage.startsWith('http') || t.thumbnailImage.startsWith('file:'))) {
+                    resolvedImage = { uri: t.thumbnailImage };
+                  } else if ((t as any).images && Array.isArray((t as any).images) && (t as any).images[0]) {
+                    resolvedImage = { uri: (t as any).images[0] };
+                  }
+
+                  return {
+                    id: t.id,
+                    name: t.name,
+                    location: cleanLocation(t.address || 'Trichy Zone IV, Tiruchirappalli'),
+                    rating: t.rating || 5.0,
+                    favCount: (idx + 1) * 3,
+                    image: resolvedImage,
+                    badge: turfBadge,
+                    sport: t.sportType || 'Cricket',
+                    surfaceType: t.surfaceType || (sType.includes('cricket') ? 'Astro Turf Pitch' : sType.includes('badminton') ? 'Indoor Woodcourt' : '5G Rubber Infill'),
+                    price: t.pricePerSlot || 1000,
+                    availableSlots: todayAvailableCount > 0 ? todayAvailableCount : 10,
+                    amenitiesIcons: resolveAmenityIcons(t.amenities),
+                    createdAt: (t as any).createdAt || new Date().toISOString(),
+                  };
+                });
+
+                const STATIC_TURFS = [
+                  {
+                    id: 'skyline',
+                    name: 'Skyline Arena Elite',
+                    location: 'Canary Wharf, East London',
+                    rating: 4.9,
+                    favCount: 124,
+                    image: { uri: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80' },
+                    badge: '✨ AI PRICED',
+                    sport: 'Football',
+                    surfaceType: '5G Rubber Infill',
+                    price: 2500,
+                    availableSlots: 8,
+                    amenitiesIcons: ['flashlight-outline', 'car-outline', 'wifi-outline'],
+                    createdAt: '2025-01-01T00:00:00.000Z',
+                  },
+                  {
+                    id: 'the-grid',
+                    name: 'The Grid Sports Complex',
+                    location: 'Stratford, London',
+                    rating: 4.7,
+                    favCount: 89,
+                    image: { uri: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=600&q=80' },
+                    badge: '🔥 POPULAR',
+                    sport: 'Cricket',
+                    surfaceType: 'Astro Turf Pitch',
+                    price: 2000,
+                    availableSlots: 4,
+                    amenitiesIcons: ['flashlight-outline', 'shirt-outline', 'water-outline'],
+                    createdAt: '2025-01-02T00:00:00.000Z',
+                  },
+                  {
+                    id: 'lords',
+                    name: 'Lord’s Indoor Nets',
+                    location: 'St John’s Wood, London',
+                    rating: 4.95,
+                    favCount: 312,
+                    image: { uri: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=600&q=80' },
+                    badge: '🏆 PREMIUM',
+                    sport: 'Cricket',
+                    surfaceType: 'Indoor Woodcourt',
+                    price: 3500,
+                    availableSlots: 2,
+                    amenitiesIcons: ['flashlight-outline', 'lock-closed-outline', 'car-outline'],
+                    createdAt: '2025-01-03T00:00:00.000Z',
+                  },
+                  {
+                    id: 'wembley',
+                    name: 'Wembley Powerleague',
+                    location: 'Wembley, London',
+                    rating: 4.8,
+                    favCount: 205,
+                    image: { uri: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80' },
+                    badge: '⭐ 5.0 RATED',
+                    sport: 'Football',
+                    surfaceType: 'Synthetic Grass',
+                    price: 3000,
+                    availableSlots: 6,
+                    amenitiesIcons: ['flashlight-outline', 'car-outline', 'wifi-outline'],
+                    createdAt: '2025-01-04T00:00:00.000Z',
+                  },
+                ];
+
+                const seenIds = new Set<string>();
+                const ALL_TURFS: any[] = [];
+                [...backendFormattedTurfs, ...userFormattedTurfs, ...STATIC_TURFS].forEach(t => {
+                  if (t && t.id && !seenIds.has(t.id)) {
+                    seenIds.add(t.id);
+                    ALL_TURFS.push(t);
+                  }
+                });
+
+                // Sort newest/most recently added turfs to the top
+                ALL_TURFS.sort((a, b) => {
+                  const aTime = a.createdAt ? new Date(a.createdAt).getTime() : (a.id?.startsWith('turf-') ? parseInt(a.id.replace('turf-', '')) || 0 : 0);
+                  const bTime = b.createdAt ? new Date(b.createdAt).getTime() : (b.id?.startsWith('turf-') ? parseInt(b.id.replace('turf-', '')) || 0 : 0);
+                  return bTime - aTime;
+                });
+
+                const filteredTurfs = ALL_TURFS.filter(t => {
+                  const matchesSport = selectedSport === 'All' || t.sport.toLowerCase() === selectedSport.toLowerCase();
+                  const matchesQuery = searchQuery.trim() === '' || t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.location.toLowerCase().includes(searchQuery.toLowerCase());
+                  return matchesSport && matchesQuery;
+                });
+
+                const renderTurfCard = (turf: any) => {
+                  const isFav = !!favorites[turf.id];
+                  return (
+                    <Pressable
+                      key={turf.id}
+                      onPress={() => handleTurfSelect(turf.id, turf.name)}
+                      style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
+                    >
+                      <View style={styles.imageContainer}>
+                        <Image
+                          source={turf.image}
+                          style={styles.turfImage}
+                          contentFit="cover"
+                          transition={200}
+                        />
+                        {!!turf.badge && (
+                          <View style={styles.cardBadge}>
+                            <ThemedText style={styles.cardBadgeText}>{turf.badge}</ThemedText>
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={styles.cardInfo}>
+                        <View style={styles.cardHeaderRow}>
+                          <View style={{ flex: 1, paddingRight: 6 }}>
+                            <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text }]} numberOfLines={1}>
+                              {turf.name}
+                            </ThemedText>
+                            <View style={styles.locationRow}>
+                              <Ionicons name="location-outline" size={11} color={theme.textSecondary} style={{ marginRight: 2 }} />
+                              <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
+                                {turf.location}
+                              </ThemedText>
+                            </View>
+                          </View>
+                          <View style={styles.ratingBadge}>
+                            <Ionicons name="star" size={11} color="#f59e0b" />
+                            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10.5, fontFamily: 'Sora_700Bold' }}>
+                              {turf.rating}
                             </ThemedText>
                           </View>
                         </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <View style={styles.ratingBadge}>
-                            <Ionicons name="star" size={10} color={theme.secondaryContainer} />
-                            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'HankenGrotesk_700Bold' }}>{turf.rating}</ThemedText>
-                          </View>
-                          <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
-                            {turf.sports.map((sp: string) => (
-                              <MaterialCommunityIcons key={sp} name={sp as any} size={12} color={theme.secondary} />
+
+                        <View style={styles.midInfoRow}>
+                          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                            {(turf.amenitiesIcons || ['flashlight-outline']).slice(0, 3).map((iconName: any, idx: number) => (
+                              <Ionicons key={idx} name={iconName as any} size={12} color={theme.primary} />
                             ))}
                           </View>
+                          <View style={styles.slotsPill}>
+                            <ThemedText style={styles.slotsPillText}>
+                              ⚡ {turf.availableSlots} slots left
+                            </ThemedText>
+                          </View>
                         </View>
-                      </View>
 
-                      {/* Extra Details (Icons Only for Amenities) */}
-                      <View style={{ marginVertical: 3, gap: 4 }}>
-                        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-                          {turf.amenities.map((am: string) => (
-                            <MaterialCommunityIcons key={am} name={am as any} size={14} color={theme.primary} />
-                          ))}
+                        <View style={styles.cardActions}>
+                          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                            <ThemedText type="headlineSm" style={{ color: theme.primary, fontSize: 15.5, fontFamily: 'Sora_700Bold' }}>
+                              ₹{turf.price}
+                            </ThemedText>
+                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>
+                              /hr
+                            </ThemedText>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Pressable
+                              onPress={() => handleTurfSelect(turf.id, turf.name)}
+                              style={[styles.actionButton, { backgroundColor: theme.primary }]}
+                            >
+                              <ThemedText type="labelMd" style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                                Book Now
+                              </ThemedText>
+                            </Pressable>
+                            <Pressable
+                              onPress={() => toggleFavorite(turf.id)}
+                              style={[styles.favButton, { backgroundColor: theme.surfaceLow }]}
+                            >
+                              <Ionicons
+                                name={isFav ? 'heart' : 'heart-outline'}
+                                size={15}
+                                color={isFav ? theme.error : theme.textSecondary}
+                              />
+                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 3, fontSize: 10 }}>
+                                {turf.favCount}
+                              </ThemedText>
+                            </Pressable>
+                          </View>
                         </View>
-                        <ThemedText style={{ color: turf.statusText.includes('🔴') ? '#d97706' : '#0f9f58', fontSize: 9.5, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
-                          {turf.statusText}
-                        </ThemedText>
                       </View>
+                    </Pressable>
+                  );
+                };
 
-                      <View style={styles.cardActions}>
-                        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                          <ThemedText type="headlineSm" style={{ color: theme.secondary, fontSize: 15, fontFamily: 'HankenGrotesk_700Bold' }}>₹{turf.price}</ThemedText>
-                          <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>/hr</ThemedText>
-                        </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <Pressable 
-                            onPress={() => handleTurfSelect(turf.id, turf.name)}
-                            style={[styles.actionButton, { backgroundColor: theme.secondaryContainer }]}
-                          >
-                            <ThemedText type="labelMd" style={{ color: theme.onSecondaryContainer, fontSize: 11, fontFamily: 'HankenGrotesk_700Bold' }}>Book Now</ThemedText>
-                          </Pressable>
-                          <Pressable 
-                            onPress={() => toggleFavorite(turf.id)}
-                            style={styles.favButton}
-                          >
-                            <MaterialCommunityIcons 
-                              name={isFav ? 'cards-heart' : 'cards-heart-outline'} 
-                              size={16} 
-                              color={isFav ? theme.error : theme.textSecondary} 
-                            />
-                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 4 }}>{turf.favCount}</ThemedText>
-                          </Pressable>
-                        </View>
-                      </View>
+                if (filteredTurfs.length === 0) {
+                  return (
+                    <View style={{ padding: Spacing.xl, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.xl, marginVertical: Spacing.md, borderColor: theme.outlineVariant + '33', borderWidth: 1 }}>
+                      <Ionicons name="search-outline" size={44} color={theme.textSecondary} style={{ opacity: 0.5, marginBottom: 10 }} />
+                      <ThemedText type="headlineSm" style={{ color: theme.text, textAlign: 'center', fontFamily: 'Sora_700Bold' }}>
+                        No {selectedSport} Turfs Found
+                      </ThemedText>
+                      <ThemedText style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 6, fontSize: 12, lineHeight: 18 }}>
+                        There are currently no {selectedSport} venues listed. Switch filter to All Sports or add a new pitch!
+                      </ThemedText>
+                      <Pressable 
+                        onPress={() => setSelectedSport('All')}
+                        style={{ backgroundColor: theme.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: BorderRadius.lg, marginTop: 14 }}
+                      >
+                        <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>Show All Sports</ThemedText>
+                      </Pressable>
                     </View>
-                  </Pressable>
+                  );
+                }
+
+                const firstChunk = filteredTurfs.slice(0, 4);
+                const remainingChunk = filteredTurfs.slice(4);
+
+                return (
+                  <>
+                    {firstChunk.map(renderTurfCard)}
+
+                    {/* Tournament Offer Zone — Rendered strictly after 4 cards */}
+                    <View style={{ marginVertical: 6, paddingHorizontal: 0, marginLeft: -Spacing.containerMargin, marginRight: -Spacing.containerMargin }}>
+                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, paddingHorizontal: Spacing.containerMargin, marginBottom: 8, letterSpacing: 0.5 }}>
+                        TOURNAMENT OFFER ZONE
+                      </ThemedText>
+                      <AutoScrollingHorizontalBanners
+                        cardWidth={305}
+                        gap={16}
+                        banners={[
+                          {
+                            title: "Grand Summer Tournament!",
+                            subtitle: "Compete in the League & win ₹50,000 + kit gifts!",
+                            buttonText: "Register Team",
+                            isGradient: true,
+                            gradientColors: ['rgba(99, 102, 241, 0.7)', 'rgba(168, 85, 247, 0.9)'],
+                            titleColor: '#ffffff',
+                            subtitleColor: 'rgba(255, 255, 255, 0.92)',
+                            buttonBackgroundColor: '#ffffff',
+                            buttonTextColor: '#4f46e5',
+                            backgroundImage: require("@/assets/images/illustrations/summer_tournament_banner_bg.png"),
+                            onPress: () => router.push('/(tabs)/tournaments'),
+                          },
+                          {
+                            title: "Weekend Champions League",
+                            subtitle: "20% OFF Team Registration fees this weekend!",
+                            buttonText: "Join Tournament",
+                            isGradient: true,
+                            gradientColors: ['rgba(245, 158, 11, 0.75)', 'rgba(217, 119, 6, 0.95)'],
+                            titleColor: '#ffffff',
+                            subtitleColor: 'rgba(255, 255, 255, 0.92)',
+                            buttonBackgroundColor: '#ffffff',
+                            buttonTextColor: '#d97706',
+                            backgroundImage: require("@/assets/images/illustrations/tournament_hero.png"),
+                            onPress: () => router.push('/(tabs)/tournaments'),
+                          }
+                        ]}
+                      />
+                    </View>
+
+                    {remainingChunk.map(renderTurfCard)}
+                  </>
                 );
-              });
-            })()}
-          </View>
-        </ScrollView>
-      </Reanimated.View>
+              })()}
+            </View>
+          </ScrollView>
+        </Reanimated.View>
       </SafeAreaView>
       {/* Floating Toast Notification */}
       {toastMsg && (
@@ -572,7 +800,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     height: '100%',
-    fontFamily: 'HankenGrotesk_400Regular',
+    fontFamily: 'Sora_400Regular',
     fontSize: 12,
     paddingVertical: 0,
     ...({ outlineStyle: 'none' } as any),
@@ -587,7 +815,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: BorderRadius.full,
+    borderRadius: 6,
     borderWidth: 1,
     height: 30,
     justifyContent: 'center',
@@ -629,7 +857,7 @@ const styles = StyleSheet.create({
   bannerTitle: {
     color: '#ffffff',
     fontSize: 18,
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     marginBottom: Spacing.base,
     lineHeight: 22,
   },
@@ -648,48 +876,46 @@ const styles = StyleSheet.create({
   },
   turfCard: {
     flexDirection: 'row',
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: 'hidden',
-    height: 154,
+    height: 148,
     marginBottom: 0,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
   },
   imageContainer: {
-    width: 120,
-    height: 154,
+    width: 125,
+    height: '100%',
     position: 'relative',
+    backgroundColor: '#1e293b',
+    overflow: 'hidden',
   },
   turfImage: {
     width: '100%',
     height: '100%',
   },
-  aiBadge: {
+  cardBadge: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    zIndex: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderTopLeftRadius: 16,
-    borderBottomRightRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  aiBadgeText: {
-    fontSize: 8,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    letterSpacing: 0.5,
-    marginLeft: 2,
-    textTransform: 'uppercase',
+  cardBadgeText: {
+    color: '#ffffff',
+    fontSize: 8.5,
+    fontFamily: 'Sora_700Bold',
+    letterSpacing: 0.3,
   },
   cardInfo: {
     flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     justifyContent: 'space-between',
   },
   cardHeaderRow: {
@@ -699,30 +925,50 @@ const styles = StyleSheet.create({
   },
   turfTitle: {
     color: '#111c2c',
-    fontSize: 14,
-    fontFamily: 'HankenGrotesk_700Bold',
-    lineHeight: 18,
-    marginVertical: 2,
+    fontSize: 13.5,
+    fontFamily: 'Sora_700Bold',
+    lineHeight: 17,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 2,
   },
   locationText: {
     color: '#43474b',
-    fontSize: 11,
-    marginLeft: 2,
+    fontSize: 10.5,
     flex: 1,
   },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  midInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 2,
+  },
+  slotsPill: {
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  slotsPillText: {
+    color: '#059669',
+    fontSize: 9.5,
+    fontFamily: 'Sora_700Bold',
   },
   cardActions: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 4,
+    marginTop: 2,
   },
   actionButton: {
     height: 28,
@@ -765,9 +1011,32 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   createPillText: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 11,
     color: '#ffffff',
     letterSpacing: 0.2,
+  },
+  fabTop: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 108 : 88,
+    right: Spacing.md,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2.5,
+    borderColor: '#ffffff',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 12,
+    zIndex: 999,
+  },
+  fabGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

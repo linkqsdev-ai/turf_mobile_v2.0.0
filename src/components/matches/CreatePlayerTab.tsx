@@ -98,17 +98,59 @@ export function CreatePlayerTab() {
     setPlayingRole(roles[0].id);
   }, [selectedSport]);
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
-    }
+  const pickImage = () => {
+    Alert.alert(
+      'Upload Player Photo',
+      'Choose an option to upload or capture player picture:',
+      [
+        {
+          text: '📷 Take Photo (Camera)',
+          onPress: async () => {
+            try {
+              const permission = await ImagePicker.requestCameraPermissionsAsync();
+              if (!permission.granted) {
+                Alert.alert('Permission Required', 'Camera access is needed to capture photo.');
+                return;
+              }
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+              if (!result.canceled && result.assets && result.assets.length > 0) {
+                setProfileImage(result.assets[0].uri);
+              }
+            } catch (err) {
+              console.log('Error capturing photo', err);
+            }
+          },
+        },
+        {
+          text: '🖼️ Choose from Gallery',
+          onPress: async () => {
+            try {
+              const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (!permission.granted) {
+                Alert.alert('Permission Required', 'Gallery access is needed to pick photo.');
+                return;
+              }
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+              if (!result.canceled && result.assets && result.assets.length > 0) {
+                setProfileImage(result.assets[0].uri);
+              }
+            } catch (err) {
+              console.log('Error picking gallery image', err);
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   const handleCreatePlayer = () => {
@@ -130,7 +172,7 @@ export function CreatePlayerTab() {
         bounces={false}
       >
       {/* ── Vector Illustration Banner ─────────────────────────────── */}
-      <View style={{ width: '100%', height: 200, borderRadius: 16, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: theme.outlineVariant + '33' }}>
+      <View style={{ width: '100%', height: 200, borderRadius: 12, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: theme.outlineVariant + '33' }}>
         <Image
           source={require('@/assets/images/illustrations/player_illustration.png')}
           style={{ width: '100%', height: '100%' }}
@@ -139,12 +181,12 @@ export function CreatePlayerTab() {
       </View>
 
       {/* ── Form Body Bento Card ────────────────────────── */}
-      <View style={[styles.bentoCard, Shadows.level2, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }]}>
+      <View style={styles.bentoCard}>
         
         {/* Header */}
         <View style={styles.cardHeader}>
           <View style={[styles.cardIconWrap, { backgroundColor: theme.primary + '11' }]}>
-            <Ionicons name="person-circle-outline" size={18} color={theme.primary} />
+            <Ionicons name="person-circle-outline" size={13} color={theme.primary} />
           </View>
           <View>
             <ThemedText style={styles.cardTitle}>Player Identity</ThemedText>
@@ -158,14 +200,22 @@ export function CreatePlayerTab() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sportList}>
             {SPORTS_LIST.map((sport) => {
               const isActive = selectedSport === sport.name;
+              const isDisabled = sport.name !== 'Cricket';
               return (
                 <Pressable
                   key={sport.name}
-                  onPress={() => setSelectedSport(sport.name)}
+                  onPress={() => {
+                    if (isDisabled) {
+                      Alert.alert('Cricket Only Mode', `${sport.name} player profiles will be enabled in a future update.`);
+                      return;
+                    }
+                    setSelectedSport(sport.name);
+                  }}
                   style={[
                     styles.sportChip,
-                    { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+                    { backgroundColor: 'transparent', borderColor: '#00000033' },
                     isActive && { backgroundColor: theme.primary, borderColor: theme.primary },
+                    isDisabled && { opacity: 0.45 },
                   ]}
                 >
                   <MaterialIcons
@@ -190,7 +240,7 @@ export function CreatePlayerTab() {
 
         {/* Branding top row: Photo + Names */}
         <View style={styles.brandingTopRow}>
-          <Pressable style={[styles.logoDropZone, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]} onPress={pickImage}>
+          <Pressable style={[styles.logoDropZone, { backgroundColor: 'transparent', borderColor: '#00000033' }]} onPress={pickImage}>
             {profileImage ? (
               <Image source={typeof profileImage === 'string' ? { uri: profileImage } : profileImage} style={styles.logoImage} />
             ) : (
@@ -209,10 +259,10 @@ export function CreatePlayerTab() {
             <TextInput
               style={[
                 styles.input,
-                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isNameFocused ? theme.primary : theme.outlineVariant + '44' }
+                { backgroundColor: 'transparent', color: theme.text, borderColor: isNameFocused ? theme.primary : '#00000033' }
               ]}
               placeholder="e.g. Rahul S."
-              placeholderTextColor={theme.textSecondary + '80'}
+              placeholderTextColor="#94a3b8"
               value={fullName}
               onChangeText={setFullName}
               onFocus={() => setIsNameFocused(true)}
@@ -251,7 +301,7 @@ export function CreatePlayerTab() {
                 onPress={() => setProfileImage(img)} 
                 style={[
                   styles.defaultLogoBtn, 
-                  { borderColor: profileImage === img ? theme.primary : theme.outlineVariant + '44', backgroundColor: theme.surfaceLow }
+                  { borderColor: profileImage === img ? theme.primary : '#00000033', backgroundColor: 'transparent' }
                 ]}
               >
                 <Image source={img} style={styles.defaultLogoImg} contentFit="cover" />
@@ -268,10 +318,10 @@ export function CreatePlayerTab() {
             <TextInput
               style={[
                 styles.input,
-                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: jerseyError ? '#ef4444' : isJerseyFocused ? theme.primary : theme.outlineVariant + '44' }
+                { backgroundColor: 'transparent', color: theme.text, borderColor: jerseyError ? '#ef4444' : isJerseyFocused ? theme.primary : '#00000033' }
               ]}
               placeholder="10"
-              placeholderTextColor={theme.textSecondary + '80'}
+              placeholderTextColor="#94a3b8"
               keyboardType="number-pad"
               maxLength={3}
               value={jerseyNo}
@@ -288,10 +338,10 @@ export function CreatePlayerTab() {
             <TextInput
               style={[
                 styles.input,
-                { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: mobileError ? '#ef4444' : isMobileFocused ? theme.primary : theme.outlineVariant + '44' }
+                { backgroundColor: 'transparent', color: theme.text, borderColor: mobileError ? '#ef4444' : isMobileFocused ? theme.primary : '#00000033' }
               ]}
               placeholder="+91..."
-              placeholderTextColor={theme.textSecondary + '80'}
+              placeholderTextColor="#94a3b8"
               keyboardType="phone-pad"
               value={mobileNo}
               onChangeText={handleMobileChange}
@@ -309,7 +359,7 @@ export function CreatePlayerTab() {
           <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Playing Role</ThemedText>
           <Pressable
             onPress={() => setShowRoleModal(true)}
-            style={[styles.dropdownTrigger, styles.input, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}
+            style={[styles.dropdownTrigger, styles.input, { backgroundColor: 'transparent', borderColor: '#00000033' }]}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {playingRole ? (
@@ -392,14 +442,14 @@ export function CreatePlayerTab() {
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Batting Style</ThemedText>
               <Pressable
                 onPress={() => setShowBattingModal(!showBattingModal)}
-                style={[styles.dropdownTrigger, styles.input, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}
+                style={[styles.dropdownTrigger, styles.input, { backgroundColor: 'transparent', borderColor: '#00000033' }]}
               >
                 <ThemedText style={[styles.dropdownValue, { color: theme.text }]}>{battingStyle}</ThemedText>
                 <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
               </Pressable>
 
               {showBattingModal && (
-                <View style={[styles.inlinePickerList, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}>
+                <View style={[styles.inlinePickerList, { backgroundColor: 'transparent', borderColor: '#00000033' }]}>
                   {BATTING_STYLES.map((item) => (
                     <Pressable
                       key={item}
@@ -410,7 +460,7 @@ export function CreatePlayerTab() {
                       style={[
                         styles.pickerItem,
                         { borderBottomColor: theme.outlineVariant + '44' },
-                        battingStyle === item && { backgroundColor: theme.surfaceHigh }
+                        battingStyle === item && { backgroundColor: theme.primary + '1a' }
                       ]}
                     >
                       <ThemedText style={[styles.pickerItemText, { color: theme.text }]}>{item}</ThemedText>
@@ -427,14 +477,14 @@ export function CreatePlayerTab() {
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Bowling Style</ThemedText>
               <Pressable
                 onPress={() => setShowBowlingModal(!showBowlingModal)}
-                style={[styles.dropdownTrigger, styles.input, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}
+                style={[styles.dropdownTrigger, styles.input, { backgroundColor: 'transparent', borderColor: '#00000033' }]}
               >
                 <ThemedText style={[styles.dropdownValue, { color: theme.text }]}>{bowlingStyle}</ThemedText>
                 <Ionicons name="chevron-down" size={16} color={theme.textSecondary} />
               </Pressable>
 
               {showBowlingModal && (
-                <View style={[styles.inlinePickerList, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}>
+                <View style={[styles.inlinePickerList, { backgroundColor: 'transparent', borderColor: theme.outlineVariant + '66' }]}>
                   {BOWLING_STYLES.map((item) => (
                     <Pressable
                       key={item}
@@ -445,7 +495,7 @@ export function CreatePlayerTab() {
                       style={[
                         styles.pickerItem,
                         { borderBottomColor: theme.outlineVariant + '44' },
-                        bowlingStyle === item && { backgroundColor: theme.surfaceHigh }
+                        bowlingStyle === item && { backgroundColor: theme.primary + '1a' }
                       ]}
                     >
                       <ThemedText style={[styles.pickerItemText, { color: theme.text }]}>{item}</ThemedText>
@@ -519,19 +569,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   badgeText: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 10,
     color: '#ffffff',
     letterSpacing: 0.5,
   },
   bannerTitle: {
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     fontSize: 24,
     color: '#ffffff',
     marginBottom: 6,
   },
   bannerSubtitle: {
-    fontFamily: 'HankenGrotesk_500Medium',
+    fontFamily: 'Sora_500Medium',
     fontSize: 13,
     color: '#ffffffe0',
     lineHeight: 18,
@@ -548,39 +598,37 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   featureText: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 12,
     color: '#ffffff',
   },
 
   /* Bento Card Container */
   bentoCard: {
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 10,
+    padding: 0,
+    marginBottom: 12,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
+    gap: 8,
+    marginBottom: 14,
   },
   cardIconWrap: {
-    width: 32,
-    height: 32,
+    width: 26,
+    height: 26,
     borderRadius: BorderRadius.sm,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cardTitle: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 16,
+    fontFamily: 'Sora_700Bold',
+    fontSize: 12.5,
   },
   cardSubtitle: {
-    fontFamily: 'HankenGrotesk_400Regular',
-    fontSize: 12,
-    marginTop: 2,
+    fontFamily: 'Sora_400Regular',
+    fontSize: 9.5,
+    marginTop: 1,
   },
 
   formDivider: {
@@ -594,8 +642,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   logoDropZone: {
-    width: 80,
-    height: 80,
+    width: 68,
+    height: 68,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderStyle: 'dashed',
@@ -603,14 +651,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoUploadTitle: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 10,
-    marginTop: 4,
-  },
-  logoUploadHint: {
-    fontFamily: 'HankenGrotesk_500Medium',
+    fontFamily: 'Sora_700Bold',
     fontSize: 9,
     marginTop: 2,
+  },
+  logoUploadHint: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 8,
+    marginTop: 1,
   },
   logoImage: {
     width: '100%',
@@ -618,12 +666,12 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   defaultLogosSection: {
-    marginTop: 16,
+    marginTop: 12,
     marginBottom: 4,
   },
   defaultLogoBtn: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     borderRadius: BorderRadius.sm,
     borderWidth: 1.5,
     overflow: 'hidden',
@@ -643,18 +691,19 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   fieldLabel: {
-    fontFamily: 'HankenGrotesk_700Bold',
-    fontSize: 11,
-    marginBottom: 6,
-    textTransform: 'uppercase',
+    fontFamily: 'Sora_500Medium',
+    fontSize: 9,
+    letterSpacing: 0.1,
+    marginBottom: 3,
+    color: '#64748b',
   },
   input: {
-    height: 44,
-    borderRadius: BorderRadius.md,
+    height: 35,
+    borderRadius: BorderRadius.sm,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    fontFamily: 'HankenGrotesk_500Medium',
-    fontSize: 13,
+    paddingHorizontal: 10,
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11.5,
   },
   sportList: {
     flexDirection: 'row',
@@ -672,7 +721,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sportChipText: {
-    fontFamily: 'HankenGrotesk_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 10,
     marginLeft: 4,
   },
@@ -693,7 +742,7 @@ const styles = StyleSheet.create({
   roleIconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -702,12 +751,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   roleTitle: {
-    fontFamily: 'HankenGrotesk_700Bold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 13,
     marginBottom: 2,
   },
   roleDesc: {
-    fontFamily: 'HankenGrotesk_500Medium',
+    fontFamily: 'Sora_500Medium',
     fontSize: 11,
   },
   radioCircle: {
@@ -731,7 +780,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dropdownValue: {
-    fontFamily: 'HankenGrotesk_500Medium',
+    fontFamily: 'Sora_500Medium',
     fontSize: 12,
   },
   inlinePickerList: {
@@ -749,7 +798,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   pickerItemText: {
-    fontFamily: 'HankenGrotesk_400Regular',
+    fontFamily: 'Sora_400Regular',
     fontSize: 12,
   },
 
@@ -774,7 +823,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButtonText: {
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     fontSize: 13,
     color: '#ffffff',
   },
@@ -798,7 +847,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontFamily: 'HankenGrotesk_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     fontSize: 18,
   },
   modalClose: {

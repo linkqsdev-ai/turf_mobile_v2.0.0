@@ -106,9 +106,6 @@ export default function ForgotPasswordScreen() {
                 style={styles.logo}
                 contentFit="contain"
               />
-              <View style={styles.tagPill}>
-                <ThemedText style={styles.tagText}>ACCOUNT RECOVERY</ThemedText>
-              </View>
               <View style={styles.titleRow}>
                 <ThemedText style={styles.titleNormal}>Reset </ThemedText>
                 <View style={styles.titleHighlightWrap}>
@@ -133,9 +130,6 @@ export default function ForgotPasswordScreen() {
                 <View style={styles.successState}>
                   <View style={styles.successIconRing}>
                     <Ionicons name="checkmark-circle" size={56} color={ACCENT} />
-                  </View>
-                  <View style={styles.tagPill}>
-                    <ThemedText style={styles.tagText}>EMAIL SENT</ThemedText>
                   </View>
                   <ThemedText style={styles.successTitle}>Instructions Sent!</ThemedText>
                   <ThemedText style={styles.successBody}>
@@ -173,7 +167,7 @@ export default function ForgotPasswordScreen() {
                     <TextInput
                       style={styles.input}
                       placeholder="Enter registered email"
-                      placeholderTextColor={TEXT_MID + '88'}
+                      placeholderTextColor="#94a3b8"
                       value={email}
                       onChangeText={setEmail}
                       keyboardType="email-address"
@@ -270,21 +264,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: Spacing.md,
   },
-  tagPill: {
-    backgroundColor: ACCENT + '18',
-    borderColor: ACCENT + '33',
-    borderWidth: 1,
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    marginBottom: Spacing.sm,
-  },
-  tagText: {
-    fontSize: 9,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: ACCENT,
-    letterSpacing: 1.4,
-  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -293,7 +272,7 @@ const styles = StyleSheet.create({
   },
   titleNormal: {
     fontSize: 30,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     color: TEXT_DARK,
     lineHeight: 38,
     letterSpacing: -0.5,
@@ -301,7 +280,7 @@ const styles = StyleSheet.create({
   titleHighlightWrap: { position: 'relative' },
   titleHighlight: {
     fontSize: 30,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     color: TEXT_DARK,
     lineHeight: 38,
     letterSpacing: -0.5,
@@ -319,7 +298,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     color: TEXT_MID,
-    fontFamily: 'PlusJakartaSans_400Regular',
+    fontFamily: 'Sora_400Regular',
     lineHeight: 20,
   },
 
@@ -341,7 +320,7 @@ const styles = StyleSheet.create({
   cardDesc: {
     fontSize: 14,
     color: TEXT_MID,
-    fontFamily: 'PlusJakartaSans_400Regular',
+    fontFamily: 'Sora_400Regular',
     lineHeight: 22,
     marginBottom: 28,
   },
@@ -359,12 +338,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: '#ef4444',
-    fontFamily: 'PlusJakartaSans_500Medium',
+    fontFamily: 'Sora_500Medium',
   },
 
   label: {
     fontSize: 13,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontFamily: 'Sora_600SemiBold',
     color: TEXT_DARK,
     marginBottom: 8,
     marginLeft: 4,
@@ -388,7 +367,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: TEXT_DARK,
-    fontFamily: 'PlusJakartaSans_500Medium',
+    fontFamily: 'Sora_500Medium',
     height: '100%',
   },
 
@@ -408,7 +387,7 @@ const styles = StyleSheet.create({
   ctaText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Sora_700Bold',
     letterSpacing: 1.0,
   },
 
@@ -420,7 +399,7 @@ const styles = StyleSheet.create({
   backLink: {
     fontSize: 14,
     color: TEXT_DARK,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Sora_700Bold',
   },
 
   // Success state
@@ -439,7 +418,7 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: 24,
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontFamily: 'Sora_800ExtraBold',
     color: TEXT_DARK,
     marginTop: 12,
     marginBottom: 12,
@@ -448,7 +427,7 @@ const styles = StyleSheet.create({
   successBody: {
     fontSize: 14,
     color: TEXT_MID,
-    fontFamily: 'PlusJakartaSans_400Regular',
+    fontFamily: 'Sora_400Regular',
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 16,
@@ -468,13 +447,13 @@ const styles = StyleSheet.create({
   },
   emailBadgeText: {
     fontSize: 14,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontFamily: 'Sora_700Bold',
     color: TEXT_DARK,
   },
   successHint: {
     fontSize: 12,
     color: TEXT_MID,
-    fontFamily: 'PlusJakartaSans_400Regular',
+    fontFamily: 'Sora_400Regular',
     textAlign: 'center',
     marginBottom: 32,
   },

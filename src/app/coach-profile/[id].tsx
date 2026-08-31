@@ -45,7 +45,7 @@ export default function CoachProfile() {
       <SafeAreaView edges={['top']}>
         {/* Header with Back Button */}
         <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/coach')}>
             <Ionicons name="arrow-back" size={24} color={theme.secondary} />
           </Pressable>
           <Pressable onPress={() => {}}>
@@ -58,9 +58,6 @@ export default function CoachProfile() {
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <Image source={COACH_DATA.image} style={styles.profileImage} />
-          <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={24} color="#22c55e" />
-          </View>
         </View>
 
         <View style={styles.profileInfo}>
@@ -108,42 +105,13 @@ export default function CoachProfile() {
           ))}
         </View>
 
-        {/* Certifications */}
-        <View style={styles.section}>
-          <ThemedText type="labelMd" style={{ marginBottom: 12 }}>Certifications</ThemedText>
-          <View style={styles.certGrid}>
-            {COACH_DATA.certifications.map(cert => (
-              <View key={cert} style={[styles.certBadge, { backgroundColor: theme.surfaceHigh }]}>
-                <Ionicons name="ribbon" size={16} color="#22c55e" />
-                <ThemedText type="labelSm" style={{ marginLeft: 6 }}>
-                  {cert}
-                </ThemedText>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Specializations */}
-        <View style={styles.section}>
-          <ThemedText type="labelMd" style={{ marginBottom: 12 }}>Specializations</ThemedText>
-          <View style={styles.tagRow}>
-            {COACH_DATA.specializations.map(spec => (
-              <View key={spec} style={[styles.tag, { backgroundColor: '#22c55e' }]}>
-                <ThemedText type="labelSm" style={{ color: '#ffffff' }}>
-                  {spec}
-                </ThemedText>
-              </View>
-            ))}
-          </View>
-        </View>
-
         {/* Programs */}
         <View style={styles.section}>
           <ThemedText type="labelMd" style={{ marginBottom: 12 }}>Training Programs</ThemedText>
           {COACH_DATA.programs.map(prog => (
             <View key={prog.id} style={[styles.programCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}>
               <View style={{ flex: 1 }}>
-                <ThemedText type="headlineSm">{prog.title}</ThemedText>
+                <ThemedText type="headlineSm" numberOfLines={1}>{prog.title}</ThemedText>
                 <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
                   {prog.desc}
                 </ThemedText>
@@ -160,8 +128,8 @@ export default function CoachProfile() {
           <ThemedText type="labelMd" style={{ marginBottom: 12 }}>Reviews</ThemedText>
           {COACH_DATA.reviews.map(review => (
             <View key={review.id} style={[styles.reviewCard, { backgroundColor: theme.surfaceLowest }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <ThemedText type="headlineSm">{review.name}</ThemedText>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <ThemedText type="headlineSm" numberOfLines={1} style={{ flex: 1, marginRight: 8 }}>{review.name}</ThemedText>
                 <View style={{ flexDirection: 'row', gap: 2 }}>
                   {Array(5)
                     .fill(0)
@@ -202,17 +170,12 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 120 },
   profileHeader: { alignItems: 'center', marginVertical: Spacing.lg, position: 'relative' },
   profileImage: { width: 140, height: 140, borderRadius: 70 },
-  verifiedBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#ffffff', borderRadius: 50 },
   profileInfo: { alignItems: 'center', marginVertical: Spacing.md },
   metaRow: { marginTop: 8 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
   locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
   section: { marginVertical: Spacing.lg, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.md },
   achievementItem: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
-  certGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  certBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: BorderRadius.full },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: BorderRadius.full },
   programCard: { paddingHorizontal: 12, paddingVertical: 12, marginVertical: 8, borderRadius: BorderRadius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1 },
   reviewCard: { paddingHorizontal: 12, paddingVertical: 12, marginVertical: 8, borderRadius: BorderRadius.lg },
   bottomActions: { flexDirection: 'row', gap: 8, paddingHorizontal: Spacing.containerMargin, paddingVertical: Spacing.md },

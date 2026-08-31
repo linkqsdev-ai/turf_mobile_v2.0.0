@@ -103,7 +103,7 @@ export default function TabLayout() {
           elevation: 15,
         },
         tabBarLabelStyle: {
-          fontFamily: 'HankenGrotesk_500Medium', // Premium attractive regular font
+          fontFamily: 'Sora_500Medium', // Premium attractive regular font
           fontSize: 8.8, // Slightly reduced to fit "TOURNAMENT" fully on all devices
           letterSpacing: 0.5,
           textTransform: 'uppercase',
@@ -137,7 +137,7 @@ export default function TabLayout() {
             <ThemedText 
               style={{ 
                 color: focused ? '#00ffd0' : '#a7f3d0', 
-                fontFamily: focused ? 'HankenGrotesk_800ExtraBold' : 'HankenGrotesk_700Bold', 
+                fontFamily: focused ? 'Sora_800ExtraBold' : 'Sora_700Bold', 
                 fontSize: 8.8, 
                 letterSpacing: 0.5, 
                 textTransform: 'uppercase', 
@@ -171,7 +171,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="network"
         options={{
-          href: role === 'Player' ? undefined : null,
+          href: (role === 'Player' || role === 'Super Admin') ? undefined : null,
           title: 'Connect',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon focused={focused} color={color} iconName="share-social" />
@@ -181,7 +181,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="club"
         options={{
-          href: role === 'Organizer' ? undefined : null,
+          href: (role === 'Organizer' || role === 'Super Admin') ? undefined : null,
           title: 'Club',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon focused={focused} color={color} iconName="shield-checkmark" />
@@ -191,13 +191,13 @@ export default function TabLayout() {
       <Tabs.Screen
         name="coach"
         options={{
-          href: (role === 'Owner' || role === 'Coach') ? undefined : null,
+          href: (role === 'Owner' || role === 'Coach' || role === 'Super Admin') ? undefined : null,
           title: role === 'Owner' ? 'Add Turf' : 'Coach',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon
               focused={focused}
               color={color}
-              iconName={role === 'Owner' ? 'stadium' : 'account-tie'}
+              iconName={role === 'Owner' ? 'soccer-field' : 'account-tie'}
               library="MaterialCommunityIcons"
             />
           ),

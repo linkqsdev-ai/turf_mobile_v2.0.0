@@ -16,6 +16,8 @@ import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useUserProfile, getShortLocation } from '@/hooks/use-user-profile';
+import { getAvatarSource } from '@/constants/avatars';
 
 // Import Tabs
 import { MatchesHomeTab } from '@/components/matches/MatchesHomeTab';
@@ -23,6 +25,9 @@ import { CreateTeamTab } from '@/components/matches/CreateTeamTab';
 import { CreatePlayerTab } from '@/components/matches/CreatePlayerTab';
 import { BidMatchTab } from '@/components/matches/BidMatchTab';
 import { QuickMatchTab } from '@/components/matches/QuickMatchTab';
+
+import { useNotifications } from '@/context/NotificationContext';
+import { useBidStore } from '@/store/app-store';
 
 const TABS = ['Home', 'New Team', 'New Player', 'Bid Match', 'Quick Match'];
 
@@ -80,7 +85,7 @@ const AnimatedTabItem = ({ tab, isActive, isLast, onPress, theme }: any) => {
       {tab !== 'Home' && (
         <ThemedText style={{
           color: color,
-          fontFamily: isActive ? 'HankenGrotesk_800ExtraBold' : (isSpecial ? 'HankenGrotesk_700Bold' : 'HankenGrotesk_600SemiBold'),
+          fontFamily: isActive ? 'Sora_800ExtraBold' : (isSpecial ? 'Sora_700Bold' : 'Sora_600SemiBold'),
           fontSize: isSpecial ? 10 : 9,
           marginLeft: 2,
         }}>
@@ -97,6 +102,9 @@ export default function MatchesScreen() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const [activeTab, setActiveTab] = useState('Home');
   const [coinTossVisible, setCoinTossVisible] = useState(false);
+  const [bidListModalVisible, setBidListModalVisible] = useState(false);
+  const { openNotificationModal, unreadCount } = useNotifications();
+  const { bids } = useBidStore();
 
   useEffect(() => {
     if (params.tab && TABS.includes(params.tab)) {
@@ -104,13 +112,20 @@ export default function MatchesScreen() {
     }
   }, [params.tab]);
 
+  const { profile } = useUserProfile();
+
   const renderActiveTab = () => {
     return (
       <View style={{ flex: 1 }}>
         {activeTab === 'Home' && <MatchesHomeTab />}
         {activeTab === 'New Team' && <CreateTeamTab onNavigate={setActiveTab} />}
         {activeTab === 'New Player' && <CreatePlayerTab />}
-        {activeTab === 'Bid Match' && <BidMatchTab />}
+        {activeTab === 'Bid Match' && (
+          <BidMatchTab
+            showBidListModalExternal={bidListModalVisible}
+            onCloseBidListModalExternal={() => setBidListModalVisible(false)}
+          />
+        )}
         {activeTab === 'Quick Match' && <QuickMatchTab onNavigate={setActiveTab} />}
       </View>
     );
@@ -124,29 +139,77 @@ export default function MatchesScreen() {
           <View style={styles.headerLeft}>
             <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
               <Image
-                source={require('@/assets/images/avatars/avatar_1.png')}
+                source={getAvatarSource(profile.avatarUrl)}
                 style={styles.headerAvatar}
+                contentFit="cover"
               />
             </Pressable>
             <View style={styles.headerTextGroup}>
-              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'HankenGrotesk_700Bold', lineHeight: 18 }}>
-                Azarudeen
+              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'Sora_700Bold', lineHeight: 18 }}>
+                {profile.name}
               </ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                 <Ionicons name="location-sharp" size={12} color={theme.secondary} />
                 <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
-                  London, UK
+                  {getShortLocation(profile.location)}
                 </ThemedText>
               </View>
             </View>
           </View>
           <View style={styles.headerRightActions}>
-            {/* Temporarily Hidden Network Activity Icon */}
-            {/* <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
-              <Ionicons name="pulse" size={20} color={theme.secondary} />
-            </Pressable> */}
-            <Pressable style={styles.iconButton}>
+            {/* 📋 Bid Match List Icon: only visible in Bid Match Tab and positioned before Notification icon */}
+            {activeTab === 'Bid Match' && (
+              <Pressable
+                style={[styles.iconButton, { position: 'relative' }]}
+                onPress={() => setBidListModalVisible(true)}
+                hitSlop={8}
+              >
+                <MaterialCommunityIcons name="clipboard-list-outline" size={22} color={theme.primary} />
+                {bids.length > 0 && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                      backgroundColor: '#EF4444',
+                      borderRadius: 6,
+                      minWidth: 14,
+                      height: 14,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      paddingHorizontal: 2,
+                    }}
+                  >
+                    <ThemedText style={{ color: '#ffffff', fontSize: 8, fontFamily: 'Sora_700Bold' }}>
+                      {bids.length}
+                    </ThemedText>
+                  </View>
+                )}
+              </Pressable>
+            )}
+
+            <Pressable style={[styles.iconButton, { position: 'relative' }]} onPress={openNotificationModal}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
+              {unreadCount > 0 && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 2,
+                    right: 2,
+                    backgroundColor: '#EF4444',
+                    borderRadius: 6,
+                    minWidth: 14,
+                    height: 14,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    paddingHorizontal: 2,
+                  }}
+                >
+                  <ThemedText style={{ color: '#ffffff', fontSize: 8, fontFamily: 'Sora_700Bold' }}>
+                    {unreadCount}
+                  </ThemedText>
+                </View>
+              )}
             </Pressable>
             <Pressable style={styles.iconButton} onPress={() => setCoinTossVisible(true)}>
               <Image

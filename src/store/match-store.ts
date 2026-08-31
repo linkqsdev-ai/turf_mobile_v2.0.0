@@ -1,6 +1,6 @@
 /**
  * match-store.ts
- * Manages match state, team rosters, and scores.
+ * Manages match state, team squads, and scores.
  */
 
 export interface Player {
@@ -22,6 +22,7 @@ export interface Team {
   losses: number;
   draws: number;
   isFavourite?: boolean;
+  phone?: string;
   createdAt: string;
 }
 
