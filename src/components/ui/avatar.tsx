@@ -66,7 +66,7 @@ export function Avatar({ uri, name, size = 'md', className, ring }: AvatarProps)
           onError={() => setFailed(true)}
         />
       ) : (
-        <Text className={cn('font-bold text-muted-foreground', textForSize[size ?? 'md'])}>
+        <Text className={cn('font-semibold text-muted-foreground', textForSize[size ?? 'md'])}>
           {initials(name)}
         </Text>
       )}
@@ -94,7 +94,7 @@ export function AvatarStack({
       ))}
       {extra > 0 ? (
         <View className="-ml-3 h-9 w-9 items-center justify-center rounded-full border-2 border-background bg-secondary">
-          <Text className="font-bold text-2xs text-secondary-foreground">+{extra}</Text>
+          <Text className="font-semibold text-2xs text-secondary-foreground">+{extra}</Text>
         </View>
       ) : null}
     </View>

@@ -51,7 +51,7 @@ export default function FixtureManagementScreen() {
   const [selectedDate, setSelectedDate] = useState('2026-06-15');
   const [hasConflict, setHasConflict] = useState(true);
 
-  // AI Suite states
+  // Schedule tools state
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -83,8 +83,8 @@ export default function FixtureManagementScreen() {
     ]).start(() => setToastMsg(null));
   };
 
-  // AI Suite Functions
-  const handleAIOptimize = () => {
+  // Schedule tools
+  const handleOptimizeSchedule = () => {
     setIsOptimizing(true);
     setTimeout(() => {
       // Rearrange schedules: resolve the overlap at 12:30 PM on Pitch A
@@ -97,11 +97,11 @@ export default function FixtureManagementScreen() {
       setFixtures(optimized);
       setHasConflict(false);
       setIsOptimizing(false);
-      triggerToast('AI schedule optimization complete! Pitch idle time reduced by 28 mins.');
+      triggerToast('Schedule optimised — pitch idle time reduced by 28 mins.');
     }, 1500);
   };
 
-  const handleAIGenerateBrackets = () => {
+  const handleGenerateBrackets = () => {
     setIsGenerating(true);
     setTimeout(() => {
       const generated: Fixture[] = [
@@ -117,12 +117,12 @@ export default function FixtureManagementScreen() {
       setHasConflict(false);
       setViewMode('bracket');
       setIsGenerating(false);
-      triggerToast('AI generated a perfect 8-team Knockout Bracket!');
+      triggerToast('Generated a perfect 8-team knockout bracket!');
     }, 1800);
   };
 
   const handleResolveConflict = () => {
-    handleAIOptimize();
+    handleOptimizeSchedule();
   };
 
   // Edit Fixture Functions
@@ -375,37 +375,37 @@ export default function FixtureManagementScreen() {
           </Pressable>
         </View>
 
-        {/* AI Optimization Suite Panel */}
-        <View style={[styles.aiSuitePanel, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant }]}>
+        {/* Schedule Tools Panel */}
+        <View style={[styles.toolsPanel, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant }]}>
           <View style={styles.rowBetween}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="sparkles" size={18} color={theme.secondaryContainer} />
-              <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: 'bold', marginLeft: 6 }}>AI OPTIMIZATION SUITE</ThemedText>
+              <Ionicons name="options-outline" size={18} color={theme.secondaryContainer} />
+              <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: 'bold', marginLeft: 6 }}>SCHEDULE TOOLS</ThemedText>
             </View>
             {isOptimizing || isGenerating ? (
               <ActivityIndicator size="small" color={theme.secondaryContainer} />
             ) : null}
           </View>
 
-          <View style={styles.aiButtonsRow}>
-            <Pressable style={[styles.aiSuiteBtn, { backgroundColor: theme.primary }]} onPress={handleAIOptimize}>
+          <View style={styles.toolsButtonsRow}>
+            <Pressable style={[styles.toolsBtn, { backgroundColor: theme.primary }]} onPress={handleOptimizeSchedule}>
               <Ionicons name="options-outline" size={14} color="#ffffff" />
               <ThemedText type="labelSm" style={{ color: '#ffffff', marginLeft: 4 }}>Optimize Times</ThemedText>
             </Pressable>
-            <Pressable style={[styles.aiSuiteBtn, { backgroundColor: theme.primary }]} onPress={handleAIGenerateBrackets}>
+            <Pressable style={[styles.toolsBtn, { backgroundColor: theme.primary }]} onPress={handleGenerateBrackets}>
               <Ionicons name="git-branch-outline" size={14} color="#ffffff" />
               <ThemedText type="labelSm" style={{ color: '#ffffff', marginLeft: 4 }}>Auto-Gen Brackets</ThemedText>
             </Pressable>
           </View>
         </View>
 
-        {/* AI CONFLICT DETECTOR WARNING BOX */}
+        {/* CONFLICT DETECTOR WARNING BOX */}
         {hasConflict && viewMode === 'list' && (
           <View style={[styles.conflictAlertBox, { backgroundColor: '#fff8e1', borderColor: '#ffe082' }]}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
               <Ionicons name="warning-sharp" size={20} color="#ffb300" style={{ marginTop: 2 }} />
               <View style={{ flex: 1, marginLeft: 8 }}>
-                <ThemedText type="labelSm" style={{ color: '#6b4500', fontWeight: 'bold' }}>AI Conflict Detected</ThemedText>
+                <ThemedText type="labelSm" style={{ color: '#6b4500', fontWeight: 'bold' }}>Schedule Conflict Detected</ThemedText>
                 <ThemedText type="bodySm" style={{ color: '#7f5800', marginTop: 2 }}>
                   Blue Tigers vs London United scheduled on Pitch A at 12:30 PM, overlapping with Red Devils FC.
                 </ThemedText>
@@ -528,19 +528,19 @@ const styles = StyleSheet.create({
   modeBtnActive: {
     borderWidth: 0,
   },
-  aiSuitePanel: {
+  toolsPanel: {
     marginHorizontal: Spacing.containerMargin,
     padding: Spacing.md,
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
     marginBottom: Spacing.md,
   },
-  aiButtonsRow: {
+  toolsButtonsRow: {
     flexDirection: 'row',
     gap: 8,
     marginTop: Spacing.sm,
   },
-  aiSuiteBtn: {
+  toolsBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',

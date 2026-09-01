@@ -4,7 +4,7 @@
  * API-compatible with the native `index.tsx` (Moti/Reanimated).
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { motion, AnimatePresence as FMAnimatePresence } from 'framer-motion';
 import { gsap } from 'gsap';
 import type {
@@ -44,6 +44,7 @@ export function MotionView({
   pointerEvents,
 }: MotionViewProps) {
   const v = useMemo(() => variants(preset, distance), [preset, distance]);
+  const flatStyle = useMemo(() => StyleSheet.flatten(style) || {}, [style]);
   return (
     <MView
       key={animateKey}
@@ -52,7 +53,7 @@ export function MotionView({
       variants={v}
       transition={{ duration, delay, ease: EASE }}
       className={className}
-      style={style as any}
+      style={flatStyle as any}
       pointerEvents={pointerEvents}
     >
       {children}
@@ -71,6 +72,16 @@ export function MotionPressable({
   accessibilityLabel,
   accessibilityRole = 'button',
 }: MotionPressableProps) {
+  const resolvedStyle = useMemo(() => {
+    const flattened = StyleSheet.flatten(
+      typeof style === 'function' ? (style as any)({ pressed: false }) : style
+    ) || {};
+    return {
+      ...flattened,
+      cursor: disabled ? 'not-allowed' : 'pointer',
+    };
+  }, [style, disabled]);
+
   return (
     <MPressable
       onPress={disabled ? undefined : onPress}
@@ -81,7 +92,7 @@ export function MotionPressable({
       whileTap={disabled ? undefined : { scale: pressScale }}
       transition={{ type: 'spring', stiffness: 420, damping: 26 }}
       className={className}
-      style={[{ cursor: disabled ? 'not-allowed' : 'pointer' }, style] as any}
+      style={resolvedStyle as any}
     >
       {children}
     </MPressable>
@@ -98,10 +109,11 @@ export function Stagger({
 }: StaggerProps) {
   const items = React.Children.toArray(children);
   const v = variants(preset, 14);
+  const flatStyle = useMemo(() => StyleSheet.flatten(style) || {}, [style]);
   return (
     <MView
       className={className}
-      style={style as any}
+      style={flatStyle as any}
       initial="hidden"
       animate="visible"
       transition={{ staggerChildren: interval, delayChildren: delay }}

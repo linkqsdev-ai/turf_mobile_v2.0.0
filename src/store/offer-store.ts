@@ -22,6 +22,7 @@ export interface OwnerOffer {
   appliesTo: string;          // Turf name, or 'All Turfs'
   status: OfferStatus;
   createdAt: string;
+  bannerImage?: string;       // Custom banner image URL or preset
 }
 
 export function generateOfferId(): string {
@@ -102,6 +103,44 @@ export function createOffer(
   };
 }
 
+export function getOffersForTurf(turfName: string, offers: OwnerOffer[]): OwnerOffer[] {
+  if (!turfName || !Array.isArray(offers)) return [];
+  const cleanTurf = turfName.trim().toLowerCase();
+
+  // 1. Venue-specific offers
+  const venueSpecific = offers.filter(o => {
+    if (!isRedeemable(o)) return false;
+    const applies = (o.appliesTo || '').trim().toLowerCase();
+    return applies === cleanTurf;
+  });
+
+  // 2. Platform-wide offers ('All Turfs')
+  const generalOffers = offers.filter(o => {
+    if (!isRedeemable(o)) return false;
+    const applies = (o.appliesTo || '').trim().toLowerCase();
+    return applies === 'all turfs' || applies === 'all';
+  });
+
+  // If this venue has its own exclusive offers, avoid showing redundant generic offers with the same discount
+  const existingDiscounts = new Set(
+    venueSpecific.map(o => `${o.discountType}-${o.discountValue}`)
+  );
+
+  const nonRedundantGeneral = generalOffers.filter(
+    o => !existingDiscounts.has(`${o.discountType}-${o.discountValue}`)
+  );
+
+  const combined = [...venueSpecific, ...nonRedundantGeneral];
+
+  // Deduplicate by code
+  const seenCodes = new Set<string>();
+  return combined.filter(o => {
+    if (seenCodes.has(o.code)) return false;
+    seenCodes.add(o.code);
+    return true;
+  });
+}
+
 /** Seeded so a brand-new owner account has something to look at and edit. */
 export function defaultOwnerOffers(): OwnerOffer[] {
   const daysFromNow = (n: number) => {
@@ -111,6 +150,21 @@ export function defaultOwnerOffers(): OwnerOffer[] {
   };
 
   return [
+    {
+      id: 'offer-seed-yawah',
+      code: 'YAWAH50',
+      title: 'YAWAH OFFER',
+      description: 'Claim this voucher discount during booking checkout.',
+      discountType: 'percent',
+      discountValue: 20,
+      minBooking: 500,
+      maxRedemptions: 10,
+      redeemedCount: 0,
+      validTill: daysFromNow(30),
+      appliesTo: 'Grand Turf',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+    },
     {
       id: 'offer-seed-1',
       code: 'WEEKDAY20',

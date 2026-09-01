@@ -72,6 +72,12 @@ export function MotionView({
   );
 }
 
+// A single animated Pressable rather than a Pressable wrapping an animated
+// View: the wrapper swallowed layout classes (a `w-1/2` landed on the inner
+// view while the Pressable shrink-wrapped it), and it keeps the element tree
+// identical to the web build.
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export function MotionPressable({
   children,
   onPress,
@@ -87,12 +93,14 @@ export function MotionPressable({
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={disabled ? undefined : onPress}
       disabled={disabled}
       hitSlop={hitSlop}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole={accessibilityRole}
+      className={className}
+      style={[animatedStyle, style]}
       onPressIn={() => {
         scale.value = withTiming(pressScale, { duration: 90, easing: EASE });
       }}
@@ -100,10 +108,8 @@ export function MotionPressable({
         scale.value = withTiming(1, { duration: 160, easing: EASE });
       }}
     >
-      <Animated.View className={className} style={[animatedStyle, style]}>
-        {children}
-      </Animated.View>
-    </Pressable>
+      {children}
+    </AnimatedPressable>
   );
 }
 

@@ -30,7 +30,7 @@ const buttonVariants = cva(
   },
 );
 
-const labelVariants = cva('font-bold text-base', {
+const labelVariants = cva('font-semibold text-sm', {
   variants: {
     variant: {
       primary: 'text-primary-foreground',
@@ -40,7 +40,7 @@ const labelVariants = cva('font-bold text-base', {
       ghost: 'text-foreground',
       destructive: 'text-destructive-foreground',
     },
-    size: { sm: 'text-sm', md: 'text-base', lg: 'text-base', icon: 'text-base' },
+    size: { sm: 'text-xs', md: 'text-sm', lg: 'text-base', icon: 'text-sm' },
   },
   defaultVariants: { variant: 'primary', size: 'md' },
 });

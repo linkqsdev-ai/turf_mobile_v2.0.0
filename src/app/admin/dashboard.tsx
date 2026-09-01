@@ -31,7 +31,7 @@ export default function AdminDashboard() {
             <View className="h-9 w-9 items-center justify-center rounded-lg bg-muted">
               <Ionicons name={s.icon as any} size={16} color={t.mutedForeground} />
             </View>
-            <Text className={`font-extrabold text-2xl ${s.tone}`}>{s.value}</Text>
+            <Text className={`font-semibold text-xl ${s.tone}`}>{s.value}</Text>
             <Text variant="caption">{s.label}</Text>
           </Card>
         ))}

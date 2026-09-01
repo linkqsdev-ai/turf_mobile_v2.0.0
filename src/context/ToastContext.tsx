@@ -98,51 +98,54 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast, showSuccess, showError, showWarning, showInfo, hideToast }}>
       {children}
-      {toast && (
+      {/* NOTE: this renders as a sibling of `children`, so it sits *behind* any
+          native <Modal>. Screens inside a modal should surface feedback with
+          <InlineNotice> instead of a toast. */}
+      {toast ? (
         <View style={styles.toastOverlay} pointerEvents="none">
           <Reanimated.View
-            entering={SlideInUp.springify().damping(15).stiffness(120)}
-            exiting={SlideOutUp.duration(200)}
-            style={[
-              styles.toastCard,
-              Shadows.level3,
-              {
-                backgroundColor: theme.surfaceLowest,
-                borderColor: getToastConfig(toast.type).border,
-              },
-            ]}
-          >
-            {/* Colored left bar accent */}
-            <View style={[styles.leftAccent, { backgroundColor: getToastConfig(toast.type).color }]} />
-
-            {/* Icon Container */}
-            <View
+              entering={SlideInUp.springify().damping(15).stiffness(120)}
+              exiting={SlideOutUp.duration(200)}
               style={[
-                styles.iconWrap,
-                { backgroundColor: getToastConfig(toast.type).bgTint },
+                styles.toastCard,
+                Shadows.level3,
+                {
+                  backgroundColor: theme.surfaceLowest,
+                  borderColor: getToastConfig(toast.type).border,
+                },
               ]}
             >
-              <Ionicons
-                name={getToastConfig(toast.type).icon}
-                size={24}
-                color={getToastConfig(toast.type).color}
-              />
-            </View>
+              {/* Colored left bar accent */}
+              <View style={[styles.leftAccent, { backgroundColor: getToastConfig(toast.type).color }]} />
 
-            {/* Text Content */}
-            <View style={styles.contentWrap}>
-              <ThemedText type="bodyMd" style={styles.titleText}>
-                {toast.title}
-              </ThemedText>
-              {toast.message ? (
-                <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>
-                  {toast.message}
+              {/* Icon Container */}
+              <View
+                style={[
+                  styles.iconWrap,
+                  { backgroundColor: getToastConfig(toast.type).bgTint },
+                ]}
+              >
+                <Ionicons
+                  name={getToastConfig(toast.type).icon}
+                  size={24}
+                  color={getToastConfig(toast.type).color}
+                />
+              </View>
+
+              {/* Text Content */}
+              <View style={styles.contentWrap}>
+                <ThemedText type="bodyMd" style={styles.titleText}>
+                  {toast.title}
                 </ThemedText>
-              ) : null}
-            </View>
-          </Reanimated.View>
+                {toast.message ? (
+                  <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>
+                    {toast.message}
+                  </ThemedText>
+                ) : null}
+              </View>
+            </Reanimated.View>
         </View>
-      )}
+      ) : null}
     </ToastContext.Provider>
   );
 }

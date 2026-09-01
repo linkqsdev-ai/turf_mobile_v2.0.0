@@ -149,10 +149,10 @@ export default function PlayerProfileScreen() {
 
             <View style={styles.bentoContainer}>
               <View style={styles.bentoRow}>
-                {/* AI Skill Assessment circle progress */}
+                {/* Skill assessment circle progress */}
                 <View style={[styles.skillRatingCell, { backgroundColor: theme.primaryContainer }]}>
                   <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.7)', letterSpacing: 0.5, marginBottom: Spacing.sm }}>
-                    AI SKILL RATING
+                    SKILL RATING
                   </ThemedText>
 
                   <View style={styles.circularProgressContainer}>

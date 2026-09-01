@@ -24,7 +24,7 @@ export default function AdminIndex() {
               <Ionicons name={it.icon} size={20} color={t.primary} />
             </View>
             <View className="flex-1">
-              <Text className="font-bold text-foreground">{it.title}</Text>
+              <Text className="font-medium text-sm text-foreground">{it.title}</Text>
               <Text variant="caption">{it.desc}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={t.mutedForeground} />

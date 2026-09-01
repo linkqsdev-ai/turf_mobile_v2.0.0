@@ -84,7 +84,7 @@ export default function CoachList() {
               >
                 <Avatar uri={c.image} name={c.name} size="lg" />
                 <View className="flex-1">
-                  <Text className="font-bold text-foreground" numberOfLines={1}>
+                  <Text className="font-medium text-sm text-foreground" numberOfLines={1}>
                     {c.name}
                   </Text>
                   <Text variant="caption">{c.sport}</Text>
@@ -99,7 +99,7 @@ export default function CoachList() {
                 <View className="items-end gap-1">
                   <View className="flex-row items-center gap-1">
                     <Ionicons name="star" size={13} color={t.warning} />
-                    <Text className="font-bold text-sm text-foreground">{c.rating}</Text>
+                    <Text className="font-semibold text-sm text-foreground">{c.rating}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={t.mutedForeground} />
                 </View>

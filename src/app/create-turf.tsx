@@ -12,6 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
@@ -38,6 +40,14 @@ const STEPS = [
 const OFFERS_STEP = 2;
 const PUBLISH_STEP = STEPS.length - 1;
 
+// Curated high-res voucher banner presets for instant professional binding
+const VOUCHER_BANNER_PRESETS = [
+  { id: 'arena', label: '🏟️ Arena', uri: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=800&q=80' },
+  { id: 'night', label: '🌙 Night Lights', uri: 'https://images.unsplash.com/photo-1518605368461-1ee71165b400?auto=format&fit=crop&w=800&q=80' },
+  { id: 'turf', label: '⚽ Lush Turf', uri: 'https://images.unsplash.com/photo-1544698310-74ea9d1c8258?auto=format&fit=crop&w=800&q=80' },
+  { id: 'cricket', label: '🏏 Pitch Nets', uri: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=800&q=80' },
+];
+
 // A voucher being edited inside the turf form. `offerId` is present only once
 // the row is backed by a saved offer in the global store.
 interface TurfOfferDraft {
@@ -52,6 +62,8 @@ interface TurfOfferDraft {
   validDays: string;
   /** Cap on total redemptions — "first N users". Blank means unlimited. */
   maxRedemptions: string;
+  /** Single banner image URL or uploaded photo per voucher */
+  bannerImage?: string;
 }
 
 const makeOfferDraft = (): TurfOfferDraft => ({
@@ -64,6 +76,7 @@ const makeOfferDraft = (): TurfOfferDraft => ({
   minBooking: '',
   validDays: '30',
   maxRedemptions: '',
+  bannerImage: VOUCHER_BANNER_PRESETS[0].uri,
 });
 
 const SURFACE_TYPES = ['Natural Grass', 'Artificial Turf', 'Concrete', 'Wooden Court', 'Clay'];
@@ -239,7 +252,7 @@ export default function CreateTurfScreen() {
       if (Array.isArray(turfs) && turfs.length > 0) {
         setExistingTurfsList(turfs);
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   const STANDARD_VENUE_NAMES = [
@@ -406,6 +419,7 @@ export default function CreateTurfScreen() {
           Math.max(1, Math.ceil((new Date(o.validTill).getTime() - Date.now()) / 86400000))
         ),
         maxRedemptions: o.maxRedemptions ? String(o.maxRedemptions) : '',
+        bannerImage: o.bannerImage || VOUCHER_BANNER_PRESETS[0].uri,
       }))
     );
     setInitialOfferIds(attached.map(o => o.id));
@@ -568,6 +582,27 @@ export default function CreateTurfScreen() {
     setTurfOffers(prev => [...prev, makeOfferDraft()]);
   };
 
+  const pickVoucherBanner = async (localId: string) => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted' && Platform.OS !== 'web') {
+        triggerToast('⚠️ Photo library permission needed');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.9,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        patchOffer(localId, { bannerImage: result.assets[0].uri });
+      }
+    } catch (err) {
+      console.warn('Error picking voucher banner:', err);
+    }
+  };
+
   const removeOfferRow = (localId: string) => {
     setTurfOffers(prev => prev.filter(o => o.localId !== localId));
     setOfferErrors(prev => {
@@ -670,6 +705,7 @@ export default function CreateTurfScreen() {
         maxRedemptions: Number(o.maxRedemptions || 0),
         validTill: validTill.toISOString(),
         appliesTo: finalTurfName,
+        bannerImage: o.bannerImage,
       };
 
       if (o.offerId) {
@@ -834,24 +870,29 @@ export default function CreateTurfScreen() {
                       </View>
                     )}
 
-                    {/* Overlay Action Buttons: Pin Icon + Delete */}
+                    {/* Overlay Action Buttons: Pin Icon + Delete.
+                        Icon-only — a "Set Cover" text label made this row wider
+                        than the slot, so the delete button was clipped away. */}
                     <View style={styles.imageSlotActionOverlay}>
                       <Pressable
                         onPress={() => setPinnedIndex(idx)}
+                        hitSlop={6}
+                        accessibilityLabel="Set as cover photo"
                         style={[
                           styles.pinIconButton,
                           { backgroundColor: isCover ? theme.primary : 'rgba(0,0,0,0.65)' }
                         ]}
                       >
-                        <Ionicons name={isCover ? "pin" : "pin-outline"} size={13} color="#ffffff" />
-                        {!isCover && <ThemedText style={styles.pinBtnLabel}>Set Cover</ThemedText>}
+                        <Ionicons name={isCover ? 'pin' : 'pin-outline'} size={12} color="#ffffff" />
                       </Pressable>
 
                       <Pressable
                         onPress={() => handleRemoveImage(idx)}
+                        hitSlop={6}
+                        accessibilityLabel="Remove photo"
                         style={[styles.deleteIconButton, { backgroundColor: '#ef4444cc' }]}
                       >
-                        <Ionicons name="trash-outline" size={13} color="#ffffff" />
+                        <Ionicons name="trash-outline" size={12} color="#ffffff" />
                       </Pressable>
                     </View>
                   </View>
@@ -941,7 +982,7 @@ export default function CreateTurfScreen() {
                 >
                   <MaterialIcons
                     name={sport.icon as any}
-                    size={18}
+                    size={14}
                     color={isActive ? '#ffffff' : theme.textSecondary}
                   />
                   <ThemedText
@@ -983,7 +1024,7 @@ export default function CreateTurfScreen() {
                 >
                   <MaterialIcons
                     name={sport.icon as any}
-                    size={18}
+                    size={14}
                     color={isActive ? '#ffffff' : theme.textSecondary}
                   />
                   <ThemedText
@@ -1462,9 +1503,6 @@ export default function CreateTurfScreen() {
                   <ThemedText style={[styles.slotCellText, { color: textCol }]}>
                     {time}
                   </ThemedText>
-                  {LATE_NIGHT_BLOCKS.includes(time) && (
-                    <ThemedText style={[styles.slotCellNote, { color: textCol }]}>+1d</ThemedText>
-                  )}
                 </Pressable>
               );
             })}
@@ -1472,7 +1510,7 @@ export default function CreateTurfScreen() {
 
           <ThemedText style={[styles.helperText, { color: theme.textSecondary }]}>
             💡 Tapping a slot applies the current mode ({editMode}). Tapping it again removes the slot.
-            Slots marked +1d run after midnight, on the following morning.
+            Slots 12 AM – 3 AM run after midnight, on the following morning.
           </ThemedText>
 
           {/* Clear Button */}
@@ -1482,15 +1520,15 @@ export default function CreateTurfScreen() {
             </ThemedText>
           </Pressable>
 
-          {/* AI Dynamic Price Guider Card (PRO teaser) */}
-          <View style={[styles.aiPriceCard, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
-            <View style={styles.aiPriceRow}>
-              <View style={[styles.aiIconCircle, { backgroundColor: theme.primary + '18' }]}>
-                <Ionicons name="sparkles" size={16} color={theme.primary} />
+          {/* Dynamic Price Guider Card (PRO teaser) */}
+          <View style={[styles.priceGuiderCard, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
+            <View style={styles.priceGuiderRow}>
+              <View style={[styles.priceGuiderIconCircle, { backgroundColor: theme.primary + '18' }]}>
+                <Ionicons name="trending-up-outline" size={16} color={theme.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <ThemedText style={[styles.aiPriceTitle, { color: theme.text }]}>AI Dynamic Price Guider</ThemedText>
-                <ThemedText style={[styles.aiPriceSub, { color: theme.textSecondary }]}>
+                <ThemedText style={[styles.priceGuiderTitle, { color: theme.text }]}>Dynamic Price Guider</ThemedText>
+                <ThemedText style={[styles.priceGuiderSub, { color: theme.textSecondary }]}>
                   Automatically optimize peak weekend & night pricing based on local occupancy trends.
                 </ThemedText>
               </View>
@@ -1505,6 +1543,110 @@ export default function CreateTurfScreen() {
   };
 
   // ─── Step 3: Vouchers & Offers ───────────────────────────────────────────
+
+  const renderVoucherDesignCard = (draft: TurfOfferDraft) => {
+    const discountVal = draft.discountValue || '20';
+    const isPercent = draft.discountType === 'percent';
+    const discountLabel = isPercent ? `${discountVal}%` : `₹${discountVal}`;
+    const code = (draft.code || 'PROMOCODE').trim().toUpperCase();
+    const minBook = Number(draft.minBooking || 0);
+    const days = draft.validDays || '30';
+    const cap = Number(draft.maxRedemptions || 0);
+    const brand = turfName.trim() || 'TURF';
+
+    return (
+      <View key={draft.localId} style={styles.kakaoCouponCard}>
+        {/* Serrated Perforated Top Teeth Row */}
+        <View style={styles.kakaoTeethRow}>
+          {Array.from({ length: 18 }).map((_, i) => (
+            <View key={i} style={styles.kakaoTooth} />
+          ))}
+        </View>
+
+        {/* Main Body: with user-selected banner image or consistent fallback color */}
+        <View style={styles.kakaoPinkBody}>
+          {draft.bannerImage ? (
+            <>
+              <Image
+                source={{ uri: draft.bannerImage }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+              />
+              <LinearGradient
+                colors={['rgba(255, 30, 112, 0.84)', 'rgba(219, 10, 85, 0.95)']}
+                style={StyleSheet.absoluteFill}
+              />
+            </>
+          ) : null}
+
+          {/* Subtle Watermark "SALE" */}
+          <ThemedText style={styles.kakaoWatermark}>SALE</ThemedText>
+
+          {/* Header Row: Brand block on left, Yellow circle on right */}
+          <View style={styles.kakaoHeaderRow}>
+            <View style={styles.kakaoBrandBlock}>
+              <ThemedText style={styles.kakaoBrandTitle} numberOfLines={1}>
+                {brand.toUpperCase()}
+              </ThemedText>
+              <ThemedText style={styles.kakaoBrandSub}>STYLE</ThemedText>
+              <ThemedText style={styles.kakaoBrandCoupon}>X COUPON</ThemedText>
+              <View style={styles.kakaoBrandLine} />
+            </View>
+
+            {/* Floating Yellow Circle Badge */}
+            <View style={styles.kakaoYellowBadge}>
+              <ThemedText style={styles.kakaoYellowBadgeText}>COUPON</ThemedText>
+              <ThemedText style={styles.kakaoYellowBadgeText}>CLAIM</ThemedText>
+              <Ionicons name="arrow-down" size={13} color="#000000" style={{ marginTop: 1 }} />
+            </View>
+          </View>
+
+          {/* Center Discount Typography: 20% OFF */}
+          <View style={styles.kakaoDiscountCenter}>
+            <ThemedText style={styles.kakaoBigDiscount}>
+              {discountLabel}
+            </ThemedText>
+            <ThemedText style={styles.kakaoBigOff}>OFF</ThemedText>
+          </View>
+        </View>
+
+        {/* Bottom Tear-Off Stub (White) */}
+        <View style={styles.kakaoWhiteStub}>
+          <ThemedText style={styles.kakaoStubLabel}>VALIDITY PERIOD</ThemedText>
+          <ThemedText style={styles.kakaoStubDays}>
+            Valid for {days} Days · {cap > 0 ? `Limited to 1st ${cap} Users` : 'All Users'}
+          </ThemedText>
+
+          <View style={styles.kakaoStubFooter}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <ThemedText style={styles.kakaoStubCode}>
+                Code: <ThemedText style={{ fontFamily: 'Sora_800ExtraBold', color: '#FF1E70' }}>{code}</ThemedText>
+                {minBook > 0 ? ` · Min ₹${minBook}` : ''}
+              </ThemedText>
+              <ThemedText style={styles.kakaoStubDesc} numberOfLines={1}>
+                {draft.description.trim() || 'Claim this voucher discount during booking checkout.'}
+              </ThemedText>
+            </View>
+
+            {/* Barcode Graphic */}
+            <View style={styles.kakaoBarcode}>
+              {[2, 1, 3, 1, 2, 4, 1, 2, 3, 1, 2, 1].map((w, idx) => (
+                <View
+                  key={idx}
+                  style={{
+                    width: w,
+                    height: 22,
+                    backgroundColor: '#18181b',
+                    marginRight: idx % 2 === 0 ? 1.5 : 2,
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   const renderStepOffers = () => {
     const offerField = (
@@ -1555,8 +1697,7 @@ export default function CreateTurfScreen() {
             </View>
           </View>
           <ThemedText style={[styles.helperText, { color: theme.textSecondary, marginTop: 4 }]}>
-            Add promo codes players can redeem when booking this turf, or skip this step
-            entirely — you can add them later from Vouchers &amp; Offers.
+            Add promotional voucher codes with custom banner art that players can redeem when booking this turf.
           </ThemedText>
 
           {turfOffers.length === 0 ? (
@@ -1590,7 +1731,84 @@ export default function CreateTurfScreen() {
                   </Pressable>
                 </View>
 
-                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                {/* ── 1. Banner Image Upload Section ── */}
+                <View style={{ marginTop: 12 }}>
+                  <ThemedText style={styles.fieldLabel}>VOUCHER BANNER ART</ThemedText>
+                  <ThemedText style={[styles.uploadHint, { color: theme.textSecondary, marginBottom: 8 }]}>
+                    Single banner art displayed on this voucher's ticket &amp; player wallet
+                  </ThemedText>
+
+                  {/* Banner Preview & Action Box */}
+                  <View style={[styles.voucherBannerPickerCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }]}>
+                    <Image
+                      source={{ uri: draft.bannerImage || VOUCHER_BANNER_PRESETS[0].uri }}
+                      style={styles.voucherBannerThumb}
+                      contentFit="cover"
+                    />
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.75)']}
+                      style={StyleSheet.absoluteFill}
+                    />
+
+                    <View style={styles.voucherBannerActions}>
+                      <Pressable
+                        onPress={() => pickVoucherBanner(draft.localId)}
+                        style={[styles.bannerUploadBtn, { backgroundColor: theme.primary }]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Upload custom banner"
+                      >
+                        <Ionicons name="cloud-upload-outline" size={14} color="#ffffff" />
+                        <ThemedText style={styles.bannerUploadBtnText}>
+                          Upload Banner
+                        </ThemedText>
+                      </Pressable>
+
+                      {draft.bannerImage && (
+                        <Pressable
+                          onPress={() => patchOffer(draft.localId, { bannerImage: VOUCHER_BANNER_PRESETS[0].uri })}
+                          style={styles.bannerRemoveBtn}
+                          accessibilityRole="button"
+                          accessibilityLabel="Reset banner"
+                        >
+                          <Ionicons name="refresh-outline" size={13} color="#ffffff" />
+                          <ThemedText style={styles.bannerRemoveBtnText}>Reset</ThemedText>
+                        </Pressable>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Quick Curated Preset Selector */}
+                  <View style={{ marginTop: 8 }}>
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, marginBottom: 5 }}>
+                      Or select a curated sports preset:
+                    </ThemedText>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+                      {VOUCHER_BANNER_PRESETS.map(p => {
+                        const isSelected = draft.bannerImage === p.uri;
+                        return (
+                          <Pressable
+                            key={p.id}
+                            onPress={() => patchOffer(draft.localId, { bannerImage: p.uri })}
+                            style={[
+                              styles.presetChip,
+                              {
+                                backgroundColor: isSelected ? theme.primary + '22' : theme.surfaceLowest,
+                                borderColor: isSelected ? theme.primary : theme.outlineVariant + '44',
+                              },
+                            ]}
+                          >
+                            <ThemedText style={[styles.presetChipText, { color: isSelected ? theme.primary : theme.textSecondary }]}>
+                              {p.label}
+                            </ThemedText>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                </View>
+
+                {/* ── 2. Voucher Fields ── */}
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
                   {offerField(draft, 'code', 'PROMO CODE', { placeholder: 'WEEKDAY20', caps: true })}
                   {offerField(draft, 'title', 'OFFER NAME', { placeholder: 'Weekday Saver' })}
                 </View>
@@ -1629,8 +1847,6 @@ export default function CreateTurfScreen() {
                   </View>
                 </View>
 
-                {/* Two per row — three numeric fields across a phone width left
-                    no room for their labels and they wrapped mid-word. */}
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
                   {offerField(
                     draft,
@@ -1666,6 +1882,26 @@ export default function CreateTurfScreen() {
                     placeholder: 'What do players get, and when?',
                     multiline: true,
                   })}
+                </View>
+
+                {/* ── 3. Live Voucher Design Output (Template Binding) ── */}
+                <View style={{ marginTop: 16 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <Ionicons name="color-palette-outline" size={14} color={theme.primary} />
+                      <ThemedText style={{ fontFamily: 'Sora_700Bold', fontSize: 11, color: theme.primary, letterSpacing: 0.3 }}>
+                        VOUCHER DESIGN OUTPUT
+                      </ThemedText>
+                    </View>
+                    <View style={[styles.livePreviewBadge, { backgroundColor: theme.primary + '18' }]}>
+                      <View style={[styles.liveDot, { backgroundColor: theme.primary }]} />
+                      <ThemedText style={[styles.livePreviewText, { color: theme.primary }]}>
+                        Live Bound
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  {renderVoucherDesignCard(draft)}
                 </View>
               </View>
             ))
@@ -1779,22 +2015,9 @@ export default function CreateTurfScreen() {
                 No vouchers attached to this turf.
               </ThemedText>
             ) : (
-              turfOffers.filter(o => !isBlankOffer(o)).map(o => (
-                <View key={o.localId} style={styles.offerPreviewRow}>
-                  <Ionicons name="pricetag" size={13} color={theme.primary} />
-                  <ThemedText style={[styles.offerPreviewCode, { color: theme.text }]}>
-                    {o.code.trim().toUpperCase() || '—'}
-                  </ThemedText>
-                  <ThemedText
-                    style={{ color: theme.textSecondary, fontSize: 11.5, fontFamily: 'Sora_500Medium', flexShrink: 1 }}
-                    numberOfLines={1}
-                  >
-                    {o.discountType === 'percent' ? `${o.discountValue || 0}% off` : `₹${o.discountValue || 0} off`}
-                    {o.minBooking ? ` · min ₹${o.minBooking}` : ''}
-                    {Number(o.maxRedemptions) > 0 ? ` · first ${o.maxRedemptions}` : ''}
-                  </ThemedText>
-                </View>
-              ))
+              <View style={{ gap: Spacing.md, marginTop: 6 }}>
+                {turfOffers.filter(o => !isBlankOffer(o)).map(o => renderVoucherDesignCard(o))}
+              </View>
             )}
           </View>
 
@@ -1964,7 +2187,9 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.containerMargin,
     backgroundColor: '#ffffff',
     borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
+    // 16 rather than 24: the 3-across photo grid needs the extra horizontal
+    // room, otherwise the third slot runs past the card on narrow screens.
+    padding: Spacing.md,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -1982,11 +2207,15 @@ const styles = StyleSheet.create({
   // 3 Images Grid with Pin
   threeImageGrid: {
     flexDirection: 'row',
-    gap: 8,
+    width: '100%',
+    gap: 6,
   },
   imageCardSlot: {
     flex: 1,
-    height: 105,
+    // Without this a child's intrinsic width can push the row past the card,
+    // clipping the third slot off the right edge on narrow screens.
+    minWidth: 0,
+    height: 96,
     borderRadius: BorderRadius.lg,
     borderWidth: 1.5,
     overflow: 'hidden',
@@ -2021,20 +2250,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pinIconButton: {
-    flexDirection: 'row',
+    width: 24,
+    height: 24,
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    justifyContent: 'center',
     borderRadius: 4,
-    gap: 2,
-  },
-  pinBtnLabel: {
-    color: '#ffffff',
-    fontSize: 8.5,
-    fontFamily: 'Sora_600SemiBold',
   },
   deleteIconButton: {
-    padding: 4,
+    width: 24,
+    height: 24,
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2064,25 +2288,26 @@ const styles = StyleSheet.create({
   // Sports Rows (Row 1 top 5 filled, Row 2 remaining filled)
   sportsRow: {
     flexDirection: 'row',
-    gap: 6,
-    marginBottom: 6,
+    gap: 5,
+    marginBottom: 5,
   },
   sportChipInline: {
     flex: 1,
-    paddingVertical: 8,
+    minWidth: 0,
+    paddingVertical: 5,
     paddingHorizontal: 2,
     borderRadius: BorderRadius.md,
-    borderWidth: 1.5,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
+    gap: 2,
   },
   sportChipSpacer: {
     flex: 1,
   },
   sportChipText: {
-    fontSize: 9.5,
-    fontFamily: 'Sora_700Bold',
+    fontSize: 8.5,
+    fontFamily: 'Sora_600SemiBold',
     textAlign: 'center',
   },
 
@@ -2122,17 +2347,16 @@ const styles = StyleSheet.create({
   modeBtnText: { fontFamily: 'Sora_600SemiBold', fontSize: 9 },
 
   slotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  slotCell: { width: 46, paddingVertical: 7, borderRadius: BorderRadius.md, borderWidth: 1, alignItems: 'center' },
+  slotCell: { width: 48, height: 38, borderRadius: BorderRadius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   slotCellText: { fontFamily: 'Sora_600SemiBold', fontSize: 10 },
-  slotCellNote: { fontFamily: 'Sora_600SemiBold', fontSize: 7.5, opacity: 0.75, marginTop: 1 },
   helperText: { fontSize: 11, lineHeight: 16, marginTop: Spacing.sm },
 
-  // AI Price Guider
-  aiPriceCard: { padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, marginTop: Spacing.md, marginBottom: Spacing.xs },
-  aiPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  aiIconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  aiPriceTitle: { fontFamily: 'Sora_700Bold', fontSize: 12 },
-  aiPriceSub: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
+  // Price Guider
+  priceGuiderCard: { padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, marginTop: Spacing.md, marginBottom: Spacing.xs },
+  priceGuiderRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  priceGuiderIconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  priceGuiderTitle: { fontFamily: 'Sora_700Bold', fontSize: 12 },
+  priceGuiderSub: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
   proNoteText: { fontFamily: 'Sora_400Regular', fontSize: 9.5, marginTop: 6 },
 
   previewCard: { borderRadius: BorderRadius['2xl'], padding: Spacing.lg, marginBottom: Spacing.lg },
@@ -2156,6 +2380,212 @@ const styles = StyleSheet.create({
   offerPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7 },
   offerPreviewCode: { fontSize: 12, fontFamily: 'Sora_700Bold', letterSpacing: 0.8 },
   amenityText: { fontFamily: 'Sora_600SemiBold', fontSize: 11 },
+  uploadHint: { fontFamily: 'Sora_400Regular', fontSize: 10 },
+
+  // Voucher Banner Image Picker & Presets
+  voucherBannerPickerCard: { height: 105, borderRadius: BorderRadius.md, borderWidth: 1, overflow: 'hidden', position: 'relative', justifyContent: 'flex-end', padding: 8 },
+  voucherBannerThumb: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  voucherBannerActions: { flexDirection: 'row', gap: 8, zIndex: 3 },
+  bannerUploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BorderRadius.full },
+  bannerUploadBtnText: { color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 10.5 },
+  bannerRemoveBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: BorderRadius.full, backgroundColor: 'rgba(0,0,0,0.55)' },
+  bannerRemoveBtnText: { color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 10 },
+  presetChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: BorderRadius.full, borderWidth: 1 },
+  presetChipText: { fontFamily: 'Sora_600SemiBold', fontSize: 10.5 },
+
+  // Live Output Badges
+  livePreviewBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full },
+  liveDot: { width: 5, height: 5, borderRadius: 2.5 },
+  livePreviewText: { fontFamily: 'Sora_700Bold', fontSize: 9.5 },
+
+  // Live Voucher Output Design (Template Binding Card)
+  voucherOutputCard: { borderRadius: BorderRadius.xl, borderWidth: 1, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 3 },
+  voucherOutputBanner: { height: 110, width: '100%', position: 'relative', justifyContent: 'flex-start', padding: 10 },
+  voucherOutputImg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  voucherOutputTopBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 2 },
+  voucherDiscountBadge: { backgroundColor: '#10b981', flexDirection: 'row', alignItems: 'baseline', gap: 3, paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 4, elevation: 2 },
+  voucherDiscountValue: { color: '#ffffff', fontFamily: 'Sora_800ExtraBold', fontSize: 13.5 },
+  voucherDiscountSuffix: { color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 8.5 },
+  voucherBrandPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.65)', paddingHorizontal: 9, paddingVertical: 3.5, borderRadius: BorderRadius.full },
+  voucherBrandPillText: { color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 9.5, letterSpacing: 0.3, textTransform: 'uppercase' },
+
+  // Ticket Perforation Divider
+  ticketDividerRow: { flexDirection: 'row', alignItems: 'center', height: 16, position: 'relative' },
+  ticketNotchLeft: { width: 10, height: 16, borderTopRightRadius: 8, borderBottomRightRadius: 8 },
+  ticketDottedLine: { flex: 1, height: 1, borderWidth: 0.8, borderStyle: 'dashed', marginHorizontal: 6 },
+  ticketNotchRight: { width: 10, height: 16, borderTopLeftRadius: 8, borderBottomLeftRadius: 8 },
+
+  // Ticket Content Body
+  voucherOutputBody: { paddingHorizontal: Spacing.md, paddingBottom: Spacing.md, paddingTop: 2 },
+  voucherOutputTitle: { fontFamily: 'Sora_700Bold', fontSize: 13.5 },
+  voucherOutputDesc: { fontFamily: 'Sora_400Regular', fontSize: 10.5, lineHeight: 15, marginTop: 2 },
+  voucherOutputFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, flexWrap: 'wrap', gap: 6 },
+  voucherCodePill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: BorderRadius.md, borderWidth: 1.2, borderStyle: 'dashed' },
+  voucherCodeText: { fontFamily: 'Sora_700Bold', fontSize: 12, letterSpacing: 0.8 },
+  voucherMetaPills: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
+  voucherMetaPill: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: BorderRadius.full },
+  voucherMetaPillText: { fontFamily: 'Sora_600SemiBold', fontSize: 9.5 },
+
+  // KakaoStyle Trendy Ticket Voucher
+  kakaoCouponCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#FF1E70',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 4,
+    marginVertical: 8,
+  },
+  kakaoTeethRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#FF1E70',
+    height: 8,
+    overflow: 'hidden',
+  },
+  kakaoTooth: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#f1f5f9',
+  },
+  kakaoPinkBody: {
+    backgroundColor: '#FF1E70',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 22,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  kakaoWatermark: {
+    position: 'absolute',
+    right: -10,
+    bottom: -15,
+    fontSize: 88,
+    fontFamily: 'Sora_800ExtraBold',
+    color: 'rgba(255, 255, 255, 0.13)',
+    letterSpacing: 2,
+    transform: [{ rotate: '-12deg' }],
+  },
+  kakaoHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    zIndex: 2,
+  },
+  kakaoBrandBlock: {
+    alignItems: 'flex-start',
+    maxWidth: '65%',
+  },
+  kakaoBrandTitle: {
+    fontSize: 12.5,
+    fontFamily: 'Sora_800ExtraBold',
+    color: '#18181b',
+    letterSpacing: 0.5,
+  },
+  kakaoBrandSub: {
+    fontSize: 11,
+    fontFamily: 'Sora_800ExtraBold',
+    color: '#18181b',
+    lineHeight: 13,
+  },
+  kakaoBrandCoupon: {
+    fontSize: 10,
+    fontFamily: 'Sora_800ExtraBold',
+    color: '#18181b',
+    lineHeight: 12,
+  },
+  kakaoBrandLine: {
+    width: 42,
+    height: 2.5,
+    backgroundColor: '#18181b',
+    marginTop: 3,
+  },
+  kakaoYellowBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FFDE00',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  kakaoYellowBadgeText: {
+    fontSize: 8.5,
+    fontFamily: 'Sora_800ExtraBold',
+    color: '#18181b',
+    lineHeight: 10.5,
+    textAlign: 'center',
+  },
+  kakaoDiscountCenter: {
+    marginTop: 12,
+    zIndex: 2,
+  },
+  kakaoBigDiscount: {
+    fontSize: 48,
+    fontFamily: 'Sora_800ExtraBold',
+    color: '#ffffff',
+    lineHeight: 48,
+    letterSpacing: -1,
+  },
+  kakaoBigOff: {
+    fontSize: 40,
+    fontFamily: 'Sora_800ExtraBold',
+    color: '#ffffff',
+    lineHeight: 40,
+    letterSpacing: 0.5,
+  },
+  kakaoWhiteStub: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1.5,
+    borderTopColor: '#f1f5f9',
+    borderStyle: 'dashed',
+  },
+  kakaoStubLabel: {
+    fontSize: 9.5,
+    fontFamily: 'Sora_700Bold',
+    color: '#FF1E70',
+    letterSpacing: 0.4,
+  },
+  kakaoStubDays: {
+    fontSize: 12,
+    fontFamily: 'Sora_700Bold',
+    color: '#0f172a',
+    marginTop: 2,
+  },
+  kakaoStubFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  kakaoStubCode: {
+    fontSize: 10.5,
+    fontFamily: 'Sora_600SemiBold',
+    color: '#334155',
+  },
+  kakaoStubDesc: {
+    fontSize: 9,
+    color: '#64748b',
+    marginTop: 2,
+    maxWidth: 210,
+  },
+  kakaoBarcode: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
   bottomNav: { flexDirection: 'row', padding: Spacing.md, paddingHorizontal: Spacing.containerMargin, borderTopWidth: 1 },
   navBtnOutline: { flex: 1, flexDirection: 'row', height: 44, borderRadius: BorderRadius.xl, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   navBtnFill: { flex: 2, flexDirection: 'row', height: 44, borderRadius: BorderRadius.xl, alignItems: 'center', justifyContent: 'center' },

@@ -22,7 +22,7 @@ import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile, getShortLocation } from '@/hooks/use-user-profile';
 import { getAvatarSource } from '@/constants/avatars';
-import { useClassStore, useTurfStore } from '@/store/app-store';
+import { useClassStore, useTurfStore, useBookings } from '@/store/app-store';
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
 
@@ -146,6 +146,7 @@ export default function CoachTab() {
   const { profile } = useUserProfile();
   const { classes } = useClassStore();
   const { ownedTurfs } = useTurfStore();
+  const { bookings } = useBookings();
   const [backendTurfs, setBackendTurfs] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [coinTossVisible, setCoinTossVisible] = useState(false);
@@ -269,14 +270,14 @@ export default function CoachTab() {
           </View>
 
           <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
-            <ScrollView 
-              showsVerticalScrollIndicator={false} 
+            <ScrollView
+              showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
               }
             >
-              
+
               {/* Bento Stats Row */}
               <View style={styles.section}>
                 <ThemedText type="headlineSm" style={{ marginBottom: Spacing.md }}>
@@ -325,9 +326,10 @@ export default function CoachTab() {
                   </View>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginTop: 8 }}>
                     {classes.map((cls: any, i: number) => (
-                      <View
+                      <Pressable
                         key={cls.id || i}
-                        style={[
+                        onPress={() => router.push({ pathname: '/create-class', params: { editId: cls.id } })}
+                        style={({ pressed }) => [
                           styles.teamCard,
                           {
                             width: 240,
@@ -336,11 +338,18 @@ export default function CoachTab() {
                             borderWidth: 1,
                             padding: 12,
                             borderRadius: BorderRadius.lg,
+                            opacity: pressed ? 0.9 : 1,
+                            transform: [{ scale: pressed ? 0.98 : 1 }],
                           },
                           Shadows.level2
                         ]}
                       >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 6 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <View style={{ backgroundColor: theme.primary + '18', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                            <ThemedText style={{ color: theme.primary, fontSize: 9.5, fontFamily: 'Sora_700Bold' }}>
+                              ✏️ Tap to Edit
+                            </ThemedText>
+                          </View>
                           <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_700Bold' }}>
                             {cls.feeAmount ? `₹${cls.feeAmount}` : 'Free'}
                           </ThemedText>
@@ -354,7 +363,7 @@ export default function CoachTab() {
                         <ThemedText style={{ color: theme.textSecondary, fontSize: 10, marginTop: 4 }} numberOfLines={1}>
                           📍 {cls.venue || 'Main Pitch'}
                         </ThemedText>
-                      </View>
+                      </Pressable>
                     ))}
                   </ScrollView>
                 </View>
@@ -374,57 +383,84 @@ export default function CoachTab() {
                 <View style={[styles.teamGrid, { marginTop: Spacing.sm }]}>
                   {(() => {
                     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                    const currentToday = daysOfWeek[new Date().getDay()];
+                    const now = new Date();
+                    const currentToday = daysOfWeek[now.getDay()];
+                    const todayISO = now.toISOString().split('T')[0];
+
+                    const computeOccupancy = (turf: any) => {
+                      let todayTotal = 12;
+                      if (Array.isArray(turf.slots) && turf.slots.length > 0) {
+                        const configuredToday = turf.slots.filter(
+                          (s: any) => s.day === currentToday && s.status !== 'maintenance' && s.status !== 'blocked'
+                        );
+                        if (configuredToday.length > 0) {
+                          todayTotal = configuredToday.length;
+                        }
+                      }
+
+                      // Find actual confirmed bookings for this venue today
+                      const confirmedTodayBookings = (bookings || []).filter((b: any) => {
+                        const isVenueMatch =
+                          (b.venueId === turf.id) ||
+                          (b.venueName && turf.name && b.venueName.toLowerCase() === turf.name.toLowerCase());
+                        const isToday =
+                          b.date === todayISO ||
+                          (b.dayLabel && (b.dayLabel.includes(todayISO) || b.dayLabel.includes(currentToday)));
+                        const isConfirmed = b.status !== 'cancelled';
+                        return isVenueMatch && isToday && isConfirmed;
+                      });
+
+                      let todayBooked = 0;
+                      confirmedTodayBookings.forEach((b: any) => {
+                        todayBooked += Array.isArray(b.slots) ? b.slots.length : 1;
+                      });
+
+                      todayBooked = Math.min(todayTotal, todayBooked);
+                      const todayAvailable = Math.max(0, todayTotal - todayBooked);
+                      const occupancyPct = todayTotal > 0 ? Math.round((todayBooked / todayTotal) * 100) : 0;
+
+                      return {
+                        todayBooked,
+                        todayTotal,
+                        todayAvailable,
+                        occupancyPct,
+                        slotsText: `${todayBooked}/${todayTotal} slots booked today (${todayAvailable} active)`,
+                      };
+                    };
 
                     const backendTurfsFormatted = (backendTurfs || []).map((t: any) => {
-                      const todayAvailable = t.slots && t.slots.length > 0
-                        ? t.slots.filter((s: any) => s.day === currentToday && s.status === 'available').length
-                        : 8;
-                      const todayTotal = t.slots && t.slots.filter((s: any) => s.day === currentToday).length > 0
-                        ? t.slots.filter((s: any) => s.day === currentToday).length
-                        : 12;
-                      const todayBooked = Math.max(0, todayTotal - todayAvailable);
-                      const occupancyPct = Math.round((todayBooked / todayTotal) * 100);
-
+                      const occ = computeOccupancy(t);
                       return {
                         id: t.id,
                         name: t.name,
                         location: cleanLocation(t.address || 'Local Arena'),
                         sport: t.sportType || 'Football',
                         pitch: t.surfaceType || 'Artificial Turf',
-                        slotsText: `${todayBooked}/${todayTotal} slots booked today (${todayAvailable} active)`,
-                        todayBooked,
-                        todayTotal,
-                        todayAvailable,
-                        occupancyPct,
-                        rate: `₹${t.pricePerSlot}/hr`,
+                        slotsText: occ.slotsText,
+                        todayBooked: occ.todayBooked,
+                        todayTotal: occ.todayTotal,
+                        todayAvailable: occ.todayAvailable,
+                        occupancyPct: occ.occupancyPct,
+                        rate: `₹${t.pricePerSlot || 1000}/hr`,
                         image: t.thumbnailImage || t.images?.[0] || 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
                         createdAt: t.createdAt || new Date().toISOString(),
                       };
                     });
 
                     const userTurfsFormatted = (ownedTurfs || []).map(t => {
-                      const todayAvailable = t.slots && t.slots.length > 0
-                        ? t.slots.filter(s => s.day === currentToday && s.status === 'available').length
-                        : 8;
-                      const todayTotal = t.slots && t.slots.filter(s => s.day === currentToday).length > 0
-                        ? t.slots.filter(s => s.day === currentToday).length
-                        : 12;
-                      const todayBooked = Math.max(0, todayTotal - todayAvailable);
-                      const occupancyPct = Math.round((todayBooked / todayTotal) * 100);
-
+                      const occ = computeOccupancy(t);
                       return {
                         id: t.id,
                         name: t.name,
                         location: cleanLocation(t.address || 'Local Arena'),
                         sport: t.sportType || 'Football',
                         pitch: t.surfaceType || 'Artificial Turf',
-                        slotsText: `${todayBooked}/${todayTotal} slots booked today (${todayAvailable} active)`,
-                        todayBooked,
-                        todayTotal,
-                        todayAvailable,
-                        occupancyPct,
-                        rate: `₹${t.pricePerSlot}/hr`,
+                        slotsText: occ.slotsText,
+                        todayBooked: occ.todayBooked,
+                        todayTotal: occ.todayTotal,
+                        todayAvailable: occ.todayAvailable,
+                        occupancyPct: occ.occupancyPct,
+                        rate: `₹${t.pricePerSlot || 1000}/hr`,
                         image: t.thumbnailImage || t.images?.[0] || 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
                         createdAt: (t as any).createdAt || new Date().toISOString(),
                       };
@@ -437,11 +473,7 @@ export default function CoachTab() {
                         location: 'Canary Wharf, East London',
                         sport: 'Football',
                         pitch: '5G Rubber Infill Turf',
-                        slotsText: '4/12 slots booked today (8 active)',
-                        todayBooked: 4,
-                        todayTotal: 12,
-                        todayAvailable: 8,
-                        occupancyPct: 33,
+                        ...computeOccupancy({ id: 'skyline', name: 'Skyline Arena Elite' }),
                         rate: '₹25/hr',
                         image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
                         createdAt: '2025-01-01T00:00:00.000Z',
@@ -452,11 +484,7 @@ export default function CoachTab() {
                         location: 'Stratford Central, London',
                         sport: 'Multi-Sport',
                         pitch: 'Indoor Woodcourt',
-                        slotsText: '8/12 slots booked today (4 active)',
-                        todayBooked: 8,
-                        todayTotal: 12,
-                        todayAvailable: 4,
-                        occupancyPct: 67,
+                        ...computeOccupancy({ id: 'the-grid', name: 'The Grid Multisport' }),
                         rate: '₹18/hr',
                         image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=600&q=80',
                         createdAt: '2025-01-02T00:00:00.000Z',
@@ -481,18 +509,18 @@ export default function CoachTab() {
                     });
 
                     return ALL_MANAGED.map((turf) => (
-                      <View 
-                        key={turf.id} 
+                      <View
+                        key={turf.id}
                         style={[
-                          styles.teamCard, 
-                          { 
-                            backgroundColor: theme.surfaceLowest, 
-                            borderColor: theme.outlineVariant + '35', 
-                            borderWidth: 1, 
-                            padding: Spacing.md, 
+                          styles.teamCard,
+                          {
+                            backgroundColor: theme.surfaceLowest,
+                            borderColor: theme.outlineVariant + '35',
+                            borderWidth: 1,
+                            padding: Spacing.md,
                             borderRadius: BorderRadius.xl,
-                            gap: Spacing.xs 
-                          }, 
+                            gap: Spacing.xs
+                          },
                           Shadows.level2
                         ]}
                       >
@@ -551,20 +579,20 @@ export default function CoachTab() {
 
                           {/* Visual occupancy bar */}
                           <View style={{ height: 5, borderRadius: 2.5, backgroundColor: theme.outlineVariant + '30', overflow: 'hidden' }}>
-                            <View 
-                              style={{ 
-                                height: '100%', 
-                                width: `${Math.max(8, turf.occupancyPct)}%`, 
-                                backgroundColor: turf.occupancyPct > 50 ? '#10b981' : theme.primary, 
-                                borderRadius: 2.5 
-                              }} 
+                            <View
+                              style={{
+                                height: '100%',
+                                width: `${Math.max(8, turf.occupancyPct)}%`,
+                                backgroundColor: turf.occupancyPct > 50 ? '#10b981' : theme.primary,
+                                borderRadius: 2.5
+                              }}
                             />
                           </View>
                         </View>
 
                         {/* Action Buttons Row */}
                         <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-                          <Pressable 
+                          <Pressable
                             style={[{ flex: 1, backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '40', borderWidth: 1, paddingVertical: 8, borderRadius: BorderRadius.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 }]}
                             onPress={() => router.push({ pathname: '/details', params: { id: turf.id, name: turf.name } })}
                           >
@@ -572,7 +600,7 @@ export default function CoachTab() {
                             <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 11 }}>View Arena</ThemedText>
                           </Pressable>
 
-                          <Pressable 
+                          <Pressable
                             style={[{ flex: 1, backgroundColor: theme.primary, paddingVertical: 8, borderRadius: BorderRadius.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 }, Shadows.level1]}
                             onPress={() => router.push({ pathname: '/create-turf', params: { editId: turf.id } })}
                           >
@@ -638,10 +666,13 @@ export default function CoachTab() {
             </View>
           </View>
           <View style={styles.headerRightActions}>
-            {/* Temporarily Hidden Network Activity Icon */}
-            {/* <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
-              <Ionicons name="pulse" size={20} color={theme.secondary} />
-            </Pressable> */}
+            <Pressable
+              style={styles.iconButton}
+              onPress={() => router.push({ pathname: '/create-class', params: { showDrafts: 'true' } })}
+              hitSlop={8}
+            >
+              <Ionicons name="document-text-outline" size={20} color={theme.secondary} />
+            </Pressable>
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
             </Pressable>
@@ -656,8 +687,8 @@ export default function CoachTab() {
         </View>
 
         <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
-          <ScrollView 
-            showsVerticalScrollIndicator={false} 
+          <ScrollView
+            showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
@@ -666,7 +697,7 @@ export default function CoachTab() {
             {/* User Analytics / Personal Ranking Bento Grid */}
             <View style={styles.section}>
               <View style={styles.rankingGrid}>
-                
+
                 {/* Global Ranking Card */}
                 <View style={[styles.rankingCard, { backgroundColor: theme.primaryContainer }]}>
                   <View style={styles.rankingCardDecor} />
@@ -677,7 +708,7 @@ export default function CoachTab() {
                     <ThemedText type="headlineMd" style={{ color: '#ffffff', marginTop: Spacing.half }}>
                       Elite Division • #428
                     </ThemedText>
-                    
+
                     <View style={styles.statsRow}>
                       <View>
                         <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Win Rate</ThemedText>
@@ -695,7 +726,7 @@ export default function CoachTab() {
                   </View>
                 </View>
 
-                {/* AI Matcher Info Card */}
+                {/* Coach Matcher Info Card */}
                 <View style={[styles.matcherCard, { backgroundColor: theme.surfaceHigh, borderColor: theme.outlineVariant + '33' }]}>
                   <View style={styles.matcherAvatarContainer}>
                     <View style={[styles.matcherAvatarRing, { borderColor: theme.secondaryContainer }]}>
@@ -703,7 +734,7 @@ export default function CoachTab() {
                     </View>
                   </View>
                   <ThemedText type="headlineSm" style={{ color: theme.text, marginTop: Spacing.sm }}>
-                    AI Matcher Active
+                    Coach Matcher Active
                   </ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: Spacing.half }}>
                     Analyzing 48 coaches in your local metro area.
@@ -857,7 +888,7 @@ export default function CoachTab() {
                         {/* Summer Class Ad after 2nd and 4th coach */}
                         {index === 2 && coachFilter !== 'Me' && (
                           <Reanimated.View entering={FadeInDown.delay(index * 80 - 20).duration(500).damping(14)}>
-                            <Pressable 
+                            <Pressable
                               style={styles.summerAdCard}
                               onPress={() => router.push({
                                 pathname: '/enroll',
@@ -919,7 +950,7 @@ export default function CoachTab() {
 
                         {index === 4 && coachFilter !== 'Me' && (
                           <Reanimated.View entering={FadeInDown.delay(index * 80 - 20).duration(500).damping(14)}>
-                            <Pressable 
+                            <Pressable
                               style={styles.summerAdCard}
                               onPress={() => router.push({
                                 pathname: '/enroll',

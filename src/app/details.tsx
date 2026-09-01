@@ -17,9 +17,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useTurfStore } from '@/store/app-store';
+import { useTurfStore, useOfferStore } from '@/store/app-store';
+import { getOffersForTurf, formatDiscount } from '@/store/offer-store';
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
@@ -125,8 +127,9 @@ const VENUE_DETAILS: Record<string, {
 export default function TurfDetailsScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ id: string; name?: string }>();
+  const params = useLocalSearchParams<{ id: string; name?: string; coupon?: string }>();
   const { ownedTurfs } = useTurfStore();
+  const { offers } = useOfferStore();
   const [remoteTurf, setRemoteTurf] = React.useState<any>(null);
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -217,16 +220,45 @@ export default function TurfDetailsScreen() {
     return list;
   }, [userTurf, details.image]);
 
+  const formatSessionDate = (d: Date): string => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
+  };
+
+  const availableSessionDates = React.useMemo(() => {
+    const list: string[] = [];
+    const now = new Date();
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(now);
+      d.setDate(now.getDate() + i);
+      list.push(formatSessionDate(d));
+    }
+    return list;
+  }, []);
+
   const [activeImageIndex, setActiveImageIndex] = React.useState(0);
   const [heroCardWidth, setHeroCardWidth] = React.useState(0);
   const [reviewsVisible, setReviewsVisible] = React.useState(false);
   const [sessionPickerVisible, setSessionPickerVisible] = React.useState(false);
-  const [selectedSessionDate, setSelectedSessionDate] = React.useState('Fri, Oct 24');
+  const [selectedSessionDate, setSelectedSessionDate] = React.useState<string>(() => {
+    return formatSessionDate(new Date());
+  });
 
-  const handleBookNow = () => {
+  const turfOffers = React.useMemo(() => getOffersForTurf(details.name, offers), [details.name, offers]);
+  const activeOffer = turfOffers[0];
+
+  const handleBookNow = (couponCode?: string) => {
+    const chosenCoupon = couponCode || params.coupon || activeOffer?.code || '';
     router.push({
       pathname: '/booking',
-      params: { id: params.id || 'skyline', name: details.name, price: details.price, date: selectedSessionDate },
+      params: {
+        id: params.id || 'skyline',
+        name: details.name,
+        price: details.price,
+        date: selectedSessionDate,
+        ...(chosenCoupon ? { coupon: chosenCoupon } : {}),
+      },
     });
   };
 
@@ -436,6 +468,115 @@ export default function TurfDetailsScreen() {
               </View>
             </View>
 
+            {/* Vouchers & Offers Section */}
+            {turfOffers.length > 0 && (
+              <View style={styles.contentSection}>
+                <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
+                    <ThemedText type="headlineSm" style={[styles.cardSectionHeader, { borderBottomWidth: 0, paddingBottom: 0, marginBottom: 0 }]}>
+                      Vouchers & Offers
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#10b981' }}>
+                      {turfOffers.length} Active {turfOffers.length === 1 ? 'Offer' : 'Offers'}
+                    </ThemedText>
+                  </View>
+
+                  {turfOffers.map((offer) => {
+                    const isVenueSpecific = (offer.appliesTo || '').trim().toLowerCase() === details.name.trim().toLowerCase();
+                    const brand = isVenueSpecific ? details.name.toUpperCase() : 'TURF PASS';
+                    const discountText = formatDiscount(offer);
+                    return (
+                      <View key={offer.id} style={styles.kakaoCouponCard}>
+                        {/* Serrated Perforated Top Teeth Row */}
+                        <View style={styles.kakaoTeethRow}>
+                          {Array.from({ length: 18 }).map((_, i) => (
+                            <View key={i} style={styles.kakaoTooth} />
+                          ))}
+                        </View>
+
+                        {/* Main Body: with user-selected banner image or fallback color */}
+                        <View style={styles.kakaoPinkBody}>
+                          {offer.bannerImage ? (
+                            <>
+                              <Image
+                                source={{ uri: offer.bannerImage }}
+                                style={StyleSheet.absoluteFill}
+                                contentFit="cover"
+                              />
+                              <LinearGradient
+                                colors={['rgba(255, 30, 112, 0.84)', 'rgba(219, 10, 85, 0.95)']}
+                                style={StyleSheet.absoluteFill}
+                              />
+                            </>
+                          ) : null}
+
+                          {/* Subtle Watermark "SALE" */}
+                          <ThemedText style={styles.kakaoWatermark}>SALE</ThemedText>
+
+                          {/* Header Row: Brand block on left, Yellow circle on right */}
+                          <View style={styles.kakaoHeaderRow}>
+                            <View style={styles.kakaoBrandBlock}>
+                              <ThemedText style={styles.kakaoBrandTitle} numberOfLines={1}>
+                                {brand}
+                              </ThemedText>
+                              <ThemedText style={styles.kakaoBrandSub}>STYLE</ThemedText>
+                              <ThemedText style={styles.kakaoBrandCoupon}>X COUPON</ThemedText>
+                              <View style={styles.kakaoBrandLine} />
+                            </View>
+
+                            {/* Floating Yellow Circle Badge - Click to Apply */}
+                            <Pressable
+                              onPress={() => handleBookNow(offer.code)}
+                              style={styles.kakaoYellowBadge}
+                            >
+                              <ThemedText style={styles.kakaoYellowBadgeText}>COUPON</ThemedText>
+                              <ThemedText style={styles.kakaoYellowBadgeText}>CLAIM</ThemedText>
+                              <Ionicons name="arrow-down" size={13} color="#000000" style={{ marginTop: 1 }} />
+                            </Pressable>
+                          </View>
+
+                          {/* Center Discount Typography: 20% OFF */}
+                          <View style={styles.kakaoDiscountCenter}>
+                            <ThemedText style={styles.kakaoBigDiscount}>
+                              {discountText.replace(' OFF', '')}
+                            </ThemedText>
+                            <ThemedText style={styles.kakaoBigOff}>OFF</ThemedText>
+                          </View>
+                        </View>
+
+                        {/* Bottom Tear-Off Stub (White) */}
+                        <View style={styles.kakaoWhiteStub}>
+                          <ThemedText style={styles.kakaoStubLabel}>VALIDITY PERIOD</ThemedText>
+                          <ThemedText style={styles.kakaoStubDays}>
+                            Valid Offer · {offer.maxRedemptions > 0 ? `Limited to 1st ${offer.maxRedemptions} Users` : 'Open for All Users'}
+                          </ThemedText>
+
+                          <View style={styles.kakaoStubFooter}>
+                            <View style={{ flex: 1, paddingRight: 8 }}>
+                              <ThemedText style={styles.kakaoStubCode}>
+                                Code: <ThemedText style={{ fontFamily: 'Sora_800ExtraBold', color: '#FF1E70' }}>{offer.code}</ThemedText>
+                                {offer.minBooking > 0 ? ` · Min ₹${offer.minBooking}` : ''}
+                              </ThemedText>
+                              <ThemedText style={styles.kakaoStubDesc} numberOfLines={1}>
+                                {offer.description || 'Claim this voucher discount during booking checkout.'}
+                              </ThemedText>
+                            </View>
+
+                            <Pressable
+                              onPress={() => handleBookNow(offer.code)}
+                              style={styles.kakaoApplyBtn}
+                            >
+                              <ThemedText style={styles.kakaoApplyBtnText}>Apply →</ThemedText>
+                            </Pressable>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
             {/* Location Map Preview */}
             <View style={[styles.contentSection, { paddingBottom: 120 }]}>
               <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
@@ -506,7 +647,7 @@ export default function TurfDetailsScreen() {
           </Pressable>
 
           <Pressable
-            onPress={handleBookNow}
+            onPress={() => handleBookNow()}
             style={[styles.bookButton, { backgroundColor: theme.primaryContainer }, Shadows.level2]}
           >
             <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
@@ -610,16 +751,9 @@ export default function TurfDetailsScreen() {
             </View>
 
             <ScrollView style={{ paddingVertical: Spacing.md }} showsVerticalScrollIndicator={false}>
-              {[
-                'Fri, Oct 24',
-                'Sat, Oct 25',
-                'Sun, Oct 26',
-                'Mon, Oct 27',
-                'Tue, Oct 28',
-                'Wed, Oct 29',
-                'Thu, Oct 30',
-              ].map((dateOption) => {
+              {availableSessionDates.map((dateOption, idx) => {
                 const isSelected = dateOption === selectedSessionDate;
+                const isToday = idx === 0;
                 return (
                   <Pressable
                     key={dateOption}
@@ -636,18 +770,17 @@ export default function TurfDetailsScreen() {
                     ]}
                   >
                     <ThemedText
-                      style={[
-                        styles.sessionOptionText,
-                        {
-                          color: isSelected ? theme.onSecondaryContainer : theme.text,
-                          fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_600SemiBold'
-                        }
-                      ]}
+                      type="bodyLg"
+                      style={{
+                        color: isSelected ? theme.onSecondaryContainer : theme.text,
+                        fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium',
+                        fontSize: 13,
+                      }}
                     >
-                      {dateOption}
+                      {isToday ? `${dateOption} (Today)` : dateOption}
                     </ThemedText>
                     {isSelected && (
-                      <Ionicons name="checkmark-circle" size={20} color={theme.onSecondaryContainer} />
+                      <Ionicons name="checkmark-circle" size={18} color={theme.secondary} />
                     )}
                   </Pressable>
                 );
@@ -1026,5 +1159,299 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
+  },
+  // Ticket-style Voucher & Offers
+  voucherCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  voucherTopBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#1e293b',
+  },
+  voucherDiscountBadge: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  voucherDiscountText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontFamily: 'Sora_800ExtraBold',
+    letterSpacing: 0.3,
+  },
+  voucherBrandPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#0f172a',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  voucherBrandPillText: {
+    color: '#94a3b8',
+    fontSize: 9.5,
+    fontFamily: 'Sora_700Bold',
+    letterSpacing: 0.4,
+  },
+  ticketDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 16,
+    overflow: 'hidden',
+  },
+  ticketNotchLeft: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginLeft: -8,
+  },
+  ticketDottedLine: {
+    flex: 1,
+    borderStyle: 'dashed',
+    borderBottomWidth: 1.5,
+    marginHorizontal: 4,
+  },
+  ticketNotchRight: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginRight: -8,
+  },
+  voucherBody: {
+    paddingHorizontal: 14,
+    paddingTop: 4,
+    paddingBottom: 12,
+  },
+  voucherTitle: {
+    fontSize: 13,
+    fontFamily: 'Sora_700Bold',
+    letterSpacing: 0.2,
+  },
+  voucherDesc: {
+    fontSize: 10.5,
+    lineHeight: 15,
+    marginTop: 2,
+  },
+  voucherFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  voucherCodePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  voucherCodeText: {
+    fontSize: 11,
+    fontFamily: 'Sora_800ExtraBold',
+    letterSpacing: 0.5,
+  },
+  voucherMetaWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  voucherMetaBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  voucherMetaText: {
+    fontSize: 9.5,
+    fontFamily: 'Sora_600SemiBold',
+  },
+  voucherApplyBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  voucherApplyBtnText: {
+    color: '#ffffff',
+    fontSize: 10.5,
+    fontFamily: 'Sora_700Bold',
+  },
+  // KakaoStyle Trendy Ticket Voucher
+  kakaoCouponCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#FF1E70',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 4,
+    marginVertical: 8,
+  },
+  kakaoTeethRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#FF1E70',
+    height: 8,
+    overflow: 'hidden',
+  },
+  kakaoTooth: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#f1f5f9',
+  },
+  kakaoPinkBody: {
+    backgroundColor: '#FF1E70',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 22,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  kakaoWatermark: {
+    position: 'absolute',
+    right: -10,
+    bottom: -15,
+    fontSize: 88,
+    fontFamily: 'Sora_800ExtraBold',
+    color: 'rgba(255, 255, 255, 0.13)',
+    letterSpacing: 2,
+    transform: [{ rotate: '-12deg' }],
+  },
+  kakaoHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    zIndex: 2,
+  },
+  kakaoBrandBlock: {
+    alignItems: 'flex-start',
+    maxWidth: '65%',
+  },
+  kakaoBrandTitle: {
+    fontSize: 12.5,
+    fontFamily: 'Sora_800ExtraBold',
+    color: '#18181b',
+    letterSpacing: 0.5,
+  },
+  kakaoBrandSub: {
+    fontSize: 11,
+    fontFamily: 'Sora_800ExtraBold',
+    color: '#18181b',
+    lineHeight: 13,
+  },
+  kakaoBrandCoupon: {
+    fontSize: 10,
+    fontFamily: 'Sora_800ExtraBold',
+    color: '#18181b',
+    lineHeight: 12,
+  },
+  kakaoBrandLine: {
+    width: 42,
+    height: 2.5,
+    backgroundColor: '#18181b',
+    marginTop: 3,
+  },
+  kakaoYellowBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FFDE00',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  kakaoYellowBadgeText: {
+    fontSize: 8.5,
+    fontFamily: 'Sora_800ExtraBold',
+    color: '#18181b',
+    lineHeight: 10.5,
+    textAlign: 'center',
+  },
+  kakaoDiscountCenter: {
+    marginTop: 12,
+    zIndex: 2,
+  },
+  kakaoBigDiscount: {
+    fontSize: 48,
+    fontFamily: 'Sora_800ExtraBold',
+    color: '#ffffff',
+    lineHeight: 48,
+    letterSpacing: -1,
+  },
+  kakaoBigOff: {
+    fontSize: 40,
+    fontFamily: 'Sora_800ExtraBold',
+    color: '#ffffff',
+    lineHeight: 40,
+    letterSpacing: 0.5,
+  },
+  kakaoWhiteStub: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1.5,
+    borderTopColor: '#f1f5f9',
+    borderStyle: 'dashed',
+  },
+  kakaoStubLabel: {
+    fontSize: 9.5,
+    fontFamily: 'Sora_700Bold',
+    color: '#FF1E70',
+    letterSpacing: 0.4,
+  },
+  kakaoStubDays: {
+    fontSize: 12,
+    fontFamily: 'Sora_700Bold',
+    color: '#0f172a',
+    marginTop: 2,
+  },
+  kakaoStubFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  kakaoStubCode: {
+    fontSize: 10.5,
+    fontFamily: 'Sora_600SemiBold',
+    color: '#334155',
+  },
+  kakaoStubDesc: {
+    fontSize: 9,
+    color: '#64748b',
+    marginTop: 2,
+    maxWidth: 210,
+  },
+  kakaoApplyBtn: {
+    backgroundColor: '#FF1E70',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  kakaoApplyBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontFamily: 'Sora_700Bold',
   },
 });

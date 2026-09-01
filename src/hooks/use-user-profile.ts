@@ -63,7 +63,7 @@ export function getShortLocation(location?: string): string {
 let globalProfile: UserProfile = {
   name: 'Azarudeen',
   email: 'azarudeen@nonstricker.com',
-  phone: '',
+  phone: '9876543210',
   position: 'Forward',
   location: 'CHN, TN',
   bio: 'Dedicated performance athlete focusing on tactical execution and explosive power. Currently competing in the Diamond League and lead captain of Blue Falcons FC.',
@@ -90,12 +90,32 @@ let globalProfile: UserProfile = {
   aiGenerationEnabled: true,
 };
 
+let hasHydrated = false;
+
 const listeners = new Set<(profile: UserProfile) => void>();
 
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile>(globalProfile);
 
   useEffect(() => {
+    if (!hasHydrated) {
+      hasHydrated = true;
+      AsyncStorage.getItem(PROFILE_STORAGE_KEY)
+        .then((stored) => {
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored);
+              globalProfile = { ...globalProfile, ...parsed };
+              if (!globalProfile.phone) globalProfile.phone = '9876543210';
+              listeners.forEach((listener) => listener(globalProfile));
+            } catch (e) {
+              console.warn('Failed to parse stored profile:', e);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+
     const listener = (newProfile: UserProfile) => {
       setProfile(newProfile);
     };

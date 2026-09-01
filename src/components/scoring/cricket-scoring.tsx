@@ -20,8 +20,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { getAvatarSource } from '@/constants/avatars';
 import { matchApi } from '@/services/match-api';
-import { useMatchStore } from '@/store/app-store';
+import { useMatchStore, useWalletStore } from '@/store/app-store';
 import { ScoreboardBoundaryWatermark } from '@/components/scoring/ScoreboardBoundaryWatermark';
 import { saveMatchToOwnBoard } from '@/store/own-board-store';
 import { exportScoreSheetPDF } from '@/services/score-sheet-pdf';
@@ -48,6 +49,537 @@ interface Bowler {
   avatar?: string;
 }
 
+export function formatMobileNumber(phone?: string | null): string {
+  if (!phone) return '';
+  const digits = String(phone).replace(/\D/g, '');
+  if (digits.length === 10) {
+    return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+  }
+  if (digits.length === 12 && digits.startsWith('91')) {
+    return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+  }
+  if (digits.length >= 10) {
+    const last10 = digits.slice(-10);
+    return `+91 ${last10.slice(0, 5)} ${last10.slice(5)}`;
+  }
+  return phone;
+}
+
+function getTwoLetterLogo(name: string): string {
+  if (!name || !name.trim()) return 'NP';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+const PRESET_AVATARS = [
+  'avatar_1',
+  'avatar_2',
+  'avatar_3',
+  'avatar_4',
+  'avatar_5',
+  'avatar_6',
+  'avatar_7',
+  'avatar_8',
+];
+
+function NewPlayerModal({
+  visible,
+  onClose,
+  onSave,
+  theme,
+  initialSearchQuery,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSave: (player: { name: string; avatar?: string; mobile?: string; role?: string; details?: string }) => void;
+  theme: any;
+  initialSearchQuery?: string;
+}) {
+  const { addWalletFunds } = useWalletStore();
+  const [name, setName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [avatar, setAvatar] = useState<string>('avatar_1'); // Default as Avatar!
+  const [role, setRole] = useState('Batsman');
+  const [details, setDetails] = useState('Right-hand Bat');
+  const [otpStatus, setOtpStatus] = useState<'idle' | 'sent' | 'verified'>('idle');
+  const [otpCode, setOtpCode] = useState('');
+  const [coinsClaimed, setCoinsClaimed] = useState(false);
+
+  // Auto pre-fill from search query if passed
+  React.useEffect(() => {
+    if (visible) {
+      if (initialSearchQuery && initialSearchQuery.trim()) {
+        const q = initialSearchQuery.trim();
+        if (/^\d+$/.test(q)) {
+          setMobile(q.slice(0, 10));
+        } else {
+          setName(q.replace(/[^a-zA-Z\s]/g, '').slice(0, 25));
+        }
+      }
+    }
+  }, [visible, initialSearchQuery]);
+
+  const twoLetterMonogram = React.useMemo(() => getTwoLetterLogo(name), [name]);
+
+  const handlePickCustomImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setAvatar(result.assets[0].uri);
+      }
+    } catch {
+      Alert.alert('Error', 'Could not open photo library.');
+    }
+  };
+
+  const handleSendOtp = () => {
+    if (mobile.length !== 10) {
+      Alert.alert('Invalid Number', 'Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    setOtpStatus('sent');
+    setOtpCode('1234');
+  };
+
+  const handleVerifyOtp = () => {
+    if (otpCode.trim() !== '1234' && otpCode.trim().length !== 4) {
+      Alert.alert('Invalid OTP', 'Please enter the 4-digit code (Demo OTP: 1234).');
+      return;
+    }
+    setOtpStatus('verified');
+    if (!coinsClaimed) {
+      addWalletFunds(5);
+      setCoinsClaimed(true);
+      Alert.alert('🎉 +5 Coins Added!', '5 Credit Coins deposited into your Turf Wallet.');
+    }
+  };
+
+  const isSaveDisabled = !name.trim();
+
+  const handleSavePlayer = () => {
+    if (isSaveDisabled) {
+      Alert.alert('Name Required', 'Please enter player full name.');
+      return;
+    }
+    onSave({
+      name: name.trim(),
+      avatar: avatar || undefined,
+      mobile: mobile.trim() || undefined,
+      role,
+      details,
+    });
+    setName('');
+    setMobile('');
+    setAvatar('avatar_1');
+    setOtpStatus('idle');
+    setOtpCode('');
+    setCoinsClaimed(false);
+    onClose();
+  };
+
+  const isCustomUri = avatar.startsWith('file://') || avatar.startsWith('http') || avatar.startsWith('data:');
+  const isMonogram = avatar === 'monogram';
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <View style={{ width: '100%', maxWidth: 380, maxHeight: '90%', backgroundColor: theme.background || '#ffffff', borderRadius: 20, borderWidth: 1, borderColor: theme.outlineVariant + '33', padding: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 15 }}>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <View>
+                <ThemedText type="headlineSm" style={{ fontSize: 16, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                  Add New Player
+                </ThemedText>
+                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 1 }}>
+                  Create profile & sync with match squad
+                </ThemedText>
+              </View>
+              <Pressable onPress={onClose} style={{ padding: 4 }}>
+                <Ionicons name="close-circle-outline" size={24} color={theme.textSecondary} />
+              </Pressable>
+            </View>
+
+            {/* Profile Pic / Avatar Preview & Selector Section */}
+            <View style={{ alignItems: 'center', marginVertical: 8 }}>
+              <View style={{ position: 'relative' }}>
+                {isCustomUri ? (
+                  <Image source={{ uri: avatar }} style={{ width: 76, height: 76, borderRadius: 38, borderWidth: 2.5, borderColor: theme.primary }} contentFit="cover" />
+                ) : isMonogram ? (
+                  <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2.5, borderColor: theme.primary + '44' }}>
+                    <ThemedText style={{ fontSize: 26, fontFamily: 'Sora_800ExtraBold', color: '#ffffff', letterSpacing: 1 }}>
+                      {twoLetterMonogram}
+                    </ThemedText>
+                  </View>
+                ) : (
+                  <Image source={getAvatarSource(avatar)} style={{ width: 76, height: 76, borderRadius: 38, borderWidth: 2.5, borderColor: theme.primary }} contentFit="cover" />
+                )}
+                <Pressable
+                  onPress={handlePickCustomImage}
+                  style={{
+                    position: 'absolute',
+                    bottom: -2,
+                    right: -2,
+                    backgroundColor: theme.primary,
+                    width: 26,
+                    height: 26,
+                    borderRadius: 13,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                  }}
+                >
+                  <Ionicons name="camera" size={13} color="#ffffff" />
+                </Pressable>
+              </View>
+
+              {/* Avatar Preset & Upload Actions */}
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, alignItems: 'center' }}>
+                <Pressable
+                  onPress={handlePickCustomImage}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    backgroundColor: isCustomUri ? theme.primary + '18' : theme.surfaceLow,
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: isCustomUri ? theme.primary : theme.outlineVariant + '44',
+                  }}
+                >
+                  <Ionicons name="image-outline" size={13} color={theme.primary} />
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                    Upload Photo
+                  </ThemedText>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setAvatar('monogram')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    backgroundColor: isMonogram ? theme.primary + '18' : theme.surfaceLow,
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: isMonogram ? theme.primary : theme.outlineVariant + '44',
+                  }}
+                >
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: isMonogram ? theme.primary : theme.textSecondary }}>
+                    2-Letter Logo
+                  </ThemedText>
+                </Pressable>
+              </View>
+
+              {/* Quick Preset Avatars Carousel */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingHorizontal: 4, marginTop: 8 }}
+              >
+                {PRESET_AVATARS.map((avKey) => {
+                  const isSelected = avatar === avKey;
+                  return (
+                    <Pressable
+                      key={avKey}
+                      onPress={() => setAvatar(avKey)}
+                      style={{
+                        padding: 2,
+                        borderRadius: 18,
+                        borderWidth: 2,
+                        borderColor: isSelected ? theme.primary : 'transparent',
+                      }}
+                    >
+                      <Image
+                        source={getAvatarSource(avKey)}
+                        style={{ width: 32, height: 32, borderRadius: 16 }}
+                        contentFit="cover"
+                      />
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* Input: Player Name with Red Mandatory Asterisk */}
+            <View style={{ marginTop: 8 }}>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text, marginBottom: 5 }}>
+                Player Full Name <ThemedText style={{ color: '#ef4444', fontFamily: 'Sora_700Bold' }}>*</ThemedText>
+              </ThemedText>
+              <TextInput
+                value={name}
+                onChangeText={(val) => setName(val.replace(/[^a-zA-Z\s]/g, ''))}
+                placeholder="e.g. Arun Prakash"
+                placeholderTextColor="#94a3b8"
+                maxLength={25}
+                style={{
+                  backgroundColor: theme.surfaceLowest || '#ffffff',
+                  borderWidth: 1.5,
+                  borderColor: theme.outlineVariant + '44',
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  height: 38,
+                  fontSize: 13,
+                  fontFamily: 'Sora_600SemiBold',
+                  color: theme.text,
+                }}
+              />
+            </View>
+
+            {/* Input: Phone Number */}
+            <View style={{ marginTop: 10 }}>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text, marginBottom: 5 }}>
+                Phone Number (Match Stats Sync)
+              </ThemedText>
+              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                <View style={{ backgroundColor: theme.surfaceLow, paddingHorizontal: 10, height: 38, borderRadius: 10, justifyContent: 'center', borderWidth: 1.5, borderColor: theme.outlineVariant + '44' }}>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                    🇮🇳 +91
+                  </ThemedText>
+                </View>
+                <TextInput
+                  value={mobile}
+                  onChangeText={(val) => {
+                    setMobile(val.replace(/[^0-9]/g, ''));
+                    if (otpStatus === 'verified') {
+                      setOtpStatus('idle');
+                    }
+                  }}
+                  placeholder="10-digit mobile number"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  style={{
+                    flex: 1,
+                    backgroundColor: theme.surfaceLowest || '#ffffff',
+                    borderWidth: 1.5,
+                    borderColor: theme.outlineVariant + '44',
+                    borderRadius: 10,
+                    paddingHorizontal: 12,
+                    height: 38,
+                    fontSize: 13,
+                    fontFamily: 'Sora_600SemiBold',
+                    color: theme.text,
+                  }}
+                />
+              </View>
+            </View>
+
+            {/* Positive & Friendly 5 Free Coins Reward Card */}
+            <View style={{ backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', padding: 11, marginTop: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: '#0f172a' }}>
+                  Sync Phone for 5 Free Turf Coins
+                </ThemedText>
+                <View style={{ backgroundColor: '#f1f5f9', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4, borderWidth: 1, borderColor: '#e2e8f0' }}>
+                  <ThemedText style={{ color: '#0f172a', fontSize: 9, fontFamily: 'Sora_700Bold' }}>
+                    +5 COINS
+                  </ThemedText>
+                </View>
+              </View>
+              <ThemedText style={{ fontSize: 9.5, color: '#64748b', marginTop: 2, lineHeight: 14 }}>
+                Add your phone number to sync match records and claim 5 wallet coins.
+              </ThemedText>
+
+              {/* OTP Actions */}
+              {otpStatus === 'verified' ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, backgroundColor: '#ffffff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#cbd5e1' }}>
+                  <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: '#0f172a' }}>
+                    Verified · 5 Coins Credited to Wallet
+                  </ThemedText>
+                </View>
+              ) : otpStatus === 'sent' ? (
+                <View style={{ marginTop: 6, backgroundColor: '#ffffff', borderRadius: 8, padding: 8, borderWidth: 1, borderColor: '#e2e8f0' }}>
+                  <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: '#0f172a', marginBottom: 4 }}>
+                    Enter 4-Digit Code (Demo OTP: 1234)
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                    <TextInput
+                      value={otpCode}
+                      onChangeText={(val) => setOtpCode(val.replace(/[^0-9]/g, ''))}
+                      placeholder="1234"
+                      keyboardType="number-pad"
+                      maxLength={4}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#f8fafc',
+                        borderWidth: 1,
+                        borderColor: '#cbd5e1',
+                        borderRadius: 6,
+                        height: 30,
+                        paddingHorizontal: 8,
+                        fontSize: 12,
+                        fontFamily: 'Sora_700Bold',
+                        textAlign: 'center',
+                        letterSpacing: 4,
+                      }}
+                    />
+                    <Pressable
+                      onPress={handleVerifyOtp}
+                      style={{
+                        backgroundColor: theme.primary,
+                        paddingHorizontal: 12,
+                        height: 30,
+                        borderRadius: 6,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
+                        Verify OTP
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={handleSendOtp}
+                  disabled={mobile.length !== 10}
+                  style={{
+                    backgroundColor: mobile.length === 10 ? theme.primary : theme.primary + '40',
+                    borderRadius: 8,
+                    paddingVertical: 6,
+                    paddingHorizontal: 10,
+                    alignItems: 'center',
+                    marginTop: 6,
+                  }}
+                >
+                  <ThemedText style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>
+                    Verify & Claim 5 Free Coins
+                  </ThemedText>
+                </Pressable>
+              )}
+            </View>
+
+            {/* Playing Role Selection */}
+            <View style={{ marginTop: 10 }}>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text, marginBottom: 5 }}>
+                Playing Role
+              </ThemedText>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {['Batsman', 'Bowler', 'All-Rounder', 'Wicket Keeper'].map((r) => {
+                  const isSelected = role === r;
+                  return (
+                    <Pressable
+                      key={r}
+                      onPress={() => setRole(r)}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: 8,
+                        backgroundColor: isSelected ? theme.primary : '#f1f5f9',
+                        borderWidth: 1,
+                        borderColor: isSelected ? theme.primary : '#e2e8f0',
+                      }}
+                    >
+                      <ThemedText
+                        style={{
+                          fontSize: 10.5,
+                          fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_600SemiBold',
+                          color: isSelected ? '#ffffff' : '#475569',
+                        }}
+                      >
+                        {r}
+                      </ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Batting Style / Details */}
+            <View style={{ marginTop: 8 }}>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text, marginBottom: 5 }}>
+                Batting Style
+              </ThemedText>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {['Right-hand Bat', 'Left-hand Bat'].map((d) => {
+                  const isSelected = details === d;
+                  return (
+                    <Pressable
+                      key={d}
+                      onPress={() => setDetails(d)}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 6,
+                        borderRadius: 8,
+                        alignItems: 'center',
+                        backgroundColor: isSelected ? theme.primary + '14' : '#f1f5f9',
+                        borderWidth: 1,
+                        borderColor: isSelected ? theme.primary : '#e2e8f0',
+                      }}
+                    >
+                      <ThemedText
+                        style={{
+                          fontSize: 10.5,
+                          fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_600SemiBold',
+                          color: isSelected ? theme.primary : '#475569',
+                        }}
+                      >
+                        {d}
+                      </ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Bottom Modal Actions */}
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+              <Pressable
+                onPress={onClose}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f1f5f9',
+                  borderRadius: 10,
+                  paddingVertical: 9,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: '#e2e8f0',
+                }}
+              >
+                <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: '#64748b' }}>
+                  Cancel
+                </ThemedText>
+              </Pressable>
+
+              <Pressable
+                onPress={handleSavePlayer}
+                disabled={isSaveDisabled}
+                style={{
+                  flex: 2,
+                  backgroundColor: isSaveDisabled ? '#e2e8f0' : theme.primary,
+                  borderRadius: 10,
+                  paddingVertical: 9,
+                  alignItems: 'center',
+                }}
+              >
+                <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: isSaveDisabled ? '#94a3b8' : '#ffffff' }}>
+                  Save & Add Player
+                </ThemedText>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function PlayerDropdownSelector({
   value,
   onSelectPlayer,
@@ -55,50 +587,99 @@ function PlayerDropdownSelector({
   squadList,
   otherSelectedName,
   dismissedNames,
+  retiredHurtNames,
+  opposingTeamNames,
+  maxBowlerOvers,
   placeholder,
   theme,
   isOpen,
   setIsOpen,
+  onAddPlayerToSquad,
 }: {
   value: string;
-  onSelectPlayer: (name: string, avatar?: string) => void;
+  onSelectPlayer: (name: string, avatar?: string, existingStats?: { runs: number; balls: number; fours: number; sixes: number }) => void;
   onCustomNameChange: (name: string) => void;
-  squadList: Array<{ name: string; avatar?: string; mobile?: string }>;
+  squadList: Array<{ name: string; avatar?: string; mobile?: string; role?: string; details?: string; position?: string; phone?: string; isCaptain?: boolean; overs?: number; runs?: number; balls?: number; fours?: number; sixes?: number; [key: string]: any }>;
   otherSelectedName?: string;
   dismissedNames?: string[];
+  retiredHurtNames?: string[];
+  opposingTeamNames?: string[];
+  maxBowlerOvers?: number;
   placeholder: string;
   theme: any;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+  onAddPlayerToSquad?: (player: { name: string; avatar?: string; mobile?: string; role?: string }) => void;
 }) {
-  const [isCustomMode, setIsCustomMode] = useState(false);
+  const [showNewPlayerModal, setShowNewPlayerModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [modalSearchSeed, setModalSearchSeed] = useState('');
 
-  if (isCustomMode) {
-    return (
-      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <TextInput
-          style={[styles.modalInput, { flex: 1, color: '#0f172a', borderColor: theme.primary, backgroundColor: '#ffffff', marginBottom: 0 }]}
-          value={value}
-          onChangeText={(val) => onCustomNameChange(val.replace(/[^a-zA-Z\s]/g, ''))}
-          placeholder="Enter player name..."
-          placeholderTextColor="#94a3b8"
-          maxLength={25}
-          autoFocus
-        />
-        <Pressable
-          onPress={() => setIsCustomMode(false)}
-          style={{ backgroundColor: '#f1f5f9', paddingHorizontal: 8, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#cbd5e1' }}
-        >
-          <Ionicons name="list" size={16} color={theme.primary} />
-        </Pressable>
-      </View>
-    );
-  }
+  // Filter squad list by name or mobile number, with available players at top and disabled/out players at bottom
+  const filteredSquad = React.useMemo(() => {
+    let list = [...squadList];
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter((p) => {
+        const nameMatch = Boolean(p.name && p.name.toLowerCase().includes(q));
+        const mobileMatch = Boolean(p.mobile && String(p.mobile).includes(q));
+        return nameMatch || mobileMatch;
+      });
+    }
+
+    const getPlayerRank = (p: any) => {
+      const pName = (p.name || '').trim().toLowerCase();
+      const isSelectedInOtherSlot = Boolean(
+        otherSelectedName &&
+        otherSelectedName.trim().length > 0 &&
+        pName === otherSelectedName.trim().toLowerCase()
+      );
+      const isRetiredHurt = Boolean(
+        retiredHurtNames &&
+        retiredHurtNames.some(rhName => rhName && rhName.trim().toLowerCase() === pName)
+      );
+      const isDismissedOut = Boolean(
+        !isRetiredHurt &&
+        dismissedNames &&
+        dismissedNames.some(dName => dName && dName.trim().toLowerCase() === pName)
+      );
+      const isInOpposingTeam = Boolean(
+        opposingTeamNames &&
+        opposingTeamNames.some(oppName => oppName && oppName.trim().toLowerCase() === pName)
+      );
+      const isBowlerQuotaFull = Boolean(
+        maxBowlerOvers !== undefined &&
+        maxBowlerOvers !== Infinity &&
+        (p.overs || 0) >= maxBowlerOvers
+      );
+
+      // Rank 0: Available & eligible squad / AI suggested player / Returning Retired Hurt -> TOP
+      if (!isSelectedInOtherSlot && !isDismissedOut && !isInOpposingTeam && !isBowlerQuotaFull) return 0;
+      // Rank 1: Selected in other slot -> BOTTOM
+      if (isSelectedInOtherSlot) return 1;
+      // Rank 2: Permanently out batsman -> BOTTOM
+      if (isDismissedOut) return 2;
+      // Rank 3: Bowler Quota full -> BOTTOM
+      if (isBowlerQuotaFull) return 3;
+      // Rank 4: In opposing team -> BOTTOM
+      return 4;
+    };
+
+    return list.sort((a, b) => {
+      const rankA = getPlayerRank(a);
+      const rankB = getPlayerRank(b);
+      if (rankA !== rankB) return rankA - rankB;
+      return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+    });
+  }, [squadList, searchQuery, otherSelectedName, dismissedNames, retiredHurtNames, opposingTeamNames, maxBowlerOvers]);
 
   return (
     <View style={{ flex: 1, position: 'relative', zIndex: isOpen ? 99999 : 1 }}>
       <Pressable
-        onPress={() => setIsOpen(!isOpen)}
+        onPress={() => {
+          setIsOpen(!isOpen);
+          setSearchQuery('');
+        }}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -140,91 +721,230 @@ function PlayerDropdownSelector({
             shadowOpacity: 0.25,
             shadowRadius: 12,
             elevation: 25,
-            maxHeight: 190,
+            maxHeight: 250,
             zIndex: 99999,
             overflow: 'hidden',
           }}
         >
+          {/* Live Search Bar for Name or 10-Digit Mobile */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderBottomWidth: 1,
+              borderBottomColor: '#e2e8f0',
+              backgroundColor: '#f8fafc',
+            }}
+          >
+            <Ionicons name="search" size={14} color="#64748b" style={{ marginRight: 6 }} />
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search by name or phone..."
+              placeholderTextColor="#94a3b8"
+              style={{
+                flex: 1,
+                height: 28,
+                fontSize: 12,
+                fontFamily: 'Sora_600SemiBold',
+                color: '#0f172a',
+                padding: 0,
+              }}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+                <Ionicons name="close-circle" size={14} color="#94a3b8" />
+              </Pressable>
+            )}
+          </View>
+
           <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={{ backgroundColor: '#ffffff' }}>
-            {/* Option 1: + Add New Player */}
+            {/* Option 1: + Add New Player (Pre-filled with search query) */}
             <Pressable
               onPress={() => {
+                setModalSearchSeed(searchQuery);
                 setIsOpen(false);
-                setIsCustomMode(true);
+                setShowNewPlayerModal(true);
               }}
               style={({ pressed }) => [{
                 flexDirection: 'row',
                 alignItems: 'center',
-                paddingVertical: 10,
+                paddingVertical: 9,
                 paddingHorizontal: 12,
                 borderBottomWidth: 1,
-                borderBottomColor: '#e2e8f0',
-                backgroundColor: pressed ? theme.primary + '20' : theme.primary + '10',
+                borderBottomColor: '#f1f5f9',
+                backgroundColor: pressed ? theme.primary + '18' : theme.primary + '0c',
               }]}
-            ><Ionicons name="add-circle" size={18} color={theme.primary} style={{ marginRight: 8 }} /><ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.primary }}>+ Add New Player</ThemedText></Pressable>
+            >
+              <Ionicons name="add-circle" size={16} color={theme.primary} style={{ marginRight: 8 }} />
+              <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: theme.primary }} numberOfLines={1}>
+                {searchQuery.trim() ? `+ Add "${searchQuery.trim()}" as New Player` : '+ Add New Player'}
+              </ThemedText>
+            </Pressable>
 
-            {/* Squad List */}
-            {squadList.map((p, idx) => {
+            {/* Squad List filtered by Name / Mobile & Sorted by Availability Priority */}
+            {filteredSquad.map((p, idx) => {
               const isSelectedInOtherSlot = Boolean(
                 otherSelectedName &&
                 otherSelectedName.trim().length > 0 &&
                 p.name.trim().toLowerCase() === otherSelectedName.trim().toLowerCase()
               );
+              const isRetiredHurt = Boolean(
+                (p.isRetiredHurt || (retiredHurtNames && retiredHurtNames.some(rhName => rhName && rhName.trim().toLowerCase() === p.name.trim().toLowerCase())))
+              );
               const isDismissedOut = Boolean(
+                !isRetiredHurt &&
                 dismissedNames &&
                 dismissedNames.some(dName => dName && dName.trim().toLowerCase() === p.name.trim().toLowerCase())
               );
-              const isDisabled = isSelectedInOtherSlot || isDismissedOut;
+              const isInOpposingTeam = Boolean(
+                opposingTeamNames &&
+                opposingTeamNames.some(oppName => oppName && oppName.trim().toLowerCase() === p.name.trim().toLowerCase())
+              );
+              const isBowlerQuotaFull = Boolean(
+                maxBowlerOvers !== undefined &&
+                maxBowlerOvers !== Infinity &&
+                (p.overs || 0) >= maxBowlerOvers
+              );
+              const isDisabled = isSelectedInOtherSlot || isDismissedOut || isInOpposingTeam || isBowlerQuotaFull;
+              const initials = getTwoLetterLogo(p.name);
+              const isCustom = p.avatar && (p.avatar.startsWith('file://') || p.avatar.startsWith('http') || p.avatar.startsWith('data:'));
+              const isMonog = p.avatar === 'monogram';
+              const playerMobile = p.mobile || (p.phone ? p.phone : `987${((Math.abs(p.name.split('').reduce((a: number, b: string) => a + b.charCodeAt(0), 0)) * 97) % 9000000 + 1000000)}`);
+              const isCaptain = Boolean(p.isCaptain || p.position?.includes('(C)') || p.role?.toLowerCase() === 'captain' || p.position?.toLowerCase().includes('captain'));
+              const isResumingBatsman = Boolean(
+                isRetiredHurt ||
+                p.isReturningPlayer ||
+                ((p.runs !== undefined && p.runs > 0) || (p.balls !== undefined && p.balls > 0))
+              );
 
               return (
                 <Pressable
-                  key={idx}
+                  key={`squad-item-${p.name}-${idx}`}
                   disabled={isDisabled}
                   onPress={() => {
                     if (isDisabled) return;
+                    onSelectPlayer(
+                      p.name,
+                      p.avatar,
+                      (p.runs !== undefined || p.balls !== undefined)
+                        ? { runs: p.runs || 0, balls: p.balls || 0, fours: p.fours || 0, sixes: p.sixes || 0 }
+                        : undefined
+                    );
                     setIsOpen(false);
-                    onSelectPlayer(p.name, p.avatar);
+                    setSearchQuery('');
                   }}
                   style={({ pressed }) => [{
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    paddingVertical: 9,
+                    paddingVertical: 8,
                     paddingHorizontal: 12,
-                    borderBottomWidth: idx === squadList.length - 1 ? 0 : 1,
+                    borderBottomWidth: idx === filteredSquad.length - 1 ? 0 : 1,
                     borderBottomColor: '#f1f5f9',
-                    backgroundColor: isDisabled ? '#f8fafc' : pressed ? '#f1f5f9' : '#ffffff',
+                    backgroundColor: isDisabled ? '#f8fafc' : isResumingBatsman ? '#f0f9ff' : pressed ? '#f1f5f9' : '#ffffff',
                     opacity: isDisabled ? 0.45 : 1,
                   }]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 6 }}>
-                    <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: isDisabled ? '#94a3b830' : theme.primary + '15', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
-                      <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: isDisabled ? '#64748b' : theme.primary }}>
-                        {p.name ? p.name.charAt(0).toUpperCase() : 'P'}
-                      </ThemedText>
-                    </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 8 }}>
+                    {isCustom ? (
+                      <Image source={{ uri: p.avatar }} style={{ width: 30, height: 30, borderRadius: 15, marginRight: 10, borderWidth: 1, borderColor: '#e2e8f0' }} contentFit="cover" />
+                    ) : isMonog ? (
+                      <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: '#e2e8f0' }}>
+                        <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#334155' }}>
+                          {initials}
+                        </ThemedText>
+                      </View>
+                    ) : p.avatar ? (
+                      <Image source={getAvatarSource(p.avatar)} style={{ width: 30, height: 30, borderRadius: 15, marginRight: 10, borderWidth: 1, borderColor: '#e2e8f0' }} contentFit="cover" />
+                    ) : (
+                      <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: '#e2e8f0' }}>
+                        <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#334155' }}>
+                          {initials}
+                        </ThemedText>
+                      </View>
+                    )}
                     <View style={{ flex: 1 }}>
-                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: isDisabled ? '#64748b' : '#0f172a' }} numberOfLines={1}>
-                        {p.name}
+                      {/* Profile Name & Captain Badge */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: isDisabled ? '#94a3b8' : '#0f172a' }} numberOfLines={1}>
+                          {p.name}
+                        </ThemedText>
+                        {isCaptain && (
+                          <View style={{ backgroundColor: theme.primary + '18', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
+                            <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                              (C)
+                            </ThemedText>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Clean Subtitle: Formatted Mobile Number or Resume Stats */}
+                      <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: isResumingBatsman ? '#0284c7' : isDisabled ? '#94a3b8' : '#64748b', marginTop: 1 }} numberOfLines={1}>
+                        {isResumingBatsman ? `Resume: ${p.runs || 0} runs (${p.balls || 0} balls)` : formatMobileNumber(playerMobile)}
                       </ThemedText>
-                      {p.mobile ? <ThemedText style={{ fontSize: 9, color: '#94a3b8' }}>{`📱 ${p.mobile}`}</ThemedText> : null}
                     </View>
                   </View>
                   {isSelectedInOtherSlot && (
                     <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                      <ThemedText style={{ fontSize: 8.5, color: '#d97706', fontFamily: 'Sora_700Bold' }}>Selected</ThemedText>
+                      <ThemedText style={{ fontSize: 8.5, color: '#92400e', fontFamily: 'Sora_700Bold' }}>Selected</ThemedText>
+                    </View>
+                  )}
+                  {isResumingBatsman && !isSelectedInOtherSlot && (
+                    <View style={{ backgroundColor: '#e0f2fe', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <ThemedText style={{ fontSize: 8.5, color: '#0369a1', fontFamily: 'Sora_700Bold' }}>
+                        Resume ({p.runs || 0}r, {p.balls || 0}b)
+                      </ThemedText>
                     </View>
                   )}
                   {isDismissedOut && (
                     <View style={{ backgroundColor: '#fee2e2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                      <ThemedText style={{ fontSize: 8.5, color: '#dc2626', fontFamily: 'Sora_700Bold' }}>Out</ThemedText>
+                      <ThemedText style={{ fontSize: 8.5, color: '#b91c1c', fontFamily: 'Sora_700Bold' }}>Already Out</ThemedText>
+                    </View>
+                  )}
+                  {isBowlerQuotaFull && (
+                    <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <ThemedText style={{ fontSize: 8.5, color: '#b45309', fontFamily: 'Sora_700Bold' }}>Quota Full ({p.overs || 0}/{maxBowlerOvers} Ov)</ThemedText>
+                    </View>
+                  )}
+                  {isInOpposingTeam && (
+                    <View style={{ backgroundColor: '#f1f5f9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <ThemedText style={{ fontSize: 8.5, color: '#64748b', fontFamily: 'Sora_700Bold' }}>In Opp. Team</ThemedText>
                     </View>
                   )}
                 </Pressable>
               );
             })}
 
-            {squadList.length === 0 && (
+            {filteredSquad.length === 0 && searchQuery.trim().length > 0 && (
+              <View style={{ padding: 14, alignItems: 'center', backgroundColor: '#ffffff' }}>
+                <ThemedText style={{ fontSize: 11, color: '#64748b', textAlign: 'center' }}>
+                  No player found matching "{searchQuery}".
+                </ThemedText>
+                <Pressable
+                  onPress={() => {
+                    setModalSearchSeed(searchQuery);
+                    setIsOpen(false);
+                    setShowNewPlayerModal(true);
+                  }}
+                  style={{
+                    backgroundColor: theme.primary,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 8,
+                    marginTop: 8,
+                  }}
+                >
+                  <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                    + Add New Player Now
+                  </ThemedText>
+                </Pressable>
+              </View>
+            )}
+
+            {filteredSquad.length === 0 && !searchQuery.trim() && (
               <View style={{ padding: 12, alignItems: 'center', backgroundColor: '#ffffff' }}>
                 <ThemedText style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>
                   No extra squad players available.
@@ -234,6 +954,21 @@ function PlayerDropdownSelector({
           </ScrollView>
         </View>
       )}
+
+      {/* New Player Modal with OTP and Coin Rewards */}
+      <NewPlayerModal
+        visible={showNewPlayerModal}
+        onClose={() => {
+          setShowNewPlayerModal(false);
+          setModalSearchSeed('');
+        }}
+        theme={theme}
+        initialSearchQuery={modalSearchSeed}
+        onSave={(newPlayer) => {
+          onSelectPlayer(newPlayer.name, newPlayer.avatar);
+          onAddPlayerToSquad?.(newPlayer);
+        }}
+      />
     </View>
   );
 }
@@ -321,74 +1056,16 @@ export default function CricketScoring({
   React.useEffect(() => {
     if (activeDropdownKey && showEditPlayersModal) {
       setTimeout(() => {
-        if (activeDropdownKey === 'bowler' || activeDropdownKey === 'b2') {
+        if (activeDropdownKey === 'bowler') {
           modalScrollRef.current?.scrollToEnd({ animated: true });
+        } else if (activeDropdownKey === 'b2') {
+          modalScrollRef.current?.scrollTo({ y: 260, animated: true });
         } else if (activeDropdownKey === 'b1') {
-          modalScrollRef.current?.scrollTo({ y: 140, animated: true });
+          modalScrollRef.current?.scrollTo({ y: 80, animated: true });
         }
       }, 100);
     }
   }, [activeDropdownKey, showEditPlayersModal]);
-  const [showPreRulesModal, setShowPreRulesModal] = useState(false);
-  const [currentTotalOvers, setCurrentTotalOvers] = useState<string>(totalOvers);
-  const [editTotalOversInput, setEditTotalOversInput] = useState(totalOvers);
-  const [tossText, setTossText] = useState<string>(`${teamA} won toss & select bat`);
-  const [ruleAutoWide, setRuleAutoWide] = useState(autoWide === '1');
-  const [ruleAutoNoBall, setRuleAutoNoBall] = useState(autoNoBall === '1');
-  const [ruleAllowByes, setRuleAllowByes] = useState(allowByes === '1');
-
-  // 🔔 Animated Toast Notification State (Success / Warning / Error / Info)
-  const [toastConfig, setToastConfig] = useState<{
-    visible: boolean;
-    type: 'success' | 'warning' | 'error' | 'info';
-    message: string;
-  }>({ visible: false, type: 'info', message: '' });
-
-  const toastAnimY = React.useRef(new Animated.Value(-100)).current;
-  const toastOpacity = React.useRef(new Animated.Value(0)).current;
-  const toastTimeoutRef = React.useRef<any>(null);
-
-  const showToast = (type: 'success' | 'warning' | 'error' | 'info', message: string) => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    setToastConfig({ visible: true, type, message });
-    toastAnimY.setValue(-80);
-    toastOpacity.setValue(0);
-
-    Animated.parallel([
-      Animated.spring(toastAnimY, {
-        toValue: 16,
-        useNativeDriver: true,
-        friction: 7,
-        tension: 80,
-      }),
-      Animated.timing(toastOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    toastTimeoutRef.current = setTimeout(() => {
-      hideToast();
-    }, 3200);
-  };
-
-  const hideToast = () => {
-    Animated.parallel([
-      Animated.timing(toastAnimY, {
-        toValue: -80,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-      Animated.timing(toastOpacity, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setToastConfig(prev => ({ ...prev, visible: false }));
-    });
-  };
 
   React.useEffect(() => {
     if (totalOvers) {
@@ -533,9 +1210,14 @@ export default function CricketScoring({
   const [showExtraModal, setShowExtraModal] = useState(false);
   const [activeExtraType, setActiveExtraType] = useState<'WD' | 'NB' | 'BYE' | 'LB' | null>(null);
 
-  // Wicket detail sheet — lets a run out record the runs completed before the
-  // dismissal and which batsman was actually out.
+  // Wicket detail sheet — records dismissal type (bowled, caught, lbw, stumped, run out, etc.),
+  // fielder attribution, runs completed, and dismissed batsman.
   const [showWicketModal, setShowWicketModal] = useState(false);
+  const [wicketDismissalType, setWicketDismissalType] = useState<
+    'bowled' | 'caught' | 'caught_and_bowled' | 'lbw' | 'stumped' | 'run_out' | 'hit_wicket' | 'retired'
+  >('bowled');
+  const [wicketFielderName, setWicketFielderName] = useState<string>('');
+  const [customFielderInput, setCustomFielderInput] = useState<string>('');
   const [wicketRuns, setWicketRuns] = useState(0);
   const [wicketWhoIsOut, setWicketWhoIsOut] = useState<'striker' | 'non-striker'>('striker');
 
@@ -605,6 +1287,34 @@ export default function CricketScoring({
   // Player Stats State (Empty by default for a clean start when starting a new match!)
   const [batsmen, setBatsmen] = useState<Batsman[]>([]);
 
+  // Live Innings Master Archive: Keeps track of each batsman's cumulative runs/balls/4s/6s this innings
+  const [inningsBatsmenArchive, setInningsBatsmenArchive] = useState<
+    Record<string, { name: string; runs: number; balls: number; fours: number; sixes: number; avatar?: string }>
+  >({});
+
+  // Synchronize live batsmen stats to innings archive in real time
+  React.useEffect(() => {
+    if (batsmen && batsmen.length > 0) {
+      setInningsBatsmenArchive(prev => {
+        const next = { ...prev };
+        batsmen.forEach(b => {
+          if (b && b.name && b.name.trim() && b.name.trim() !== 'Batsman 1' && b.name.trim() !== 'Batsman 2') {
+            const key = b.name.trim().toLowerCase();
+            next[key] = {
+              name: b.name.trim(),
+              runs: b.runs || 0,
+              balls: b.balls || 0,
+              fours: b.fours || 0,
+              sixes: b.sixes || 0,
+              avatar: b.avatar || next[key]?.avatar,
+            };
+          }
+        });
+        return next;
+      });
+    }
+  }, [batsmen]);
+
   const [bowler, setBowler] = useState<Bowler>(
     { name: '', overs: 0, ballsInOver: 0, maidens: 0, runs: 0, wickets: 0 }
   );
@@ -615,6 +1325,72 @@ export default function CricketScoring({
   const [otherBowlers, setOtherBowlers] = useState<any[]>([]);
 
   const { teams, addPlayerToTeam } = useMatchStore();
+
+  const [showPreRulesModal, setShowPreRulesModal] = useState(false);
+  const [currentTotalOvers, setCurrentTotalOvers] = useState<string>(totalOvers);
+  const [editTotalOversInput, setEditTotalOversInput] = useState(totalOvers);
+  const [tossText, setTossText] = useState<string>(`${teamA} won toss & select bat`);
+  const [ruleAutoWide, setRuleAutoWide] = useState(autoWide === '1');
+  const [ruleAutoNoBall, setRuleAutoNoBall] = useState(autoNoBall === '1');
+  const [ruleAllowByes, setRuleAllowByes] = useState(allowByes === '1');
+  const [ruleAllowWicketRuns, setRuleAllowWicketRuns] = useState(true);
+  const defaultMaxOversPerBowler = Math.max(1, Math.ceil((parseInt(totalOvers) || 20) / 5)).toString();
+  const [ruleMaxOversPerBowler, setRuleMaxOversPerBowler] = useState<string>(defaultMaxOversPerBowler);
+  const [editMaxOversPerBowlerInput, setEditMaxOversPerBowlerInput] = useState<string>(defaultMaxOversPerBowler);
+
+  // 🔔 Animated Toast Notification State (Success / Warning / Error / Info)
+  const [toastConfig, setToastConfig] = useState<{
+    visible: boolean;
+    type: 'success' | 'warning' | 'error' | 'info';
+    message: string;
+  }>({ visible: false, type: 'info', message: '' });
+
+  const toastAnimY = React.useRef(new Animated.Value(-100)).current;
+  const toastOpacity = React.useRef(new Animated.Value(0)).current;
+  const toastTimeoutRef = React.useRef<any>(null);
+
+  const showToast = (type: 'success' | 'warning' | 'error' | 'info', message: string) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToastConfig({ visible: true, type, message });
+    toastAnimY.setValue(-80);
+    toastOpacity.setValue(0);
+
+    Animated.parallel([
+      Animated.spring(toastAnimY, {
+        toValue: 16,
+        useNativeDriver: true,
+        friction: 7,
+        tension: 80,
+      }),
+      Animated.timing(toastOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    toastTimeoutRef.current = setTimeout(() => {
+      hideToast();
+    }, 3000);
+  };
+
+  const hideToast = () => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    Animated.parallel([
+      Animated.timing(toastAnimY, {
+        toValue: -80,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(toastOpacity, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setToastConfig(prev => ({ ...prev, visible: false }));
+    });
+  };
 
   // Sync squad players from persistent team store on mount or team change
   React.useEffect(() => {
@@ -632,31 +1408,64 @@ export default function CricketScoring({
     }
   }, [battingTeamName, bowlingTeamName, teamA, teamB, teams, currentInnings]);
 
-  // Computed bench batsmen (strictly excluding currently active batsmen, dismissed batsmen, and deduplicated by name)
+  // Computed bench batsmen (including available yet-to-bat squad AND previously batted/retired batsmen who can resume play!)
   const availableBenchBatsmen = React.useMemo(() => {
     const activeNames = new Set(
       batsmen
         .map(b => (b && b.name ? b.name.trim().toLowerCase() : ''))
         .filter(n => n !== '' && n !== 'batsman 1' && n !== 'batsman 2')
     );
-    const dismissedNames = new Set(
-      dismissedBatsmen.map(db => (db && db.name ? db.name.trim().toLowerCase() : ''))
+    const permanentlyOutNames = new Set(
+      dismissedBatsmen
+        .filter(db => db && db.name && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt')
+        .map(db => db.name.trim().toLowerCase())
     );
 
     const map = new Map<string, any>();
+    // 1. Yet to bat players
     for (const p of yetToBatBatsmen) {
       if (!p) continue;
       const bName = typeof p === 'string' ? p : (p.name || '');
       if (!bName) continue;
       const nameLower = bName.trim().toLowerCase();
-      if (!activeNames.has(nameLower) && !dismissedNames.has(nameLower) && !map.has(nameLower)) {
-        map.set(nameLower, typeof p === 'string' ? { name: p } : p);
+      if (!activeNames.has(nameLower) && !permanentlyOutNames.has(nameLower) && !map.has(nameLower)) {
+        const archived = inningsBatsmenArchive[nameLower];
+        if (archived && (archived.runs > 0 || archived.balls > 0)) {
+          map.set(nameLower, {
+            ...(typeof p === 'string' ? { name: p } : p),
+            name: bName.trim(),
+            runs: archived.runs,
+            balls: archived.balls,
+            fours: archived.fours,
+            sixes: archived.sixes,
+            isReturningPlayer: true,
+            role: `Resume (${archived.runs} runs, ${archived.balls}b)`
+          });
+        } else {
+          map.set(nameLower, typeof p === 'string' ? { name: p, runs: 0, balls: 0, fours: 0, sixes: 0 } : { ...p, runs: 0, balls: 0, fours: 0, sixes: 0 });
+        }
+      }
+    }
+    // 2. Previously batted players in innings archive who are not currently on pitch
+    for (const [nameKey, archived] of Object.entries(inningsBatsmenArchive)) {
+      if (!archived || !archived.name) continue;
+      if (!activeNames.has(nameKey) && !permanentlyOutNames.has(nameKey) && !map.has(nameKey)) {
+        map.set(nameKey, {
+          name: archived.name,
+          runs: archived.runs,
+          balls: archived.balls,
+          fours: archived.fours,
+          sixes: archived.sixes,
+          avatar: archived.avatar,
+          isReturningPlayer: true,
+          role: `Resume (${archived.runs} runs, ${archived.balls}b)`
+        });
       }
     }
     return Array.from(map.values());
-  }, [yetToBatBatsmen, batsmen, dismissedBatsmen]);
+  }, [yetToBatBatsmen, batsmen, dismissedBatsmen, inningsBatsmenArchive]);
 
-  // Computed bench bowlers (strictly excluding current active bowler, active batsmen, dismissed batsmen, and deduplicated by name)
+  // Computed bench bowlers (strictly excluding current active bowler, active batsmen, dismissed batsmen, and identifying quota full)
   const availableBenchBowlers = React.useMemo(() => {
     const activeBowlerName = bowler && bowler.name ? bowler.name.trim().toLowerCase() : '';
     const activeBatNames = new Set(
@@ -669,6 +1478,7 @@ export default function CricketScoring({
         .map(b => (b && b.name ? b.name.trim().toLowerCase() : ''))
         .filter(n => n.length > 0)
     );
+    const maxLimit = ruleMaxOversPerBowler === 'unlimited' ? Infinity : (parseInt(ruleMaxOversPerBowler) || Infinity);
 
     const map = new Map<string, any>();
     for (const b of otherBowlers) {
@@ -676,12 +1486,15 @@ export default function CricketScoring({
       const bName = typeof b === 'string' ? b : (b.name || '');
       if (!bName) continue;
       const nameLower = bName.trim().toLowerCase();
+      const bOvers = typeof b === 'string' ? 0 : (b.overs || 0);
+      const isQuotaFull = bOvers >= maxLimit;
+
       if (nameLower !== activeBowlerName && !activeBatNames.has(nameLower) && !dismissedBatNames.has(nameLower) && !map.has(nameLower)) {
-        map.set(nameLower, typeof b === 'string' ? { name: b } : b);
+        map.set(nameLower, typeof b === 'string' ? { name: b, overs: 0, isQuotaFull } : { ...b, isQuotaFull });
       }
     }
     return Array.from(map.values());
-  }, [otherBowlers, bowler, batsmen, dismissedBatsmen]);
+  }, [otherBowlers, bowler, batsmen, dismissedBatsmen, ruleMaxOversPerBowler]);
 
   // Form edit states
   const [b1Name, setB1Name] = useState('');
@@ -895,6 +1708,34 @@ export default function CricketScoring({
       return;
     }
 
+    // Dismissed Batsman Validation: Permanently out batsmen cannot be selected to bat again
+    const isB1PermanentlyOut = dismissedBatsmen.some(db => db.name && db.name.trim().toLowerCase() === b1Name.trim().toLowerCase() && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt');
+    const isB2PermanentlyOut = dismissedBatsmen.some(db => db.name && db.name.trim().toLowerCase() === b2Name.trim().toLowerCase() && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt');
+    if (isB1PermanentlyOut) {
+      showToast('error', `Batsman 1 (${b1Name.trim()}) is already Out and cannot bat again in this innings!`);
+      return;
+    }
+    if (isB2PermanentlyOut) {
+      showToast('error', `Batsman 2 (${b2Name.trim()}) is already Out and cannot bat again in this innings!`);
+      return;
+    }
+
+    // Clean up Retired Hurt records from dismissed list if restored into active lineup
+    setDismissedBatsmen(prev => prev.filter(db => {
+      const nameLower = db.name.trim().toLowerCase();
+      const isResumed = nameLower === b1Name.trim().toLowerCase() || nameLower === b2Name.trim().toLowerCase();
+      return !isResumed || (db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt');
+    }));
+
+    // Bowler Max Overs Quota Validation
+    const maxBowlerLimit = ruleMaxOversPerBowler === 'unlimited' ? Infinity : (parseInt(ruleMaxOversPerBowler) || Infinity);
+    const existingBowler = otherBowlers.find(b => (typeof b === 'string' ? b : b.name).trim().toLowerCase() === bowlName.trim().toLowerCase());
+    const bowlerOversSoFar = existingBowler && typeof existingBowler !== 'string' ? (existingBowler.overs || 0) : 0;
+    if (bowlerOversSoFar >= maxBowlerLimit) {
+      showToast('error', `Bowler (${bowlName.trim()}) has already bowled maximum allowed ${maxBowlerLimit} overs under match rules!`);
+      return;
+    }
+
     const oldState = {
       runs,
       wickets,
@@ -906,63 +1747,109 @@ export default function CricketScoring({
     };
     setHistory(prev => [...prev, oldState]);
 
+    // If outgoing batsman 1 was replaced, archive their stats
+    if (batsmen[0] && batsmen[0].name && batsmen[0].name.trim().toLowerCase() !== b1Name.trim().toLowerCase()) {
+      setInningsBatsmenArchive(prev => ({
+        ...prev,
+        [batsmen[0].name.trim().toLowerCase()]: {
+          name: batsmen[0].name.trim(),
+          runs: batsmen[0].runs || 0,
+          balls: batsmen[0].balls || 0,
+          fours: batsmen[0].fours || 0,
+          sixes: batsmen[0].sixes || 0,
+          avatar: batsmen[0].avatar,
+        }
+      }));
+    }
+    // If outgoing batsman 2 was replaced, archive their stats
+    if (batsmen[1] && batsmen[1].name && batsmen[1].name.trim().toLowerCase() !== b2Name.trim().toLowerCase()) {
+      setInningsBatsmenArchive(prev => ({
+        ...prev,
+        [batsmen[1].name.trim().toLowerCase()]: {
+          name: batsmen[1].name.trim(),
+          runs: batsmen[1].runs || 0,
+          balls: batsmen[1].balls || 0,
+          fours: batsmen[1].fours || 0,
+          sixes: batsmen[1].sixes || 0,
+          avatar: batsmen[1].avatar,
+        }
+      }));
+    }
+
     const newBatsmen: Batsman[] = [];
     if (b1Name.trim()) {
+      const b1R = parseInt(b1Runs) || 0;
+      const b1B = parseInt(b1Balls) || 0;
+      const b14 = parseInt(b1Fours) || 0;
+      const b16 = parseInt(b1Sixes) || 0;
       newBatsmen.push({
         name: b1Name.trim(),
-        runs: parseInt(b1Runs) || 0,
-        balls: parseInt(b1Balls) || 0,
-        fours: parseInt(b1Fours) || 0,
-        sixes: parseInt(b1Sixes) || 0,
+        runs: b1R,
+        balls: b1B,
+        fours: b14,
+        sixes: b16,
         active: batsmen[0]?.active ?? true,
         avatar: b1Avatar,
       });
+      setInningsBatsmenArchive(prev => ({
+        ...prev,
+        [b1Name.trim().toLowerCase()]: {
+          name: b1Name.trim(),
+          runs: b1R,
+          balls: b1B,
+          fours: b14,
+          sixes: b16,
+          avatar: b1Avatar,
+        }
+      }));
     }
     if (b2Name.trim()) {
+      const b2R = parseInt(b2Runs) || 0;
+      const b2B = parseInt(b2Balls) || 0;
+      const b24 = parseInt(b2Fours) || 0;
+      const b26 = parseInt(b2Sixes) || 0;
       newBatsmen.push({
         name: b2Name.trim(),
-        runs: parseInt(b2Runs) || 0,
-        balls: parseInt(b2Balls) || 0,
-        fours: parseInt(b2Fours) || 0,
-        sixes: parseInt(b2Sixes) || 0,
+        runs: b2R,
+        balls: b2B,
+        fours: b24,
+        sixes: b26,
         active: batsmen[1]?.active ?? false,
         avatar: b2Avatar,
       });
+      setInningsBatsmenArchive(prev => ({
+        ...prev,
+        [b2Name.trim().toLowerCase()]: {
+          name: b2Name.trim(),
+          runs: b2R,
+          balls: b2B,
+          fours: b24,
+          sixes: b26,
+          avatar: b2Avatar,
+        }
+      }));
     }
 
     setBatsmen(newBatsmen);
 
-    const trimmedBowlName = bowlName.trim();
-    setBowler(prev => ({
-      ...prev,
-      name: trimmedBowlName,
-      overs: parseInt(bowlOvers) || 0,
-      maidens: parseInt(bowlMaidens) || 0,
-      runs: parseInt(bowlRuns) || 0,
-      wickets: parseInt(bowlWickets) || 0,
-      avatar: bowlAvatar,
-    }));
-
-    if (trimmedBowlName) {
-      setOtherBowlers(prev => {
-        const existingNames = new Set(prev.map((p: any) => (typeof p === 'string' ? p : p.name).trim().toLowerCase()));
-        if (!existingNames.has(trimmedBowlName.toLowerCase())) {
-          return [...prev, { name: trimmedBowlName, overs: parseInt(bowlOvers) || 0, maidens: parseInt(bowlMaidens) || 0, runs: parseInt(bowlRuns) || 0, wickets: parseInt(bowlWickets) || 0 }];
-        }
-        return prev;
+    if (bowlName.trim()) {
+      setBowler({
+        name: bowlName.trim(),
+        overs: parseInt(bowlOvers) || 0,
+        maidens: parseInt(bowlMaidens) || 0,
+        runs: parseInt(bowlRuns) || 0,
+        wickets: parseInt(bowlWickets) || 0,
+        ballsInOver: bowler.ballsInOver,
+        avatar: bowlAvatar,
       });
     }
 
     setShowEditPlayersModal(false);
   };
 
-  const executeRetire = (type: 'Retired Hurt' | 'Retired Out', replacementName: string) => {
-    if (!replacementName.trim()) {
-      Alert.alert('Error', 'Please select or enter a replacement name.');
-      return;
-    }
+  const executeRetireBatsman = (type: 'Retired Hurt' | 'Retired Out' = 'Retired Hurt') => {
     const idx = actionTarget?.batsmanIndex;
-    if (idx === undefined) return;
+    if (idx === undefined || !batsmen[idx] || !batsmen[idx].name) return;
 
     const oldState = {
       runs,
@@ -973,17 +1860,18 @@ export default function CricketScoring({
       batsmen: batsmen.map(b => ({ ...b })),
       bowler: { ...bowler },
       dismissedBatsmen: dismissedBatsmen.map(db => ({ ...db })),
-      yetToBatBatsmen: yetToBatBatsmen.map(y => ({ ...y })),
     };
     setHistory(prev => [...prev, oldState]);
 
     const retiringPlayer = batsmen[idx];
 
+    // Add to dismissed batsmen with explicit type
     setDismissedBatsmen(prev => [
       ...prev,
       {
         name: retiringPlayer.name,
         status: type,
+        dismissalType: type === 'Retired Hurt' ? 'retired_hurt' : 'retired_out',
         runs: retiringPlayer.runs,
         balls: retiringPlayer.balls,
         fours: retiringPlayer.fours,
@@ -991,55 +1879,39 @@ export default function CricketScoring({
       }
     ]);
 
-    const isFromSquad = yetToBatBatsmen.find(p => p.name.toLowerCase() === replacementName.toLowerCase());
-    if (isFromSquad) {
-      setYetToBatBatsmen(prev => prev.filter(p => p.name.toLowerCase() !== replacementName.toLowerCase()));
-    }
-
+    // Clear the batsman slot
     setBatsmen(prev => {
       const next = [...prev];
-      if (next.length === 0) {
-        return [{
-          name: replacementName.trim(),
+      if (idx === 0) {
+        next[0] = {
+          name: '',
           runs: 0,
           balls: 0,
           fours: 0,
           sixes: 0,
-          active: true,
-        }];
-      } else if (next.length === 1 && idx === 1) {
-        return [
-          next[0],
-          {
-            name: replacementName.trim(),
-            runs: 0,
-            balls: 0,
-            fours: 0,
-            sixes: 0,
-            active: false,
-          }
-        ];
-      } else {
-        next[idx] = {
-          name: replacementName.trim(),
-          runs: 0,
-          balls: 0,
-          fours: 0,
-          sixes: 0,
-          active: retiringPlayer ? retiringPlayer.active : (idx === 0),
+          active: prev[0]?.active ?? true,
         };
-        return next;
+      } else {
+        next[1] = {
+          name: '',
+          runs: 0,
+          balls: 0,
+          fours: 0,
+          sixes: 0,
+          active: prev[1]?.active ?? false,
+        };
       }
+      return next;
     });
 
     if (idx === 0) {
-      setB1Name(replacementName.trim());
+      setB1Name('');
       setB1Runs('0');
       setB1Balls('0');
       setB1Fours('0');
       setB1Sixes('0');
     } else {
-      setB2Name(replacementName.trim());
+      setB2Name('');
       setB2Runs('0');
       setB2Balls('0');
       setB2Fours('0');
@@ -1048,15 +1920,126 @@ export default function CricketScoring({
 
     setActionTarget(null);
     setCustomNewName('');
+    showToast('info', `${retiringPlayer.name} has retired (${type}).`);
+  };
+
+  const executeSubstituteBatsman = (replacementName: string) => {
+    const idx = actionTarget?.batsmanIndex;
+    if (idx === undefined || !replacementName.trim()) return;
+
+    const trimmedReplacement = replacementName.trim();
+    const replacementLower = trimmedReplacement.toLowerCase();
+
+    // Dismissed Check: Permanently out batsmen cannot be selected
+    const isPermanentlyOut = dismissedBatsmen.some(
+      db => db && db.name && db.name.trim().toLowerCase() === replacementLower &&
+            db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt'
+    );
+    if (isPermanentlyOut) {
+      showToast('error', `${trimmedReplacement} is already Out and cannot bat again!`);
+      return;
+    }
+
+    const oldPlayer = batsmen[idx];
+    // Archive outgoing player's stats
+    if (oldPlayer && oldPlayer.name && oldPlayer.name.trim()) {
+      setInningsBatsmenArchive(prev => ({
+        ...prev,
+        [oldPlayer.name.trim().toLowerCase()]: {
+          name: oldPlayer.name.trim(),
+          runs: oldPlayer.runs || 0,
+          balls: oldPlayer.balls || 0,
+          fours: oldPlayer.fours || 0,
+          sixes: oldPlayer.sixes || 0,
+          avatar: oldPlayer.avatar,
+        }
+      }));
+    }
+
+    // Look up incoming player in archive or retired hurt list
+    const retHurtRec = dismissedBatsmen.find(
+      db => db && db.name && db.name.trim().toLowerCase() === replacementLower &&
+            (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')
+    );
+    const archived = inningsBatsmenArchive[replacementLower];
+    const runsInit = archived ? (archived.runs || 0) : (retHurtRec ? (retHurtRec.runs || 0) : 0);
+    const ballsInit = archived ? (archived.balls || 0) : (retHurtRec ? (retHurtRec.balls || 0) : 0);
+    const foursInit = archived ? (archived.fours || 0) : (retHurtRec ? (retHurtRec.fours || 0) : 0);
+    const sixesInit = archived ? (archived.sixes || 0) : (retHurtRec ? (retHurtRec.sixes || 0) : 0);
+
+    if (retHurtRec) {
+      setDismissedBatsmen(prev => prev.filter(db => db.name.trim().toLowerCase() !== replacementLower));
+    }
+
+    const oldState = {
+      runs,
+      wickets,
+      overs,
+      ballsInCurrentOver,
+      overLog: [...overLog],
+      batsmen: batsmen.map(b => ({ ...b })),
+      bowler: { ...bowler },
+      dismissedBatsmen: dismissedBatsmen.map(db => ({ ...db })),
+      inningsBatsmenArchive: { ...inningsBatsmenArchive },
+    };
+    setHistory(prev => [...prev, oldState]);
+
+    setBatsmen(prev => {
+      const next = [...prev];
+      if (next[idx]) {
+        next[idx] = {
+          ...next[idx],
+          name: trimmedReplacement,
+          runs: runsInit,
+          balls: ballsInit,
+          fours: foursInit,
+          sixes: sixesInit,
+        };
+      }
+      return next;
+    });
+
+    if (idx === 0) {
+      setB1Name(trimmedReplacement);
+      setB1Runs(String(runsInit));
+      setB1Balls(String(ballsInit));
+      setB1Fours(String(foursInit));
+      setB1Sixes(String(sixesInit));
+    } else {
+      setB2Name(trimmedReplacement);
+      setB2Runs(String(runsInit));
+      setB2Balls(String(ballsInit));
+      setB2Fours(String(foursInit));
+      setB2Sixes(String(sixesInit));
+    }
+
+    setActionTarget(null);
+    setCustomNewName('');
+    if (runsInit > 0 || ballsInit > 0) {
+      showToast('success', `${trimmedReplacement} resumed batting with ${runsInit} runs (${ballsInit}b)!`);
+    } else {
+      showToast('success', `${trimmedReplacement} is now batting!`);
+    }
   };
 
   const sendInBatsman = (playerName: string, targetSlot?: number) => {
     const trimmed = playerName.trim();
     if (!trimmed) return;
+    const nameLower = trimmed.toLowerCase();
+
+    // Check if player is permanently dismissed
+    const permanentlyDismissed = dismissedBatsmen.find(
+      db => db && db.name && db.name.trim().toLowerCase() === nameLower &&
+            db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt'
+    );
+    if (permanentlyDismissed) {
+      showToast('error', `${trimmed} is already Out and cannot bat again in this innings!`);
+      return;
+    }
 
     // Duplicate Player Check: Prevent assigning a player who is already at the crease
     const alreadyBattingIdx = batsmen.findIndex(
-      b => b && b.name && b.name.trim().toLowerCase() === trimmed.toLowerCase()
+      b => b && b.name && b.name.trim().toLowerCase() === nameLower
     );
 
     if (alreadyBattingIdx !== -1) {
@@ -1064,39 +2047,73 @@ export default function CricketScoring({
       return;
     }
 
+    // Look up incoming player in archive or retired hurt list
+    const retiredHurtRecord = dismissedBatsmen.find(
+      db => db && db.name && db.name.trim().toLowerCase() === nameLower &&
+            (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')
+    );
+    const archived = inningsBatsmenArchive[nameLower];
+    const initialRuns = archived ? (archived.runs || 0) : (retiredHurtRecord ? (retiredHurtRecord.runs || 0) : 0);
+    const initialBalls = archived ? (archived.balls || 0) : (retiredHurtRecord ? (retiredHurtRecord.balls || 0) : 0);
+    const initialFours = archived ? (archived.fours || 0) : (retiredHurtRecord ? (retiredHurtRecord.fours || 0) : 0);
+    const initialSixes = archived ? (archived.sixes || 0) : (retiredHurtRecord ? (retiredHurtRecord.sixes || 0) : 0);
+
+    // If returning from Retired Hurt, remove from dismissed list
+    if (retiredHurtRecord) {
+      setDismissedBatsmen(prev => prev.filter(db => db.name.trim().toLowerCase() !== nameLower));
+    }
+
     // Filter out from yet to bat list
-    setYetToBatBatsmen(prev => prev.filter(p => p.name.toLowerCase() !== trimmed.toLowerCase()));
+    setYetToBatBatsmen(prev => prev.filter(p => (typeof p === 'string' ? p : p.name).toLowerCase() !== nameLower));
 
     const b1Valid = batsmen[0] && batsmen[0].name && batsmen[0].name.trim() !== '' && batsmen[0].name.trim() !== 'Batsman 1';
     const b2Valid = batsmen[1] && batsmen[1].name && batsmen[1].name.trim() !== '' && batsmen[1].name.trim() !== 'Batsman 2';
 
     if (!b1Valid) {
       setBatsmen(prev => [
-        { name: trimmed, runs: 0, balls: 0, fours: 0, sixes: 0, active: true },
+        { name: trimmed, runs: initialRuns, balls: initialBalls, fours: initialFours, sixes: initialSixes, active: true },
         (prev[1] && prev[1].name) ? prev[1] : { name: '', runs: 0, balls: 0, fours: 0, sixes: 0, active: false }
       ]);
       setB1Name(trimmed);
-      setB1Runs('0');
-      setB1Balls('0');
-      setB1Fours('0');
-      setB1Sixes('0');
-      showToast('success', `${trimmed} is now on strike as Striker!`);
+      setB1Runs(String(initialRuns));
+      setB1Balls(String(initialBalls));
+      setB1Fours(String(initialFours));
+      setB1Sixes(String(initialSixes));
+      showToast('success', initialRuns > 0 || initialBalls > 0
+        ? `${trimmed} resumed batting with ${initialRuns} (${initialBalls}b)!`
+        : `${trimmed} is now on strike as Striker!`
+      );
     } else if (!b2Valid) {
       setBatsmen(prev => [
         prev[0],
-        { name: trimmed, runs: 0, balls: 0, fours: 0, sixes: 0, active: false }
+        { name: trimmed, runs: initialRuns, balls: initialBalls, fours: initialFours, sixes: initialSixes, active: false }
       ]);
       setB2Name(trimmed);
-      setB2Runs('0');
-      setB2Balls('0');
-      setB2Fours('0');
-      setB2Sixes('0');
-      showToast('success', `${trimmed} has taken crease as Non-Striker!`);
+      setB2Runs(String(initialRuns));
+      setB2Balls(String(initialBalls));
+      setB2Fours(String(initialFours));
+      setB2Sixes(String(initialSixes));
+      showToast('success', initialRuns > 0 || initialBalls > 0
+        ? `${trimmed} resumed batting with ${initialRuns} (${initialBalls}b)!`
+        : `${trimmed} has taken crease as Non-Striker!`
+      );
     } else {
       const idx = targetSlot !== undefined ? targetSlot : (batsmen[0].active ? 0 : 1);
       const oldPlayer = batsmen[idx];
 
       if (oldPlayer && oldPlayer.name && oldPlayer.name.trim()) {
+        // Archive old player's stats
+        setInningsBatsmenArchive(prev => ({
+          ...prev,
+          [oldPlayer.name.trim().toLowerCase()]: {
+            name: oldPlayer.name.trim(),
+            runs: oldPlayer.runs || 0,
+            balls: oldPlayer.balls || 0,
+            fours: oldPlayer.fours || 0,
+            sixes: oldPlayer.sixes || 0,
+            avatar: oldPlayer.avatar,
+          }
+        }));
         setYetToBatBatsmen(prev => [
           ...prev,
           { name: oldPlayer.name, status: 'yet to bat', runs: oldPlayer.runs, balls: oldPlayer.balls, fours: oldPlayer.fours, sixes: oldPlayer.sixes }
@@ -1105,24 +2122,27 @@ export default function CricketScoring({
 
       setBatsmen(prev => {
         const next = [...prev];
-        next[idx] = { name: trimmed, runs: 0, balls: 0, fours: 0, sixes: 0, active: true };
+        next[idx] = { name: trimmed, runs: initialRuns, balls: initialBalls, fours: initialFours, sixes: initialSixes, active: true };
         return next;
       });
 
       if (idx === 0) {
         setB1Name(trimmed);
-        setB1Runs('0');
-        setB1Balls('0');
-        setB1Fours('0');
-        setB1Sixes('0');
+        setB1Runs(String(initialRuns));
+        setB1Balls(String(initialBalls));
+        setB1Fours(String(initialFours));
+        setB1Sixes(String(initialSixes));
       } else {
         setB2Name(trimmed);
-        setB2Runs('0');
-        setB2Balls('0');
-        setB2Fours('0');
-        setB2Sixes('0');
+        setB2Runs(String(initialRuns));
+        setB2Balls(String(initialBalls));
+        setB2Fours(String(initialFours));
+        setB2Sixes(String(initialSixes));
       }
-      showToast('success', `${trimmed} is now batting!`);
+      showToast('success', initialRuns > 0 || initialBalls > 0
+        ? `${trimmed} resumed batting with ${initialRuns} (${initialBalls}b)!`
+        : `${trimmed} is now batting!`
+      );
     }
   };
 
@@ -1130,9 +2150,26 @@ export default function CricketScoring({
     sendInBatsman(replacementName);
   };
 
+  const executeRetire = (type: 'Retired Hurt' | 'Retired Out', replacementName?: string) => {
+    executeRetireBatsman(type);
+    if (replacementName && replacementName.trim()) {
+      sendInBatsman(replacementName);
+    }
+  };
+
   const executeReplaceBowler = (replacementName: string) => {
     if (!replacementName.trim()) {
       showToast('warning', 'Please select or enter a bowler name.');
+      return;
+    }
+
+    const trimmedNewName = replacementName.trim();
+    // Max Overs Check: Prevent bowler who reached quota from bowling again
+    const maxLimit = ruleMaxOversPerBowler === 'unlimited' ? Infinity : (parseInt(ruleMaxOversPerBowler) || Infinity);
+    const existingRec = otherBowlers.find(b => (typeof b === 'string' ? b : b.name).trim().toLowerCase() === trimmedNewName.toLowerCase());
+    const oversBowled = existingRec && typeof existingRec !== 'string' ? (existingRec.overs || 0) : 0;
+    if (oversBowled >= maxLimit) {
+      showToast('error', `${trimmedNewName} has already bowled their maximum allowed ${maxLimit} overs!`);
       return;
     }
 
@@ -1149,7 +2186,6 @@ export default function CricketScoring({
     setHistory(prev => [...prev, oldState]);
 
     const oldBowler = bowler;
-    const trimmedNewName = replacementName.trim();
 
     // Deduplicate and register both old bowler and new bowler into bowling squad registry
     setOtherBowlers(prev => {
@@ -1304,14 +2340,15 @@ export default function CricketScoring({
   };
 
 
-  // Details a wicket can carry beyond "someone is out". Defaults reproduce the
-  // old one-tap behaviour (striker out, nobody ran, credited to the bowler).
+  // Details a wicket can carry beyond "someone is out".
   type WicketOptions = {
+    dismissalType?: string;
+    fielderName?: string;
     // Runs completed by the batsmen before the dismissal — the run-out case.
     runsCompleted?: number;
     // A run out can dismiss the batsman at either end.
     whoIsOut?: 'striker' | 'non-striker';
-    // Run outs are not credited to the bowler's wicket column.
+    // Run outs & retirements are not credited to the bowler's wicket column.
     creditBowler?: boolean;
   };
 
@@ -1406,9 +2443,13 @@ export default function CricketScoring({
       const newWickets = wickets + 1;
       setWickets(newWickets);
 
+      const dismissalType = wicketOptions?.dismissalType || 'bowled';
+      const fielderName = wicketOptions?.fielderName || '';
       const runsCompleted = Math.max(0, wicketOptions?.runsCompleted ?? 0);
       const whoIsOut = wicketOptions?.whoIsOut ?? 'striker';
-      const creditBowler = wicketOptions?.creditBowler ?? true;
+      const creditBowler = wicketOptions?.creditBowler !== undefined
+        ? wicketOptions.creditBowler
+        : (dismissalType !== 'run_out' && dismissalType !== 'retired');
       // Odd runs means the batsmen crossed, so the striker's end changes.
       const crossed = runsCompleted % 2 !== 0;
 
@@ -1424,9 +2465,23 @@ export default function CricketScoring({
       const newTotalRuns = runs + runsCompleted;
       if (runsCompleted > 0) setRuns(newTotalRuns);
 
-      setOverLog(prev => [...prev, runsCompleted > 0 ? `${runsCompleted}W` : 'W']);
+      let logSymbol = 'W';
+      if (dismissalType === 'run_out') {
+        logSymbol = runsCompleted > 0 ? `${runsCompleted}W` : 'W';
+      }
+      setOverLog(prev => [...prev, logSymbol]);
 
       if (dismissedPlayer && dismissedPlayer.name) {
+        let dismissalDesc = `b ${bowler.name}`;
+        if (dismissalType === 'bowled') dismissalDesc = `b ${bowler.name}`;
+        else if (dismissalType === 'caught') dismissalDesc = fielderName ? `c ${fielderName} b ${bowler.name}` : `c & b ${bowler.name}`;
+        else if (dismissalType === 'caught_and_bowled') dismissalDesc = `c & b ${bowler.name}`;
+        else if (dismissalType === 'lbw') dismissalDesc = `lbw b ${bowler.name}`;
+        else if (dismissalType === 'stumped') dismissalDesc = fielderName ? `st ${fielderName} b ${bowler.name}` : `st b ${bowler.name}`;
+        else if (dismissalType === 'run_out') dismissalDesc = fielderName ? `run out (${fielderName})` : `run out`;
+        else if (dismissalType === 'hit_wicket') dismissalDesc = `hit wicket b ${bowler.name}`;
+        else if (dismissalType === 'retired') dismissalDesc = `retired`;
+
         // The striker is credited with the runs completed and the ball faced;
         // a run-out non-striker gets neither.
         const isStrikerOut = targetIdx === safeStrikerIdx;
@@ -1434,7 +2489,11 @@ export default function CricketScoring({
           ...prev,
           {
             name: dismissedPlayer.name,
-            status: 'Out',
+            status: dismissalDesc,
+            dismissalType: dismissalType,
+            dismissalDescription: dismissalDesc,
+            fielder: fielderName,
+            bowler: bowler.name,
             runs: dismissedPlayer.runs + (isStrikerOut ? runsCompleted : 0),
             balls: dismissedPlayer.balls + (isStrikerOut ? 1 : 0),
             fours: dismissedPlayer.fours,
@@ -1464,12 +2523,27 @@ export default function CricketScoring({
         })
       );
 
+      // Clear the dismissed batsman slot in dropdown inputs so it resets to placeholder
+      if (targetIdx === 0) {
+        setB1Name('');
+        setB1Runs('0');
+        setB1Balls('0');
+        setB1Fours('0');
+        setB1Sixes('0');
+      } else if (targetIdx === 1) {
+        setB2Name('');
+        setB2Runs('0');
+        setB2Balls('0');
+        setB2Fours('0');
+        setB2Sixes('0');
+      }
+
       setBowler(prev => ({
         ...prev,
         ballsInOver: prev.ballsInOver + 1,
         // Runs conceded still count against the bowler even on a run out.
         runs: prev.runs + runsCompleted,
-        // A run out is not the bowler's wicket.
+        // Run outs & retirements are not the bowler's wicket.
         wickets: creditBowler ? prev.wickets + 1 : prev.wickets,
       }));
 
@@ -1523,19 +2597,19 @@ export default function CricketScoring({
     if (!validatePlayersBeforeScoring()) return;
 
     // Auto-record pre-verified extras to avoid repetitive selection popups during live scoring
-    if (extraType === 'WD' && autoWide === '1') {
+    if (extraType === 'WD' && ruleAutoWide) {
       recordExtraWithRuns('WD', 1, false);
       return;
     }
-    if (extraType === 'NB' && autoNoBall === '1') {
+    if (extraType === 'NB' && ruleAutoNoBall) {
       recordExtraWithRuns('NB', 1, false);
       return;
     }
-    if (extraType === 'BYE' && allowByes === '1') {
+    if (extraType === 'BYE' && ruleAllowByes) {
       recordExtraWithRuns('BYE', 1, true);
       return;
     }
-    if (extraType === 'LB' && allowByes === '1') {
+    if (extraType === 'LB' && ruleAllowByes) {
       recordExtraWithRuns('LB', 1, true);
       return;
     }
@@ -2563,6 +3637,10 @@ export default function CricketScoring({
                         <Pressable
                           key={extra}
                           onPress={() => handleExtraClick(extra as 'WD' | 'NB' | 'BYE' | 'LB')}
+                          onLongPress={() => {
+                            setActiveExtraType(extra as 'WD' | 'NB' | 'BYE' | 'LB');
+                            setShowExtraModal(true);
+                          }}
                           style={({ pressed }) => [{
                             flex: 1,
                             paddingVertical: 7,
@@ -2870,16 +3948,16 @@ export default function CricketScoring({
               </View>
             </View>
 
-            {/* AI Suggestion Card */}
+            {/* Next Batsman Suggestion Card */}
             <View style={styles.section}>
               <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderRadius: BorderRadius.xl, padding: 14, ...Shadows.level2 }]}>
                 {/* Header */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                   <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: theme.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
-                    <Ionicons name="sparkles" size={14} color={theme.primary} />
+                    <Ionicons name="people-outline" size={14} color={theme.primary} />
                   </View>
                   <ThemedText style={{ fontSize: 13.5, fontFamily: 'Sora_700Bold', color: theme.text }}>
-                    AI Next Batsman Suggestion
+                    Next Batsman Suggestion
                   </ThemedText>
                 </View>
 
@@ -2894,7 +3972,7 @@ export default function CricketScoring({
                         style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 12, paddingVertical: 5, borderRadius: BorderRadius.full }}
                       >
                         <ThemedText style={{ color: theme.primary, fontSize: 10.5, fontFamily: 'Sora_700Bold' }}>
-                          + Add Squad Players for AI Suggestions
+                          + Add Squad Players for Suggestions
                         </ThemedText>
                       </Pressable>
                     </View>
@@ -3814,6 +4892,10 @@ export default function CricketScoring({
                   <Pressable
                     key={extra}
                     onPress={() => handleExtraClick(extra as 'WD' | 'NB' | 'BYE' | 'LB')}
+                    onLongPress={() => {
+                      setActiveExtraType(extra as 'WD' | 'NB' | 'BYE' | 'LB');
+                      setShowExtraModal(true);
+                    }}
                     style={[styles.extraButton, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant }]}
                   >
                     <ThemedText type="labelMd" style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>
@@ -4570,6 +5652,8 @@ export default function CricketScoring({
                         value={bowlName}
                         placeholder="Select Active Bowler..."
                         squadList={otherBowlers}
+                        maxBowlerOvers={ruleMaxOversPerBowler === 'unlimited' ? Infinity : (parseInt(ruleMaxOversPerBowler) || Infinity)}
+                        opposingTeamNames={[...yetToBatBatsmen, ...batsmen, ...dismissedBatsmen].map(p => typeof p === 'string' ? p : p?.name).filter(Boolean)}
                         theme={theme}
                         isOpen={activeDropdownKey === 'bowler'}
                         setIsOpen={(val) => setActiveDropdownKey(val ? 'bowler' : null)}
@@ -4578,6 +5662,7 @@ export default function CricketScoring({
                           if (avatar) setBowlAvatar(avatar);
                         }}
                         onCustomNameChange={(name) => setBowlName(name)}
+                        onAddPlayerToSquad={(player) => setOtherBowlers(prev => [...prev, player])}
                       />
                     </View>
                     <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 8, fontStyle: 'italic' }}>
@@ -4680,17 +5765,52 @@ export default function CricketScoring({
                       <PlayerDropdownSelector
                         value={b1Name}
                         placeholder="Select Batsman 1..."
-                        squadList={yetToBatBatsmen}
+                        squadList={availableBenchBatsmen}
                         otherSelectedName={b2Name}
-                        dismissedNames={dismissedBatsmen.map(db => db.name)}
+                        dismissedNames={dismissedBatsmen.filter(db => db && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt').map(db => db.name)}
+                        retiredHurtNames={dismissedBatsmen.filter(db => db && (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')).map(db => db.name)}
                         theme={theme}
                         isOpen={activeDropdownKey === 'b1'}
                         setIsOpen={(val) => setActiveDropdownKey(val ? 'b1' : null)}
-                        onSelectPlayer={(name, avatar) => {
-                          setB1Name(name);
+                        onSelectPlayer={(name, avatar, existingStats) => {
+                          const nameTrimmed = name.trim();
+                          const nameLower = nameTrimmed.toLowerCase();
+
+                          // Archive current batsman 1 stats before swapping
+                          if (b1Name.trim() && b1Name.trim().toLowerCase() !== nameLower) {
+                            setInningsBatsmenArchive(prev => ({
+                              ...prev,
+                              [b1Name.trim().toLowerCase()]: {
+                                name: b1Name.trim(),
+                                runs: parseInt(b1Runs) || 0,
+                                balls: parseInt(b1Balls) || 0,
+                                fours: parseInt(b1Fours) || 0,
+                                sixes: parseInt(b1Sixes) || 0,
+                                avatar: b1Avatar,
+                              }
+                            }));
+                          }
+
+                          setB1Name(nameTrimmed);
                           if (avatar) setB1Avatar(avatar);
+
+                          // Load incoming batsman stats (restore if previously batted, otherwise 0 for new batsman!)
+                          const archived = existingStats || inningsBatsmenArchive[nameLower];
+                          if (archived && (archived.runs !== undefined || archived.balls !== undefined)) {
+                            setB1Runs(String(archived.runs || 0));
+                            setB1Balls(String(archived.balls || 0));
+                            setB1Fours(String(archived.fours || 0));
+                            setB1Sixes(String(archived.sixes || 0));
+                          } else {
+                            // Brand new batsman: ALWAYS start at 0!
+                            setB1Runs('0');
+                            setB1Balls('0');
+                            setB1Fours('0');
+                            setB1Sixes('0');
+                          }
                         }}
                         onCustomNameChange={(name) => setB1Name(name)}
+                        onAddPlayerToSquad={(player) => setYetToBatBatsmen(prev => [...prev, player])}
                       />
                     </View>
                     <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 8, fontStyle: 'italic' }}>
@@ -4788,17 +5908,52 @@ export default function CricketScoring({
                       <PlayerDropdownSelector
                         value={b2Name}
                         placeholder="Select Batsman 2..."
-                        squadList={yetToBatBatsmen}
+                        squadList={availableBenchBatsmen}
                         otherSelectedName={b1Name}
-                        dismissedNames={dismissedBatsmen.map(db => db.name)}
+                        dismissedNames={dismissedBatsmen.filter(db => db && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt').map(db => db.name)}
+                        retiredHurtNames={dismissedBatsmen.filter(db => db && (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')).map(db => db.name)}
                         theme={theme}
                         isOpen={activeDropdownKey === 'b2'}
                         setIsOpen={(val) => setActiveDropdownKey(val ? 'b2' : null)}
-                        onSelectPlayer={(name, avatar) => {
-                          setB2Name(name);
+                        onSelectPlayer={(name, avatar, existingStats) => {
+                          const nameTrimmed = name.trim();
+                          const nameLower = nameTrimmed.toLowerCase();
+
+                          // Archive current batsman 2 stats before swapping
+                          if (b2Name.trim() && b2Name.trim().toLowerCase() !== nameLower) {
+                            setInningsBatsmenArchive(prev => ({
+                              ...prev,
+                              [b2Name.trim().toLowerCase()]: {
+                                name: b2Name.trim(),
+                                runs: parseInt(b2Runs) || 0,
+                                balls: parseInt(b2Balls) || 0,
+                                fours: parseInt(b2Fours) || 0,
+                                sixes: parseInt(b2Sixes) || 0,
+                                avatar: b2Avatar,
+                              }
+                            }));
+                          }
+
+                          setB2Name(nameTrimmed);
                           if (avatar) setB2Avatar(avatar);
+
+                          // Load incoming batsman stats (restore if previously batted, otherwise 0 for new batsman!)
+                          const archived = existingStats || inningsBatsmenArchive[nameLower];
+                          if (archived && (archived.runs !== undefined || archived.balls !== undefined)) {
+                            setB2Runs(String(archived.runs || 0));
+                            setB2Balls(String(archived.balls || 0));
+                            setB2Fours(String(archived.fours || 0));
+                            setB2Sixes(String(archived.sixes || 0));
+                          } else {
+                            // Brand new batsman: ALWAYS start at 0!
+                            setB2Runs('0');
+                            setB2Balls('0');
+                            setB2Fours('0');
+                            setB2Sixes('0');
+                          }
                         }}
                         onCustomNameChange={(name) => setB2Name(name)}
+                        onAddPlayerToSquad={(player) => setYetToBatBatsmen(prev => [...prev, player])}
                       />
                     </View>
                     <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 8, fontStyle: 'italic' }}>
@@ -4903,15 +6058,50 @@ export default function CricketScoring({
                       <PlayerDropdownSelector
                         value={b1Name}
                         placeholder="Select Batsman 1..."
-                        squadList={yetToBatBatsmen}
+                        squadList={availableBenchBatsmen}
                         otherSelectedName={b2Name}
-                        dismissedNames={dismissedBatsmen.map(db => db.name)}
+                        dismissedNames={dismissedBatsmen.filter(db => db && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt').map(db => db.name)}
+                        retiredHurtNames={dismissedBatsmen.filter(db => db && (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')).map(db => db.name)}
+                        opposingTeamNames={otherBowlers.map(p => typeof p === 'string' ? p : p.name).filter(Boolean)}
                         theme={theme}
                         isOpen={activeDropdownKey === 'b1'}
                         setIsOpen={(val) => setActiveDropdownKey(val ? 'b1' : null)}
-                        onSelectPlayer={(name, avatar) => {
-                          setB1Name(name);
+                        onSelectPlayer={(name, avatar, existingStats) => {
+                          const nameTrimmed = name.trim();
+                          const nameLower = nameTrimmed.toLowerCase();
+
+                          // Archive current batsman 1 stats before swapping
+                          if (b1Name.trim() && b1Name.trim().toLowerCase() !== nameLower) {
+                            setInningsBatsmenArchive(prev => ({
+                              ...prev,
+                              [b1Name.trim().toLowerCase()]: {
+                                name: b1Name.trim(),
+                                runs: parseInt(b1Runs) || 0,
+                                balls: parseInt(b1Balls) || 0,
+                                fours: parseInt(b1Fours) || 0,
+                                sixes: parseInt(b1Sixes) || 0,
+                                avatar: b1Avatar,
+                              }
+                            }));
+                          }
+
+                          setB1Name(nameTrimmed);
                           if (avatar) setB1Avatar(avatar);
+
+                          // Load incoming batsman stats (restore if previously batted, otherwise 0 for new batsman!)
+                          const archived = existingStats || inningsBatsmenArchive[nameLower];
+                          if (archived && (archived.runs !== undefined || archived.balls !== undefined)) {
+                            setB1Runs(String(archived.runs || 0));
+                            setB1Balls(String(archived.balls || 0));
+                            setB1Fours(String(archived.fours || 0));
+                            setB1Sixes(String(archived.sixes || 0));
+                          } else {
+                            // Brand new batsman: ALWAYS start at 0!
+                            setB1Runs('0');
+                            setB1Balls('0');
+                            setB1Fours('0');
+                            setB1Sixes('0');
+                          }
                         }}
                         onCustomNameChange={(name) => setB1Name(name)}
                       />
@@ -5011,15 +6201,50 @@ export default function CricketScoring({
                       <PlayerDropdownSelector
                         value={b2Name}
                         placeholder="Select Batsman 2..."
-                        squadList={yetToBatBatsmen}
+                        squadList={availableBenchBatsmen}
                         otherSelectedName={b1Name}
-                        dismissedNames={dismissedBatsmen.map(db => db.name)}
+                        dismissedNames={dismissedBatsmen.filter(db => db && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt').map(db => db.name)}
+                        retiredHurtNames={dismissedBatsmen.filter(db => db && (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')).map(db => db.name)}
+                        opposingTeamNames={otherBowlers.map(p => typeof p === 'string' ? p : p.name).filter(Boolean)}
                         theme={theme}
                         isOpen={activeDropdownKey === 'b2'}
                         setIsOpen={(val) => setActiveDropdownKey(val ? 'b2' : null)}
-                        onSelectPlayer={(name, avatar) => {
-                          setB2Name(name);
+                        onSelectPlayer={(name, avatar, existingStats) => {
+                          const nameTrimmed = name.trim();
+                          const nameLower = nameTrimmed.toLowerCase();
+
+                          // Archive current batsman 2 stats before swapping
+                          if (b2Name.trim() && b2Name.trim().toLowerCase() !== nameLower) {
+                            setInningsBatsmenArchive(prev => ({
+                              ...prev,
+                              [b2Name.trim().toLowerCase()]: {
+                                name: b2Name.trim(),
+                                runs: parseInt(b2Runs) || 0,
+                                balls: parseInt(b2Balls) || 0,
+                                fours: parseInt(b2Fours) || 0,
+                                sixes: parseInt(b2Sixes) || 0,
+                                avatar: b2Avatar,
+                              }
+                            }));
+                          }
+
+                          setB2Name(nameTrimmed);
                           if (avatar) setB2Avatar(avatar);
+
+                          // Load incoming batsman stats (restore if previously batted, otherwise 0 for new batsman!)
+                          const archived = existingStats || inningsBatsmenArchive[nameLower];
+                          if (archived && (archived.runs !== undefined || archived.balls !== undefined)) {
+                            setB2Runs(String(archived.runs || 0));
+                            setB2Balls(String(archived.balls || 0));
+                            setB2Fours(String(archived.fours || 0));
+                            setB2Sixes(String(archived.sixes || 0));
+                          } else {
+                            // Brand new batsman: ALWAYS start at 0!
+                            setB2Runs('0');
+                            setB2Balls('0');
+                            setB2Fours('0');
+                            setB2Sixes('0');
+                          }
                         }}
                         onCustomNameChange={(name) => setB2Name(name)}
                       />
@@ -5116,6 +6341,8 @@ export default function CricketScoring({
                         value={bowlName}
                         placeholder="Select Active Bowler..."
                         squadList={otherBowlers}
+                        maxBowlerOvers={ruleMaxOversPerBowler === 'unlimited' ? Infinity : (parseInt(ruleMaxOversPerBowler) || Infinity)}
+                        opposingTeamNames={[...yetToBatBatsmen, ...batsmen, ...dismissedBatsmen].map(p => typeof p === 'string' ? p : p?.name).filter(Boolean)}
                         theme={theme}
                         isOpen={activeDropdownKey === 'bowler'}
                         setIsOpen={(val) => setActiveDropdownKey(val ? 'bowler' : null)}
@@ -5208,27 +6435,40 @@ export default function CricketScoring({
                 <ThemedText type="labelMd" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>Cancel</ThemedText>
               </Pressable>
 
-              <Pressable
-                onPress={savePlayersEdit}
-                style={({ pressed }) => [
-                  styles.saveBtn,
-                  {
-                    backgroundColor: theme.primary,
-                    height: 44,
-                    borderRadius: 12,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                    elevation: 3,
-                    boxShadow: `0px 4px 12px ${theme.primary}40`,
-                    opacity: pressed ? 0.85 : 1,
-                  }
-                ]}
-              >
-                <Ionicons name="checkmark-circle" size={18} color="#ffffff" />
-                <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 13.5 }}>Save Changes</ThemedText>
-              </Pressable>
+              {(() => {
+                const isPitchLineupReady = Boolean(
+                  b1Name.trim() &&
+                  b2Name.trim() &&
+                  bowlName.trim() &&
+                  b1Name.trim().toLowerCase() !== b2Name.trim().toLowerCase()
+                );
+                return (
+                  <Pressable
+                    disabled={!isPitchLineupReady}
+                    onPress={savePlayersEdit}
+                    style={({ pressed }) => [
+                      styles.saveBtn,
+                      {
+                        backgroundColor: isPitchLineupReady ? theme.primary : (theme.outlineVariant + '44'),
+                        height: 44,
+                        borderRadius: 12,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        elevation: isPitchLineupReady ? 3 : 0,
+                        boxShadow: isPitchLineupReady ? `0px 4px 12px ${theme.primary}40` : 'none',
+                        opacity: !isPitchLineupReady ? 0.55 : pressed ? 0.85 : 1,
+                      }
+                    ]}
+                  >
+                    <Ionicons name={isPitchLineupReady ? "checkmark-circle" : "alert-circle-outline"} size={18} color="#ffffff" />
+                    <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 13.5 }}>
+                      {isPitchLineupReady ? 'On Pitch' : 'Select Batsmen (On Pitch)'}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })()}
             </View>
           </View>
         </View>
@@ -5278,10 +6518,14 @@ export default function CricketScoring({
                   {availableBenchBowlers.map((b, idx) => {
                     const bName = typeof b === 'string' ? b : (b && b.name ? b.name : '');
                     if (!bName) return null;
+                    const isQuotaFull = Boolean(b && typeof b !== 'string' && b.isQuotaFull);
+                    const bOvers = typeof b === 'string' ? 0 : (b.overs || 0);
                     return (
                       <Pressable
                         key={`${bName}_${idx}`}
+                        disabled={isQuotaFull}
                         onPress={() => {
+                          if (isQuotaFull) return;
                           executeReplaceBowler(bName);
                           setShowOverCompleteModal(false);
                         }}
@@ -5290,20 +6534,26 @@ export default function CricketScoring({
                             flexDirection: 'row',
                             alignItems: 'center',
                             gap: 6,
-                            backgroundColor: theme.surfaceLow,
+                            backgroundColor: isQuotaFull ? theme.surfaceLow + '66' : theme.surfaceLow,
                             paddingHorizontal: 12,
                             paddingVertical: 8,
                             borderRadius: 20,
                             borderWidth: 1,
-                            borderColor: theme.outlineVariant + '33',
+                            borderColor: isQuotaFull ? theme.outlineVariant + '22' : theme.outlineVariant + '33',
+                            opacity: isQuotaFull ? 0.45 : 1,
                           },
                           pressed && { opacity: 0.7 }
                         ]}
                       >
-                        <Ionicons name="shirt-outline" size={12} color={theme.primary} />
-                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
-                          {bName}
+                        <Ionicons name="shirt-outline" size={12} color={isQuotaFull ? theme.textSecondary : theme.primary} />
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: isQuotaFull ? theme.textSecondary : theme.text }}>
+                          {bName} {bOvers > 0 ? `(${bOvers} Ov)` : ''}
                         </ThemedText>
+                        {isQuotaFull && (
+                          <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                            <ThemedText style={{ fontSize: 8, color: '#b45309', fontFamily: 'Sora_700Bold' }}>Quota Full</ThemedText>
+                          </View>
+                        )}
                       </Pressable>
                     );
                   })}
@@ -5350,6 +6600,7 @@ export default function CricketScoring({
 
       {/* Wicket Detail Modal — one tap for a normal dismissal, or record a run
           out with the runs completed and which batsman was out. */}
+      {/* Comprehensive Cricket Dismissal Modal */}
       <Modal
         visible={showWicketModal}
         transparent
@@ -5358,112 +6609,452 @@ export default function CricketScoring({
       >
         <View style={styles.modalOverlay}>
           <Pressable style={styles.modalBackdrop} onPress={() => setShowWicketModal(false)} />
-          <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', maxHeight: '75%' }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', maxHeight: '85%' }]}>
             <View style={styles.modalHeader}>
-              <ThemedText type="headlineSm" style={{ color: theme.text }}>Record Wicket</ThemedText>
+              <View>
+                <ThemedText type="headlineSm" style={{ color: theme.text }}>Record Wicket</ThemedText>
+                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
+                  Select dismissal type, fielder, and batsman out
+                </ThemedText>
+              </View>
               <Pressable onPress={() => setShowWicketModal(false)} style={styles.modalCloseBtn}>
                 <Ionicons name="close" size={20} color={theme.text} />
               </Pressable>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-              <Pressable
-                style={[styles.extraOptionBtn, { backgroundColor: '#EF444415', borderColor: '#EF4444' }]}
-                onPress={() => {
-                  setShowWicketModal(false);
-                  recordBall('wicket', 'W');
-                }}
-              >
-                <ThemedText style={{ fontFamily: 'Sora_700Bold', color: '#EF4444' }}>Wicket — no runs</ThemedText>
-                <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>
-                  Bowled, caught, LBW, stumped · striker out, credited to the bowler
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
+              {/* 1. DISMISSAL TYPE SELECTION */}
+              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 }}>
+                SELECT DISMISSAL TYPE:
+              </ThemedText>
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                {[
+                  { key: 'bowled', label: 'Bowled', desc: `b ${bowler.name || 'Bowler'}`, icon: 'shield-outline' as const, color: '#EF4444' },
+                  { key: 'caught', label: 'Caught', desc: 'c Fielder b Bowler', icon: 'hand-left-outline' as const, color: '#F59E0B' },
+                  { key: 'caught_and_bowled', label: 'Caught & Bowled', desc: `c & b ${bowler.name || 'Bowler'}`, icon: 'fitness-outline' as const, color: '#8B5CF6' },
+                  { key: 'lbw', label: 'LBW', desc: `lbw b ${bowler.name || 'Bowler'}`, icon: 'body-outline' as const, color: '#EC4899' },
+                  { key: 'run_out', label: 'Run Out', desc: 'run out (Fielder)', icon: 'flash-outline' as const, color: '#3B82F6' },
+                  { key: 'stumped', label: 'Stumped', desc: 'st Keeper b Bowler', icon: 'hand-right-outline' as const, color: '#10B981' },
+                  { key: 'hit_wicket', label: 'Hit Wicket', desc: `hit wicket b ${bowler.name || 'Bowler'}`, icon: 'alert-circle-outline' as const, color: '#64748B' },
+                  { key: 'retired', label: 'Retired', desc: 'Retired hurt / out', icon: 'exit-outline' as const, color: '#6B7280' },
+                ].map(item => {
+                  const isSelected = wicketDismissalType === item.key;
+                  return (
+                    <Pressable
+                      key={item.key}
+                      onPress={() => {
+                        setWicketDismissalType(item.key as any);
+                        if (item.key === 'caught_and_bowled') {
+                          setWicketFielderName(bowler.name || 'Bowler');
+                        } else if (item.key === 'bowled' || item.key === 'lbw' || item.key === 'hit_wicket') {
+                          setWicketFielderName('');
+                        }
+                      }}
+                      style={{
+                        width: '48.5%',
+                        paddingVertical: 10,
+                        paddingHorizontal: 12,
+                        borderRadius: 10,
+                        borderWidth: 1.5,
+                        borderColor: isSelected ? item.color : theme.outlineVariant + '33',
+                        backgroundColor: isSelected ? item.color + '18' : theme.surfaceLow,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: isSelected ? item.color : item.color + '22', justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name={item.icon} size={15} color={isSelected ? '#ffffff' : item.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText numberOfLines={1} style={{ fontFamily: 'Sora_700Bold', fontSize: 12, color: isSelected ? item.color : theme.text }}>
+                          {item.label}
+                        </ThemedText>
+                        <ThemedText numberOfLines={1} style={{ fontSize: 9.5, color: theme.textSecondary }}>
+                          {item.desc}
+                        </ThemedText>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* 2. CONTEXTUAL SECTIONS */}
+
+              {/* A. CAUGHT FIELDER PICKER */}
+              {wicketDismissalType === 'caught' && (
+                <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '33', marginBottom: 14 }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 8 }}>
+                    WHO TOOK THE CATCH?
+                  </ThemedText>
+
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                    {/* Wicket-Keeper Chip */}
+                    <Pressable
+                      onPress={() => setWicketFielderName('Wicket-Keeper')}
+                      style={{
+                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: wicketFielderName === 'Wicket-Keeper' ? '#F59E0B' : theme.outlineVariant + '44',
+                        backgroundColor: wicketFielderName === 'Wicket-Keeper' ? '#F59E0B20' : theme.surfaceLowest,
+                      }}
+                    >
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: wicketFielderName === 'Wicket-Keeper' ? '#D97706' : theme.text }}>
+                        🧤 Wicket-Keeper
+                      </ThemedText>
+                    </Pressable>
+
+                    {/* Bowler Chip */}
+                    {bowler.name ? (
+                      <Pressable
+                        onPress={() => setWicketFielderName(bowler.name)}
+                        style={{
+                          paddingVertical: 6,
+                          paddingHorizontal: 10,
+                          borderRadius: 6,
+                          borderWidth: 1,
+                          borderColor: wicketFielderName === bowler.name ? '#F59E0B' : theme.outlineVariant + '44',
+                          backgroundColor: wicketFielderName === bowler.name ? '#F59E0B20' : theme.surfaceLowest,
+                        }}
+                      >
+                        <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: wicketFielderName === bowler.name ? '#D97706' : theme.text }}>
+                          🎯 {bowler.name} (C&B)
+                        </ThemedText>
+                      </Pressable>
+                    ) : null}
+
+                    {/* Fielding Team Squad Chips */}
+                    {otherBowlers.map((p, idx) => {
+                      const pName = typeof p === 'string' ? p : p.name;
+                      if (!pName || pName === bowler.name) return null;
+                      const isChosen = wicketFielderName === pName;
+                      return (
+                        <Pressable
+                          key={idx}
+                          onPress={() => setWicketFielderName(pName)}
+                          style={{
+                            paddingVertical: 6,
+                            paddingHorizontal: 10,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: isChosen ? '#F59E0B' : theme.outlineVariant + '44',
+                            backgroundColor: isChosen ? '#F59E0B20' : theme.surfaceLowest,
+                          }}
+                        >
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: isChosen ? '#D97706' : theme.text }}>
+                            {pName}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <TextInput
+                    style={{
+                      height: 38,
+                      borderWidth: 1,
+                      borderColor: theme.outlineVariant + '55',
+                      borderRadius: 8,
+                      paddingHorizontal: 10,
+                      fontSize: 12,
+                      color: theme.text,
+                      backgroundColor: theme.surfaceLowest,
+                    }}
+                    placeholder="Or enter custom fielder name..."
+                    placeholderTextColor={theme.textSecondary + '99'}
+                    value={wicketFielderName}
+                    onChangeText={setWicketFielderName}
+                  />
+                </View>
+              )}
+
+              {/* B. STUMPED KEEPER / FIELDER PICKER */}
+              {wicketDismissalType === 'stumped' && (
+                <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '33', marginBottom: 14 }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 8 }}>
+                    STUMPED BY (WICKET-KEEPER)
+                  </ThemedText>
+
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                    <Pressable
+                      onPress={() => setWicketFielderName('Wicket-Keeper')}
+                      style={{
+                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: wicketFielderName === 'Wicket-Keeper' ? '#10B981' : theme.outlineVariant + '44',
+                        backgroundColor: wicketFielderName === 'Wicket-Keeper' ? '#10B98120' : theme.surfaceLowest,
+                      }}
+                    >
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: wicketFielderName === 'Wicket-Keeper' ? '#059669' : theme.text }}>
+                        🧤 Wicket-Keeper
+                      </ThemedText>
+                    </Pressable>
+
+                    {otherBowlers.map((p, idx) => {
+                      const pName = typeof p === 'string' ? p : p.name;
+                      if (!pName) return null;
+                      const isChosen = wicketFielderName === pName;
+                      return (
+                        <Pressable
+                          key={idx}
+                          onPress={() => setWicketFielderName(pName)}
+                          style={{
+                            paddingVertical: 6,
+                            paddingHorizontal: 10,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: isChosen ? '#10B981' : theme.outlineVariant + '44',
+                            backgroundColor: isChosen ? '#10B98120' : theme.surfaceLowest,
+                          }}
+                        >
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: isChosen ? '#059669' : theme.text }}>
+                            {pName}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <TextInput
+                    style={{
+                      height: 38,
+                      borderWidth: 1,
+                      borderColor: theme.outlineVariant + '55',
+                      borderRadius: 8,
+                      paddingHorizontal: 10,
+                      fontSize: 12,
+                      color: theme.text,
+                      backgroundColor: theme.surfaceLowest,
+                    }}
+                    placeholder="Or enter wicket-keeper name..."
+                    placeholderTextColor={theme.textSecondary + '99'}
+                    value={wicketFielderName}
+                    onChangeText={setWicketFielderName}
+                  />
+                </View>
+              )}
+
+              {/* C. RUN OUT DETAILS */}
+              {wicketDismissalType === 'run_out' && (
+                <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '33', marginBottom: 14 }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+                    RUNS COMPLETED BEFORE RUN OUT:
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                    {[0, 1, 2, 3].map(r => {
+                      const active = wicketRuns === r;
+                      return (
+                        <Pressable
+                          key={r}
+                          onPress={() => setWicketRuns(r)}
+                          style={{
+                            flex: 1,
+                            paddingVertical: 8,
+                            borderRadius: 8,
+                            alignItems: 'center',
+                            borderWidth: 1.5,
+                            borderColor: active ? '#3B82F6' : theme.outlineVariant + '44',
+                            backgroundColor: active ? '#3B82F6' : theme.surfaceLowest,
+                          }}
+                        >
+                          <ThemedText style={{ fontFamily: 'Sora_700Bold', color: active ? '#ffffff' : theme.text }}>{r}</ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+                    WHO WAS RUN OUT?
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                    {(['striker', 'non-striker'] as const).map(who => {
+                      const active = wicketWhoIsOut === who;
+                      const player = batsmen.find(b => (who === 'striker' ? b.active : !b.active));
+                      return (
+                        <Pressable
+                          key={who}
+                          onPress={() => setWicketWhoIsOut(who)}
+                          style={{
+                            flex: 1,
+                            paddingVertical: 8,
+                            paddingHorizontal: 8,
+                            borderRadius: 8,
+                            alignItems: 'center',
+                            borderWidth: 1.5,
+                            borderColor: active ? '#3B82F6' : theme.outlineVariant + '44',
+                            backgroundColor: active ? '#3B82F618' : theme.surfaceLowest,
+                          }}
+                        >
+                          <ThemedText numberOfLines={1} style={{ fontFamily: 'Sora_700Bold', fontSize: 11.5, color: active ? '#2563EB' : theme.text }}>
+                            {who === 'striker' ? 'Striker' : 'Non-striker'}
+                          </ThemedText>
+                          <ThemedText numberOfLines={1} style={{ fontSize: 10, color: theme.textSecondary }}>
+                            {player?.name || '—'}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+                    RUN OUT AFFECTED BY:
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                    {['Direct Hit', 'Wicket-Keeper', bowler.name].filter(Boolean).map((specialName, sIdx) => {
+                      const isChosen = wicketFielderName === specialName;
+                      return (
+                        <Pressable
+                          key={sIdx}
+                          onPress={() => setWicketFielderName(specialName!)}
+                          style={{
+                            paddingVertical: 6,
+                            paddingHorizontal: 10,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: isChosen ? '#3B82F6' : theme.outlineVariant + '44',
+                            backgroundColor: isChosen ? '#3B82F620' : theme.surfaceLowest,
+                          }}
+                        >
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: isChosen ? '#2563EB' : theme.text }}>
+                            {specialName}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                    {otherBowlers.map((p, idx) => {
+                      const pName = typeof p === 'string' ? p : p.name;
+                      if (!pName || pName === bowler.name) return null;
+                      const isChosen = wicketFielderName === pName;
+                      return (
+                        <Pressable
+                          key={idx}
+                          onPress={() => setWicketFielderName(pName)}
+                          style={{
+                            paddingVertical: 6,
+                            paddingHorizontal: 10,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: isChosen ? '#3B82F6' : theme.outlineVariant + '44',
+                            backgroundColor: isChosen ? '#3B82F620' : theme.surfaceLowest,
+                          }}
+                        >
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: isChosen ? '#2563EB' : theme.text }}>
+                            {pName}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <TextInput
+                    style={{
+                      height: 38,
+                      borderWidth: 1,
+                      borderColor: theme.outlineVariant + '55',
+                      borderRadius: 8,
+                      paddingHorizontal: 10,
+                      fontSize: 12,
+                      color: theme.text,
+                      backgroundColor: theme.surfaceLowest,
+                    }}
+                    placeholder="Or enter fielder / thrower name..."
+                    placeholderTextColor={theme.textSecondary + '99'}
+                    value={wicketFielderName}
+                    onChangeText={setWicketFielderName}
+                  />
+                </View>
+              )}
+
+              {/* D. RETIRED BATSMAN PICKER */}
+              {wicketDismissalType === 'retired' && (
+                <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '33', marginBottom: 14 }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+                    WHO IS RETIRING?
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {(['striker', 'non-striker'] as const).map(who => {
+                      const active = wicketWhoIsOut === who;
+                      const player = batsmen.find(b => (who === 'striker' ? b.active : !b.active));
+                      return (
+                        <Pressable
+                          key={who}
+                          onPress={() => setWicketWhoIsOut(who)}
+                          style={{
+                            flex: 1,
+                            paddingVertical: 8,
+                            paddingHorizontal: 8,
+                            borderRadius: 8,
+                            alignItems: 'center',
+                            borderWidth: 1.5,
+                            borderColor: active ? '#6B7280' : theme.outlineVariant + '44',
+                            backgroundColor: active ? '#6B728020' : theme.surfaceLowest,
+                          }}
+                        >
+                          <ThemedText numberOfLines={1} style={{ fontFamily: 'Sora_700Bold', fontSize: 11.5, color: active ? '#374151' : theme.text }}>
+                            {who === 'striker' ? 'Striker' : 'Non-striker'}
+                          </ThemedText>
+                          <ThemedText numberOfLines={1} style={{ fontSize: 10, color: theme.textSecondary }}>
+                            {player?.name || '—'}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* 3. SCORECARD PREVIEW SUMMARY CARD */}
+              <View style={{ backgroundColor: theme.primary + '12', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.primary + '33', marginBottom: 16 }}>
+                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                  SCORECARD ENTRY PREVIEW
                 </ThemedText>
-              </Pressable>
-
-              <View style={{ height: 1, backgroundColor: theme.outlineVariant + '33', marginVertical: 16 }} />
-
-              <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text, marginBottom: 4 }}>Run out</ThemedText>
-              <ThemedText style={{ color: theme.textSecondary, marginBottom: 12, fontSize: 12 }}>
-                Runs completed before the dismissal are added to the total and to the striker. Not credited to the bowler.
-              </ThemedText>
-
-              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.textSecondary, marginBottom: 6 }}>
-                RUNS COMPLETED
-              </ThemedText>
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-                {[0, 1, 2, 3].map(r => {
-                  const active = wicketRuns === r;
-                  return (
-                    <Pressable
-                      key={r}
-                      onPress={() => setWicketRuns(r)}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 10,
-                        borderRadius: 8,
-                        alignItems: 'center',
-                        borderWidth: 1.5,
-                        borderColor: active ? theme.primary : theme.outlineVariant + '44',
-                        backgroundColor: active ? theme.primary : 'transparent',
-                      }}
-                    >
-                      <ThemedText style={{ fontFamily: 'Sora_700Bold', color: active ? '#ffffff' : theme.text }}>{r}</ThemedText>
-                    </Pressable>
-                  );
-                })}
+                <ThemedText style={{ fontFamily: 'Sora_700Bold', fontSize: 14, color: theme.text }}>
+                  {(() => {
+                    const dismissed = batsmen.find(b => (wicketDismissalType === 'run_out' || wicketDismissalType === 'retired' ? (wicketWhoIsOut === 'striker' ? b.active : !b.active) : b.active));
+                    return dismissed?.name || 'Striker';
+                  })()}
+                </ThemedText>
+                <ThemedText style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2, fontStyle: 'italic' }}>
+                  {(() => {
+                    const fName = wicketFielderName.trim();
+                    const bName = bowler.name || 'Bowler';
+                    if (wicketDismissalType === 'bowled') return `b ${bName}`;
+                    if (wicketDismissalType === 'caught') return fName ? `c ${fName} b ${bName}` : `c & b ${bName}`;
+                    if (wicketDismissalType === 'caught_and_bowled') return `c & b ${bName}`;
+                    if (wicketDismissalType === 'lbw') return `lbw b ${bName}`;
+                    if (wicketDismissalType === 'stumped') return fName ? `st ${fName} b ${bName}` : `st b ${bName}`;
+                    if (wicketDismissalType === 'run_out') return fName ? `run out (${fName})${wicketRuns > 0 ? ` · +${wicketRuns} run${wicketRuns === 1 ? '' : 's'}` : ''}` : `run out${wicketRuns > 0 ? ` · +${wicketRuns} run${wicketRuns === 1 ? '' : 's'}` : ''}`;
+                    if (wicketDismissalType === 'hit_wicket') return `hit wicket b ${bName}`;
+                    if (wicketDismissalType === 'retired') return `retired`;
+                    return `b ${bName}`;
+                  })()}
+                </ThemedText>
               </View>
 
-              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.textSecondary, marginBottom: 6 }}>
-                WHO IS OUT
-              </ThemedText>
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-                {(['striker', 'non-striker'] as const).map(who => {
-                  const active = wicketWhoIsOut === who;
-                  const player = batsmen.find(b => (who === 'striker' ? b.active : !b.active));
-                  return (
-                    <Pressable
-                      key={who}
-                      onPress={() => setWicketWhoIsOut(who)}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 10,
-                        paddingHorizontal: 8,
-                        borderRadius: 8,
-                        alignItems: 'center',
-                        borderWidth: 1.5,
-                        borderColor: active ? theme.primary : theme.outlineVariant + '44',
-                        backgroundColor: active ? theme.primary + '15' : 'transparent',
-                      }}
-                    >
-                      <ThemedText numberOfLines={1} style={{ fontFamily: 'Sora_700Bold', fontSize: 12, color: active ? theme.primary : theme.text }}>
-                        {who === 'striker' ? 'Striker' : 'Non-striker'}
-                      </ThemedText>
-                      <ThemedText numberOfLines={1} style={{ fontSize: 10, color: theme.textSecondary }}>
-                        {player?.name || '—'}
-                      </ThemedText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
+              {/* 4. CONFIRM BUTTON */}
               <Pressable
-                style={[styles.extraOptionBtn, { backgroundColor: theme.primary, borderColor: theme.primary }]}
+                style={[styles.extraOptionBtn, { backgroundColor: theme.primary, borderColor: theme.primary, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' }]}
                 onPress={() => {
                   setShowWicketModal(false);
                   recordBall('wicket', 'W', {
-                    runsCompleted: wicketRuns,
-                    whoIsOut: wicketWhoIsOut,
-                    creditBowler: false,
+                    dismissalType: wicketDismissalType,
+                    fielderName: wicketFielderName.trim(),
+                    runsCompleted: wicketDismissalType === 'run_out' ? wicketRuns : 0,
+                    whoIsOut: wicketDismissalType === 'run_out' || wicketDismissalType === 'retired' ? wicketWhoIsOut : 'striker',
+                    creditBowler: wicketDismissalType !== 'run_out' && wicketDismissalType !== 'retired',
                   });
                 }}
               >
-                <ThemedText style={{ fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
-                  Record run out{wicketRuns > 0 ? ` + ${wicketRuns} run${wicketRuns === 1 ? '' : 's'}` : ''}
-                </ThemedText>
-                <ThemedText style={{ fontSize: 10, color: '#ffffffcc' }}>
-                  {wicketWhoIsOut === 'striker' ? 'Striker' : 'Non-striker'} out
-                  {wicketRuns > 0 ? ` · +${wicketRuns} to the total` : ''}
-                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="checkmark-circle-outline" size={18} color="#ffffff" />
+                  <ThemedText style={{ fontFamily: 'Sora_700Bold', color: '#ffffff', fontSize: 14 }}>
+                    Confirm & Record Wicket
+                  </ThemedText>
+                </View>
               </Pressable>
             </ScrollView>
           </View>
@@ -5518,13 +7109,13 @@ export default function CricketScoring({
                       1-run penalty added automatically and the resulting team
                       total spelled out — picking "2 runs" for a wide previously
                       scored 2 in total instead of the correct 3. */}
-                  {[0, 1, 2, 3].map(ran => {
+                  {(activeExtraType === 'WD' ? [0, 1, 2, 3, 4] : [0, 1, 2, 3, 4, 6]).map(ran => {
                     const total = ran + 1;
                     const isWide = activeExtraType === 'WD';
                     const label =
                       ran === 0
-                        ? isWide ? 'Wide only' : 'No ball only'
-                        : `${isWide ? 'Wide' : 'No ball'} + ${ran} run${ran === 1 ? '' : 's'} ${isWide ? 'run' : 'off the bat'}`;
+                        ? isWide ? 'Wide only (1 run)' : 'No ball only (1 run)'
+                        : `${isWide ? 'Wide' : 'No ball'} + ${ran} run${ran === 1 ? '' : 's'}${ran === 4 ? ' (Boundary)' : ran === 6 ? ' (Six!)' : ''} ${isWide ? 'byes/overthrow' : 'off the bat'}`;
                     const sub =
                       ran === 0
                         ? `Adds ${total} run to the total · delivery re-bowled`
@@ -6023,58 +7614,136 @@ export default function CricketScoring({
               </View>
             </View>
 
+            {/* Max Overs Per Bowler Rule Selector */}
+            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+              MAX OVERS PER BOWLER: {isMatchUnderway ? `(LOCKED AT ${ruleMaxOversPerBowler === 'unlimited' ? 'NO LIMIT' : `${ruleMaxOversPerBowler} OV/BOWLER`})` : ''}
+            </ThemedText>
+            <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
+              {['1', '2', '3', '4', '5', 'unlimited'].map(ov => (
+                <Pressable
+                  key={ov}
+                  disabled={isMatchUnderway}
+                  onPress={() => setEditMaxOversPerBowlerInput(ov)}
+                  style={[
+                    { paddingHorizontal: 11, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: theme.outlineVariant + '44', backgroundColor: theme.surfaceLow },
+                    editMaxOversPerBowlerInput === ov && { backgroundColor: theme.primary, borderColor: theme.primary },
+                    isMatchUnderway && { opacity: 0.6 }
+                  ]}
+                >
+                  <ThemedText style={[{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: theme.text }, editMaxOversPerBowlerInput === ov && { color: '#ffffff' }]}>
+                    {ov === 'unlimited' ? 'No Limit' : `${ov} Ov`}
+                  </ThemedText>
+                </Pressable>
+              ))}
+            </View>
+
             {/* Quick Scoring Rules Checkboxes */}
             <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
-              QUICK SCORING RULES (AUTO-RECORD EXTRAS):
+              QUICK SCORING RULES (AUTO-RECORD EXTRAS & RUNS):
             </ThemedText>
-            <View style={{ gap: 8, marginBottom: 14 }}>
+            <View style={{ gap: 8, marginBottom: 12 }}>
+              {/* Wide Ball */}
               <Pressable
                 disabled={isMatchUnderway}
                 onPress={() => setRuleAutoWide(!ruleAutoWide)}
                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '33', backgroundColor: theme.surfaceLow, opacity: isMatchUnderway ? 0.65 : 1 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <View style={{ backgroundColor: '#F59E0B20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
                     <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#F59E0B' }}>WD</ThemedText>
                   </View>
-                  <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
-                    Wide Ball: +1 Run & Re-bowl (Auto)
-                  </ThemedText>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                      Wide Ball: +1 Extra Run (Auto)
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginTop: 1 }}>
+                      Tap = +1 run. Long-press 'WD' or uncheck to score Wide + 1, 2, 4 overthrows.
+                    </ThemedText>
+                  </View>
                 </View>
                 <Ionicons name={ruleAutoWide ? "checkbox" : "square-outline"} size={20} color={ruleAutoWide ? theme.primary : theme.textSecondary} />
               </Pressable>
 
+              {/* No Ball */}
               <Pressable
                 disabled={isMatchUnderway}
                 onPress={() => setRuleAutoNoBall(!ruleAutoNoBall)}
                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '33', backgroundColor: theme.surfaceLow, opacity: isMatchUnderway ? 0.65 : 1 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <View style={{ backgroundColor: '#EF444420', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
                     <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>NB</ThemedText>
                   </View>
-                  <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
-                    No Ball: +1 Run & Re-bowl (Auto)
-                  </ThemedText>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                      No Ball: +1 Extra Run & Free Hit (Auto)
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginTop: 1 }}>
+                      Tap = +1 run. Long-press 'NB' to score runs off bat (NB+1, +2, +4, +6).
+                    </ThemedText>
+                  </View>
                 </View>
                 <Ionicons name={ruleAutoNoBall ? "checkbox" : "square-outline"} size={20} color={ruleAutoNoBall ? theme.primary : theme.textSecondary} />
               </Pressable>
 
+              {/* Byes & Leg Byes */}
               <Pressable
                 disabled={isMatchUnderway}
                 onPress={() => setRuleAllowByes(!ruleAllowByes)}
                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '33', backgroundColor: theme.surfaceLow, opacity: isMatchUnderway ? 0.65 : 1 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <View style={{ backgroundColor: '#3B82F620', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
                     <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#3B82F6' }}>LB</ThemedText>
                   </View>
-                  <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
-                    Byes & Leg Byes: Count runs, legal ball
-                  </ThemedText>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                      Byes & Leg Byes: Count runs, legal ball
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginTop: 1 }}>
+                      Runs counted without wide penalty; legally bowled delivery.
+                    </ThemedText>
+                  </View>
                 </View>
                 <Ionicons name={ruleAllowByes ? "checkbox" : "square-outline"} size={20} color={ruleAllowByes ? theme.primary : theme.textSecondary} />
               </Pressable>
+
+              {/* Wicket + Runs Rule */}
+              <Pressable
+                disabled={isMatchUnderway}
+                onPress={() => setRuleAllowWicketRuns(!ruleAllowWicketRuns)}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '33', backgroundColor: theme.surfaceLow, opacity: isMatchUnderway ? 0.65 : 1 }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <View style={{ backgroundColor: '#8B5CF620', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#8B5CF6' }}>WK</ThemedText>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                      Wicket + Runs: Support Run Outs (W+1, W+2)
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginTop: 1 }}>
+                      Tap 'Wicket' on pad → pick 'W+1' or 'W+2' for completed runs on dismissals.
+                    </ThemedText>
+                  </View>
+                </View>
+                <Ionicons name={ruleAllowWicketRuns ? "checkbox" : "square-outline"} size={20} color={ruleAllowWicketRuns ? theme.primary : theme.textSecondary} />
+              </Pressable>
+            </View>
+
+            {/* How Match Scenarios Are Handled Guide Box */}
+            <View style={{ backgroundColor: theme.primary + '10', borderColor: theme.primary + '33', borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Ionicons name="flash" size={13} color={theme.primary} />
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                  Scoring Scenarios Handled During Match:
+                </ThemedText>
+              </View>
+              <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, lineHeight: 14 }}>
+                • <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>Wide + 1 or 2 runs:</ThemedText> Long-press 'Wide' button on keypad to pick 1 penalty + runs.{'\n'}
+                • <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>Wicket + 1 or 2 runs:</ThemedText> Tap 'Wicket' → select 'Wicket + 1 Run' or 'Wicket + 2 Runs' (Run Out).{'\n'}
+                • <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>No Ball + Runs:</ThemedText> Long-press 'No Ball' to add runs off bat with Free Hit.
+              </ThemedText>
             </View>
 
             {/* Save / Close Action Button */}
@@ -6092,8 +7761,10 @@ export default function CricketScoring({
                 onPress={() => {
                   const newOvers = editTotalOversInput || '20';
                   setCurrentTotalOvers(newOvers);
+                  const newMaxBowler = editMaxOversPerBowlerInput || '2';
+                  setRuleMaxOversPerBowler(newMaxBowler);
                   setShowPreRulesModal(false);
-                  showToast('success', `Rules Verified: Match overs updated to ${newOvers} Overs.`);
+                  showToast('success', `Rules Applied: ${newOvers} Overs (${newMaxBowler === 'unlimited' ? 'No Limit' : `${newMaxBowler} Ov/Bowler`}).`);
                 }}
                 style={({ pressed }) => [{ width: '100%', paddingVertical: 12, borderRadius: 10, backgroundColor: theme.primary, alignItems: 'center' }, pressed && { opacity: 0.85 }]}
               >

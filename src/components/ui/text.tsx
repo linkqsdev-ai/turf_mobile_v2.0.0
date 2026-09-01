@@ -3,19 +3,26 @@ import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
+// Type hierarchy rule: **bold weights are reserved for parent (page-level)
+// headings** — `display`, `title` and `heading`. Everything nested inside a
+// page — card titles, list-item titles, section labels, links — steps down to
+// medium/semibold at a slightly smaller size so a screen has exactly one
+// dominant voice instead of competing bold text.
 const textVariants = cva('text-foreground', {
   variants: {
     variant: {
+      // ── parent headings (bold) ──────────────────────────────────────────
       display: 'font-extrabold text-4xl text-foreground',
       title: 'font-bold text-2xl text-foreground',
       heading: 'font-bold text-xl text-foreground',
-      subheading: 'font-semibold text-lg text-foreground',
+      // ── nested headings & body (never bold) ─────────────────────────────
+      subheading: 'font-medium text-base text-foreground',
       body: 'font-sans text-base text-foreground',
-      callout: 'font-medium text-base text-foreground',
+      callout: 'font-medium text-sm text-foreground',
       subtle: 'font-sans text-sm text-muted-foreground',
       caption: 'font-medium text-xs text-muted-foreground',
-      overline: 'font-bold text-2xs uppercase tracking-widest text-muted-foreground',
-      link: 'font-semibold text-base text-primary',
+      overline: 'font-semibold text-2xs uppercase tracking-widest text-muted-foreground',
+      link: 'font-medium text-sm text-primary',
     },
   },
   defaultVariants: { variant: 'body' },

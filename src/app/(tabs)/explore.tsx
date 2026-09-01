@@ -53,7 +53,8 @@ const generateRolling14Days = () => {
 };
 
 import { SPORTS_LIST } from '@/constants/sports';
-import { useWalletStore, useTurfStore } from '@/store/app-store';
+import { useWalletStore, useTurfStore, useOfferStore } from '@/store/app-store';
+import { getOffersForTurf, formatDiscount } from '@/store/offer-store';
 import { cleanLocation } from '@/utils/location';
 
 export default function ExploreScreen() {
@@ -62,6 +63,7 @@ export default function ExploreScreen() {
   const { profile } = useUserProfile();
   const { walletBalance } = useWalletStore();
   const { ownedTurfs } = useTurfStore();
+  const { offers } = useOfferStore();
 
   const [backendTurfs, setBackendTurfs] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -121,10 +123,10 @@ export default function ExploreScreen() {
     setFavorites(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleTurfSelect = (id: string, name: string) => {
+  const handleTurfSelect = (id: string, name: string, offerCode?: string) => {
     router.push({
       pathname: '/details',
-      params: { id, name },
+      params: { id, name, ...(offerCode ? { coupon: offerCode } : {}) },
     });
   };
 
@@ -376,7 +378,7 @@ export default function ExploreScreen() {
                   ],
                 };
 
-                const BADGE_POOL = ['🆕 JUST ADDED', '✨ AI PRICED', '🔥 POPULAR', '🏆 PREMIUM', '⭐ 5.0 RATED', '⚡ INSTANT BOOK'];
+                const BADGE_POOL = ['🆕 JUST ADDED', '💸 BEST VALUE', '🔥 POPULAR', '🏆 PREMIUM', '⭐ 5.0 RATED', '⚡ INSTANT BOOK'];
 
                 const backendFormattedTurfs = (backendTurfs || []).map((t: any, idx: number) => {
                   const todayAvailableCount = t.slots && t.slots.length > 0
@@ -454,7 +456,7 @@ export default function ExploreScreen() {
                     rating: 4.9,
                     favCount: 124,
                     image: { uri: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80' },
-                    badge: '✨ AI PRICED',
+                    badge: '💸 BEST VALUE',
                     sport: 'Football',
                     surfaceType: '5G Rubber Infill',
                     price: 2500,
@@ -533,10 +535,13 @@ export default function ExploreScreen() {
 
                 const renderTurfCard = (turf: any) => {
                   const isFav = !!favorites[turf.id];
+                  const turfOffers = getOffersForTurf(turf.name, offers);
+                  const activeOffer = turfOffers.find(o => o.appliesTo?.toLowerCase() === turf.name.toLowerCase()) || turfOffers[0];
+
                   return (
                     <Pressable
                       key={turf.id}
-                      onPress={() => handleTurfSelect(turf.id, turf.name)}
+                      onPress={() => handleTurfSelect(turf.id, turf.name, activeOffer?.code)}
                       style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
                     >
                       <View style={styles.imageContainer}>
@@ -587,6 +592,13 @@ export default function ExploreScreen() {
                           </View>
                         </View>
 
+                        {/* Clean Small Offer Text (no badge, no decorative icons) */}
+                        {!!activeOffer && (
+                          <ThemedText style={{ fontSize: 9, color: '#059669', fontFamily: 'Sora_600SemiBold', marginTop: 1, marginBottom: 1 }} numberOfLines={1}>
+                            {formatDiscount(activeOffer)} · Use code <ThemedText style={{ fontFamily: 'Sora_700Bold', color: '#047857' }}>{activeOffer.code}</ThemedText>
+                          </ThemedText>
+                        )}
+
                         <View style={styles.cardActions}>
                           <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
                             <ThemedText type="headlineSm" style={{ color: theme.primary, fontSize: 15.5, fontFamily: 'Sora_700Bold' }}>
@@ -598,7 +610,7 @@ export default function ExploreScreen() {
                           </View>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Pressable
-                              onPress={() => handleTurfSelect(turf.id, turf.name)}
+                              onPress={() => handleTurfSelect(turf.id, turf.name, activeOffer?.code)}
                               style={[styles.actionButton, { backgroundColor: theme.primary }]}
                             >
                               <ThemedText type="labelMd" style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>
@@ -635,7 +647,7 @@ export default function ExploreScreen() {
                       <ThemedText style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 6, fontSize: 12, lineHeight: 18 }}>
                         There are currently no {selectedSport} venues listed. Switch filter to All Sports or add a new pitch!
                       </ThemedText>
-                      <Pressable 
+                      <Pressable
                         onPress={() => setSelectedSport('All')}
                         style={{ backgroundColor: theme.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: BorderRadius.lg, marginTop: 14 }}
                       >
@@ -878,7 +890,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: 12,
     overflow: 'hidden',
-    height: 148,
+    minHeight: 148,
     marginBottom: 0,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
@@ -911,6 +923,45 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
     fontFamily: 'Sora_700Bold',
     letterSpacing: 0.3,
+  },
+  cardOfferBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: '#10b981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+    borderRadius: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.25,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  cardOfferBadgeText: {
+    color: '#ffffff',
+    fontSize: 8.5,
+    fontFamily: 'Sora_800ExtraBold',
+    letterSpacing: 0.2,
+  },
+  cardOfferStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  cardOfferStripText: {
+    fontSize: 9.5,
+    fontFamily: 'Sora_600SemiBold',
+    color: '#047857',
+    flex: 1,
   },
   cardInfo: {
     flex: 1,

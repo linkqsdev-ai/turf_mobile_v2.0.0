@@ -15,20 +15,38 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useMatchStore } from '@/store/app-store';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 import { SPORTS_LIST } from '@/constants/sports';
 
 export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   const theme = useTheme();
-  const { addTeam } = useMatchStore();
+  const { teams, addTeam } = useMatchStore();
+  const { profile } = useUserProfile();
 
   const [teamName, setTeamName] = useState('');
   const [shortName, setShortName] = useState('');
   const [selectedSport, setSelectedSport] = useState('Cricket');
   const [homeGround, setHomeGround] = useState('');
-  const [captainPhone, setCaptainPhone] = useState('');
+  const [captainPhone, setCaptainPhone] = useState(profile.phone || '9876543210');
   const [crestImage, setCrestImage] = useState<any>(require('@/assets/images/mascots/lion.png'));
   const [isFavourite, setIsFavourite] = useState(false);
+
+  const cleanedPhone = captainPhone.replace(/[^0-9]/g, '');
+  const favTeamsForUser = teams.filter(t => {
+    if (!t.isFavourite) return false;
+    const p = (t.phone || '').replace(/[^0-9]/g, '');
+    return p === cleanedPhone && p.length > 0;
+  });
+  const isFavLimitReached = cleanedPhone.length >= 7 && favTeamsForUser.length >= 2;
+
+  const handleToggleFavourite = () => {
+    if (isFavLimitReached && !isFavourite) {
+      Alert.alert('Favourite Limit Reached', 'Per user allowed to create up to 2 teams as Favourite Team.');
+      return;
+    }
+    setIsFavourite(!isFavourite);
+  };
 
   const [isNameFocused, setIsNameFocused] = useState(false);
   const [isShortFocused, setIsShortFocused] = useState(false);
@@ -157,7 +175,7 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
             <ThemedText style={[styles.cardSubtitle, { color: theme.textSecondary }]}>Set the foundation for your team.</ThemedText>
           </View>
           <Pressable 
-            onPress={() => setIsFavourite(!isFavourite)} 
+            onPress={handleToggleFavourite} 
             style={{ 
               flexDirection: 'row', 
               alignItems: 'center', 
@@ -167,7 +185,8 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
               borderRadius: BorderRadius.full, 
               backgroundColor: isFavourite ? '#FFE25920' : theme.surfaceLow,
               borderWidth: 1,
-              borderColor: isFavourite ? '#FFA751' : theme.outlineVariant + '44'
+              borderColor: isFavourite ? '#FFA751' : theme.outlineVariant + '44',
+              opacity: isFavLimitReached && !isFavourite ? 0.6 : 1,
             }}
           >
             {isFavourite ? (
@@ -180,10 +199,16 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
               fontSize: 10, 
               color: isFavourite ? "#FFA751" : theme.textSecondary 
             }}>
-              Favourite
+              Favourite ({isFavourite ? `${favTeamsForUser.length + 1}/2` : `${favTeamsForUser.length}/2`})
             </ThemedText>
           </Pressable>
         </View>
+
+        <ThemedText style={{ color: isFavLimitReached ? '#ef4444' : theme.textSecondary, fontSize: 10, fontFamily: 'Sora_500Medium', marginBottom: 14 }}>
+          {isFavLimitReached
+            ? '⚠️ Limit reached: Per user allowed to create up to 2 teams as Favourite Team.'
+            : '💡 Per user allowed to create up to 2 teams as Favourite Team (shown at top of lists).'}
+        </ThemedText>
 
         {/* Sport selection */}
         <View style={[styles.inputGroup, { marginBottom: 20 }]}>

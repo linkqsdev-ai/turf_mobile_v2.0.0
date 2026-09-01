@@ -25,8 +25,28 @@ motion layer.
 
 ### Type scale — always via `<Text variant="…">`
 
-`display` `title` `heading` `subheading` `body` `callout` `subtle` `caption` `overline` `link`
 RN does **not** inherit text styles across `View`s, so every string lives in a `<Text>`.
+
+**Weight rule — bold is reserved for parent (page-level) headings.** Nested text —
+card titles, list-item titles, section labels, buttons, badges, chips, tab labels, values —
+never goes above semibold, and headings inside cards sit one step smaller than page headings.
+
+| Variant | Weight | Size | Use |
+| --- | --- | --- | --- |
+| `display` | **extrabold** | 38 | page hero title (auth screens) |
+| `title` | **bold** | 24 | page title (`Screen header large`) |
+| `heading` | **bold** | 20 | page-level heading |
+| `subheading` | medium | 15 | **card titles**, sheet titles, empty-state titles |
+| `body` | regular | 15 | body copy |
+| `callout` | medium | 13 | emphasised body; nav-bar title (the one bold exception, via `AppHeader`) |
+| `subtle` | regular | 13 | secondary copy |
+| `caption` | medium | 12 | metadata |
+| `overline` | semibold | 10 | section labels (`Section title`) |
+| `link` | medium | 13 | inline links / section actions |
+
+When hand-writing classes on a screen: card/list-item headings → `font-medium text-sm`,
+emphasised values and control labels → `font-semibold`. Never `font-bold` outside the three
+parent-heading variants.
 
 ---
 
@@ -69,19 +89,25 @@ RN does **not** inherit text styles across `View`s, so every string lives in a `
    | status pills | `<Badge variant=…>` |
    | filter pills | `<Chip>` / `<ChipGroup>` |
    | section header + "See all" | `<Section title=… action={{label,onPress}}>` |
+   | any `font-bold` that isn't the page title | `font-medium text-sm` (headings) / `font-semibold` (values, labels) |
    | manual modal sheet | `<Sheet open= onClose= title=>` |
    | `theme.primary` etc. for an icon `color` | `useTokens().primary` |
    | list entrance animations | wrap rows in `<Stagger>` or `<MotionView preset="fade-up" delay={i*0.05}>` |
 5. Icon libraries: `Ionicons` for UI glyphs; `SPORTS_LIST[].icon` are **MaterialIcons** names.
+5b. **Third-party components need `cssInterop`** — NativeWind only maps `className` for RN's own
+   components; on anything else it is silently ignored. Register it in
+   `src/lib/nativewind-interop.ts` (already done for `LinearGradient`) or pass `style` instead.
 6. Verify: `npx tsc --noEmit` → `npx expo export --platform web` / `ios` / `android`.
 
 ### Reference conversions already done
 `(tabs)/_layout.tsx`, `(auth)/{landing,login,signup,forgot-password}.tsx`, `(tabs)/{matches,club}.tsx`,
 `admin/{index,dashboard,create-turf}.tsx`, `coach/index.tsx`, `coach-profile/[id].tsx`,
-`enroll.tsx`, `booking-confirmation.tsx`, `coach-home.tsx`, `new-match.tsx`.
+`enroll.tsx`, `booking-confirmation.tsx`, `coach-home.tsx`, `new-match.tsx`,
+`components/home/player-dashboard.tsx` (the Player home, rendered from `(tabs)/index.tsx`).
 
 ### Remaining screens (inherit the theme via `_layout`, still on old primitives)
-`(tabs)/{index,explore,tournaments,network,coach}.tsx`, `booking.tsx`, `details.tsx`, `profile.tsx`,
+`(tabs)/index.tsx` *(Owner / Coach / Organizer branches only — Player is done)*,
+`(tabs)/{explore,tournaments,network,coach}.tsx`, `booking.tsx`, `details.tsx`, `profile.tsx`,
 `edit-profile.tsx`, `player-profile.tsx`, `settings.tsx`, `wallet.tsx`, `voucher-redeem.tsx`, `scoring.tsx`,
 `create-turf.tsx`, `create-class.tsx`, `create-tournament.tsx`, `tournament-details.tsx`,
 `team-registration.tsx`, `team-management.tsx`, `fixture-management.tsx`, `owner-offers.tsx`,

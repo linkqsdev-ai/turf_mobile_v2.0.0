@@ -29,7 +29,7 @@ export function Chip({ label, selected, onPress, leftIcon, className, disabled }
       {leftIcon}
       <Text
         className={cn(
-          'font-semibold text-sm',
+          'font-medium text-sm',
           selected ? 'text-primary-foreground' : 'text-foreground',
         )}
       >

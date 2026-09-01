@@ -45,7 +45,10 @@ export default function CoachDetail() {
     },
   });
 
-  const navigateToEditClass = () => router.push('/create-class');
+  const navigateToEditClass = () => router.push({
+    pathname: '/create-class',
+    params: { editId: params.id as string }
+  });
 
   return (
     <GradientContainer screenName="coach" style={styles.container}>

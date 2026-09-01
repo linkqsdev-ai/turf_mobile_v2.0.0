@@ -27,14 +27,17 @@ export interface CardProps extends ViewProps, VariantProps<typeof cardVariants> 
 export const Card = React.forwardRef<View, CardProps>(
   ({ className, variant, padded, onPress, ...props }, ref) => {
     if (onPress) {
+      // Children render directly on the Pressable — nesting them in a bare
+      // inner View dropped every layout class (gap, flex-row, …) passed in
+      // `className`, since those live on the Pressable.
       return (
         <Pressable
+          ref={ref}
           onPress={onPress}
           className={cn(cardVariants({ variant, padded }), 'active:opacity-95', className)}
           accessibilityRole="button"
-        >
-          <View ref={ref} {...props} />
-        </Pressable>
+          {...(props as any)}
+        />
       );
     }
     return <View ref={ref} className={cn(cardVariants({ variant, padded }), className)} {...props} />;

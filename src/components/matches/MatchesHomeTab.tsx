@@ -33,7 +33,7 @@ import { FoFAvatarStack } from '@/components/fof/FoFAvatarStack';
 import { getSportIllustration } from '@/constants/sports';
 import { MotionIllustration } from '@/components/motion-illustration';
 
-const FILTERS = ['Me', 'All', 'Turf', 'Ground', 'Bid', 'Tournament', 'Upcoming', 'Finished'];
+const FILTERS = ['Me', 'All', 'Turf', 'Ground', 'Bid', 'Coaching', 'Tournament', 'Finished'];
 
 export function MatchesHomeTab() {
   const theme = useTheme();
@@ -293,19 +293,23 @@ export function MatchesHomeTab() {
           </View>
           */}
 
-          {/* If the filter is 'Classes', only show the coaching classes */}
-          {selectedFilter === 'Classes' ? (
+          {/* Coaching: the whole feed becomes the classes coaches have published */}
+          {selectedFilter === 'Coaching' ? (
             <View style={[styles.section, { marginBottom: Spacing.sm }]}>
               <ThemedText type="labelMd" style={{ color: theme.textSecondary, textTransform: 'none', marginBottom: Spacing.xs }}>
                 Academy Coaching Classes
               </ThemedText>
               {classes.length > 0 ? (
-                <ScrollView 
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingVertical: 4, gap: 12 }}
-                >
+                <View style={{ gap: 12 }}>
                   {classes.map((cls: any, idx: number) => {
+                    const sport = cls.sportType || 'Sports';
+                    const fee = cls.feeAmount
+                      ? `₹${cls.feeAmount}/${cls.feeType === 'Per Session' ? 'sess' : 'mo'}`
+                      : 'Free';
+                    const certificate =
+                      cls.certificateName ||
+                      (cls.certificates && cls.certificates.length > 0 ? cls.certificates[0] : null);
+
                     const navigateToProfile = () => {
                       router.push({
                         pathname: '/coach/[id]',
@@ -317,63 +321,76 @@ export function MatchesHomeTab() {
                           trainees: '18',
                           rating: '5.0',
                           reviews: '1',
-                          rate: cls.feeAmount ? `₹${cls.feeAmount}/${cls.feeType === 'Per Session' ? 'sess' : 'mo'}` : 'Free',
+                          rate: fee,
                           location: cls.venue,
                           match: 'Your Class',
-                          sports: [cls.sportType.toLowerCase()].join(','),
+                          sports: sport.toLowerCase(),
                           avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
                           badge: 'OWNER',
-                        }
+                        },
                       });
                     };
-                    const watermarkSource = getSportIllustration(cls.sportType);
 
                     return (
                       <Pressable
                         key={cls.id || `match-class-${idx}`}
-                        style={[styles.advertisementCard, { backgroundColor: '#f5f6ff', borderColor: theme.outlineVariant + '33', width: 220, overflow: 'hidden' }]}
+                        style={[
+                          styles.advertisementCard,
+                          {
+                            backgroundColor: theme.surfaceLowest,
+                            borderColor: theme.outlineVariant + '33',
+                            overflow: 'hidden',
+                          },
+                        ]}
                         onPress={navigateToProfile}
                       >
                         {/* Subtle watermark vector illustration */}
-                        <Image 
-                          source={watermarkSource}
-                          style={{ position: 'absolute', right: -10, bottom: -10, width: 90, height: 90, opacity: 0.12 }}
+                        <Image
+                          source={getSportIllustration(sport)}
+                          style={{ position: 'absolute', right: -12, bottom: -12, width: 104, height: 104, opacity: 0.12 }}
                           contentFit="contain"
                         />
                         {/* Banner Top Accent */}
                         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, backgroundColor: theme.primary, borderTopLeftRadius: BorderRadius.xl, borderTopRightRadius: BorderRadius.xl }} />
-                        
+
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                          <Image 
+                          <Image
                             source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
                             style={{ width: 44, height: 44, borderRadius: BorderRadius.full }}
                           />
                           <View style={{ flex: 1, marginLeft: 10 }}>
                             <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_800ExtraBold', fontSize: 10, letterSpacing: 0.5 }}>COACHING CLASS</ThemedText>
-                            <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 1 }}>{cls.classType} · {cls.sportType.toUpperCase()}</ThemedText>
+                            <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 1 }} numberOfLines={1}>
+                              {cls.classType} · {String(sport).toUpperCase()}
+                            </ThemedText>
+                          </View>
+                          <View style={{ backgroundColor: theme.primary + '18', paddingHorizontal: 9, paddingVertical: 4, borderRadius: BorderRadius.full }}>
+                            <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_700Bold', fontSize: 11 }}>{fee}</ThemedText>
                           </View>
                         </View>
 
-                        <ThemedText type="title" style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 15, lineHeight: 20 }} numberOfLines={1}>
+                        <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 15, lineHeight: 20 }} numberOfLines={1}>
                           {cls.className}
                         </ThemedText>
-                        
-                        <ThemedText type="bodyMd" style={{ color: theme.textSecondary, fontSize: 12, marginTop: 4 }} numberOfLines={1}>
-                          Session Duration · {cls.sessionDuration}
+
+                        <ThemedText style={{ color: theme.textSecondary, fontSize: 12, marginTop: 4 }} numberOfLines={1}>
+                          {cls.ageGroup || 'All ages'} · {cls.skillLevel || 'All levels'} · {cls.sessionDuration}
                         </ThemedText>
 
-                        {/* Certificate Accreditation */}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                          <Ionicons name="ribbon-outline" size={12} color="#10b981" style={{ marginRight: 4 }} />
-                          <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_700Bold' }} numberOfLines={1}>
-                            {cls.certificateName || (cls.certificates && cls.certificates.length > 0 ? cls.certificates[0] : 'BWF Level 2 Certified Coach')}
-                          </ThemedText>
-                        </View>
+                        {/* Only shown when the coach actually recorded one — no invented credentials */}
+                        {certificate ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                            <Ionicons name="ribbon-outline" size={12} color="#10b981" style={{ marginRight: 4 }} />
+                            <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_700Bold' }} numberOfLines={1}>
+                              {certificate}
+                            </ThemedText>
+                          </View>
+                        ) : null}
 
-                        <View style={{ borderTopWidth: 1, borderTopColor: theme.outlineVariant + '1a', marginTop: 10, paddingTop: 10 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                        <View style={{ borderTopWidth: 1, borderTopColor: theme.outlineVariant + '1a', marginTop: 10, paddingTop: 10, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                             <Ionicons name="location-outline" size={13} color={theme.textSecondary} style={{ marginRight: 4 }} />
-                            <ThemedText style={{ color: theme.textSecondary, fontSize: 11 }} numberOfLines={1}>{cls.venue}</ThemedText>
+                            <ThemedText style={{ color: theme.textSecondary, fontSize: 11, flex: 1 }} numberOfLines={1}>{cls.venue}</ThemedText>
                           </View>
                           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Ionicons name="time-outline" size={13} color={theme.textSecondary} style={{ marginRight: 4 }} />
@@ -385,10 +402,16 @@ export function MatchesHomeTab() {
                       </Pressable>
                     );
                   })}
-                </ScrollView>
+                </View>
               ) : (
-                <View style={{ padding: 20, alignItems: 'center' }}>
-                  <ThemedText type="bodyMd" style={{ color: theme.textSecondary }}>No Coaching Classes available.</ThemedText>
+                <View style={{ paddingVertical: 28, alignItems: 'center' }}>
+                  <MotionIllustration scenario="coaching" size={92} accessibilityLabel="No coaching classes" />
+                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13, marginTop: 6 }}>
+                    No coaching classes yet
+                  </ThemedText>
+                  <ThemedText style={{ color: theme.textSecondary, fontSize: 11.5, marginTop: 2, textAlign: 'center' }}>
+                    Classes published by coaches will appear here.
+                  </ThemedText>
                 </View>
               )}
             </View>
@@ -714,7 +737,6 @@ export function MatchesHomeTab() {
                   if (selectedFilter === 'Turf') return item.category === 'Turf';
                   if (selectedFilter === 'Ground') return item.category === 'Ground';
                   if (selectedFilter === 'Tournament') return item.type === 'Tournament';
-                  if (selectedFilter === 'Upcoming') return item.status === 'Upcoming';
                   if (selectedFilter === 'Finished') return item.status === 'Finished';
                   return true;
                 };

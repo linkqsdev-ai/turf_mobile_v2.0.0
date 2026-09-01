@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -21,11 +21,14 @@ try {
 import { ThemedText } from './themed-text';
 import { FavouriteTeamIcon } from './favourite-team-icon';
 import { useTheme } from '@/hooks/use-theme';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { SPORTS_LIST } from '@/constants/sports';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMatchStore } from '@/store/app-store';
+import { InlineNotice, type Notice } from '@/components/ui/inline-notice';
+import { favouriteTeamDefaults, isSameTeam } from '@/lib/favourite-teams';
 import { isTimeSlotPassed } from '@/utils/date-utils';
 import { turfApi } from '@/services/turf-api';
 
@@ -60,7 +63,7 @@ const generateShortName = (name: string): string => {
   if (words.length >= 2) {
     return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
   }
-  return name.trim().slice(0, 3).toUpperCase();
+  return name.trim().slice(0, 2).toUpperCase();
 };
 
 interface CoinTossModalProps {
@@ -72,11 +75,23 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
   const theme = useTheme();
   const router = useRouter();
   const { teams, addTeam } = useMatchStore();
+  const { profile } = useUserProfile();
+  // Feedback banner shown inside the popup — a global toast would render
+  // behind this modal's window and never be seen.
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const noticeSeq = useRef(0);
+  const notify = useCallback((tone: Notice['tone'], title: string, message?: string) => {
+    noticeSeq.current += 1;
+    setNotice({ tone, title, message, key: noticeSeq.current });
+  }, []);
+  const clearNotice = useCallback(() => setNotice(null), []);
 
   // Setup states
   const [selectedSport, setSelectedSport] = useState('Cricket');
-  const [teamAName, setTeamAName] = useState('Lions FC');
-  const [teamBName, setTeamBName] = useState('Titans Utd');
+  // Left blank so the favourite-team effect below can seed them on open;
+  // these used to be hardcoded placeholder names ("Lions FC" / "Titans Utd").
+  const [teamAName, setTeamAName] = useState('');
+  const [teamBName, setTeamBName] = useState('');
   const [tossCaller, setTossCaller] = useState<'A' | 'B'>('A');
   const [tossCall, setTossCall] = useState<'HEADS' | 'TAILS'>('HEADS');
   const [tossDecision, setTossDecision] = useState<string>('');
@@ -92,13 +107,14 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
   const [autoWideRule, setAutoWideRule] = useState(true);
   const [autoNoBallRule, setAutoNoBallRule] = useState(true);
   const [allowByesRule, setAllowByesRule] = useState(true);
+  const [allowWicketRunsRule, setAllowWicketRunsRule] = useState(true);
 
   // New Team Modal states
   const [isNewTeamModalOpen, setIsNewTeamModalOpen] = useState(false);
   const [addingForTeam, setAddingForTeam] = useState<'A' | 'B' | null>(null);
   const [newTeamName, setNewTeamName] = useState('');
   const [newShortName, setNewShortName] = useState('');
-  const [newPhone, setNewPhone] = useState('');
+  const [newPhone, setNewPhone] = useState(profile.phone || '9876543210');
   const [newMascot, setNewMascot] = useState('lion');
   const [newIsFavourite, setNewIsFavourite] = useState(false);
   const [isNameFocused, setIsNameFocused] = useState(false);
@@ -107,10 +123,12 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
 
   const openNewTeamModal = (slot: 'A' | 'B') => {
     setAddingForTeam(slot);
-    const initialName = slot === 'A' ? teamAName : teamBName;
-    const trimmed = initialName ? initialName.trim() : '';
-    setNewTeamName(trimmed);
-    setNewShortName(generateShortName(trimmed));
+    // Allow user to enter custom team name (do not prefill from user profile)
+    setNewTeamName('');
+    setNewShortName('');
+    // Automatically place logged-in user phone
+    const autoPhone = profile.phone || '9876543210';
+    setNewPhone(autoPhone);
     setNewIsFavourite(false);
     setIsNewTeamModalOpen(true);
     setDropdownAOpen(false);
@@ -138,7 +156,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
     }
 
     if (newIsFavourite && isFavLimitReached) {
-      Alert.alert('Favorite Limit Reached', 'Only 2 favorite teams are allowed per mobile number.');
+      Alert.alert('Favourite Limit Reached', 'Per user allowed to create up to 2 teams as Favourite Team.');
       return;
     }
 
@@ -147,7 +165,13 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
       sport: selectedSport,
       mascot: newMascot,
       phone: newPhone.trim(),
-      players: [],
+      players: [
+        {
+          id: `player-${Date.now()}`,
+          name: profile.name || 'Captain',
+          skillLevel: profile.skillLevel || 'Intermediate',
+        } as any,
+      ],
       isFavourite: newIsFavourite && !isFavLimitReached,
     });
 
@@ -265,9 +289,18 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
   
   const [displaySide, setDisplaySide] = useState<'HEADS' | 'TAILS'>('HEADS');
   const [spinAnim] = useState(() => new Animated.Value(0));
+  const tossScrollRef = useRef<ScrollView>(null);
 
+  const autoScrollToBottom = (delay = 150) => {
+    setTimeout(() => {
+      tossScrollRef.current?.scrollToEnd({ animated: true });
+    }, delay);
+  };
+
+  // The team taken by the other slot stays listed rather than silently
+  // vanishing — tapping it raises an "already selected" notification instead.
   const suggestionsA = teams
-    .filter(t => (!t.sport || t.sport.toLowerCase() === selectedSport.toLowerCase()) && (!teamBName.trim() || t.name.toLowerCase() !== teamBName.trim().toLowerCase()) && t.name.toLowerCase().includes(teamAName.toLowerCase()))
+    .filter(t => (!t.sport || t.sport.toLowerCase() === selectedSport.toLowerCase()) && t.name.toLowerCase().includes(teamAName.toLowerCase()))
     .sort((a, b) => {
       if (a.isFavourite && !b.isFavourite) return -1;
       if (!a.isFavourite && b.isFavourite) return 1;
@@ -275,12 +308,72 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
     });
 
   const suggestionsB = teams
-    .filter(t => (!t.sport || t.sport.toLowerCase() === selectedSport.toLowerCase()) && (!teamAName.trim() || t.name.toLowerCase() !== teamAName.trim().toLowerCase()) && t.name.toLowerCase().includes(teamBName.toLowerCase()))
+    .filter(t => (!t.sport || t.sport.toLowerCase() === selectedSport.toLowerCase()) && t.name.toLowerCase().includes(teamBName.toLowerCase()))
     .sort((a, b) => {
       if (a.isFavourite && !b.isFavourite) return -1;
       if (!a.isFavourite && b.isFavourite) return 1;
       return a.name.localeCompare(b.name);
     });
+
+  // ── Favourite team defaults ───────────────────────────────────────────────
+  // Re-runs each time the popup opens so it always lands on the player's
+  // current favourites, but never overwrites a slot they've already filled.
+  useEffect(() => {
+    if (!visible) {
+      setNotice(null);
+      return;
+    }
+    if (teams.length === 0) return;
+
+    const { teamA, teamB } = favouriteTeamDefaults(teams, selectedSport);
+    if (!teamA) return;
+
+    const slotAEmpty = !teamAName.trim();
+    const slotBEmpty = !teamBName.trim();
+    if (slotAEmpty) setTeamAName(teamA);
+    if (teamB && slotBEmpty && !isSameTeam(teamA, teamB)) setTeamBName(teamB);
+
+    if (slotAEmpty) {
+      notify('success', 'Favourite team ready', `${teamA} is preselected as Team A.`);
+    } else if (isSameTeam(teamAName, teamA)) {
+      notify('info', 'Already selected', `${teamA} is already your Team A.`);
+    }
+    // Intentionally keyed on `visible` only: this is an on-open default, not a
+    // live binding that should fight the user as they edit the slots.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  /**
+   * Single entry point for picking a team from a dropdown. Notifies instead of
+   * silently no-oping when the tapped team is already in play.
+   */
+  const selectTeamForSlot = (slot: 'A' | 'B', name: string) => {
+    const current = slot === 'A' ? teamAName : teamBName;
+    const other = slot === 'A' ? teamBName : teamAName;
+
+    if (slot === 'A') setDropdownAOpen(false);
+    else setDropdownBOpen(false);
+
+    if (isSameTeam(current, name)) {
+      notify('info', 'Already selected', `${name} is already your Team ${slot}.`);
+      return;
+    }
+    if (isSameTeam(other, name)) {
+      notify(
+        'warning',
+        'Already selected',
+        `${name} is playing as Team ${slot === 'A' ? 'B' : 'A'}. Pick a different side.`,
+      );
+      return;
+    }
+
+    if (slot === 'A') setTeamAName(name);
+    else setTeamBName(name);
+    setTeamAError('');
+    setTeamBError('');
+    setResult(null);
+    setTossDecision('');
+  };
 
   const handleAddNewTeam = (name: string, field: 'A' | 'B') => {
     const cleanName = name.trim();
@@ -370,6 +463,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
       setIsFlipping(false);
       setResult(tossResult);
       setDisplaySide(tossResult);
+      autoScrollToBottom(180);
     });
   };
 
@@ -442,6 +536,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
             </Pressable>
 
             <ScrollView
+              ref={tossScrollRef}
               showsVerticalScrollIndicator={false}
               style={{ width: '100%' }}
               contentContainerStyle={styles.scrollContent}
@@ -457,6 +552,9 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                   Configure and start match live scoring
                 </ThemedText>
               </View>
+
+              {/* Feedback banner (favourite preselected / already selected) */}
+              <InlineNotice notice={notice} onDismiss={clearNotice} />
 
               {/* Sport selector */}
               <View style={{ width: '100%', marginBottom: 8 }}>
@@ -561,7 +659,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                         }
                         return (
                           <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_800ExtraBold', color: '#5D68E8', letterSpacing: 0.5 }}>
-                            {generateShortName(teamAName) || 'TM A'}
+                            {generateShortName(teamAName) || 'TA'}
                           </ThemedText>
                         );
                       })()}
@@ -676,14 +774,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                                     ? pressed ? '#fef3c7' : '#fffdf5'
                                     : pressed ? '#f8fafc' : '#ffffff',
                                 }]}
-                                onPress={() => {
-                                  setTeamAName(team.name);
-                                  setTeamAError('');
-                                  setTeamBError('');
-                                  setDropdownAOpen(false);
-                                  setResult(null);
-                                  setTossDecision('');
-                                }}
+                                onPress={() => selectTeamForSlot('A', team.name)}
                               >
                                 {team.mascot ? (
                                   <Image source={getMascotAsset(team.mascot)} style={{ width: 14, height: 14, borderRadius: 2 }} contentFit="contain" />
@@ -733,7 +824,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                         }
                         return (
                           <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_800ExtraBold', color: '#5D68E8', letterSpacing: 0.5 }}>
-                            {generateShortName(teamBName) || 'TM B'}
+                            {generateShortName(teamBName) || 'TB'}
                           </ThemedText>
                         );
                       })()}
@@ -846,14 +937,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                                     ? pressed ? '#fef3c7' : '#fffdf5'
                                     : pressed ? '#f8fafc' : '#ffffff',
                                 }]}
-                                onPress={() => {
-                                  setTeamBName(team.name);
-                                  setTeamBError('');
-                                  setTeamAError('');
-                                  setDropdownBOpen(false);
-                                  setResult(null);
-                                  setTossDecision('');
-                                }}
+                                onPress={() => selectTeamForSlot('B', team.name)}
                               >
                                 {team.mascot ? (
                                   <Image source={getMascotAsset(team.mascot)} style={{ width: 14, height: 14, borderRadius: 2 }} contentFit="contain" />
@@ -1222,7 +1306,10 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       {selectedSport.toLowerCase() === 'cricket' ? (
                         <>
                           <Pressable
-                            onPress={() => setTossDecision('Bat')}
+                            onPress={() => {
+                              setTossDecision('Bat');
+                              autoScrollToBottom(120);
+                            }}
                             style={[
                               { flex: 1, borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 6, paddingVertical: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F6FA' },
                               tossDecision === 'Bat' && { backgroundColor: theme.primary, borderColor: theme.primary }
@@ -1231,7 +1318,10 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                             <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: tossDecision === 'Bat' ? '#ffffff' : '#64748b' }}>🏏 Batting</ThemedText>
                           </Pressable>
                           <Pressable
-                            onPress={() => setTossDecision('Bowl')}
+                            onPress={() => {
+                              setTossDecision('Bowl');
+                              autoScrollToBottom(120);
+                            }}
                             style={[
                               { flex: 1, borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 6, paddingVertical: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F6FA' },
                               tossDecision === 'Bowl' && { backgroundColor: theme.primary, borderColor: theme.primary }
@@ -1243,7 +1333,10 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       ) : (
                         <>
                           <Pressable
-                            onPress={() => setTossDecision('Kickoff')}
+                            onPress={() => {
+                              setTossDecision('Kickoff');
+                              autoScrollToBottom(120);
+                            }}
                             style={[
                               { flex: 1, borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 6, paddingVertical: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F6FA' },
                               tossDecision === 'Kickoff' && { backgroundColor: theme.primary, borderColor: theme.primary }
@@ -1252,7 +1345,10 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                             <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: tossDecision === 'Kickoff' ? '#ffffff' : '#64748b' }}>⚽ Serve / Kickoff</ThemedText>
                           </Pressable>
                           <Pressable
-                            onPress={() => setTossDecision('Receive')}
+                            onPress={() => {
+                              setTossDecision('Receive');
+                              autoScrollToBottom(120);
+                            }}
                             style={[
                               { flex: 1, borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 6, paddingVertical: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F6FA' },
                               tossDecision === 'Receive' && { backgroundColor: theme.primary, borderColor: theme.primary }
@@ -1406,7 +1502,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         <Ionicons name={autoWideRule ? 'checkbox' : 'square-outline'} size={14} color={autoWideRule ? '#5D68E8' : '#94a3b8'} />
                         <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#334155' }}>
-                          Wide Ball = 1 Extra Run
+                          Wide Ball = 1 Extra Run (Supports Wide + 1, 2 runs)
                         </ThemedText>
                       </View>
                       <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_700Bold', color: autoWideRule ? '#5D68E8' : '#94a3b8' }}>
@@ -1421,7 +1517,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         <Ionicons name={autoNoBallRule ? 'checkbox' : 'square-outline'} size={14} color={autoNoBallRule ? '#5D68E8' : '#94a3b8'} />
                         <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#334155' }}>
-                          No Ball = 1 Extra Run
+                          No Ball = 1 Extra Run & Free Hit
                         </ThemedText>
                       </View>
                       <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_700Bold', color: autoNoBallRule ? '#5D68E8' : '#94a3b8' }}>
@@ -1443,6 +1539,28 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                         {allowByesRule ? 'ACTIVE' : 'OFF'}
                       </ThemedText>
                     </Pressable>
+
+                    <Pressable
+                      onPress={() => setAllowWicketRunsRule(!allowWicketRunsRule)}
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 1 }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <Ionicons name={allowWicketRunsRule ? 'checkbox' : 'square-outline'} size={14} color={allowWicketRunsRule ? '#5D68E8' : '#94a3b8'} />
+                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#334155' }}>
+                          Wicket + Runs Allowed (Run Outs: W+1, W+2)
+                        </ThemedText>
+                      </View>
+                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_700Bold', color: allowWicketRunsRule ? '#5D68E8' : '#94a3b8' }}>
+                        {allowWicketRunsRule ? 'ACTIVE' : 'OFF'}
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+
+                  {/* Guide Pill */}
+                  <View style={{ backgroundColor: '#5D68E812', borderRadius: 6, padding: 6, marginTop: 5 }}>
+                    <ThemedText style={{ fontSize: 8.5, color: '#475569', lineHeight: 12 }}>
+                      💡 <ThemedText style={{ fontFamily: 'Sora_700Bold', color: '#5D68E8' }}>Match Scenarios:</ThemedText> Long-press 'WD' on pad for Wide + 1, 2 runs. Tap 'Wicket' → pick 'W+1' or 'W+2' for Run Outs.
+                    </ThemedText>
                   </View>
                 </View>
               )}
@@ -1661,6 +1779,27 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+              {/* Linked Logged-In User Badge */}
+              <View style={[styles.userLinkCard, { backgroundColor: theme.primary + '12', borderColor: theme.primary + '33' }]}>
+                <View style={[styles.userLinkAvatar, { backgroundColor: theme.primary }]}>
+                  <Ionicons name="person" size={14} color="#ffffff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <ThemedText style={[styles.userLinkName, { color: theme.text }]}>
+                      {profile.name || 'Account User'}
+                    </ThemedText>
+                    <View style={[styles.userLinkBadge, { backgroundColor: '#10B98122' }]}>
+                      <Ionicons name="shield-checkmark" size={11} color="#10B981" />
+                      <ThemedText style={styles.userLinkBadgeText}>Logged User Linked</ThemedText>
+                    </View>
+                  </View>
+                  <ThemedText style={[styles.userLinkSub, { color: theme.textSecondary }]}>
+                    Manager &amp; Phone ({newPhone || profile.phone || '9876543210'}) automatically linked
+                  </ThemedText>
+                </View>
+              </View>
+
               {/* Team Name Input */}
               <View style={styles.modalInputGroup}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Team name *</ThemedText>
@@ -1690,7 +1829,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       styles.input,
                       { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isShortFocused ? theme.primary : theme.outlineVariant + '44' }
                     ]}
-                    placeholder="LSR"
+                    placeholder="LS"
                     placeholderTextColor="#94a3b8"
                     value={newShortName}
                     onChangeText={setNewShortName}
@@ -1707,7 +1846,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       styles.input,
                       { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isPhoneFocused ? theme.primary : theme.outlineVariant + '44' }
                     ]}
-                    placeholder="+447000"
+                    placeholder={profile.phone || '9876543210'}
                     placeholderTextColor="#94a3b8"
                     value={newPhone}
                     onChangeText={(t) => setNewPhone(t.replace(/[^0-9+\s\-()]/g, ''))}
@@ -1715,8 +1854,12 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                     onBlur={() => setIsPhoneFocused(false)}
                     keyboardType="phone-pad"
                   />
-                  {newPhone !== '' && newPhone.replace(/[^0-9]/g, '').length < 7 && (
+                  {newPhone !== '' && newPhone.replace(/[^0-9]/g, '').length < 7 ? (
                     <ThemedText style={{ color: '#ef4444', fontSize: 10, marginTop: 3 }}>Min 7 digits required</ThemedText>
+                  ) : (
+                    <ThemedText style={{ color: '#10B981', fontSize: 10, fontFamily: 'Sora_600SemiBold', marginTop: 3 }}>
+                      ✓ Auto-placed from logged user
+                    </ThemedText>
                   )}
                 </View>
               </View>
@@ -1749,8 +1892,8 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                   onPress={() => {
                     if (isFavLimitReached && !newIsFavourite) {
                       Alert.alert(
-                        'Favorite Limit Reached',
-                        'You can only mark up to 2 favorite teams for this mobile number.'
+                        'Favourite Limit Reached',
+                        'Per user allowed to create up to 2 teams as Favourite Team.'
                       );
                       return;
                     }
@@ -1772,13 +1915,20 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       color={newIsFavourite ? '#FACC15' : theme.textSecondary}
                     />
                     <View style={{ flex: 1 }}>
-                      <ThemedText style={{ fontFamily: 'Sora_600SemiBold', fontSize: 12, color: theme.text }}>
-                        Mark as Favourite Team
-                      </ThemedText>
-                      <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 10, color: theme.textSecondary }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <ThemedText style={{ fontFamily: 'Sora_600SemiBold', fontSize: 12, color: theme.text }}>
+                          Mark as Favourite Team
+                        </ThemedText>
+                        <View style={{ backgroundColor: '#FACC1525', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }}>
+                          <ThemedText style={{ fontFamily: 'Sora_700Bold', fontSize: 9.5, color: '#D97706' }}>
+                            {newIsFavourite ? `${favTeamsForNewPhone.length + 1}/2` : `${favTeamsForNewPhone.length}/2`}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 10, color: theme.textSecondary, marginTop: 2 }}>
                         {isFavLimitReached
-                          ? 'Max 2 favorite teams reached for this mobile number'
-                          : 'Show this team at the top of selection lists'}
+                          ? 'Limit reached: Per user allowed to create up to 2 teams as Favourite Team'
+                          : 'Per user allowed to create up to 2 teams as Favourite Team (shown at top of selection lists)'}
                       </ThemedText>
                     </View>
                   </View>
@@ -1983,5 +2133,43 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  userLinkCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginBottom: 4,
+  },
+  userLinkAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userLinkName: {
+    fontFamily: 'Sora_700Bold',
+    fontSize: 12.5,
+  },
+  userLinkBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  userLinkBadgeText: {
+    fontSize: 9.5,
+    fontFamily: 'Sora_700Bold',
+    color: '#10B981',
+  },
+  userLinkSub: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 10,
+    marginTop: 2,
   },
 });

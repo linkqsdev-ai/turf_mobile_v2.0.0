@@ -163,12 +163,23 @@ export function MotionIllustration({
   scenario,
   size = 104,
   accessibilityLabel,
+  glow,
+  accents,
 }: {
   scenario: Scenario;
   size?: number;
   accessibilityLabel?: string;
+  /** Override the halo gradient — lets a themed screen tint the artwork. */
+  glow?: [string, string];
+  /** Override the floating accent motes. */
+  accents?: AccentIcon[];
 }) {
-  const config = SCENARIOS[scenario];
+  const base = SCENARIOS[scenario];
+  const config = {
+    ...base,
+    ...(glow ? { glow } : null),
+    ...(accents ? { accents } : null),
+  };
   const [animate, setAnimate] = useState(true);
 
   // Ambient looping motion is exactly what "reduce motion" is meant to silence.

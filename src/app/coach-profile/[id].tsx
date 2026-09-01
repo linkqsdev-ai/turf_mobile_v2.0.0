@@ -50,10 +50,10 @@ export default function CoachProfile() {
       footer={
         <View className="flex-row gap-2">
           <Button variant="outline" className="flex-1" leftIcon={<MaterialCommunityIcons name="phone" size={18} color={t.primary} />}>
-            <Text className="font-bold text-primary">Call</Text>
+            <Text className="font-semibold text-sm text-primary">Call</Text>
           </Button>
           <Button variant="outline" className="flex-1" leftIcon={<MaterialCommunityIcons name="whatsapp" size={18} color={t.primary} />}>
-            <Text className="font-bold text-primary">Chat</Text>
+            <Text className="font-semibold text-sm text-primary">Chat</Text>
           </Button>
           <Button className="flex-[1.4]">Book session</Button>
         </View>
@@ -112,10 +112,10 @@ export default function CoachProfile() {
           {COACH_DATA.programs.map((p) => (
             <Card key={p.id} variant="elevated" className="flex-row items-center justify-between">
               <View className="flex-1">
-                <Text className="font-bold text-foreground">{p.title}</Text>
+                <Text className="font-medium text-sm text-foreground">{p.title}</Text>
                 <Text variant="caption">{p.desc}</Text>
               </View>
-              <Text className="font-bold text-primary">{p.price}</Text>
+              <Text className="font-semibold text-primary">{p.price}</Text>
             </Card>
           ))}
         </Stagger>
@@ -126,7 +126,7 @@ export default function CoachProfile() {
           {COACH_DATA.reviews.map((r) => (
             <Card key={r.id} variant="surface" className="gap-2">
               <View className="flex-row items-center justify-between">
-                <Text className="font-bold text-foreground">{r.name}</Text>
+                <Text className="font-medium text-sm text-foreground">{r.name}</Text>
                 <View className="flex-row gap-0.5">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Ionicons

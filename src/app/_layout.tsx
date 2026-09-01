@@ -1,4 +1,5 @@
 import '../../global.css';
+import '@/lib/nativewind-interop';
 import { Stack, ThemeProvider, DarkTheme, DefaultTheme, useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View, Platform } from 'react-native';
 import { colorScheme as nativewindColorScheme } from 'nativewind';

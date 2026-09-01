@@ -25,6 +25,8 @@ import { getAvatarSource } from '@/constants/avatars';
 import { PromoBanner, AutoScrollingHorizontalBanners, BANNER_DESIGNS_10 } from '@/components/promo-banner';
 import { useClassStore, useTurfStore, useOfferStore } from '@/store/app-store';
 import { isExpired } from '@/store/offer-store';
+import { PlayerDashboard } from '@/components/home/player-dashboard';
+import { useNotifications } from '@/context/NotificationContext';
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
 
@@ -35,6 +37,7 @@ export default function HomeScreen() {
   const { classes } = useClassStore();
   const { ownedTurfs } = useTurfStore();
   const { offers } = useOfferStore();
+  const { openNotificationModal } = useNotifications();
   const [backendTurfs, setBackendTurfs] = useState<any[]>([]);
 
   // Summary shown on the owner's Vouchers & Offers entry card. An offer that has
@@ -106,6 +109,22 @@ const CALENDAR_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 
   const handleProfilePress = () => router.push('/profile');
   const handleNetworkPress = () => router.push('/(tabs)/network');
+
+  // Players get the redesigned dashboard; Owner / Coach / Organizer keep the
+  // existing role-specific layout below.
+  if (role === 'Player') {
+    return (
+      <>
+        <PlayerDashboard
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onOpenNotifications={openNotificationModal}
+          onOpenCoinToss={() => setCoinTossVisible(true)}
+        />
+        <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
+      </>
+    );
+  }
 
   return (
     <GradientContainer screenName="home" style={styles.container}>

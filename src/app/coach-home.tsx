@@ -101,9 +101,9 @@ export default function CoachHomeScreen() {
               }
             >
               <View className="flex-1 pr-3">
-                <Text className="font-extrabold text-lg text-white">{item.title}</Text>
+                <Text className="font-semibold text-base text-white">{item.title}</Text>
                 <View className="mt-3 self-start rounded-full bg-white px-3 py-1.5">
-                  <Text className="text-2xs font-bold" style={{ color: item.color }}>
+                  <Text className="text-2xs font-semibold" style={{ color: item.color }}>
                     Join now
                   </Text>
                 </View>
@@ -141,7 +141,7 @@ export default function CoachHomeScreen() {
               onPress={() => router.push({ pathname: '/coach-profile/[id]', params: { id: item.id } })}
             >
               <Image source={item.image} style={{ width: '100%', height: 110, borderRadius: 14 }} />
-              <Text className="mt-2 font-bold text-foreground" numberOfLines={1}>
+              <Text className="mt-2 font-medium text-sm text-foreground" numberOfLines={1}>
                 {item.name}
               </Text>
               <Text variant="caption">{item.sport}</Text>
@@ -149,13 +149,13 @@ export default function CoachHomeScreen() {
                 <Text variant="caption">{item.experience}</Text>
                 <View className="flex-row items-center gap-1">
                   <Ionicons name="star" size={12} color={t.warning} />
-                  <Text className="text-xs font-bold text-foreground">{item.rating}</Text>
+                  <Text className="text-xs font-semibold text-foreground">{item.rating}</Text>
                 </View>
               </View>
-              <Text className="mt-2 font-bold text-primary">{item.price}</Text>
+              <Text className="mt-2 font-semibold text-primary">{item.price}</Text>
               <View className="mt-2.5 flex-row gap-2">
                 <Button variant="outline" size="sm" className="flex-1 px-0">
-                  <Text className="text-xs font-bold text-foreground">Profile</Text>
+                  <Text className="text-xs font-semibold text-foreground">Profile</Text>
                 </Button>
                 <Button size="sm" className="flex-1 px-0">
                   Book

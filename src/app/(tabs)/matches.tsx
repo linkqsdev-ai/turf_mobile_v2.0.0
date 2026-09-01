@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -53,7 +53,7 @@ function Dot({ count, color }: { count: number; color?: string }) {
         paddingHorizontal: 3,
       }}
     >
-      <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#FFFFFF' }}>{count}</Text>
+      <Text style={{ fontSize: 9, fontWeight: '600', color: '#FFFFFF' }}>{count}</Text>
     </View>
   );
 }
@@ -95,7 +95,7 @@ export default function MatchesScreen() {
             contentFit="cover"
           />
           <View>
-            <Text style={{ fontWeight: 'bold', fontSize: 14, color: t.foreground }}>{profile.name}</Text>
+            <Text style={{ fontWeight: '600', fontSize: 13, color: t.foreground }}>{profile.name}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
               <Ionicons name="location-sharp" size={11} color={t.mutedForeground} />
               <Text style={{ fontSize: 11, color: t.mutedForeground }}>{getShortLocation(profile.location)}</Text>
@@ -164,19 +164,17 @@ export default function MatchesScreen() {
                 borderBottomColor: active ? t.primary : 'transparent',
               }}
             >
-              <MaterialIcons name={TAB_ICON[tab]} size={tab === 'Home' ? 20 : 16} color={color} />
-              {tab !== 'Home' ? (
-                <Text
-                  numberOfLines={1}
-                  style={{
-                    fontSize: 12,
-                    fontWeight: active ? '800' : special ? '700' : '600',
-                    color,
-                  }}
-                >
-                  {tab}
-                </Text>
-              ) : null}
+              <MaterialIcons name={TAB_ICON[tab]} size={16} color={color} />
+              <Text
+                numberOfLines={1}
+                style={{
+                  fontSize: 12,
+                  fontWeight: active ? '600' : '500',
+                  color,
+                }}
+              >
+                {tab}
+              </Text>
             </Pressable>
           );
         })}

@@ -51,6 +51,10 @@ export function generateTeamId(): string {
   return `team-${Date.now()}`;
 }
 
+export function generatePlayerId(): string {
+  return `player-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+}
+
 export function createTeam(params: Omit<Team, 'id' | 'wins' | 'losses' | 'draws' | 'createdAt'>): Team {
   return {
     ...params,

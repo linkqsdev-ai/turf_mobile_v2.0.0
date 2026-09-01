@@ -91,6 +91,7 @@ interface AppStoreContextType {
   // Classes
   classes: any[];
   addClass: (params: any) => void;
+  updateClass: (id: string, params: any) => void;
 
   // Wallet
   walletBalance: number;
@@ -458,6 +459,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     return newClass;
   }, []);
 
+  const updateClass = useCallback((id: string, params: any) => {
+    setClasses(prev => {
+      const next = prev.map(c => c.id === id ? { ...c, ...params, updatedAt: new Date().toISOString() } : c);
+      AsyncStorage.setItem(KEYS.classes, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   // ── Bid actions ─────────────────────────────────────────────────────────────
   const addBid = useCallback((bidData: any) => {
     setBids(prev => {
@@ -569,7 +578,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       teams, addTeam, addPlayerToTeam, updateTeam, deleteTeam, toggleTeamFavourite, addPlayerToTeamById, removePlayerFromTeam, MAX_FAVOURITE_TEAMS,
       matches, addMatch, updateMatchScore, completeMatch,
       ownedTurfs, addTurf, updateTurf,
-      classes, addClass,
+      classes, addClass, updateClass,
       walletBalance, addWalletFunds, deductWalletFunds,
       bids, addBid, removeBid,
       offers, addOffer, updateOffer, deleteOffer, toggleOfferStatus, isOfferCodeAvailable, redeemOffer,
@@ -608,8 +617,8 @@ export function useTurfStore() {
 }
 
 export function useClassStore() {
-  const { classes, addClass } = useAppStore();
-  return { classes, addClass };
+  const { classes, addClass, updateClass } = useAppStore();
+  return { classes, addClass, updateClass };
 }
 
 export function useWalletStore() {

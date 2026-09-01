@@ -270,25 +270,25 @@ export default function SettingsScreen() {
             <LinkRow theme={theme} icon="key-outline" title="Change Password" subtitle="Reset your account password" onPress={() => router.push('/forgot-password')} />
           </SectionCard>
 
-          {/* ── AI Integrations (PRO) ── */}
-          <SectionCard title="AI INTEGRATIONS" icon="sparkles-outline" theme={theme}>
+          {/* ── Integrations (PRO) ── */}
+          <SectionCard title="INTEGRATIONS" icon="extension-puzzle-outline" theme={theme}>
             <Pressable
-              onPress={() => Alert.alert('🔒 PRO Feature', 'AI Integrations & API key configuration are exclusive PRO features. Upgrade to unlock!')}
+              onPress={() => Alert.alert('🔒 PRO Feature', 'Integrations & API key configuration are exclusive PRO features. Upgrade to unlock!')}
               style={{ opacity: 0.55 }}
             >
               <View pointerEvents="none">
-                <ThemedText style={[styles.rowTitle, { color: theme.textSecondary, marginBottom: 6 }]}>Gemini API Key</ThemedText>
+                <ThemedText style={[styles.rowTitle, { color: theme.textSecondary, marginBottom: 6 }]}>Service API Key</ThemedText>
                 <TextInput
                   value={geminiKey}
                   onChangeText={setGeminiKey}
                   editable={false}
                   secureTextEntry
                   style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.textSecondary, borderColor: theme.outlineVariant + '33' }]}
-                  placeholder="Enter Gemini API key…"
+                  placeholder="Enter API key…"
                   placeholderTextColor="#94a3b8"
                 />
                 <View style={[styles.switchRow, { marginTop: Spacing.md, paddingVertical: 0 }]}>
-                  <ThemedText style={[styles.rowSubtitle, { color: theme.textSecondary, flex: 1 }]}>AI suggestions & auto-generation</ThemedText>
+                  <ThemedText style={[styles.rowSubtitle, { color: theme.textSecondary, flex: 1 }]}>Suggestions & auto-generation</ThemedText>
                   <Switch value disabled trackColor={{ false: theme.surfaceLow, true: theme.primary }} thumbColor="#ffffff" />
                 </View>
               </View>

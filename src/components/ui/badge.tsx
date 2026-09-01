@@ -21,7 +21,7 @@ const badgeVariants = cva('flex-row items-center gap-1 self-start rounded-full p
   defaultVariants: { variant: 'muted', size: 'md' },
 });
 
-const badgeText = cva('font-bold text-2xs uppercase tracking-wider', {
+const badgeText = cva('font-semibold text-2xs uppercase tracking-wider', {
   variants: {
     variant: {
       primary: 'text-primary',

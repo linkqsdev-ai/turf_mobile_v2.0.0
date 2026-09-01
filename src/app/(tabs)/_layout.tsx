@@ -58,7 +58,8 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
         numberOfLines={1}
         style={{
           fontSize: isTurfBook ? 9 : 9.5,
-          fontWeight: focused ? '800' : '600',
+          // Tab labels are navigation chrome, not headings — semibold at most.
+          fontWeight: focused ? '600' : '500',
           letterSpacing: 0.2,
           textTransform: 'uppercase',
           color: focused ? t.primary : isTurfBook ? t.primary : t.mutedForeground,

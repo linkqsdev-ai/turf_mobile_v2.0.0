@@ -26,6 +26,11 @@ import {
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { useMatchStore } from '@/store/app-store';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { useToast } from '@/context/ToastContext';
+import { favouriteTeamDefaults, isSameTeam } from '@/lib/favourite-teams';
+import { PlayerSelectionModal } from '@/components/matches/PlayerSelectionModal';
+import type { Player } from '@/store/match-store';
 
 import { SPORTS_LIST } from '@/constants/sports';
 import { isTimeSlotPassed } from '@/utils/date-utils';
@@ -72,13 +77,23 @@ const generateShortName = (name: string): string => {
   if (words.length >= 2) {
     return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
   }
-  return name.trim().slice(0, 3).toUpperCase();
+  return name.trim().slice(0, 2).toUpperCase();
 };
 
-export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => void }) {
+export function QuickMatchTab({
+  onNavigate,
+  bottomInset = 68,
+}: {
+  onNavigate?: (tab: string) => void;
+  /** Space reserved below the form. Defaults to clearing the floating tab
+   *  bar; a stack screen that has no tab bar should pass a small value. */
+  bottomInset?: number;
+}) {
   const theme = useTheme();
   const router = useRouter();
   const { teams, addTeam } = useMatchStore();
+  const { profile } = useUserProfile();
+  const { showInfo, showWarning } = useToast();
   const [selectedSport, setSelectedSport] = useState('Cricket');
   const [selectedFormat, setSelectedFormat] = useState('T20');
   const [customFormat, setCustomFormat] = useState('');
@@ -161,6 +176,15 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
   const [teamBError, setTeamBError] = useState('');
   const [oversError, setOversError] = useState('');
 
+  // Pre-match player selection (drag-and-drop lineup draft — optional, can be skipped)
+  const [isPlayerSelectionOpen, setIsPlayerSelectionOpen] = useState(false);
+  const [teamALineup, setTeamALineup] = useState<Player[]>([]);
+  const [teamBLineup, setTeamBLineup] = useState<Player[]>([]);
+  const [lineupConfigured, setLineupConfigured] = useState(false);
+  // Full draft pool (matched-team rosters + any manually added guests) — kept
+  // across sheet close/reopen so guests don't get lost when re-editing.
+  const [playerPool, setPlayerPool] = useState<Player[]>([]);
+
   const [dropdownAOpen, setDropdownAOpen] = useState(false);
   const [dropdownBOpen, setDropdownBOpen] = useState(false);
 
@@ -191,16 +215,18 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
   // Modal form states
   const [newTeamName, setNewTeamName] = useState('');
   const [newShortName, setNewShortName] = useState('');
-  const [newPhone, setNewPhone] = useState('');
+  const [newPhone, setNewPhone] = useState(profile.phone || '9876543210');
   const [newMascot, setNewMascot] = useState('lion');
   const [newIsFavourite, setNewIsFavourite] = useState(false);
 
   const openNewTeamModal = (slot: 'A' | 'B') => {
     setAddingForTeam(slot);
-    const initialName = slot === 'A' ? (searchQueryA || teamAName) : (searchQueryB || teamBName);
-    const trimmed = initialName ? initialName.trim() : '';
-    setNewTeamName(trimmed);
-    setNewShortName(generateShortName(trimmed));
+    // Allow user to enter custom team name (do not prefill from user profile)
+    setNewTeamName('');
+    setNewShortName('');
+    // Automatically place logged-in user phone
+    const autoPhone = profile.phone || '9876543210';
+    setNewPhone(autoPhone);
     setNewIsFavourite(false);
     setIsNewTeamModalOpen(true);
   };
@@ -231,7 +257,7 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
     }
 
     if (newIsFavourite && isFavLimitReached) {
-      Alert.alert('Favorite Limit Reached', 'Only 2 favorite teams are allowed per mobile number.');
+      Alert.alert('Favourite Limit Reached', 'Per user allowed to create up to 2 teams as Favourite Team.');
       return;
     }
 
@@ -240,7 +266,13 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
       sport: selectedSport,
       mascot: newMascot,
       phone: newPhone.trim(),
-      players: [],
+      players: [
+        {
+          id: `player-${Date.now()}`,
+          name: profile.name || 'Captain',
+          skillLevel: profile.skillLevel || 'Intermediate',
+        } as any,
+      ],
       isFavourite: newIsFavourite && !isFavLimitReached,
     });
 
@@ -274,15 +306,15 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
     return a.name.localeCompare(b.name);
   });
 
+  // The team taken by the other slot stays in the list rather than silently
+  // vanishing — tapping it raises an "already selected" notification instead.
   const filteredTeamsA = sortedTeams.filter(team =>
     (!team.sport || team.sport.toLowerCase() === selectedSport.toLowerCase()) &&
-    (!teamBName.trim() || team.name.toLowerCase() !== teamBName.trim().toLowerCase()) &&
     team.name.toLowerCase().includes(searchQueryA.toLowerCase())
   );
 
   const filteredTeamsB = sortedTeams.filter(team =>
     (!team.sport || team.sport.toLowerCase() === selectedSport.toLowerCase()) &&
-    (!teamAName.trim() || team.name.toLowerCase() !== teamAName.trim().toLowerCase()) &&
     team.name.toLowerCase().includes(searchQueryB.toLowerCase())
   );
 
@@ -297,6 +329,7 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
   const [autoWideRule, setAutoWideRule] = useState(true);
   const [autoNoBallRule, setAutoNoBallRule] = useState(true);
   const [allowByesRule, setAllowByesRule] = useState(true);
+  const [allowWicketRunsRule, setAllowWicketRunsRule] = useState(true);
 
   // Toss Result states
   const [tossResult, setTossResult] = useState<'HEADS' | 'TAILS' | null>(null);
@@ -305,6 +338,71 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
 
   // Local display side for coin face during visual spin
   const [displaySide, setDisplaySide] = useState<'HEADS' | 'TAILS'>('HEADS');
+
+  // ── Favourite team defaults ───────────────────────────────────────────────
+  // Drop the player's starred team(s) straight into the empty slots so a quick
+  // match is one tap from ready. Only fills blanks — never overwrites a choice.
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (prefilledRef.current) return;
+    if (teams.length === 0) return;
+
+    const { teamA, teamB } = favouriteTeamDefaults(teams, selectedSport);
+    if (!teamA) return;
+
+    prefilledRef.current = true;
+    const slotAEmpty = !teamAName.trim();
+    if (slotAEmpty) {
+      setTeamAName(teamA);
+      setSearchQueryA(teamA);
+    }
+    if (teamB && !teamBName.trim() && !isSameTeam(teamA, teamB)) {
+      setTeamBName(teamB);
+      setSearchQueryB(teamB);
+    }
+
+    if (slotAEmpty) {
+      showInfo('Favourite team ready', `${teamA} is preselected as Team A.`);
+    } else if (isSameTeam(teamAName, teamA)) {
+      showInfo('Already selected', `${teamA} is already your Team A.`);
+    }
+  }, [teams, selectedSport, teamAName, teamBName, showInfo]);
+
+  /**
+   * Single entry point for picking a team from a dropdown. Notifies instead of
+   * silently no-oping when the tapped team is already in play.
+   */
+  const selectTeamForSlot = (slot: 'A' | 'B', name: string) => {
+    const current = slot === 'A' ? teamAName : teamBName;
+    const other = slot === 'A' ? teamBName : teamAName;
+
+    if (slot === 'A') setDropdownAOpen(false);
+    else setDropdownBOpen(false);
+
+    if (isSameTeam(current, name)) {
+      showInfo('Already selected', `${name} is already your Team ${slot}.`);
+      return;
+    }
+    if (isSameTeam(other, name)) {
+      showWarning(
+        'Already selected',
+        `${name} is playing as Team ${slot === 'A' ? 'B' : 'A'}. Pick a different side.`,
+      );
+      return;
+    }
+
+    if (slot === 'A') {
+      setTeamAName(name);
+      setSearchQueryA(name);
+    } else {
+      setTeamBName(name);
+      setSearchQueryB(name);
+    }
+    setTeamAError('');
+    setTeamBError('');
+    setTossResult(null);
+    setTossDecision('');
+  };
 
   // Animation values
   const spinAnim = useRef(new Animated.Value(0)).current;
@@ -474,8 +572,19 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
   const winner = tossResult === tossCall ? tossCaller : (tossCaller === 'A' ? 'B' : 'A');
   const tossWinnerName = winner === 'A' ? (teamAName.trim() || 'Team A') : (teamBName.trim() || 'Team B');
 
+  // Draft pool for the player-selection sheet: the saved-team rosters for
+  // whichever teams are currently matched, plus anything already in the pool
+  // (manually-added guests, previously confirmed picks) so re-opening the
+  // sheet doesn't drop them.
+  const matchedTeamA = teams.find((t) => t.name.toLowerCase() === teamAName.trim().toLowerCase());
+  const matchedTeamB = teams.find((t) => t.name.toLowerCase() === teamBName.trim().toLowerCase());
+  const knownPoolIds = new Set(playerPool.map((p) => p.id));
+  const newRosterPlayers = [...(matchedTeamA?.players || []), ...(matchedTeamB?.players || [])]
+    .filter((p) => !knownPoolIds.has(p.id));
+  const draftPlayerPool: Player[] = [...playerPool, ...newRosterPlayers];
+
   return (
-    <View style={[styles.container, { paddingBottom: 68 }]}>
+    <View style={[styles.container, { paddingBottom: bottomInset }]}>
       <ScrollView
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
@@ -714,9 +823,17 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                   position: 'relative',
                 }}
               >
-                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_800ExtraBold', color: '#5D68E8', letterSpacing: 0.5 }}>
-                  {teamAName ? teamAName.substring(0, 3).toUpperCase() : 'TM A'}
-                </ThemedText>
+                {(() => {
+                  const matchedTeam = teams.find(t => t.name.toLowerCase() === teamAName.trim().toLowerCase());
+                  if (matchedTeam?.mascot) {
+                    return <Image source={getMascotAsset(matchedTeam.mascot)} style={{ width: 26, height: 26 }} contentFit="contain" />;
+                  }
+                  return (
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_800ExtraBold', color: '#5D68E8', letterSpacing: 0.5 }}>
+                      {generateShortName(teamAName) || 'TA'}
+                    </ThemedText>
+                  );
+                })()}
                 <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#5D68E8', borderRadius: 3, padding: 1.5 }}>
                   <Ionicons name="add" size={8} color="#ffffff" />
                 </View>
@@ -839,15 +956,7 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                               ? pressed ? '#fef3c7' : '#fffdf5'
                               : pressed ? '#f8fafc' : '#ffffff',
                           }]}
-                          onPress={() => {
-                            setTeamAName(team.name);
-                            setSearchQueryA(team.name);
-                            setTeamAError('');
-                            setTeamBError('');
-                            setDropdownAOpen(false);
-                            setTossResult(null);
-                            setTossDecision('');
-                          }}
+                          onPress={() => selectTeamForSlot('A', team.name)}
                         >
                           <Image source={getMascotAsset(team.mascot || 'lion')} style={{ width: 16, height: 16, borderRadius: 3 }} contentFit="contain" />
                           <ThemedText style={{ color: '#0f172a', fontSize: 10.5, fontFamily: team.isFavourite ? 'Sora_700Bold' : 'Sora_500Medium', flex: 1 }} numberOfLines={1}>
@@ -886,9 +995,17 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                   position: 'relative',
                 }}
               >
-                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_800ExtraBold', color: '#5D68E8', letterSpacing: 0.5 }}>
-                  {teamBName ? teamBName.substring(0, 3).toUpperCase() : 'TM B'}
-                </ThemedText>
+                {(() => {
+                  const matchedTeam = teams.find(t => t.name.toLowerCase() === teamBName.trim().toLowerCase());
+                  if (matchedTeam?.mascot) {
+                    return <Image source={getMascotAsset(matchedTeam.mascot)} style={{ width: 26, height: 26 }} contentFit="contain" />;
+                  }
+                  return (
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_800ExtraBold', color: '#5D68E8', letterSpacing: 0.5 }}>
+                      {generateShortName(teamBName) || 'TB'}
+                    </ThemedText>
+                  );
+                })()}
                 <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#5D68E8', borderRadius: 3, padding: 1.5 }}>
                   <Ionicons name="add" size={8} color="#ffffff" />
                 </View>
@@ -1008,15 +1125,7 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                               ? pressed ? '#fef3c7' : '#fffdf5'
                               : pressed ? '#f8fafc' : '#ffffff',
                           }]}
-                          onPress={() => {
-                            setTeamBName(team.name);
-                            setSearchQueryB(team.name);
-                            setTeamAError('');
-                            setTeamBError('');
-                            setDropdownBOpen(false);
-                            setTossResult(null);
-                            setTossDecision('');
-                          }}
+                          onPress={() => selectTeamForSlot('B', team.name)}
                         >
                           <Image source={getMascotAsset(team.mascot || 'lion')} style={{ width: 16, height: 16, borderRadius: 3 }} contentFit="contain" />
                           <ThemedText style={{ color: '#0f172a', fontSize: 10.5, fontFamily: team.isFavourite ? 'Sora_700Bold' : 'Sora_500Medium', flex: 1 }} numberOfLines={1}>
@@ -1037,6 +1146,32 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
             </View>
           </View>
         </View>
+
+        {/* ── PLAYING XI (Pre-match player selection — optional, can be skipped) ── */}
+        {areTeamsValid && (
+          <Pressable
+            onPress={() => setIsPlayerSelectionOpen(true)}
+            style={[
+              styles_playingXi.card,
+              { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+            ]}
+          >
+            <View style={[styles_playingXi.iconWrap, { backgroundColor: theme.primary + '18' }]}>
+              <Ionicons name={lineupConfigured ? 'people' : 'people-outline'} size={16} color={theme.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText style={[styles_playingXi.title, { color: theme.text }]}>
+                {lineupConfigured ? 'Playing XI selected' : 'Select Playing XI'}
+              </ThemedText>
+              <ThemedText style={[styles_playingXi.subtitle, { color: theme.textSecondary }]}>
+                {lineupConfigured
+                  ? `${teamALineup.length} vs ${teamBLineup.length} players assigned — tap to edit`
+                  : 'Optional — drag players into each team, or skip and set this up later'}
+              </ThemedText>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+          </Pressable>
+        )}
 
         {/* ── MATCH TIMING, TYPE, & GROUND NAME CONTROLS ── */}
         <View style={{ marginBottom: 8, backgroundColor: theme.surfaceLow, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '44' }}>
@@ -1568,13 +1703,18 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                   borderColor: '#e2e8f0',
                 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
                   <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#F59E0B18', justifyContent: 'center', alignItems: 'center' }}>
                     <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_800ExtraBold', color: '#F59E0B' }}>WD</ThemedText>
                   </View>
-                  <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#1e293b' }}>
-                    Wide Ball: +1 Run & Re-bowl (Auto)
-                  </ThemedText>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#1e293b' }}>
+                      Wide Ball: +1 Extra Run (Auto)
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 9, color: '#64748b' }}>
+                      Tap = +1 run. Long-press 'WD' to score Wide + 1, 2, 4 overthrows.
+                    </ThemedText>
+                  </View>
                 </View>
                 <Ionicons name={autoWideRule ? "checkbox" : "square-outline"} size={18} color={autoWideRule ? '#5D68E8' : '#94a3b8'} />
               </Pressable>
@@ -1594,13 +1734,18 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                   borderColor: '#e2e8f0',
                 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
                   <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#F43F5E18', justifyContent: 'center', alignItems: 'center' }}>
                     <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_800ExtraBold', color: '#F43F5E' }}>NB</ThemedText>
                   </View>
-                  <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#1e293b' }}>
-                    No Ball: +1 Run & Re-bowl (Auto)
-                  </ThemedText>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#1e293b' }}>
+                      No Ball: +1 Extra Run & Free Hit
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 9, color: '#64748b' }}>
+                      Tap = +1 run. Long-press 'NB' to credit runs off the bat.
+                    </ThemedText>
+                  </View>
                 </View>
                 <Ionicons name={autoNoBallRule ? "checkbox" : "square-outline"} size={18} color={autoNoBallRule ? '#5D68E8' : '#94a3b8'} />
               </Pressable>
@@ -1620,16 +1765,59 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                   borderColor: '#e2e8f0',
                 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
                   <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#06B6D418', justifyContent: 'center', alignItems: 'center' }}>
                     <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_800ExtraBold', color: '#06B6D4' }}>LB</ThemedText>
                   </View>
-                  <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#1e293b' }}>
-                    Byes & Leg Byes: Count runs, legal ball
-                  </ThemedText>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#1e293b' }}>
+                      Byes & Leg Byes: Count runs, legal ball
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 9, color: '#64748b' }}>
+                      Runs counted without extra wide penalty.
+                    </ThemedText>
+                  </View>
                 </View>
                 <Ionicons name={allowByesRule ? "checkbox" : "square-outline"} size={18} color={allowByesRule ? '#5D68E8' : '#94a3b8'} />
               </Pressable>
+
+              {/* Wicket + Runs Rule */}
+              <Pressable
+                onPress={() => setAllowWicketRunsRule(!allowWicketRunsRule)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: '#ffffff',
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#e2e8f0',
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                  <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#8B5CF618', justifyContent: 'center', alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_800ExtraBold', color: '#8B5CF6' }}>WK</ThemedText>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#1e293b' }}>
+                      Wicket + Runs Allowed (Run Outs: W+1, W+2)
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 9, color: '#64748b' }}>
+                      Tap 'Wicket' → pick 'W+1' or 'W+2' for completed runs on dismissals.
+                    </ThemedText>
+                  </View>
+                </View>
+                <Ionicons name={allowWicketRunsRule ? "checkbox" : "square-outline"} size={18} color={allowWicketRunsRule ? '#5D68E8' : '#94a3b8'} />
+              </Pressable>
+
+              {/* Scenario Guide Pill */}
+              <View style={{ backgroundColor: '#5D68E810', borderColor: '#5D68E825', borderWidth: 1, borderRadius: 8, padding: 8, marginTop: 4 }}>
+                <ThemedText style={{ fontSize: 9, color: '#475569', lineHeight: 13 }}>
+                  💡 <ThemedText style={{ fontFamily: 'Sora_700Bold', color: '#5D68E8' }}>Match Scenarios:</ThemedText> Long-press 'WD' on pad for Wide + 1, 2 runs. Tap 'Wicket' → pick 'Wicket + 1' or 'Wicket + 2' for Run Outs with runs.
+                </ThemedText>
+              </View>
             </View>
           </View>
         )}
@@ -1713,6 +1901,27 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+              {/* Linked Logged-In User Badge */}
+              <View style={[styles.userLinkCard, { backgroundColor: theme.primary + '12', borderColor: theme.primary + '33' }]}>
+                <View style={[styles.userLinkAvatar, { backgroundColor: theme.primary }]}>
+                  <Ionicons name="person" size={14} color="#ffffff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <ThemedText style={[styles.userLinkName, { color: theme.text }]}>
+                      {profile.name || 'Account User'}
+                    </ThemedText>
+                    <View style={[styles.userLinkBadge, { backgroundColor: '#10B98122' }]}>
+                      <Ionicons name="shield-checkmark" size={11} color="#10B981" />
+                      <ThemedText style={styles.userLinkBadgeText}>Logged User Linked</ThemedText>
+                    </View>
+                  </View>
+                  <ThemedText style={[styles.userLinkSub, { color: theme.textSecondary }]}>
+                    Manager &amp; Phone ({newPhone || profile.phone || '9876543210'}) automatically linked
+                  </ThemedText>
+                </View>
+              </View>
+
               {/* Team Name Input */}
               <View style={styles.modalInputGroup}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Team name *</ThemedText>
@@ -1742,7 +1951,7 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                       styles.input,
                       { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isShortFocused ? theme.primary : theme.outlineVariant + '44' }
                     ]}
-                    placeholder="LSR"
+                    placeholder="LS"
                     placeholderTextColor="#94a3b8"
                     value={newShortName}
                     onChangeText={setNewShortName}
@@ -1759,7 +1968,7 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                       styles.input,
                       { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isPhoneFocused ? theme.primary : theme.outlineVariant + '44' }
                     ]}
-                    placeholder="+447000"
+                    placeholder={profile.phone || '9876543210'}
                     placeholderTextColor="#94a3b8"
                     value={newPhone}
                     onChangeText={(t) => setNewPhone(t.replace(/[^0-9+\s\-()]/g, ''))}
@@ -1767,8 +1976,12 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                     onBlur={() => setIsPhoneFocused(false)}
                     keyboardType="phone-pad"
                   />
-                  {newPhone !== '' && newPhone.replace(/[^0-9]/g, '').length < 7 && (
+                  {newPhone !== '' && newPhone.replace(/[^0-9]/g, '').length < 7 ? (
                     <ThemedText style={{ color: '#ef4444', fontSize: 10, marginTop: 3 }}>Min 7 digits required</ThemedText>
+                  ) : (
+                    <ThemedText style={{ color: '#10B981', fontSize: 10, fontFamily: 'Sora_600SemiBold', marginTop: 3 }}>
+                      ✓ Auto-placed from logged user
+                    </ThemedText>
                   )}
                 </View>
               </View>
@@ -1795,15 +2008,15 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                 </ScrollView>
               </View>
 
-              {/* Favourite Team Toggle (Max 2 allowed per mobile number) */}
+              {/* Favourite Team Toggle (Max 2 allowed per user) */}
               <View style={styles.modalInputGroup}>
                 <Pressable
                   onPress={() => {
                     if (isFavLimitReached) {
                       if (Platform.OS === 'web') {
-                        alert('Only 2 favorite teams are allowed per mobile number.');
+                        alert('Per user allowed to create up to 2 teams as Favourite Team.');
                       } else {
-                        Alert.alert('Favorite Limit Reached', 'Only 2 favorite teams are allowed per mobile number.');
+                        Alert.alert('Favourite Limit Reached', 'Per user allowed to create up to 2 teams as Favourite Team.');
                       }
                       return;
                     }
@@ -1840,15 +2053,19 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                     color: isFavLimitReached ? "#94a3b8" : newIsFavourite ? "#FFA751" : theme.textSecondary
                   }}>
                     {isFavLimitReached
-                      ? 'Favorite Limit Reached (Max 2)'
+                      ? 'Favourite Limit Reached (2/2)'
                       : newIsFavourite
                       ? `Favourite Team (${favTeamsForNewPhone.length + 1}/2)`
                       : `Favourite Team (${favTeamsForNewPhone.length}/2)`}
                   </ThemedText>
                 </Pressable>
-                {isFavLimitReached && (
+                {isFavLimitReached ? (
                   <ThemedText style={{ color: '#ef4444', fontSize: 9.5, marginTop: 4, fontFamily: 'Sora_500Medium' }}>
-                    ⚠️ Only 2 favorite teams allowed for {newPhone}. Option is disabled.
+                    ⚠️ Limit reached: Per user allowed to create up to 2 teams as Favourite Team.
+                  </ThemedText>
+                ) : (
+                  <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5, marginTop: 4, fontFamily: 'Sora_500Medium' }}>
+                    💡 Per user allowed to create up to 2 teams as Favourite Team (shown at top of selection lists).
                   </ThemedText>
                 )}
               </View>
@@ -1873,9 +2090,48 @@ export function QuickMatchTab({ onNavigate }: { onNavigate?: (tab: string) => vo
           </View>
         </View>
       </Modal>
+
+      {/* ── Playing XI Selection (drag-and-drop, skippable) ── */}
+      <PlayerSelectionModal
+        visible={isPlayerSelectionOpen}
+        teamAName={teamAName}
+        teamBName={teamBName}
+        initialPool={draftPlayerPool}
+        initialTeamA={teamALineup}
+        initialTeamB={teamBLineup}
+        onSkip={() => setIsPlayerSelectionOpen(false)}
+        onConfirm={(teamA, teamB, unassigned) => {
+          setTeamALineup(teamA);
+          setTeamBLineup(teamB);
+          setPlayerPool([...teamA, ...teamB, ...unassigned]);
+          setLineupConfigured(teamA.length > 0 || teamB.length > 0);
+          setIsPlayerSelectionOpen(false);
+        }}
+      />
     </View>
   );
 }
+
+const styles_playingXi = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  iconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: { fontFamily: 'Sora_700Bold', fontSize: 12 },
+  subtitle: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1 },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -2383,5 +2639,43 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  userLinkCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginBottom: 4,
+  },
+  userLinkAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userLinkName: {
+    fontFamily: 'Sora_700Bold',
+    fontSize: 12.5,
+  },
+  userLinkBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  userLinkBadgeText: {
+    fontSize: 9.5,
+    fontFamily: 'Sora_700Bold',
+    color: '#10B981',
+  },
+  userLinkSub: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 10,
+    marginTop: 2,
   },
 });

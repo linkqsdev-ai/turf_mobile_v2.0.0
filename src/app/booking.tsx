@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -21,7 +21,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { useToast } from '@/context/ToastContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { PromoBanner } from '@/components/promo-banner';
-import { useBookings, useWalletStore, useClassStore, useTurfStore } from '@/store/app-store';
+import { useBookings, useWalletStore, useClassStore, useTurfStore, useOfferStore } from '@/store/app-store';
+import { getOffersForTurf, formatDiscount, isRedeemable } from '@/store/offer-store';
 import { getCalendarGrid, formatDateFull, formatDateShort, formatDateISO, MONTH_NAMES, advanceMonth, isTimeSlotPassed, formatSlotsRange } from '@/utils/date-utils';
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
@@ -109,11 +110,12 @@ const VENUE_LOOKUP: Record<string, {
 export default function BookingConfigurationScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string; name?: string; price?: string; date?: string }>();
-  const { addBooking } = useBookings();
+  const params = useLocalSearchParams<{ id?: string; name?: string; price?: string; date?: string; coupon?: string }>();
+  const { bookings, addBooking } = useBookings();
   const { walletBalance, addWalletFunds, deductWalletFunds } = useWalletStore();
   const { classes } = useClassStore();
   const { ownedTurfs } = useTurfStore();
+  const { offers } = useOfferStore();
   const { showSuccess, showError } = useToast();
   const { addNotification } = useNotifications();
 
@@ -184,24 +186,126 @@ export default function BookingConfigurationScreen() {
 
   const venueId = params.id || 'lords';
 
-  // Calendar state — real date aware
-  const today = new Date();
-  const [calYear, setCalYear] = useState(today.getFullYear());
-  const [calMonth, setCalMonth] = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  // Calendar state — real date aware with parameter sync
+  const today = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []);
+
+  const initialDate = useMemo(() => {
+    if (params.date) {
+      const raw = String(params.date).trim();
+      // 1. Full ISO date string e.g. "2026-09-01"
+      if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+        const [y, m, d] = raw.split('-').map(Number);
+        return new Date(y, m - 1, d);
+      }
+      // 2. Format with month name and day e.g. "Tue, Sep 1", "Sep 1, 2026", "1 Sep 2026"
+      const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      const clean = raw.replace(/,/g, ' ').toLowerCase();
+      const parts = clean.split(/\s+/).filter(Boolean);
+
+      let foundMonth = -1;
+      let foundDay = -1;
+      let foundYear = new Date().getFullYear();
+
+      for (const part of parts) {
+        const mIndex = monthNames.findIndex(m => part.startsWith(m));
+        if (mIndex !== -1 && foundMonth === -1) {
+          foundMonth = mIndex;
+        } else if (/^\d{4}$/.test(part)) {
+          const y = parseInt(part, 10);
+          if (y >= new Date().getFullYear()) foundYear = y;
+        } else if (/^\d{1,2}$/.test(part)) {
+          if (foundDay === -1) {
+            foundDay = parseInt(part, 10);
+          }
+        }
+      }
+
+      if (foundMonth !== -1 && foundDay !== -1) {
+        const d = new Date(foundYear, foundMonth, foundDay);
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        if (d < now && d.getMonth() < now.getMonth()) {
+          d.setFullYear(now.getFullYear() + 1);
+        }
+        return d;
+      }
+    }
+    return new Date();
+  }, [params.date]);
+
+  const [calYear, setCalYear] = useState(initialDate.getFullYear());
+  const [calMonth, setCalMonth] = useState(initialDate.getMonth());
+  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
   const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<string>(
-    today.toLocaleDateString('en-US', { weekday: 'long' })
+    initialDate.toLocaleDateString('en-US', { weekday: 'long' })
   );
 
-  const selectedDayOfMonth = selectedDate ? selectedDate.getDate() : today.getDate();
+  useEffect(() => {
+    setCalYear(initialDate.getFullYear());
+    setCalMonth(initialDate.getMonth());
+    setSelectedDate(initialDate);
+    setSelectedDayOfWeek(initialDate.toLocaleDateString('en-US', { weekday: 'long' }));
+  }, [initialDate]);
+
+  const selectedDayOfMonth = selectedDate ? selectedDate.getDate() : new Date().getDate();
 
   const calendarGrid = useMemo(() => getCalendarGrid(calYear, calMonth), [calYear, calMonth]);
 
+  // Live occupancy tracking: find slots already booked by users for this venue on selectedDate
+  const bookedSlotsForSelectedDate = useMemo(() => {
+    const targetISO = formatDateISO(selectedDate);
+    const targetDayLabel = formatDateFull(selectedDate);
+
+    const venueBookings = bookings.filter(b => {
+      const isVenueMatch = (b.venueId === venueId) ||
+        (b.venueName && venue.name && b.venueName.toLowerCase() === venue.name.toLowerCase());
+      const isDateMatch = (b.date === targetISO) || (b.dayLabel === targetDayLabel);
+      const isConfirmed = b.status !== 'cancelled';
+      return isVenueMatch && isDateMatch && isConfirmed;
+    });
+
+    const set = new Set<string>();
+    venueBookings.forEach(b => {
+      if (Array.isArray(b.slots)) {
+        b.slots.forEach(s => set.add(s));
+      }
+    });
+    return set;
+  }, [bookings, venueId, venue.name, selectedDate]);
+
+  // Active slot config from turf
+  const dayShortName = selectedDate.toLocaleDateString('en-US', { weekday: 'short' });
+  const configuredSlotsMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    const turf = userTurf || remoteTurf;
+    if (turf && Array.isArray(turf.slots)) {
+      turf.slots.forEach((s: any) => {
+        if (s.day === dayShortName) {
+          map[s.time] = s.status;
+        }
+      });
+    }
+    return map;
+  }, [userTurf, remoteTurf, dayShortName]);
+
+  const activeAvailableSlots = useMemo(() => {
+    return TIME_SLOTS.filter(slot => {
+      const isPassed = isTimeSlotPassed(slot.time, selectedDate);
+      const isBooked = bookedSlotsForSelectedDate.has(slot.time);
+      const configStatus = configuredSlotsMap[slot.time];
+      const isConfigBlocked = configStatus === 'blocked' || configStatus === 'maintenance';
+      return !isPassed && !isBooked && !isConfigBlocked;
+    });
+  }, [selectedDate, bookedSlotsForSelectedDate, configuredSlotsMap]);
+
   const handlePrevMonth = () => {
-    // Don't allow going to past months
     const prev = advanceMonth(calYear, calMonth, -1);
     const prevDate = new Date(prev.year, prev.month, 1);
-    const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const thisMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     if (prevDate >= thisMonth) {
       setCalYear(prev.year);
       setCalMonth(prev.month);
@@ -214,11 +318,8 @@ export default function BookingConfigurationScreen() {
     setCalMonth(next.month);
   };
 
-  // Booking states
-  const [selectedSlots, setSelectedSlots] = useState<string[]>(() => {
-    const upcoming = TIME_SLOTS.find(s => !isTimeSlotPassed(s.time, new Date()));
-    return upcoming ? [upcoming.time] : [];
-  });
+  // Booking states: DO NOT pre-select slots on initial load!
+  const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [isSlotsExpanded, setIsSlotsExpanded] = useState<boolean>(true);
   const [coachAdded, setCoachAdded] = useState(false);
   const [recordingAdded, setRecordingAdded] = useState(false);
@@ -234,27 +335,69 @@ export default function BookingConfigurationScreen() {
   const [couponApplied, setCouponApplied] = useState<boolean>(false);
   const [cashbackOffer, setCashbackOffer] = useState<{ code: string; cashback: number } | null>(null);
 
-  // Valid coupon codes
+  // Available offers for this specific venue
+  const turfOffers = useMemo(() => getOffersForTurf(venue.name, offers), [venue.name, offers]);
+
+  // Constants
+  const courtFee = venue.basePrice * selectedSlots.length;
+  const serviceCharge = 12.00;
+  const coachFee = coachAdded ? 45.00 : 0.00;
+  const recordingFee = recordingAdded ? 25.00 : 0.00;
+  const total = courtFee + serviceCharge + coachFee + recordingFee;
+  const advanceAmount = Math.round((total * advancePct) / 100);
+
+  // Valid fallback coupon codes
   const VALID_COUPONS: Record<string, { discount: number; type: 'flat' | 'percent'; cashback: number }> = {
+    'YAWAH50': { discount: 20, type: 'percent', cashback: 0 },
     'YAWAH30': { discount: 30, type: 'percent', cashback: 50 },
     'FIRST50': { discount: 50, type: 'flat', cashback: 100 },
     'TURF20': { discount: 20, type: 'percent', cashback: 0 },
     'HAPPYHOUR': { discount: 15, type: 'flat', cashback: 20 },
   };
 
-  const applyCoupon = () => {
-    const code = couponInput.trim().toUpperCase();
+  const applyCoupon = (codeOverride?: string) => {
+    const code = (codeOverride || couponInput).trim().toUpperCase();
+    if (!code) return;
+
+    // Check store owner offers first
+    const matchedOffer = offers.find(
+      o => o.code.toUpperCase() === code && isRedeemable(o)
+    );
+
+    if (matchedOffer) {
+      if (matchedOffer.minBooking > 0 && total > 0 && total < matchedOffer.minBooking) {
+        setCouponError(`Min booking ₹${matchedOffer.minBooking} required for ${code}`);
+        setCouponDiscount(0);
+        setCouponApplied(false);
+        setCashbackOffer(null);
+        return;
+      }
+
+      const disc =
+        matchedOffer.discountType === 'percent'
+          ? Math.round(((total > 0 ? total : venue.basePrice) * matchedOffer.discountValue) / 100)
+          : matchedOffer.discountValue;
+
+      setCouponCode(code);
+      setCouponDiscount(disc);
+      setCouponApplied(true);
+      setCouponError('');
+      setCashbackOffer(null);
+      return;
+    }
+
     const found = VALID_COUPONS[code];
     if (!found) {
-      setCouponError('Invalid coupon code. Try YAWAH30 or FIRST50.');
+      setCouponError('Invalid coupon code. Try YAWAH50, YAWAH30 or FIRST50.');
       setCouponDiscount(0);
       setCouponApplied(false);
       setCashbackOffer(null);
       return;
     }
-    const disc = found.type === 'percent'
-      ? Math.round((total * found.discount) / 100)
-      : found.discount;
+    const disc =
+      found.type === 'percent'
+        ? Math.round(((total > 0 ? total : venue.basePrice) * found.discount) / 100)
+        : found.discount;
     setCouponCode(code);
     setCouponDiscount(disc);
     setCouponApplied(true);
@@ -265,6 +408,13 @@ export default function BookingConfigurationScreen() {
       setCashbackOffer(null);
     }
   };
+
+  React.useEffect(() => {
+    if (params.coupon) {
+      setCouponInput(params.coupon);
+      applyCoupon(params.coupon);
+    }
+  }, [params.coupon, offers, total]);
 
   const removeCoupon = () => {
     setCouponCode('');
@@ -283,14 +433,6 @@ export default function BookingConfigurationScreen() {
   ]);
   const [newPlayerName, setNewPlayerName] = useState<string>('');
 
-  // Constants
-  const courtFee = venue.basePrice * selectedSlots.length;
-  const serviceCharge = 12.00;
-  const coachFee = coachAdded ? 45.00 : 0.00;
-  const recordingFee = recordingAdded ? 25.00 : 0.00;
-  const total = courtFee + serviceCharge + coachFee + recordingFee;
-  const advanceAmount = Math.round((total * advancePct) / 100);
-
   // Wallet deductions
   const walletDeduction = useWallet ? Math.min(walletBalance, advanceAmount) : 0;
   const finalPayable = advanceAmount - walletDeduction - couponDiscount;
@@ -299,6 +441,7 @@ export default function BookingConfigurationScreen() {
   const toggleSlot = (time: string) => {
     const effectiveDate = selectedDate || selectedDayOfWeek;
     if (isTimeSlotPassed(time, effectiveDate)) return;
+    if (bookedSlotsForSelectedDate.has(time)) return;
     if (selectedSlots.includes(time)) {
       setSelectedSlots(selectedSlots.filter(s => s !== time));
     } else {
@@ -308,7 +451,10 @@ export default function BookingConfigurationScreen() {
 
   const handleConfirmBooking = () => {
     if (!selectedDate) {
-      // Show a gentle inline nudge instead of Alert
+      return;
+    }
+    if (selectedSlots.length === 0) {
+      showError('No Slot Selected', 'Please select at least one time slot before proceeding.');
       return;
     }
 
@@ -626,8 +772,12 @@ export default function BookingConfigurationScreen() {
                   <View style={styles.daySelectorGrid}>
                     {DAYS_OF_WEEK.map((d, dayIdx) => {
                       const isActive = d.full === selectedDayOfWeek;
-                      const todayIndex = (new Date().getDay() + 6) % 7; // Mon=0 ... Sun=6
-                      const isPastDay = dayIdx < todayIndex;
+                      const currentDayIdx = selectedDate.getDay(); // 0 (Sun) .. 6 (Sat)
+                      const targetIdx = d.short === 'Sun' ? 0 : dayIdx + 1;
+                      const diff = targetIdx - currentDayIdx;
+                      const candidate = new Date(selectedDate);
+                      candidate.setDate(selectedDate.getDate() + diff);
+                      const isPastDay = candidate.getTime() < today.getTime();
 
                       return (
                         <Pressable
@@ -635,16 +785,11 @@ export default function BookingConfigurationScreen() {
                           disabled={isPastDay}
                           onPress={() => {
                             if (isPastDay) return;
+                            setSelectedDate(candidate);
                             setSelectedDayOfWeek(d.full);
-                            const matched = calendarGrid.find(cell =>
-                              cell.date && cell.date.toLocaleDateString('en-US', { weekday: 'long' }) === d.full
-                            );
-                            if (matched && matched.date) {
-                              setSelectedDate(matched.date);
-                              setSelectedSlots(prev => prev.filter(s => !isTimeSlotPassed(s, matched.date)));
-                            } else {
-                              setSelectedSlots(prev => prev.filter(s => !isTimeSlotPassed(s, d.full)));
-                            }
+                            setCalYear(candidate.getFullYear());
+                            setCalMonth(candidate.getMonth());
+                            setSelectedSlots(prev => prev.filter(s => !isTimeSlotPassed(s, candidate)));
                           }}
                           style={[
                             styles.daySelectorTab,
@@ -670,13 +815,36 @@ export default function BookingConfigurationScreen() {
                     })}
                   </View>
 
+                  {/* Time Slots Header with Live Occupancy Count */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                      Select Time Slots
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {bookedSlotsForSelectedDate.size > 0 && (
+                        <View style={{ backgroundColor: '#ef444418', paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 4 }}>
+                          <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#ef4444' }}>
+                            {bookedSlotsForSelectedDate.size} Booked
+                          </ThemedText>
+                        </View>
+                      )}
+                      <View style={{ backgroundColor: '#10b98118', paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 4 }}>
+                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#047857' }}>
+                          {activeAvailableSlots.length} Available
+                        </ThemedText>
+                      </View>
+                    </View>
+                  </View>
+
                   {/* Time Slots Grid */}
                   <View style={styles.slotsGrid}>
                     {TIME_SLOTS.map((slot) => {
-                      const effectiveDate = selectedDate || selectedDayOfWeek;
-                      const isPassed = isTimeSlotPassed(slot.time, effectiveDate);
+                      const isPassed = isTimeSlotPassed(slot.time, selectedDate);
+                      const isBooked = bookedSlotsForSelectedDate.has(slot.time);
                       const isSelected = selectedSlots.includes(slot.time);
-                      const isDisabled = slot.disabled || isPassed;
+                      const configStatus = configuredSlotsMap[slot.time];
+                      const isConfigBlocked = configStatus === 'blocked' || configStatus === 'maintenance';
+                      const isDisabled = slot.disabled || isPassed || isBooked || isConfigBlocked;
 
                       return (
                         <Pressable
@@ -687,26 +855,42 @@ export default function BookingConfigurationScreen() {
                             styles.slotItem,
                             { backgroundColor: theme.surfaceLow },
                             isSelected && { backgroundColor: theme.primary },
-                            isDisabled && { opacity: 0.35, backgroundColor: theme.surfaceLow + '60' },
+                            isBooked && { backgroundColor: '#ef444412', borderColor: '#ef444440', borderWidth: 1 },
+                            isConfigBlocked && { backgroundColor: '#f59e0b12', borderColor: '#f59e0b40', borderWidth: 1 },
+                            isDisabled && !isBooked && !isConfigBlocked && { opacity: 0.35, backgroundColor: theme.surfaceLow + '60' },
                           ]}
                         >
                           <Ionicons
-                            name={slot.icon as any}
-                            size={14}
-                            color={isSelected ? '#ffffff' : isDisabled ? theme.textSecondary + '40' : theme.textSecondary}
+                            name={isBooked ? 'lock-closed' : isConfigBlocked ? 'close-circle-outline' : (slot.icon as any)}
+                            size={13}
+                            color={isSelected ? '#ffffff' : isBooked ? '#ef4444' : isConfigBlocked ? '#f59e0b' : isDisabled ? theme.textSecondary + '40' : theme.textSecondary}
                           />
                           <ThemedText
                             type="bodyMd"
                             style={{
-                              color: isSelected ? '#ffffff' : isDisabled ? theme.textSecondary + '60' : theme.text,
+                              color: isSelected ? '#ffffff' : isBooked ? '#ef4444' : isConfigBlocked ? '#f59e0b' : isDisabled ? theme.textSecondary + '60' : theme.text,
                               fontFamily: 'Sora_700Bold',
                               fontSize: 11,
                               marginLeft: 3,
-                              textDecorationLine: isDisabled ? 'line-through' : 'none',
+                              textDecorationLine: (isDisabled && !isBooked && !isConfigBlocked) ? 'line-through' : 'none',
                             }}
                           >
                             {slot.time}
                           </ThemedText>
+                          {isBooked && (
+                            <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 4 }}>
+                              <ThemedText style={{ color: '#ffffff', fontSize: 8, fontFamily: 'Sora_700Bold' }}>
+                                Booked
+                              </ThemedText>
+                            </View>
+                          )}
+                          {isConfigBlocked && !isBooked && (
+                            <View style={{ backgroundColor: '#f59e0b', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 4 }}>
+                              <ThemedText style={{ color: '#ffffff', fontSize: 8, fontFamily: 'Sora_700Bold' }}>
+                                {configStatus === 'maintenance' ? 'Maint' : 'Blocked'}
+                              </ThemedText>
+                            </View>
+                          )}
                         </Pressable>
                       );
                     })}
@@ -1254,10 +1438,10 @@ export default function BookingConfigurationScreen() {
                         onChangeText={(t) => { setCouponInput(t.toUpperCase()); setCouponError(''); }}
                         autoCapitalize="characters"
                         returnKeyType="done"
-                        onSubmitEditing={applyCoupon}
+                        onSubmitEditing={() => applyCoupon()}
                       />
                       <Pressable
-                        onPress={applyCoupon}
+                        onPress={() => applyCoupon()}
                         style={[styles.couponApplyBtn, { backgroundColor: theme.primary }]}
                       >
                         <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 12 }}>Apply</ThemedText>
@@ -1279,13 +1463,75 @@ export default function BookingConfigurationScreen() {
                     </View>
                   )}
 
-                  {/* Available offer hints */}
+                  {/* Available turf offers & voucher codes */}
                   {!couponApplied && (
-                    <View style={{ marginTop: 8 }}>
-                      <ThemedText style={{ color: theme.textSecondary, fontSize: 9, letterSpacing: 0.4 }}>AVAILABLE CODES</ThemedText>
+                    <View style={{ marginTop: 10 }}>
+                      {turfOffers.length > 0 && (
+                        <View style={{ marginBottom: 10 }}>
+                          <ThemedText style={{ color: '#047857', fontSize: 9.5, fontFamily: 'Sora_700Bold', letterSpacing: 0.4, marginBottom: 5 }}>
+                            EXCLUSIVE OFFERS FOR {venue.name.toUpperCase()}
+                          </ThemedText>
+                          <View style={{ gap: 6 }}>
+                            {turfOffers.map((o) => (
+                              <Pressable
+                                key={o.id}
+                                onPress={() => {
+                                  setCouponInput(o.code);
+                                  applyCoupon(o.code);
+                                }}
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  backgroundColor: '#10b98112',
+                                  borderColor: '#10b98144',
+                                  borderWidth: 1,
+                                  borderRadius: 8,
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 8,
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                                  <View style={{ backgroundColor: '#10b981', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                    <ThemedText style={{ color: '#ffffff', fontSize: 9.5, fontFamily: 'Sora_800ExtraBold' }}>
+                                      {formatDiscount(o)}
+                                    </ThemedText>
+                                  </View>
+                                  <View style={{ flex: 1 }}>
+                                    <ThemedText style={{ color: theme.text, fontSize: 11, fontFamily: 'Sora_700Bold' }} numberOfLines={1}>
+                                      {o.title || `${o.code} Voucher`}
+                                    </ThemedText>
+                                    <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5 }} numberOfLines={1}>
+                                      Use code <ThemedText style={{ fontFamily: 'Sora_700Bold', color: '#047857' }}>{o.code}</ThemedText>
+                                      {o.minBooking > 0 ? ` • Min ₹${o.minBooking}` : ''}
+                                    </ThemedText>
+                                  </View>
+                                </View>
+                                <View style={{ backgroundColor: '#10b981', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                                  <ThemedText style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_700Bold' }}>Apply</ThemedText>
+                                </View>
+                              </Pressable>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+
+                      <ThemedText style={{ color: theme.textSecondary, fontSize: 9, letterSpacing: 0.4 }}>OTHER PROMO CODES</ThemedText>
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                        {[{ code: 'YAWAH30', label: '30% OFF + ₹50 cashback' }, { code: 'FIRST50', label: '₹50 flat + ₹100 cashback' }, { code: 'TURF20', label: '20% OFF' }].map(({ code, label }) => (
-                          <Pressable key={code} onPress={() => { setCouponInput(code); setCouponError(''); }} style={[styles.offerPill, { borderColor: theme.primary + '44', backgroundColor: theme.primary + '0a' }]}>
+                        {[
+                          { code: 'YAWAH30', label: '30% OFF + ₹50 cashback' },
+                          { code: 'FIRST50', label: '₹50 flat + ₹100 cashback' },
+                          { code: 'TURF20', label: '20% OFF' },
+                        ].map(({ code, label }) => (
+                          <Pressable
+                            key={code}
+                            onPress={() => {
+                              setCouponInput(code);
+                              setCouponError('');
+                              applyCoupon(code);
+                            }}
+                            style={[styles.offerPill, { borderColor: theme.primary + '44', backgroundColor: theme.primary + '0a' }]}
+                          >
                             <ThemedText style={{ color: theme.primary, fontSize: 9, fontFamily: 'Sora_700Bold' }}>{code}</ThemedText>
                             <ThemedText style={{ color: theme.textSecondary, fontSize: 8 }}>{label}</ThemedText>
                           </Pressable>
@@ -1327,7 +1573,7 @@ export default function BookingConfigurationScreen() {
 
                   <View style={styles.ticketPriceTotalRow}>
                     <ThemedText style={[styles.ticketPriceTotalLabel, { color: theme.text }]}>Total Due</ThemedText>
-                    <ThemedText style={[styles.ticketPriceTotalVal, { color: theme.secondary }]}>₹{total.toFixed(2)}</ThemedText>
+                    <ThemedText style={[styles.ticketPriceTotalVal, { color: theme.secondary }]}>₹{Math.max(0, total - couponDiscount).toFixed(2)}</ThemedText>
                   </View>
                   {useWallet && walletDeduction > 0 && (
                     <View style={styles.ticketPriceRow}>
