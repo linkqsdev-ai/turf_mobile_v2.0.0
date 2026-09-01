@@ -533,6 +533,12 @@ export default function CricketScoring({
   const [showExtraModal, setShowExtraModal] = useState(false);
   const [activeExtraType, setActiveExtraType] = useState<'WD' | 'NB' | 'BYE' | 'LB' | null>(null);
 
+  // Wicket detail sheet — lets a run out record the runs completed before the
+  // dismissal and which batsman was actually out.
+  const [showWicketModal, setShowWicketModal] = useState(false);
+  const [wicketRuns, setWicketRuns] = useState(0);
+  const [wicketWhoIsOut, setWicketWhoIsOut] = useState<'striker' | 'non-striker'>('striker');
+
   // Full Squad Roster Modal States
   const [showFullSquadModal, setShowFullSquadModal] = useState(false);
   const [squadTab, setSquadTab] = useState<'A' | 'B'>('A');
@@ -1298,8 +1304,23 @@ export default function CricketScoring({
   };
 
 
+  // Details a wicket can carry beyond "someone is out". Defaults reproduce the
+  // old one-tap behaviour (striker out, nobody ran, credited to the bowler).
+  type WicketOptions = {
+    // Runs completed by the batsmen before the dismissal — the run-out case.
+    runsCompleted?: number;
+    // A run out can dismiss the batsman at either end.
+    whoIsOut?: 'striker' | 'non-striker';
+    // Run outs are not credited to the bowler's wicket column.
+    creditBowler?: boolean;
+  };
+
   // State Updates
-  const recordBall = (type: 'run' | 'extra' | 'wicket', value: number | string) => {
+  const recordBall = (
+    type: 'run' | 'extra' | 'wicket',
+    value: number | string,
+    wicketOptions?: WicketOptions
+  ) => {
     if (!validatePlayersBeforeScoring()) return;
     // Fix #9: Block recording after innings has ended
     if (isInningsOver) return;
@@ -1385,44 +1406,100 @@ export default function CricketScoring({
       const newWickets = wickets + 1;
       setWickets(newWickets);
 
-      const activeIdx = batsmen.findIndex(b => b.active);
-      const targetIdx = activeIdx >= 0 ? activeIdx : 0;
+      const runsCompleted = Math.max(0, wicketOptions?.runsCompleted ?? 0);
+      const whoIsOut = wicketOptions?.whoIsOut ?? 'striker';
+      const creditBowler = wicketOptions?.creditBowler ?? true;
+      // Odd runs means the batsmen crossed, so the striker's end changes.
+      const crossed = runsCompleted % 2 !== 0;
+
+      const strikerIdx = batsmen.findIndex(b => b.active);
+      const safeStrikerIdx = strikerIdx >= 0 ? strikerIdx : 0;
+      const nonStrikerIdx = safeStrikerIdx === 0 ? 1 : 0;
+      // The striker faced the ball and scores whatever was run off it; the
+      // dismissed player may be either of them on a run out.
+      const targetIdx = whoIsOut === 'non-striker' ? nonStrikerIdx : safeStrikerIdx;
       const dismissedPlayer = batsmen[targetIdx];
       const isLastBallOfOver = ballsInCurrentOver >= 5;
 
-      setOverLog(prev => [...prev, 'W']);
+      const newTotalRuns = runs + runsCompleted;
+      if (runsCompleted > 0) setRuns(newTotalRuns);
+
+      setOverLog(prev => [...prev, runsCompleted > 0 ? `${runsCompleted}W` : 'W']);
 
       if (dismissedPlayer && dismissedPlayer.name) {
+        // The striker is credited with the runs completed and the ball faced;
+        // a run-out non-striker gets neither.
+        const isStrikerOut = targetIdx === safeStrikerIdx;
         setDismissedBatsmen(prev => [
           ...prev,
           {
             name: dismissedPlayer.name,
             status: 'Out',
-            runs: dismissedPlayer.runs,
-            balls: dismissedPlayer.balls + 1,
+            runs: dismissedPlayer.runs + (isStrikerOut ? runsCompleted : 0),
+            balls: dismissedPlayer.balls + (isStrikerOut ? 1 : 0),
             fours: dismissedPlayer.fours,
             sixes: dismissedPlayer.sixes,
           }
         ]);
       }
 
-      // Clear active dismissed batsman slot
       setBatsmen(prev =>
-        prev.map((b, i) => (i === targetIdx ? { name: '', runs: 0, balls: 0, fours: 0, sixes: 0, active: true } : b))
+        prev.map((b, i) => {
+          // The new batsman takes over the dismissed player's end. Whether that
+          // end is on strike depends on whether the batsmen crossed.
+          const endsUpOnStrike = crossed
+            ? i !== safeStrikerIdx
+            : i === safeStrikerIdx;
+          if (i === targetIdx) {
+            return { name: '', runs: 0, balls: 0, fours: 0, sixes: 0, active: endsUpOnStrike };
+          }
+          // Surviving batsman: credit the striker for runs run + ball faced.
+          const isSurvivingStriker = i === safeStrikerIdx;
+          return {
+            ...b,
+            runs: isSurvivingStriker ? b.runs + runsCompleted : b.runs,
+            balls: isSurvivingStriker ? b.balls + 1 : b.balls,
+            active: endsUpOnStrike,
+          };
+        })
       );
 
       setBowler(prev => ({
         ...prev,
         ballsInOver: prev.ballsInOver + 1,
-        wickets: prev.wickets + 1,
+        // Runs conceded still count against the bowler even on a run out.
+        runs: prev.runs + runsCompleted,
+        // A run out is not the bowler's wicket.
+        wickets: creditBowler ? prev.wickets + 1 : prev.wickets,
       }));
 
       if (newWickets >= 10) {
         // Fix #4: Don't call incrementBallCount after innings ends (avoids double-increment)
         // Fix #10: Pass overs + 1 as final over count (stale 'overs' is pre-increment)
         setIsInningsOver(true);
-        handleInningsEnd(currentInnings, ballsInCurrentOver >= 5 ? overs + 1 : overs);
+        handleInningsEnd(
+          currentInnings,
+          ballsInCurrentOver >= 5 ? overs + 1 : overs,
+          newTotalRuns,
+          newWickets
+        );
         return;
+      }
+
+      // A run out can be completed on the winning run, so the chase target has
+      // to be checked here too — not just on the plain run/extra paths.
+      if (currentInnings === 2 && firstInningsScore && runsCompleted > 0) {
+        const target = firstInningsScore.runs + 1;
+        if (newTotalRuns >= target) {
+          const updatedBalls = ballsInCurrentOver + 1;
+          const updatedOvers = updatedBalls >= 6 ? overs + 1 : overs;
+          const finalBalls = updatedBalls >= 6 ? 0 : updatedBalls;
+          setIsInningsOver(true);
+          setTimeout(() => {
+            handleInningsEnd(2, updatedOvers, newTotalRuns, newWickets, finalBalls);
+          }, 50);
+          return;
+        }
       }
 
       // Fix #3: Always prompt new batsman — even on last ball of over
@@ -1467,7 +1544,19 @@ export default function CricketScoring({
     setShowExtraModal(true);
   };
 
-  const recordExtraWithRuns = (extraType: 'WD' | 'NB' | 'BYE' | 'LB', runCount: number, isLegalOverride?: boolean) => {
+  /**
+   * `runCount` is the TOTAL runs added to the team for this delivery, including
+   * the 1-run penalty for WD/NB. `runsOffBat` is how much of that total the
+   * striker actually hit — only meaningful for a No Ball, where runs off the bat
+   * are credited to the batsman while the 1-run penalty stays in extras. On a
+   * Wide nothing can come off the bat by law, so it stays 0.
+   */
+  const recordExtraWithRuns = (
+    extraType: 'WD' | 'NB' | 'BYE' | 'LB',
+    runCount: number,
+    isLegalOverride?: boolean,
+    runsOffBat: number = 0
+  ) => {
     if (!validatePlayersBeforeScoring()) return;
     // Fix #9: Block recording after innings has ended
     if (isInningsOver) return;
@@ -1504,25 +1593,36 @@ export default function CricketScoring({
       ballsInOver: isLegal ? prev.ballsInOver + 1 : prev.ballsInOver,
     }));
 
-    // Update batsman balls faced for No Ball, Bye, Leg Bye (WD does NOT count as ball faced)
+    // Update batsman balls faced for No Ball, Bye, Leg Bye (WD does NOT count as ball faced).
+    // On a No Ball the striker is also credited with whatever came off the bat —
+    // the 1-run penalty stays in extras and is never added to a personal score.
     if (extraType === 'NB' || extraType === 'BYE' || extraType === 'LB') {
       setBatsmen(prev =>
-        prev.map(b => (b.active ? { ...b, balls: b.balls + 1 } : b))
+        prev.map(b =>
+          b.active
+            ? {
+                ...b,
+                balls: b.balls + 1,
+                runs: b.runs + (extraType === 'NB' ? runsOffBat : 0),
+                fours: b.fours + (extraType === 'NB' && runsOffBat === 4 ? 1 : 0),
+                sixes: b.sixes + (extraType === 'NB' && runsOffBat === 6 ? 1 : 0),
+              }
+            : b
+        )
       );
     }
 
-    // Strike Rotation for Extras:
-    // For BYE or LB: odd runs (1, 3, 5) swap strike
-    // For WD or NB with extra physical runs: odd physical runs swap strike
-    if (extraType === 'BYE' || extraType === 'LB') {
-      if (runCount % 2 !== 0) {
-        setBatsmen(prev => prev.map(b => ({ ...b, active: !b.active })));
-      }
-    } else if ((extraType === 'WD' || extraType === 'NB') && runCount > 1) {
-      const physicalRuns = runCount - 1;
-      if (physicalRuns % 2 !== 0) {
-        setBatsmen(prev => prev.map(b => ({ ...b, active: !b.active })));
-      }
+    // Strike Rotation for Extras — driven by how many runs the batsmen physically
+    // RAN, not the team total, because the WD/NB penalty run is not run by anyone.
+    //   BYE/LB      → every run counted was run, so the total is the ran count
+    //   WD/NB       → total minus the 1-run penalty
+    // Odd ran count means they finished at opposite ends, so strike swaps.
+    const ranRuns =
+      extraType === 'BYE' || extraType === 'LB'
+        ? runCount
+        : Math.max(0, runCount - 1);
+    if (ranRuns % 2 !== 0) {
+      setBatsmen(prev => prev.map(b => ({ ...b, active: !b.active })));
     }
 
     // Fix #E: Pure wide/NB with no extra runs logs as 'WD'/'NB', not '0WD'/'0NB'
@@ -2484,7 +2584,7 @@ export default function CricketScoring({
                     {/* Action Buttons: Wicket + Undo */}
                     <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                       <Pressable
-                        onPress={() => recordBall('wicket', 'W')}
+                        onPress={() => { setWicketRuns(0); setWicketWhoIsOut('striker'); setShowWicketModal(true); }}
                         style={({ pressed }) => [{
                           flex: 2,
                           flexDirection: 'row',
@@ -3725,7 +3825,7 @@ export default function CricketScoring({
 
               <View style={styles.actionButtonsRow}>
                 <Pressable
-                  onPress={() => recordBall('wicket', 'W')}
+                  onPress={() => { setWicketRuns(0); setWicketWhoIsOut('striker'); setShowWicketModal(true); }}
                   style={[styles.wicketButton, { backgroundColor: theme.error }, Shadows.level2]}
                 >
                   <Ionicons name="skull-outline" size={18} color="#ffffff" />
@@ -5248,6 +5348,128 @@ export default function CricketScoring({
         </View>
       </Modal>
 
+      {/* Wicket Detail Modal — one tap for a normal dismissal, or record a run
+          out with the runs completed and which batsman was out. */}
+      <Modal
+        visible={showWicketModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowWicketModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowWicketModal(false)} />
+          <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', maxHeight: '75%' }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText type="headlineSm" style={{ color: theme.text }}>Record Wicket</ThemedText>
+              <Pressable onPress={() => setShowWicketModal(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={20} color={theme.text} />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+              <Pressable
+                style={[styles.extraOptionBtn, { backgroundColor: '#EF444415', borderColor: '#EF4444' }]}
+                onPress={() => {
+                  setShowWicketModal(false);
+                  recordBall('wicket', 'W');
+                }}
+              >
+                <ThemedText style={{ fontFamily: 'Sora_700Bold', color: '#EF4444' }}>Wicket — no runs</ThemedText>
+                <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>
+                  Bowled, caught, LBW, stumped · striker out, credited to the bowler
+                </ThemedText>
+              </Pressable>
+
+              <View style={{ height: 1, backgroundColor: theme.outlineVariant + '33', marginVertical: 16 }} />
+
+              <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text, marginBottom: 4 }}>Run out</ThemedText>
+              <ThemedText style={{ color: theme.textSecondary, marginBottom: 12, fontSize: 12 }}>
+                Runs completed before the dismissal are added to the total and to the striker. Not credited to the bowler.
+              </ThemedText>
+
+              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.textSecondary, marginBottom: 6 }}>
+                RUNS COMPLETED
+              </ThemedText>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                {[0, 1, 2, 3].map(r => {
+                  const active = wicketRuns === r;
+                  return (
+                    <Pressable
+                      key={r}
+                      onPress={() => setWicketRuns(r)}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        borderRadius: 8,
+                        alignItems: 'center',
+                        borderWidth: 1.5,
+                        borderColor: active ? theme.primary : theme.outlineVariant + '44',
+                        backgroundColor: active ? theme.primary : 'transparent',
+                      }}
+                    >
+                      <ThemedText style={{ fontFamily: 'Sora_700Bold', color: active ? '#ffffff' : theme.text }}>{r}</ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.textSecondary, marginBottom: 6 }}>
+                WHO IS OUT
+              </ThemedText>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                {(['striker', 'non-striker'] as const).map(who => {
+                  const active = wicketWhoIsOut === who;
+                  const player = batsmen.find(b => (who === 'striker' ? b.active : !b.active));
+                  return (
+                    <Pressable
+                      key={who}
+                      onPress={() => setWicketWhoIsOut(who)}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        paddingHorizontal: 8,
+                        borderRadius: 8,
+                        alignItems: 'center',
+                        borderWidth: 1.5,
+                        borderColor: active ? theme.primary : theme.outlineVariant + '44',
+                        backgroundColor: active ? theme.primary + '15' : 'transparent',
+                      }}
+                    >
+                      <ThemedText numberOfLines={1} style={{ fontFamily: 'Sora_700Bold', fontSize: 12, color: active ? theme.primary : theme.text }}>
+                        {who === 'striker' ? 'Striker' : 'Non-striker'}
+                      </ThemedText>
+                      <ThemedText numberOfLines={1} style={{ fontSize: 10, color: theme.textSecondary }}>
+                        {player?.name || '—'}
+                      </ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <Pressable
+                style={[styles.extraOptionBtn, { backgroundColor: theme.primary, borderColor: theme.primary }]}
+                onPress={() => {
+                  setShowWicketModal(false);
+                  recordBall('wicket', 'W', {
+                    runsCompleted: wicketRuns,
+                    whoIsOut: wicketWhoIsOut,
+                    creditBowler: false,
+                  });
+                }}
+              >
+                <ThemedText style={{ fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                  Record run out{wicketRuns > 0 ? ` + ${wicketRuns} run${wicketRuns === 1 ? '' : 's'}` : ''}
+                </ThemedText>
+                <ThemedText style={{ fontSize: 10, color: '#ffffffcc' }}>
+                  {wicketWhoIsOut === 'striker' ? 'Striker' : 'Non-striker'} out
+                  {wicketRuns > 0 ? ` · +${wicketRuns} to the total` : ''}
+                </ThemedText>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* Extra Runs Selection Modal */}
       <Modal
         visible={showExtraModal}
@@ -5292,49 +5514,40 @@ export default function CricketScoring({
               {/* Wide & No Ball options */}
               {(activeExtraType === 'WD' || activeExtraType === 'NB') && (
                 <View style={{ gap: 10 }}>
-                  <Pressable
-                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
-                    onPress={() => {
-                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 1, false);
-                      setShowExtraModal(false);
-                    }}
-                  >
-                    <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>1 Run (Re-bowl)</ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>Standard extra penalty run, delivery re-bowled</ThemedText>
-                  </Pressable>
-
-                  <Pressable
-                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
-                    onPress={() => {
-                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 2, false);
-                      setShowExtraModal(false);
-                    }}
-                  >
-                    <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>2 Runs (Re-bowl)</ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>2 extra runs, delivery re-bowled</ThemedText>
-                  </Pressable>
-
-                  <Pressable
-                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
-                    onPress={() => {
-                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 3, false);
-                      setShowExtraModal(false);
-                    }}
-                  >
-                    <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>3 Runs (Re-bowl)</ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>3 extra runs, delivery re-bowled</ThemedText>
-                  </Pressable>
-
-                  <Pressable
-                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
-                    onPress={() => {
-                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 0, false);
-                      setShowExtraModal(false);
-                    }}
-                  >
-                    <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>0 Runs (Re-bowl)</ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>No penalty runs, but delivery re-bowled</ThemedText>
-                  </Pressable>
+                  {/* Options are expressed as "runs the batsmen RAN", with the
+                      1-run penalty added automatically and the resulting team
+                      total spelled out — picking "2 runs" for a wide previously
+                      scored 2 in total instead of the correct 3. */}
+                  {[0, 1, 2, 3].map(ran => {
+                    const total = ran + 1;
+                    const isWide = activeExtraType === 'WD';
+                    const label =
+                      ran === 0
+                        ? isWide ? 'Wide only' : 'No ball only'
+                        : `${isWide ? 'Wide' : 'No ball'} + ${ran} run${ran === 1 ? '' : 's'} ${isWide ? 'run' : 'off the bat'}`;
+                    const sub =
+                      ran === 0
+                        ? `Adds ${total} run to the total · delivery re-bowled`
+                        : `Adds ${total} runs to the total (1 penalty + ${ran})${
+                            isWide ? '' : ` · ${ran} credited to the striker`
+                          } · delivery re-bowled`;
+                    return (
+                      <Pressable
+                        key={ran}
+                        style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
+                        onPress={() => {
+                          if (activeExtraType) {
+                            // Wides can't be hit, so nothing is credited off the bat.
+                            recordExtraWithRuns(activeExtraType, total, false, isWide ? 0 : ran);
+                          }
+                          setShowExtraModal(false);
+                        }}
+                      >
+                        <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>{label}</ThemedText>
+                        <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>{sub}</ThemedText>
+                      </Pressable>
+                    );
+                  })}
 
                   <Pressable
                     style={[styles.extraOptionBtn, { backgroundColor: theme.primaryContainer + '22', borderColor: theme.primary }]}
@@ -5343,8 +5556,8 @@ export default function CricketScoring({
                       setShowExtraModal(false);
                     }}
                   >
-                    <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.primary }}>Ball Count & 0 Runs</ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>Counts as a legal ball in the over, 0 runs added</ThemedText>
+                    <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.primary }}>Correction: count as legal ball, 0 runs</ThemedText>
+                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>Use if this was called in error — consumes a ball, adds nothing</ThemedText>
                   </Pressable>
                 </View>
               )}

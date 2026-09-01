@@ -28,6 +28,27 @@ export function generateOfferId(): string {
   return `offer-${Date.now()}`;
 }
 
+export type OfferRedemptionFailure = 'not_found' | 'paused' | 'expired' | 'exhausted';
+
+export interface OfferRedemptionResult {
+  ok: boolean;
+  reason?: OfferRedemptionFailure;
+  offer?: OwnerOffer;
+  /** Redemptions still available after this one; null when uncapped. */
+  remaining?: number | null;
+}
+
+/** Explains why an offer can't be claimed right now, or null if it can. */
+export function redemptionBlocker(
+  offer: OwnerOffer,
+  now: Date = new Date()
+): OfferRedemptionFailure | null {
+  if (offer.status !== 'active') return 'paused';
+  if (isExpired(offer, now)) return 'expired';
+  if (offer.maxRedemptions > 0 && offer.redeemedCount >= offer.maxRedemptions) return 'exhausted';
+  return null;
+}
+
 /** Human-readable discount, e.g. "20% OFF" or "₹150 OFF". */
 export function formatDiscount(offer: Pick<OwnerOffer, 'discountType' | 'discountValue'>): string {
   return offer.discountType === 'percent'

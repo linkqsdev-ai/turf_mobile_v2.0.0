@@ -1,10 +1,27 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TextInput, ScrollView, Pressable } from 'react-native';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
+import { Pressable, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-type Slot = { id: string; name: string; start: string; end: string; status: 'available' | 'blocked' | 'maintenance' | 'closed' };
+import { Screen } from '@/components/layout/screen';
+import { Text } from '@/components/ui/text';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Section } from '@/components/ui/section';
+import { MotionView } from '@/components/motion';
+import { cn } from '@/lib/utils';
+
+type SlotStatus = 'available' | 'blocked' | 'maintenance' | 'closed';
+type Slot = { id: string; name: string; start: string; end: string; status: SlotStatus };
+
+const STATUS_TONE: Record<SlotStatus, string> = {
+  available: 'success',
+  blocked: 'destructive',
+  maintenance: 'warning',
+  closed: 'muted',
+};
 
 export default function CreateTurf() {
   const router = useRouter();
@@ -12,76 +29,103 @@ export default function CreateTurf() {
   const [sportName, setSportName] = useState('');
   const [slots, setSlots] = useState<Slot[]>([]);
 
-  function addSlot() {
-    setSlots(s => [...s, { id: String(Date.now()), name: 'Slot ' + (s.length + 1), start: '09:00', end: '10:00', status: 'available' }]);
-  }
+  const addSlot = () =>
+    setSlots((s) => [
+      ...s,
+      { id: String(Date.now()), name: `Slot ${s.length + 1}`, start: '09:00', end: '10:00', status: 'available' },
+    ]);
 
-  function updateSlot(id: string, patch: Partial<Slot>) {
-    setSlots(s => s.map(x => x.id === id ? { ...x, ...patch } : x));
-  }
+  const updateSlot = (id: string, patch: Partial<Slot>) =>
+    setSlots((s) => s.map((x) => (x.id === id ? { ...x, ...patch } : x)));
 
-  function saveTurf() {
-    // For now persist locally (to be replaced with API)
+  const removeSlot = (id: string) => setSlots((s) => s.filter((x) => x.id !== id));
+
+  const cycleStatus = (slot: Slot) => {
+    const order: SlotStatus[] = ['available', 'blocked', 'maintenance', 'closed'];
+    updateSlot(slot.id, { status: order[(order.indexOf(slot.status) + 1) % order.length] });
+  };
+
+  const saveTurf = () => {
     console.log('Saving turf', { turfName, sportName, slots });
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/(tabs)');
-    }
-  }
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)');
+  };
 
   return (
-    <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
-        <ThemedText type="headlineMd">Create New Turf</ThemedText>
-
-        <ThemedText type="labelSm" style={{ marginTop: 16 }}>Turf Name</ThemedText>
-        <TextInput
+    <Screen
+      header={{ title: 'New turf' }}
+      footer={
+        <Button block disabled={!turfName || !sportName} onPress={saveTurf}>
+          Save turf
+        </Button>
+      }
+    >
+      <View className="gap-4 pt-3">
+        <Input
+          label="Turf name"
+          placeholder="Letters only"
           value={turfName}
           maxLength={30}
-          onChangeText={(t) => setTurfName(t.replace(/[0-9]/g, '').slice(0, 30))}
-          placeholder="Enter turf name (letters only)"
-          style={styles.input}
+          onChangeText={(v) => setTurfName(v.replace(/[0-9]/g, '').slice(0, 30))}
+        />
+        <Input
+          label="Sport"
+          placeholder="e.g. Football, Cricket"
+          value={sportName}
+          onChangeText={setSportName}
         />
 
-        <ThemedText type="labelSm" style={{ marginTop: 12 }}>Sport</ThemedText>
-        <TextInput value={sportName} onChangeText={setSportName} placeholder="e.g. Football, Cricket" style={styles.input} />
-
-        <ThemedText type="labelSm" style={{ marginTop: 12 }}>Slots</ThemedText>
-
-        {slots.map(slot => (
-          <View key={slot.id} style={styles.slotRow}>
-            <TextInput style={[styles.input, { flex: 1 }]} value={slot.name} onChangeText={v => updateSlot(slot.id, { name: v })} />
-            <TextInput style={[styles.input, { width: 80 }]} value={slot.start} onChangeText={v => updateSlot(slot.id, { start: v })} />
-            <TextInput style={[styles.input, { width: 80 }]} value={slot.end} onChangeText={v => updateSlot(slot.id, { end: v })} />
-            <Pressable style={styles.statusBtn} onPress={() => {
-              const order: Slot['status'][] = ['available', 'blocked', 'maintenance', 'closed'];
-              const next = order[(order.indexOf(slot.status) + 1) % order.length];
-              updateSlot(slot.id, { status: next });
-            }}>
-              <ThemedText type="labelSm">{slot.status}</ThemedText>
-            </Pressable>
-          </View>
-        ))}
-
-        <Pressable onPress={addSlot} style={[styles.button, { marginTop: 12 }]}>
-          <ThemedText type="labelMd">Add Slot</ThemedText>
-        </Pressable>
-
-        <View style={{ height: 20 }} />
-
-        <Pressable onPress={saveTurf} style={[styles.button, { backgroundColor: '#3c87f7' }]}>
-          <ThemedText type="labelMd" style={{ color: '#fff' }}>Save Turf</ThemedText>
-        </Pressable>
-      </ScrollView>
-    </ThemedView>
+        <Section
+          title="Slots"
+          action={{ label: '+ Add slot', onPress: addSlot }}
+          className="mt-2"
+        >
+          {slots.length === 0 ? (
+            <Card variant="muted" className="items-center py-8">
+              <Ionicons name="time-outline" size={22} color="#94a5a0" />
+              <Text variant="caption" className="mt-2">
+                No slots yet — add your first one.
+              </Text>
+            </Card>
+          ) : (
+            slots.map((slot) => (
+              <MotionView key={slot.id} preset="fade-up">
+                <Card variant="surface" className="gap-2.5">
+                  <View className="flex-row items-center gap-2">
+                    <Input
+                      containerClassName="flex-1"
+                      value={slot.name}
+                      onChangeText={(v) => updateSlot(slot.id, { name: v })}
+                    />
+                    <Pressable onPress={() => removeSlot(slot.id)} hitSlop={8} className="p-1">
+                      <Ionicons name="trash-outline" size={18} color="#EC4042" />
+                    </Pressable>
+                  </View>
+                  <View className="flex-row items-center gap-2">
+                    <Input
+                      containerClassName="w-24"
+                      value={slot.start}
+                      onChangeText={(v) => updateSlot(slot.id, { start: v })}
+                    />
+                    <Text variant="caption">to</Text>
+                    <Input
+                      containerClassName="w-24"
+                      value={slot.end}
+                      onChangeText={(v) => updateSlot(slot.id, { end: v })}
+                    />
+                    <Pressable
+                      onPress={() => cycleStatus(slot)}
+                      className={cn('ml-auto')}
+                    >
+                      <Badge variant={STATUS_TONE[slot.status] as any}>{slot.status}</Badge>
+                    </Pressable>
+                  </View>
+                </Card>
+              </MotionView>
+            ))
+          )}
+        </Section>
+      </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  input: { borderWidth: 1, borderColor: '#e1e8f0', padding: 8, borderRadius: 8, marginTop: 6 },
-  slotRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 8 },
-  statusBtn: { padding: 8, borderRadius: 8, backgroundColor: '#f0f4ff' },
-  button: { padding: 14, borderRadius: 8, backgroundColor: '#e9f2ff', alignItems: 'center' },
-});

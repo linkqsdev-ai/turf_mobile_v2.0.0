@@ -102,7 +102,7 @@ export const Typography = {
     jakartaMedium: 'Sora_500Medium',
     jakartaBold: 'Sora_700Bold',
   },
-  // Scale styles mapped from DESIGN.md
+  // Scale styles mapped from Major Second type scale (Peek analysis)
   displayLg: {
     fontFamily: 'Sora_800ExtraBold',
     fontSize: 28,
@@ -111,78 +111,115 @@ export const Typography = {
   },
   displayLgMobile: {
     fontFamily: 'Sora_700Bold',
-    fontSize: 17,
-    lineHeight: 22,
+    fontSize: 20, // Peek 20px subheading
+    lineHeight: 25,
     letterSpacing: -0.3,
   },
   headlineLg: {
     fontFamily: 'Sora_700Bold',
-    fontSize: 16,
+    fontSize: 16, // Peek 16px heading
     lineHeight: 22,
     letterSpacing: -0.2,
   },
   headlineMd: {
     fontFamily: 'Sora_600SemiBold',
-    fontSize: 13.5,
-    lineHeight: 18,
+    fontSize: 14, // Peek 14px H3
+    lineHeight: 20,
     letterSpacing: -0.1,
   },
   headlineSm: {
     fontFamily: 'Sora_600SemiBold',
-    fontSize: 11.5,
-    lineHeight: 16,
+    fontSize: 13, // Peek 13px Caption
+    lineHeight: 18,
   },
   bodyLg: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 16, // Peek 16px body
+    lineHeight: 23,
   },
   bodyMd: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 14, // Peek 14px small body
+    lineHeight: 20,
   },
   bodySm: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 12, // Peek 12px caption
+    lineHeight: 17,
   },
   labelMd: {
     fontFamily: 'Sora_700Bold',
-    fontSize: 9,
-    lineHeight: 12,
-    letterSpacing: 0.45,
+    fontSize: 11, // Peek 11px small
+    lineHeight: 15,
+    letterSpacing: 0.3,
   },
   labelSm: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 8,
-    lineHeight: 10,
+    fontSize: 9, // Peek 9px micro
+    lineHeight: 13,
+  },
+
+  // Semantic Peek Type Styles
+  subheading: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 20,
+    lineHeight: 25,
+  },
+  heading: {
+    fontFamily: 'Sora_700Bold',
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  body: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 16,
+    lineHeight: 23,
+  },
+  smallBody: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  caption: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  small: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  micro: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 9,
+    lineHeight: 13,
   },
 };
 
 export const Shadows = {
-  // Subtle border-only (for dividers / outlined cards)
+  // Peek Low Ambient Elevation (0px 1px 2px)
   level1: {
-    shadowColor: '#1a2a33',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowColor: '#181817',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  // Standard elevated card
+  // Peek Medium Card Elevation (0px 4px 16px)
   level2: {
-    shadowColor: '#1a2a33',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.09,
+    shadowColor: '#181817',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 4,
   },
-  // Hero / prominent card
+  // Peek High Elevation (0px 12px 28px)
   level3: {
-    shadowColor: '#1a2a33',
-    shadowOffset: { width: 0, height: 12 },
+    shadowColor: '#181817',
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.14,
-    shadowRadius: 24,
+    shadowRadius: 28,
     elevation: 8,
   },
   // FAB floating button glow (green tint)
@@ -212,34 +249,41 @@ export const Shadows = {
 };
 
 export const Spacing = {
+  px: 1,
   half: 2,
+  xxs: 2,
   one: 4,
+  xs: 4,
+  micro: 5,
+  compact: 6,
   two: 8,
+  sm: 8,
+  regular: 10,
   three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
-  base: 4,
-  xs: 8,
-  sm: 12,
-  md: 16,
+  md: 12,
+  base: 16,
   gutter: 16,
+  intermediate: 18,
+  four: 24,
   lg: 24,
+  five: 32,
   xl: 32,
+  six: 64,
   xxl: 64,
   containerMargin: 20,
 };
 
 export const BorderRadius = {
-  xs: 3,
-  sm: 4,
-  default: 6,
-  md: 6,       // Standardized selections & badge radius (6px)
-  lg: 8,       // Standardized button & input radius (8px)
-  xl: 8,       // Standardized action button radius (8px)
-  '2xl': 10,   // Standardized card radius (10px)
-  premium: 12, // Standardized container & modal radius (12px)
-  full: 6,     // Standardized selection chips & pills to 6px
+  xs: 4,
+  sm: 6,       // Peek 6px shape
+  default: 7,  // Peek 7px shape
+  md: 8,       // Peek 8px shape (cards & inputs)
+  lg: 8,       // Peek 8px shape (buttons)
+  xl: 12,      // Peek 12px shape (modals & panels)
+  '2xl': 12,   // Peek 12px shape
+  premium: 12, // Peek 12px shape
+  full: 9999,  // Peek 9999px pill
+  pill: 9999,  // Peek 9999px pill
 };
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;

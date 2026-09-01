@@ -50,6 +50,8 @@ interface TurfOfferDraft {
   discountValue: string;
   minBooking: string;
   validDays: string;
+  /** Cap on total redemptions — "first N users". Blank means unlimited. */
+  maxRedemptions: string;
 }
 
 const makeOfferDraft = (): TurfOfferDraft => ({
@@ -61,6 +63,7 @@ const makeOfferDraft = (): TurfOfferDraft => ({
   discountValue: '',
   minBooking: '',
   validDays: '30',
+  maxRedemptions: '',
 });
 
 const SURFACE_TYPES = ['Natural Grass', 'Artificial Turf', 'Concrete', 'Wooden Court', 'Clay'];
@@ -83,6 +86,12 @@ const TIME_BLOCKS = [
 
 // Blocks that fall after midnight, surfaced in the UI as a "late night" group.
 const LATE_NIGHT_BLOCKS = ['12 AM', '1 AM', '2 AM', '3 AM'];
+
+// Stepper geometry — the connector's vertical offset is computed from these,
+// so changing the circle size keeps the track aligned automatically.
+const STEP_CIRCLE = 26;
+const STEP_LABEL_LINE = 12;
+const STEP_CONNECTOR_H = 1.5;
 
 const AMENITIES = [
   { key: 'floodlights', label: 'Floodlights', icon: 'flashlight-outline' },
@@ -396,6 +405,7 @@ export default function CreateTurfScreen() {
         validDays: String(
           Math.max(1, Math.ceil((new Date(o.validTill).getTime() - Date.now()) / 86400000))
         ),
+        maxRedemptions: o.maxRedemptions ? String(o.maxRedemptions) : '',
       }))
     );
     setInitialOfferIds(attached.map(o => o.id));
@@ -575,7 +585,8 @@ export default function CreateTurfScreen() {
     !o.title.trim() &&
     !o.description.trim() &&
     !o.discountValue.trim() &&
-    !o.minBooking.trim();
+    !o.minBooking.trim() &&
+    !o.maxRedemptions.trim();
 
   /**
    * Vouchers are optional: no rows, or rows left entirely untouched, are fine.
@@ -612,6 +623,23 @@ export default function CreateTurfScreen() {
       if (!o.validDays.trim() || isNaN(days) || days < 1) {
         errs[`${o.localId}.validDays`] = 'At least 1 day.';
       }
+
+      // Blank = unlimited; any supplied cap must be a whole number of users.
+      if (o.maxRedemptions.trim()) {
+        const cap = Number(o.maxRedemptions);
+        if (isNaN(cap) || cap < 1) {
+          errs[`${o.localId}.maxRedemptions`] = 'At least 1 user, or leave blank.';
+        } else if (!Number.isInteger(cap)) {
+          errs[`${o.localId}.maxRedemptions`] = 'Whole numbers only.';
+        } else if (o.offerId) {
+          // Editing an existing offer: the cap can't drop below what has
+          // already been claimed, or the counter would read past its own limit.
+          const claimed = offers.find(x => x.id === o.offerId)?.redeemedCount ?? 0;
+          if (cap < claimed) {
+            errs[`${o.localId}.maxRedemptions`] = `${claimed} already redeemed.`;
+          }
+        }
+      }
     });
 
     setOfferErrors(errs);
@@ -638,7 +666,8 @@ export default function CreateTurfScreen() {
         discountType: o.discountType,
         discountValue: Number(o.discountValue),
         minBooking: Number(o.minBooking || 0),
-        maxRedemptions: 0,
+        // 0 is the store's "unlimited" sentinel, which is what blank means.
+        maxRedemptions: Number(o.maxRedemptions || 0),
         validTill: validTill.toISOString(),
         appliesTo: finalTurfName,
       };
@@ -1600,6 +1629,8 @@ export default function CreateTurfScreen() {
                   </View>
                 </View>
 
+                {/* Two per row — three numeric fields across a phone width left
+                    no room for their labels and they wrapped mid-word. */}
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
                   {offerField(
                     draft,
@@ -1611,11 +1642,24 @@ export default function CreateTurfScreen() {
                     placeholder: '0',
                     numeric: true,
                   })}
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
                   {offerField(draft, 'validDays', 'VALID (DAYS)', {
                     placeholder: '30',
                     numeric: true,
                   })}
+                  {offerField(draft, 'maxRedemptions', 'FIRST N USERS', {
+                    placeholder: 'Unlimited',
+                    numeric: true,
+                  })}
                 </View>
+
+                <ThemedText style={[styles.offerHint, { color: theme.textSecondary }]}>
+                  {Number(draft.maxRedemptions) > 0
+                    ? `Only the first ${Number(draft.maxRedemptions)} player${Number(draft.maxRedemptions) === 1 ? '' : 's'} can redeem this code — it stops working after that.`
+                    : 'Leave blank for unlimited redemptions.'}
+                </ThemedText>
 
                 <View style={{ marginTop: 12 }}>
                   {offerField(draft, 'description', 'DESCRIPTION', {
@@ -1747,6 +1791,7 @@ export default function CreateTurfScreen() {
                   >
                     {o.discountType === 'percent' ? `${o.discountValue || 0}% off` : `₹${o.discountValue || 0} off`}
                     {o.minBooking ? ` · min ₹${o.minBooking}` : ''}
+                    {Number(o.maxRedemptions) > 0 ? ` · first ${o.maxRedemptions}` : ''}
                   </ThemedText>
                 </View>
               ))
@@ -1807,7 +1852,14 @@ export default function CreateTurfScreen() {
                     <View style={[styles.stepCircle, isDone ? { backgroundColor: theme.primary, borderColor: theme.primary } : isActive ? { backgroundColor: theme.primary + '20', borderColor: theme.primary } : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '55' }]}>
                       {isDone ? <Ionicons name="checkmark" size={12} color="#fff" /> : <Ionicons name={step.icon as any} size={12} color={isActive ? theme.primary : theme.textSecondary} />}
                     </View>
-                    <ThemedText style={[styles.stepLabel, { color: isActive ? theme.primary : isDone ? theme.text : theme.textSecondary, fontFamily: isActive ? 'Sora_700Bold' : 'Sora_500Medium' }]}>{step.title}</ThemedText>
+                    <View style={styles.stepLabelBox}>
+                      <ThemedText
+                        numberOfLines={2}
+                        style={[styles.stepLabel, { color: isActive ? theme.primary : isDone ? theme.text : theme.textSecondary, fontFamily: isActive ? 'Sora_700Bold' : 'Sora_500Medium' }]}
+                      >
+                        {step.title}
+                      </ThemedText>
+                    </View>
                   </Pressable>
                   {idx < STEPS.length - 1 && <View style={[styles.stepConnector, { backgroundColor: isDone ? theme.primary : theme.outlineVariant + '33' }]} />}
                 </React.Fragment>
@@ -1882,11 +1934,31 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  stepRow: { flexDirection: 'row', alignItems: 'center' },
-  stepItem: { alignItems: 'center', gap: 4 },
-  stepCircle: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  stepLabel: { fontSize: 9, letterSpacing: 0.2 },
-  stepConnector: { flex: 1, height: 1.5, marginBottom: 14, marginHorizontal: 4 },
+  // Steps share the row evenly (flex: 1) so the circles sit at regular
+  // intervals no matter how wide each label is — without this, "Time Slots"
+  // pushes its neighbours around and the track looks lopsided.
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  stepItem: { flex: 1, alignItems: 'center', gap: 4 },
+  stepCircle: {
+    width: STEP_CIRCLE,
+    height: STEP_CIRCLE,
+    borderRadius: STEP_CIRCLE / 2,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Fixed two-line box keeps every circle on the same baseline even when one
+  // label wraps and the others don't.
+  stepLabelBox: { height: STEP_LABEL_LINE * 2, justifyContent: 'flex-start' },
+  stepLabel: { fontSize: 9, letterSpacing: 0.2, lineHeight: STEP_LABEL_LINE, textAlign: 'center' },
+  // Derived from the circle geometry rather than eyeballed, so resizing the
+  // circle can't silently knock the connector off-centre again.
+  stepConnector: {
+    width: 14,
+    height: STEP_CONNECTOR_H,
+    marginTop: STEP_CIRCLE / 2 - STEP_CONNECTOR_H / 2,
+    marginHorizontal: 2,
+  },
   scrollPad: { paddingBottom: 160, paddingTop: Spacing.xs },
   formCard: {
     marginHorizontal: Spacing.containerMargin,
@@ -2073,6 +2145,7 @@ const styles = StyleSheet.create({
 
   amenityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
   amenityChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 6, borderRadius: BorderRadius.xl, borderWidth: 1 },
+  offerHint: { fontSize: 10.5, lineHeight: 15, fontFamily: 'Sora_400Regular', marginTop: 8 },
   optionalTag: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
   optionalTagText: { fontSize: 9.5, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.3 },
   offerRowCard: { borderRadius: BorderRadius.lg, borderWidth: 1, padding: Spacing.md, marginTop: Spacing.md },

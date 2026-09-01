@@ -23,7 +23,14 @@ export type ThemedTextProps = TextProps & {
     | 'bodyMd'
     | 'bodySm'
     | 'labelMd'
-    | 'labelSm';
+    | 'labelSm'
+    // Semantic Peek Scale Types
+    | 'subheading'
+    | 'heading'
+    | 'body'
+    | 'smallBody'
+    | 'caption'
+    | 'micro';
   themeColor?: ThemeColor;
 };
 
@@ -51,6 +58,14 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
         type === 'bodySm' && styles.bodySm,
         type === 'labelMd' && styles.labelMd,
         type === 'labelSm' && styles.labelSm,
+
+        // Semantic Peek Tokens
+        type === 'subheading' && styles.displayLgMobile,
+        type === 'heading' && styles.headlineLg,
+        type === 'body' && styles.bodyLg,
+        type === 'smallBody' && styles.bodyMd,
+        type === 'caption' && styles.bodySm,
+        type === 'micro' && styles.labelSm,
 
         // Defaults/Fallback
         type === 'link' && styles.link,

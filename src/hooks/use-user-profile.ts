@@ -18,7 +18,9 @@ export interface UserProfile {
   avatarUrl: any;
   bannerImage?: string;
   theme?: 'light' | 'dark' | 'blue';
-  role: 'Player' | 'Coach' | 'Owner' | 'Organizer' | 'Super Admin';
+  // "Admin" and "Super Admin" are the same platform superuser; the backend may
+  // send either spelling depending on how the account was provisioned.
+  role: 'Player' | 'Coach' | 'Owner' | 'Organizer' | 'Admin' | 'Super Admin';
   pushNotifications?: boolean;
   emailAlerts?: boolean;
   smsAlerts?: boolean;

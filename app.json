@@ -26,6 +26,7 @@
       "package": "com.linkqsdev.turf_mobile_app_v2.x0.x0"
     },
     "web": {
+      "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },

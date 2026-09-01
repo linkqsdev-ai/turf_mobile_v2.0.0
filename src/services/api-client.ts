@@ -20,12 +20,12 @@ function getCandidateBaseUrls(): string[] {
 
   // In development, prefer the live local backend (running port 5070 with latest OTP routes)
   if (__DEV__) {
+    urls.push('http://localhost:5070/api');
+    urls.push('http://127.0.0.1:5070/api');
     if (devMachineIp) {
       urls.push(`http://${devMachineIp}:5070/api`);
     }
-    if (Platform.OS === 'web') {
-      urls.push('http://localhost:5070/api');
-    }
+    urls.push('http://192.168.1.38:5070/api');
     urls.push('http://192.168.1.12:5070/api');
   }
 

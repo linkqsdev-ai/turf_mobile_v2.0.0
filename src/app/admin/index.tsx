@@ -1,33 +1,36 @@
-import { Link } from 'expo-router';
-import { View, StyleSheet } from 'react-native';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
+import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Screen } from '@/components/layout/screen';
+import { Card } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
+import { Stagger } from '@/components/motion';
+import { useTokens } from '@/hooks/use-scheme';
+
+const ITEMS: { title: string; desc: string; icon: keyof typeof Ionicons.glyphMap; href: string }[] = [
+  { title: 'Create turf & slots', desc: 'Add a venue and configure its weekly availability grid', icon: 'add-circle-outline', href: '/admin/create-turf' },
+  { title: 'Turf analytics', desc: 'Revenue, occupancy and demand by sport', icon: 'bar-chart-outline', href: '/admin/dashboard' },
+];
 
 export default function AdminIndex() {
+  const router = useRouter();
+  const t = useTokens();
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText type="headlineMd">Admin Dashboard</ThemedText>
-
-      <View style={styles.menu}>
-        <Link href="/admin/create-turf" asChild>
-          <Pressable style={styles.button}>
-            <ThemedText type="labelMd">Create Turf & Manage Slots</ThemedText>
-          </Pressable>
-        </Link>
-
-        <Link href="/admin/dashboard" asChild>
-          <Pressable style={styles.button}>
-            <ThemedText type="labelMd">Turf Analytics</ThemedText>
-          </Pressable>
-        </Link>
-      </View>
-    </ThemedView>
+    <Screen header={{ title: 'Admin', large: true, subtitle: 'Manage venues and review performance' }}>
+      <Stagger className="gap-3 pt-2">
+        {ITEMS.map((it) => (
+          <Card key={it.href} variant="elevated" onPress={() => router.push(it.href as any)} className="flex-row items-center gap-3">
+            <View className="h-11 w-11 items-center justify-center rounded-xl bg-primary/15">
+              <Ionicons name={it.icon} size={20} color={t.primary} />
+            </View>
+            <View className="flex-1">
+              <Text className="font-bold text-foreground">{it.title}</Text>
+              <Text variant="caption">{it.desc}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={t.mutedForeground} />
+          </Card>
+        ))}
+      </Stagger>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  menu: { marginTop: 24, gap: 12 },
-  button: { padding: 14, borderRadius: 8, backgroundColor: '#e9f2ff' },
-});

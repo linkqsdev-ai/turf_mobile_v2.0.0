@@ -1,6 +1,10 @@
+import '../../global.css';
 import { Stack, ThemeProvider, DarkTheme, DefaultTheme, useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View, Platform } from 'react-native';
+import { colorScheme as nativewindColorScheme } from 'nativewind';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { PortalHost } from '@rn-primitives/portal';
 import { AppStoreProvider } from '@/store/app-store';
 import { ToastProvider } from '@/context/ToastContext';
 import { NotificationProvider } from '@/context/NotificationContext';
@@ -241,6 +245,13 @@ function RootNavigation() {
 export default function RootLayout() {
   const theme = useColorScheme();
 
+  // Keep NativeWind's color scheme in sync with the app's theme preference so
+  // every `dark:` utility resolves correctly on native and web. The legacy
+  // "blue" theme renders on the light token set.
+  useEffect(() => {
+    nativewindColorScheme.set(theme === 'dark' ? 'dark' : 'light');
+  }, [theme]);
+
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const styleId = 'rn-web-autofill-fix';
@@ -322,16 +333,19 @@ export default function RootLayout() {
   const isDark = theme === 'dark';
 
   return (
-    <AppStoreProvider>
-      <ToastProvider>
-        <NotificationProvider>
-          <ThemeProvider value={activeNavigationTheme}>
-            <StatusBar style={isDark ? "light" : "dark"} animated />
-            <RootNavigation />
-            <NotificationModal />
-          </ThemeProvider>
-        </NotificationProvider>
-      </ToastProvider>
-    </AppStoreProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AppStoreProvider>
+        <ToastProvider>
+          <NotificationProvider>
+            <ThemeProvider value={activeNavigationTheme}>
+              <StatusBar style={isDark ? "light" : "dark"} animated />
+              <RootNavigation />
+              <NotificationModal />
+              <PortalHost />
+            </ThemeProvider>
+          </NotificationProvider>
+        </ToastProvider>
+      </AppStoreProvider>
+    </GestureHandlerRootView>
   );
 }

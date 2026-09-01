@@ -1,16 +1,19 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Pressable, Image, FlatList } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
-import { Spacing, BorderRadius } from '@/constants/theme';
+import { Screen } from '@/components/layout/screen';
+import { Text } from '@/components/ui/text';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Section } from '@/components/ui/section';
+import { Stagger } from '@/components/motion';
+import { useTokens } from '@/hooks/use-scheme';
 
 const COACH_DATA = {
-  id: '1',
   name: 'Rohan Patel',
   sport: 'Football',
   experience: '10 Years',
@@ -18,10 +21,8 @@ const COACH_DATA = {
   languages: 'English, Hindi, Marathi',
   location: 'Mumbai, Maharashtra',
   image: require('@/assets/images/illustrations/football_player.png'),
-  verified: true,
-  bio: 'Passionate football coach with 10 years of experience training youth and competitive players. Specialized in modern football techniques and tactical awareness.',
+  bio: 'Passionate football coach with 10 years of experience training youth and competitive players. Specialised in modern football techniques and tactical awareness.',
   achievements: ['National Champion 2015', 'U-17 State Championship Coach', 'FIFA Certified', 'Youth Development Specialist'],
-  certifications: ['FIFA Level 2', 'Sports Science Diploma', 'Nutrition Certification', 'First Aid Certified'],
   specializations: ['Football', 'Speed Training', 'Tactical Training', 'Kids Coaching', 'Competitive Training'],
   programs: [
     { id: '1', title: 'Personal Training', desc: 'One-on-one coaching', price: '₹500/hr' },
@@ -31,153 +32,117 @@ const COACH_DATA = {
   ],
   reviews: [
     { id: '1', name: 'Arjun Kumar', rating: 5, text: 'Excellent coach! Improved my game significantly.' },
-    { id: '2', name: 'Priya Singh', rating: 4.5, text: 'Great technique teaching and very patient with kids.' },
+    { id: '2', name: 'Priya Singh', rating: 4, text: 'Great technique teaching and very patient with kids.' },
   ],
 };
 
 export default function CoachProfile() {
-  const theme = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const t = useTokens();
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView edges={['top']}>
-        {/* Header with Back Button */}
-        <View style={styles.topBar}>
-          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/coach')}>
-            <Ionicons name="arrow-back" size={24} color={theme.secondary} />
-          </Pressable>
-          <Pressable onPress={() => {}}>
-            <Ionicons name="share-social" size={24} color={theme.secondary} />
-          </Pressable>
+    <Screen
+      header={{
+        title: COACH_DATA.name,
+        onBack: () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/coach')),
+        right: <Ionicons name="share-social-outline" size={20} color={t.foreground} />,
+      }}
+      footer={
+        <View className="flex-row gap-2">
+          <Button variant="outline" className="flex-1" leftIcon={<MaterialCommunityIcons name="phone" size={18} color={t.primary} />}>
+            <Text className="font-bold text-primary">Call</Text>
+          </Button>
+          <Button variant="outline" className="flex-1" leftIcon={<MaterialCommunityIcons name="whatsapp" size={18} color={t.primary} />}>
+            <Text className="font-bold text-primary">Chat</Text>
+          </Button>
+          <Button className="flex-[1.4]">Book session</Button>
         </View>
-      </SafeAreaView>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
-          <Image source={COACH_DATA.image} style={styles.profileImage} />
+      }
+    >
+      <View className="items-center pb-2 pt-4">
+        <View className="h-32 w-32 overflow-hidden rounded-full border-2 border-primary/30 bg-muted">
+          <Image source={COACH_DATA.image} style={{ width: '100%', height: '100%' }} contentFit="cover" />
         </View>
-
-        <View style={styles.profileInfo}>
-          <ThemedText type="headlineLg">{COACH_DATA.name}</ThemedText>
-          <View style={styles.metaRow}>
-            <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
-              {COACH_DATA.sport} • {COACH_DATA.experience}
-            </ThemedText>
-          </View>
-          <View style={styles.ratingRow}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="star" size={16} color="#f59e0b" />
-              <ThemedText type="labelMd">{COACH_DATA.rating}</ThemedText>
-            </View>
-            <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
-              {COACH_DATA.languages}
-            </ThemedText>
-          </View>
-          <View style={styles.locationRow}>
-            <Ionicons name="location" size={14} color={theme.textSecondary} />
-            <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 4 }}>
-              {COACH_DATA.location}
-            </ThemedText>
+        <Text variant="heading" className="mt-3">
+          {COACH_DATA.name}
+        </Text>
+        <Text variant="subtle" className="mt-0.5">
+          {COACH_DATA.sport} · {COACH_DATA.experience}
+        </Text>
+        <View className="mt-2 flex-row items-center gap-2">
+          <Badge variant="warning" dot>
+            {COACH_DATA.rating} rating
+          </Badge>
+          <View className="flex-row items-center gap-1">
+            <Ionicons name="location-outline" size={13} color={t.mutedForeground} />
+            <Text variant="caption">{COACH_DATA.location}</Text>
           </View>
         </View>
+      </View>
 
-        {/* About Section */}
-        <View style={[styles.section, { backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.lg }]}>
-          <ThemedText type="labelMd">About</ThemedText>
-          <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 8 }}>
-            {COACH_DATA.bio}
-          </ThemedText>
-        </View>
+      <Section title="About" className="mt-4">
+        <Card variant="surface">
+          <Text variant="subtle">{COACH_DATA.bio}</Text>
+        </Card>
+      </Section>
 
-        {/* Achievements */}
-        <View style={styles.section}>
-          <ThemedText type="labelMd" style={{ marginBottom: 12 }}>Achievements</ThemedText>
-          {COACH_DATA.achievements.map(achievement => (
-            <View key={achievement} style={styles.achievementItem}>
-              <Ionicons name="checkmark-done" size={18} color="#22c55e" />
-              <ThemedText type="bodySm" style={{ marginLeft: 8 }}>
-                {achievement}
-              </ThemedText>
-            </View>
+      <Section title="Specialisations" className="mt-6">
+        <View className="flex-row flex-wrap gap-2">
+          {COACH_DATA.specializations.map((s) => (
+            <Badge key={s} variant="muted">
+              {s}
+            </Badge>
           ))}
         </View>
+      </Section>
 
-        {/* Programs */}
-        <View style={styles.section}>
-          <ThemedText type="labelMd" style={{ marginBottom: 12 }}>Training Programs</ThemedText>
-          {COACH_DATA.programs.map(prog => (
-            <View key={prog.id} style={[styles.programCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}>
-              <View style={{ flex: 1 }}>
-                <ThemedText type="headlineSm" numberOfLines={1}>{prog.title}</ThemedText>
-                <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
-                  {prog.desc}
-                </ThemedText>
+      <Section title="Achievements" className="mt-6">
+        <Card variant="surface" className="gap-2.5">
+          {COACH_DATA.achievements.map((a) => (
+            <View key={a} className="flex-row items-center gap-2">
+              <Ionicons name="checkmark-done" size={16} color={t.success} />
+              <Text variant="subtle">{a}</Text>
+            </View>
+          ))}
+        </Card>
+      </Section>
+
+      <Section title="Training programs" className="mt-6">
+        <Stagger className="gap-2.5">
+          {COACH_DATA.programs.map((p) => (
+            <Card key={p.id} variant="elevated" className="flex-row items-center justify-between">
+              <View className="flex-1">
+                <Text className="font-bold text-foreground">{p.title}</Text>
+                <Text variant="caption">{p.desc}</Text>
               </View>
-              <ThemedText type="labelMd" style={{ color: '#22c55e' }}>
-                {prog.price}
-              </ThemedText>
-            </View>
+              <Text className="font-bold text-primary">{p.price}</Text>
+            </Card>
           ))}
-        </View>
+        </Stagger>
+      </Section>
 
-        {/* Reviews */}
-        <View style={styles.section}>
-          <ThemedText type="labelMd" style={{ marginBottom: 12 }}>Reviews</ThemedText>
-          {COACH_DATA.reviews.map(review => (
-            <View key={review.id} style={[styles.reviewCard, { backgroundColor: theme.surfaceLowest }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <ThemedText type="headlineSm" numberOfLines={1} style={{ flex: 1, marginRight: 8 }}>{review.name}</ThemedText>
-                <View style={{ flexDirection: 'row', gap: 2 }}>
-                  {Array(5)
-                    .fill(0)
-                    .map((_, i) => (
-                      <Ionicons key={i} name="star" size={14} color={i < review.rating ? '#f59e0b' : '#cbd5e1'} />
-                    ))}
+      <Section title="Reviews" className="my-6">
+        <View className="gap-2.5">
+          {COACH_DATA.reviews.map((r) => (
+            <Card key={r.id} variant="surface" className="gap-2">
+              <View className="flex-row items-center justify-between">
+                <Text className="font-bold text-foreground">{r.name}</Text>
+                <View className="flex-row gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Ionicons
+                      key={i}
+                      name="star"
+                      size={13}
+                      color={i < r.rating ? t.warning : t.border}
+                    />
+                  ))}
                 </View>
               </View>
-              <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 8 }}>
-                {review.text}
-              </ThemedText>
-            </View>
+              <Text variant="subtle">{r.text}</Text>
+            </Card>
           ))}
         </View>
-      </ScrollView>
-
-      {/* Sticky Bottom Actions */}
-      <SafeAreaView edges={['bottom']} style={[styles.bottomActions, { backgroundColor: theme.background }]}>
-        <Pressable style={styles.actionBtn}>
-          <MaterialCommunityIcons name="phone" size={20} color="#22c55e" />
-          <ThemedText type="labelMd" style={{ color: '#22c55e', marginLeft: 8 }}>Call</ThemedText>
-        </Pressable>
-        <Pressable style={styles.actionBtn}>
-          <MaterialCommunityIcons name="whatsapp" size={20} color="#22c55e" />
-          <ThemedText type="labelMd" style={{ color: '#22c55e', marginLeft: 8 }}>WhatsApp</ThemedText>
-        </Pressable>
-        <Pressable style={[styles.actionBtn, { backgroundColor: '#22c55e', flex: 1.2 }]}>
-          <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Book Session</ThemedText>
-        </Pressable>
-      </SafeAreaView>
-    </ThemedView>
+      </Section>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.containerMargin, paddingVertical: Spacing.md },
-  scrollContent: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 120 },
-  profileHeader: { alignItems: 'center', marginVertical: Spacing.lg, position: 'relative' },
-  profileImage: { width: 140, height: 140, borderRadius: 70 },
-  profileInfo: { alignItems: 'center', marginVertical: Spacing.md },
-  metaRow: { marginTop: 8 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  section: { marginVertical: Spacing.lg, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.md },
-  achievementItem: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
-  programCard: { paddingHorizontal: 12, paddingVertical: 12, marginVertical: 8, borderRadius: BorderRadius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1 },
-  reviewCard: { paddingHorizontal: 12, paddingVertical: 12, marginVertical: 8, borderRadius: BorderRadius.lg },
-  bottomActions: { flexDirection: 'row', gap: 8, paddingHorizontal: Spacing.containerMargin, paddingVertical: Spacing.md },
-  actionBtn: { flex: 1, flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 12, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: '#22c55e', justifyContent: 'center', alignItems: 'center' },
-});

@@ -21,7 +21,7 @@ import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
-import { useWalletStore } from '@/store/app-store';
+import { useWalletStore, useOfferStore } from '@/store/app-store';
 import { useToast } from '@/context/ToastContext';
 import {
   VOUCHERS,
@@ -55,6 +55,7 @@ export default function WalletScreen() {
   const router = useRouter();
   const { showSuccess, showError, showInfo } = useToast();
   const { walletBalance, addWalletFunds } = useWalletStore();
+  const { redeemOffer } = useOfferStore();
 
   const [activeTab, setActiveTab] = useState<'vouchers' | 'offers' | 'history'>('vouchers');
   // Each category shows two coupons until "View All" expands it.
@@ -111,25 +112,66 @@ export default function WalletScreen() {
       triggerToast('⚠️ Enter a valid coupon code');
       return;
     }
-    const matched = getVoucherByCode(clean);
-    if (matched) {
+    const creditVoucher = (label: string, note?: string) => {
       addWalletFunds(100);
       const newTx: Transaction = {
         id: `tx-${Date.now()}`,
-        title: `Voucher Applied (${clean})`,
+        title: `Voucher Applied (${label})`,
         type: 'credit',
         amount: 100,
         date: 'Just Now',
         category: 'Voucher',
       };
-      setTransactions([newTx, ...transactions]);
+      setTransactions(prev => [newTx, ...prev]);
       setPromoCodeInput('');
-      showSuccess(`🎟️ Voucher '${clean}' applied! ₹100 credited to wallet.`);
-      triggerToast(`🎟️ Voucher '${clean}' applied! ₹100 credited.`);
-    } else {
-      showError('Invalid or expired promo code. Try TURF100 or WELCOME200');
-      triggerToast('❌ Invalid code. Try TURF100 or WELCOME200');
+      showSuccess(`🎟️ Voucher '${label}' applied! ₹100 credited to wallet.`, note);
+      triggerToast(`🎟️ Voucher '${label}' applied! ₹100 credited.`);
+    };
+
+    // Owner-published codes are checked first, because those carry a real
+    // "first N users" cap that has to be claimed atomically.
+    const claim = redeemOffer(clean);
+    if (claim.ok) {
+      const left = claim.remaining;
+      creditVoucher(
+        clean,
+        left === null || left === undefined
+          ? undefined
+          : left > 0
+            ? `${left} redemption${left === 1 ? '' : 's'} left on this code.`
+            : 'That was the last one — this code is now fully claimed.'
+      );
+      return;
     }
+
+    if (claim.reason === 'exhausted') {
+      const cap = claim.offer?.maxRedemptions ?? 0;
+      showError(
+        'Offer fully claimed',
+        `'${clean}' was limited to the first ${cap} user${cap === 1 ? '' : 's'}.`
+      );
+      triggerToast('❌ This code has been fully claimed');
+      return;
+    }
+    if (claim.reason === 'expired') {
+      showError('Offer expired', `'${clean}' is past its valid-until date.`);
+      triggerToast('❌ This code has expired');
+      return;
+    }
+    if (claim.reason === 'paused') {
+      showError('Offer paused', `'${clean}' has been paused by the venue.`);
+      triggerToast('❌ This code is currently paused');
+      return;
+    }
+
+    // Fall back to the sample catalogue shown in the vouchers grid.
+    if (getVoucherByCode(clean)) {
+      creditVoucher(clean);
+      return;
+    }
+
+    showError('Invalid or expired promo code. Try SALE50 or NIGHTOWL40');
+    triggerToast('❌ Invalid code. Try SALE50 or NIGHTOWL40');
   };
 
   const copyToClipboard = (code: string) => {

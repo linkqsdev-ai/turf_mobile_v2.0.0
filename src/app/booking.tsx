@@ -59,11 +59,11 @@ const DAYS_OF_WEEK = [
 ];
 
 const PAYMENT_METHODS = [
-  { id: 'apple',  label: 'Apple Pay',   icon: 'logo-apple',   family: 'Ionicons', color: '#000000' },
-  { id: 'paypal', label: 'PayPal',      icon: 'paypal',       family: 'FontAwesome5', color: '#003087' },
-  { id: 'gpay',   label: 'Google Pay',  icon: 'logo-google',  family: 'Ionicons', color: '#ea4335' },
-  { id: 'credit', label: 'Credit Card', icon: 'card',         family: 'Ionicons', color: '#ff5722' },
-  { id: 'debit',  label: 'Debit Card',  icon: 'card-outline', family: 'Ionicons', color: '#0f9d58' },
+  { id: 'apple', label: 'Apple Pay', icon: 'logo-apple', family: 'Ionicons', color: '#000000' },
+  { id: 'paypal', label: 'PayPal', icon: 'paypal', family: 'FontAwesome5', color: '#003087' },
+  { id: 'gpay', label: 'Google Pay', icon: 'logo-google', family: 'Ionicons', color: '#ea4335' },
+  { id: 'credit', label: 'Credit Card', icon: 'card', family: 'Ionicons', color: '#ff5722' },
+  { id: 'debit', label: 'Debit Card', icon: 'card-outline', family: 'Ionicons', color: '#0f9d58' },
 ];
 
 const ADVANCE_OPTIONS = [
@@ -125,7 +125,7 @@ export default function BookingConfigurationScreen() {
       try {
         const t = await turfApi.getTurfDetails(params.id);
         if (t) setRemoteTurf(t);
-      } catch {}
+      } catch { }
     }
   }, [params.id]);
 
@@ -236,10 +236,10 @@ export default function BookingConfigurationScreen() {
 
   // Valid coupon codes
   const VALID_COUPONS: Record<string, { discount: number; type: 'flat' | 'percent'; cashback: number }> = {
-    'YAWAH30':   { discount: 30,  type: 'percent', cashback: 50  },
-    'FIRST50':   { discount: 50,  type: 'flat',    cashback: 100 },
-    'TURF20':    { discount: 20,  type: 'percent', cashback: 0   },
-    'HAPPYHOUR': { discount: 15,  type: 'flat',    cashback: 20  },
+    'YAWAH30': { discount: 30, type: 'percent', cashback: 50 },
+    'FIRST50': { discount: 50, type: 'flat', cashback: 100 },
+    'TURF20': { discount: 20, type: 'percent', cashback: 0 },
+    'HAPPYHOUR': { discount: 15, type: 'flat', cashback: 20 },
   };
 
   const applyCoupon = () => {
@@ -375,14 +375,14 @@ export default function BookingConfigurationScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Top App Bar */}
         <View style={[styles.header, { backgroundColor: 'transparent' }]}>
-          <Pressable 
+          <Pressable
             onPress={() => {
               if (router.canGoBack()) {
                 router.back();
               } else {
                 router.replace('/(tabs)');
               }
-            }} 
+            }}
             style={styles.backButton}
           >
             <Ionicons name="arrow-back" size={24} color={theme.text} />
@@ -393,8 +393,8 @@ export default function BookingConfigurationScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        <ScrollView 
-          showsVerticalScrollIndicator={false} 
+        <ScrollView
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
@@ -402,7 +402,7 @@ export default function BookingConfigurationScreen() {
         >
           {/* Hero Card */}
           <View style={styles.heroWrapper}>
-            <View 
+            <View
               style={[styles.heroCard, { backgroundColor: theme.primaryContainer }]}
               onLayout={(e) => {
                 const { width } = e.nativeEvent.layout;
@@ -428,10 +428,10 @@ export default function BookingConfigurationScreen() {
                         typeof img === 'string' && !/^\d+$/.test(img)
                           ? { uri: img }
                           : typeof img === 'number'
-                          ? img
-                          : typeof img === 'string'
-                          ? parseInt(img, 10)
-                          : img?.uri ? { uri: img.uri } : venue.image
+                            ? img
+                            : typeof img === 'string'
+                              ? parseInt(img, 10)
+                              : img?.uri ? { uri: img.uri } : venue.image
                       }
                       style={{ width: heroCardWidth || '100%', height: '100%' }}
                       contentFit="cover"
@@ -444,8 +444,8 @@ export default function BookingConfigurationScreen() {
                     typeof venue.image === 'string' && !/^\d+$/.test(venue.image)
                       ? { uri: venue.image }
                       : typeof venue.image === 'number'
-                      ? venue.image
-                      : parseInt(venue.image || '1', 10)
+                        ? venue.image
+                        : parseInt(venue.image || '1', 10)
                   }
                   style={styles.heroImage}
                   contentFit="cover"
@@ -466,7 +466,7 @@ export default function BookingConfigurationScreen() {
                   ))}
                 </View>
               )}
-              
+
               {/* Fav Button top right */}
               <Pressable style={[styles.favFab, { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8 }]}>
                 <Ionicons name="heart" size={20} color="#ff4757" />
@@ -612,10 +612,10 @@ export default function BookingConfigurationScreen() {
                   style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary + '15', justifyContent: 'center', alignItems: 'center' }}
                   hitSlop={8}
                 >
-                  <Ionicons 
-                    name={isSlotsExpanded ? "chevron-up" : "chevron-down"} 
-                    size={16} 
-                    color={theme.primary} 
+                  <Ionicons
+                    name={isSlotsExpanded ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color={theme.primary}
                   />
                 </Pressable>
               </View>
@@ -636,7 +636,7 @@ export default function BookingConfigurationScreen() {
                           onPress={() => {
                             if (isPastDay) return;
                             setSelectedDayOfWeek(d.full);
-                            const matched = calendarGrid.find(cell => 
+                            const matched = calendarGrid.find(cell =>
                               cell.date && cell.date.toLocaleDateString('en-US', { weekday: 'long' }) === d.full
                             );
                             if (matched && matched.date) {
@@ -677,7 +677,7 @@ export default function BookingConfigurationScreen() {
                       const isPassed = isTimeSlotPassed(slot.time, effectiveDate);
                       const isSelected = selectedSlots.includes(slot.time);
                       const isDisabled = slot.disabled || isPassed;
-                      
+
                       return (
                         <Pressable
                           key={slot.time}
@@ -900,7 +900,7 @@ export default function BookingConfigurationScreen() {
                 </View>
               </View>
               {walletBalance > 0 ? (
-                <Pressable 
+                <Pressable
                   onPress={() => setUseWallet(!useWallet)}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: useWallet ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 }}
                 >
@@ -955,21 +955,21 @@ export default function BookingConfigurationScreen() {
                       {/* Expanded Payment Details */}
                       {isSelected && (pm.id === 'credit' || pm.id === 'debit') && (
                         <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignSelf: 'stretch' }}>
-                          <TextInput 
-                            placeholder="Card Number" 
+                          <TextInput
+                            placeholder="Card Number"
                             placeholderTextColor="#94a3b8"
-                            style={{ backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, marginBottom: Spacing.sm, alignSelf: 'stretch' }} 
+                            style={{ backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, marginBottom: Spacing.sm, alignSelf: 'stretch' }}
                           />
                           <View style={{ flexDirection: 'row', gap: Spacing.sm, alignSelf: 'stretch' }}>
-                            <TextInput 
-                              placeholder="MM/YY" 
+                            <TextInput
+                              placeholder="MM/YY"
                               placeholderTextColor="#94a3b8"
-                              style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }} 
+                              style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }}
                             />
-                            <TextInput 
-                              placeholder="CVV" 
+                            <TextInput
+                              placeholder="CVV"
                               placeholderTextColor="#94a3b8"
-                              style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }} 
+                              style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }}
                               secureTextEntry
                             />
                           </View>
@@ -1009,7 +1009,7 @@ export default function BookingConfigurationScreen() {
                     Split booking fee based on play hours (e.g., 1 hr, 2 hrs)
                   </ThemedText>
                 </View>
-                <Pressable 
+                <Pressable
                   onPress={() => setIsSplitEnabled(!isSplitEnabled)}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: isSplitEnabled ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 }}
                 >
@@ -1042,7 +1042,7 @@ export default function BookingConfigurationScreen() {
 
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                             {/* Hours Selector */}
-                            <Pressable 
+                            <Pressable
                               onPress={() => {
                                 if (player.hours > 1) {
                                   setSplitPlayers(splitPlayers.map(p => p.id === player.id ? { ...p, hours: p.hours - 1 } : p));
@@ -1060,7 +1060,7 @@ export default function BookingConfigurationScreen() {
                               {player.hours} {player.hours === 1 ? 'hr' : 'hrs'}
                             </ThemedText>
 
-                            <Pressable 
+                            <Pressable
                               onPress={() => {
                                 setSplitPlayers(splitPlayers.map(p => p.id === player.id ? { ...p, hours: p.hours + 1 } : p));
                               }}
@@ -1122,7 +1122,7 @@ export default function BookingConfigurationScreen() {
           {/* Booking Summary Ticket Card */}
           <View style={[styles.section, { paddingBottom: 60 }]}>
             <View style={[styles.ticketContainer, { backgroundColor: theme.surfaceLowest }, Shadows.level3]}>
-              
+
               {/* Top part: Rounded banner/hero image */}
               <View style={styles.ticketTopSection}>
                 <Image source={venue.image} style={styles.ticketHeroImage} contentFit="cover" />
@@ -1317,7 +1317,7 @@ export default function BookingConfigurationScreen() {
                     <ThemedText style={styles.ticketPriceLabel}>Service Charge</ThemedText>
                     <ThemedText style={[styles.ticketPriceValue, { color: theme.text }]}>₹{serviceCharge.toFixed(2)}</ThemedText>
                   </View>
-                  
+
                   {couponApplied && couponDiscount > 0 && (
                     <View style={styles.ticketPriceRow}>
                       <ThemedText style={[styles.ticketPriceLabel, { color: '#16a34a', fontWeight: 'bold' }]}>Coupon Discount ({couponCode})</ThemedText>

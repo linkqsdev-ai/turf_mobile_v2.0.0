@@ -1,257 +1,303 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Platform, View, StyleSheet, Animated } from 'react-native';
+import { Platform, View } from 'react-native';
+import Animated, {
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+  useAnimatedStyle,
+  Easing,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { ThemedText } from '@/components/themed-text';
+import { useTokens } from '@/hooks/use-scheme';
+import { Text } from '@/components/ui/text';
 
-function TabIcon({ 
-  focused, 
-  color, 
-  iconName, 
-  library = 'Ionicons',
-  isBook = false
-}: { 
-  focused: boolean; 
-  color: any; 
-  iconName: string; 
-  library?: 'Ionicons' | 'MaterialCommunityIcons';
-  isBook?: boolean;
+type IconLib = 'ion' | 'mc';
+
+function TabIcon({
+  focused,
+  name,
+  lib = 'ion',
+}: {
+  focused: boolean;
+  name: string;
+  lib?: IconLib;
 }) {
-  const pulseAnim = useMemo(() => new Animated.Value(1), []);
+  const t = useTokens();
+  const color = focused ? t.primary : t.mutedForeground;
+  return (
+    <View
+      style={{
+        height: 32,
+        paddingHorizontal: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 16,
+        backgroundColor: focused ? t.primary + '18' : 'transparent',
+      }}
+    >
+      {lib === 'ion' ? (
+        <Ionicons name={(focused ? name : `${name}-outline`) as any} size={20} color={color} />
+      ) : (
+        <MaterialCommunityIcons name={name as any} size={22} color={color} />
+      )}
+    </View>
+  );
+}
+
+function TabLabel({ label, focused }: { label: string; focused: boolean }) {
+  const t = useTokens();
+  const isTurfBook = label === 'Turf Book';
+  return (
+    <View style={{ alignItems: 'center', marginTop: 1 }}>
+      <Text
+        numberOfLines={1}
+        style={{
+          fontSize: isTurfBook ? 9 : 9.5,
+          fontWeight: focused ? '800' : '600',
+          letterSpacing: 0.2,
+          textTransform: 'uppercase',
+          color: focused ? t.primary : isTurfBook ? t.primary : t.mutedForeground,
+        }}
+      >
+        {label}
+      </Text>
+      {focused && (
+        <View
+          style={{
+            width: 3.5,
+            height: 3.5,
+            borderRadius: 2,
+            backgroundColor: t.primary,
+            marginTop: 2,
+          }}
+        />
+      )}
+    </View>
+  );
+}
+
+/** Centre "Turf Book" action — an animated, floating stadium puck. */
+function BookTab({ focused }: { focused: boolean }) {
+  const t = useTokens();
+
+  // Floating vertical motion (smooth bobbing up and down)
+  const floatY = useSharedValue(0);
+  const breathScale = useSharedValue(1);
+
+  // Radial energy pulse
+  const pulseScale = useSharedValue(1);
+  const pulseOpacity = useSharedValue(0.55);
 
   useEffect(() => {
-    if (isBook) {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.15,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      pulse.start();
-      return () => pulse.stop();
-    }
-  }, [isBook]);
+    // 1. Continuous smooth floating up and down
+    floatY.value = withRepeat(
+      withSequence(
+        withTiming(-7, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.sin) })
+      ),
+      -1,
+      true
+    );
+
+    // 2. Subtle breathing scale
+    breathScale.value = withRepeat(
+      withSequence(
+        withTiming(1.05, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0.97, { duration: 1300, easing: Easing.inOut(Easing.sin) })
+      ),
+      -1,
+      true
+    );
+
+    // 3. Radial floodlight energy ripple
+    pulseScale.value = withRepeat(
+      withTiming(1.5, { duration: 1700, easing: Easing.out(Easing.cubic) }),
+      -1,
+      false
+    );
+    pulseOpacity.value = withRepeat(
+      withTiming(0, { duration: 1700, easing: Easing.out(Easing.cubic) }),
+      -1,
+      false
+    );
+  }, [floatY, breathScale, pulseScale, pulseOpacity]);
+
+  const floatStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: floatY.value }, { scale: breathScale.value }],
+  }));
+
+  const haloStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: floatY.value }, { scale: pulseScale.value }],
+    opacity: pulseOpacity.value,
+  }));
 
   return (
-    <Animated.View 
-      style={[
-        styles.iconContainer, 
-        isBook && styles.iconContainerBook,
-        isBook && { transform: [{ translateY: -12 }, { scale: pulseAnim }] }
-      ]}
-    >
-      <View style={[
-        styles.iconWrapper,
-        focused && styles.iconWrapperActive,
-        isBook && styles.iconWrapperBook,
-        isBook && focused && styles.iconWrapperBookActive
-      ]}>
-        {library === 'Ionicons' ? (
-          <Ionicons 
-            name={focused ? iconName as any : `${iconName}-outline` as any} 
-            size={20} 
-            color={isBook ? (focused ? '#5D68E8' : '#00ffd0') : color} 
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: 60, height: 60, overflow: 'visible' }}>
+      {/* Animated pulsating halo behind the puck */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            width: 52,
+            height: 52,
+            borderRadius: 26,
+            backgroundColor: t.primary,
+          },
+          haloStyle,
+        ]}
+      />
+
+      {/* Main Elevated Floating Stadium Puck */}
+      <Animated.View style={floatStyle}>
+        <LinearGradient
+          colors={focused ? ['#00FFA3', '#00C878', '#009050'] : [t.primary + '38', t.primary + '14']}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 26,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 2,
+            borderColor: focused ? '#82FF78' : t.primary + '65',
+            shadowColor: '#00C878',
+            shadowOpacity: focused ? 0.55 : 0.25,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 8,
+          }}
+        >
+          <MaterialCommunityIcons
+            name="stadium-variant"
+            size={27}
+            color={focused ? '#04140D' : t.primary}
           />
-        ) : (
-          <MaterialCommunityIcons 
-            name={iconName as any} 
-            size={24} 
-            color={isBook ? (focused ? '#5D68E8' : '#00ffd0') : color} 
+
+          {/* Live glowing beacon pip */}
+          <View
+            style={{
+              position: 'absolute',
+              top: 3,
+              right: 3,
+              width: 8,
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: '#82FF78',
+              borderWidth: 1.5,
+              borderColor: t.card,
+              shadowColor: '#82FF78',
+              shadowOpacity: 0.8,
+              shadowRadius: 4,
+              elevation: 4,
+            }}
           />
-        )}
-      </View>
-      {focused && !isBook && <View style={styles.activeDot} />}
-    </Animated.View>
+        </LinearGradient>
+      </Animated.View>
+    </View>
   );
 }
 
 export default function TabLayout() {
   const { profile } = useUserProfile();
+  const t = useTokens();
+  const insets = useSafeAreaInsets();
   const role = profile.role || 'Player';
+  const isSuperAdmin = role === 'Super Admin' || role === 'Admin';
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#ffffff', // White
-        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)', // Muted White
-        tabBarStyle: {
-          backgroundColor: '#5D68E8', // Primary Blue
-          borderTopWidth: 1,
-          borderTopColor: 'rgba(255, 255, 255, 0.15)', // Premium subtle border
-          height: Platform.OS === 'ios' ? 90 : 76,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 14,
-          paddingTop: 8,
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: -10 },
-          shadowOpacity: 0.2,
-          shadowRadius: 24,
-          elevation: 15,
-        },
-        tabBarLabelStyle: {
-          fontFamily: 'Sora_500Medium', // Premium attractive regular font
-          fontSize: 8.8, // Slightly reduced to fit "TOURNAMENT" fully on all devices
-          letterSpacing: 0.5,
-          textTransform: 'uppercase',
-          marginTop: 4,
-        },
         headerShown: false,
+        tabBarActiveTintColor: t.primary,
+        tabBarInactiveTintColor: t.mutedForeground,
+        tabBarStyle: {
+          position: 'absolute',
+          overflow: 'visible',
+          height: (Platform.OS === 'ios' ? 72 : 68) + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+          paddingTop: 6,
+          backgroundColor: t.card,
+          borderTopWidth: 1,
+          borderTopColor: t.border + '50',
+          borderTopLeftRadius: 26,
+          borderTopRightRadius: 26,
+          shadowColor: '#000',
+          shadowOpacity: 0.08,
+          shadowRadius: 20,
+          shadowOffset: { width: 0, height: -4 },
+          elevation: 14,
+        },
+        tabBarShowLabel: true,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} iconName="home" />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="home" />,
+          tabBarLabel: ({ focused }) => <TabLabel label="Home" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="matches"
         options={{
-          title: 'Matches',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} iconName="calendar-number" />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="tennisball" />,
+          tabBarLabel: ({ focused }) => <TabLabel label="Matches" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          tabBarLabel: ({ focused }) => (
-            <ThemedText 
-              style={{ 
-                color: focused ? '#00ffd0' : '#a7f3d0', 
-                fontFamily: focused ? 'Sora_800ExtraBold' : 'Sora_700Bold', 
-                fontSize: 8.8, 
-                letterSpacing: 0.5, 
-                textTransform: 'uppercase', 
-                marginTop: 4,
-                textAlign: 'center'
-              }}
-            >
-              Turf Book
-            </ThemedText>
-          ),
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon 
-              focused={focused} 
-              color={color} 
-              iconName="stadium" 
-              library="MaterialCommunityIcons" 
-              isBook={true} 
-            />
-          ),
+          tabBarItemStyle: { overflow: 'visible' },
+          tabBarIcon: ({ focused }) => <BookTab focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label="Turf Book" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="tournaments"
         options={{
-          title: 'Tournament',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} iconName="trophy" />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="trophy" />,
+          tabBarLabel: ({ focused }) => <TabLabel label="Cups" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="network"
         options={{
-          href: (role === 'Player' || role === 'Super Admin') ? undefined : null,
-          title: 'Connect',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} iconName="share-social" />
-          ),
+          href: role === 'Player' || isSuperAdmin ? undefined : null,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="share-social" />,
+          tabBarLabel: ({ focused }) => <TabLabel label="Connect" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="club"
         options={{
-          href: (role === 'Organizer' || role === 'Super Admin') ? undefined : null,
-          title: 'Club',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon focused={focused} color={color} iconName="shield-checkmark" />
-          ),
+          href: role === 'Organizer' || isSuperAdmin ? undefined : null,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="shield-checkmark" />,
+          tabBarLabel: ({ focused }) => <TabLabel label="Club" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="coach"
         options={{
-          href: (role === 'Owner' || role === 'Coach' || role === 'Super Admin') ? undefined : null,
-          title: role === 'Owner' ? 'Add Turf' : 'Coach',
-          tabBarIcon: ({ color, focused }) => (
+          href: role === 'Owner' || role === 'Coach' || isSuperAdmin ? undefined : null,
+          tabBarIcon: ({ focused }) => (
             <TabIcon
               focused={focused}
-              color={color}
-              iconName={role === 'Owner' ? 'soccer-field' : 'account-tie'}
-              library="MaterialCommunityIcons"
+              lib="mc"
+              name={role === 'Owner' ? 'soccer-field' : 'whistle'}
             />
+          ),
+          tabBarLabel: ({ focused }) => (
+            <TabLabel label={role === 'Owner' ? 'Add Turf' : 'Coach'} focused={focused} />
           ),
         }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  iconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 48,
-    width: 60,
-  },
-  iconContainerBook: {
-    transform: [{ translateY: -12 }], // Floating Central Button shift up
-  },
-  iconWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 36,
-    width: 52,
-    borderRadius: 18,
-    backgroundColor: 'transparent',
-  },
-  iconWrapperActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)', // Premium soft white glow backdrop
-  },
-  iconWrapperBook: {
-    height: 50,
-    width: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(0, 255, 208, 0.15)', // Semi-transparent neon green
-    borderWidth: 1.5,
-    borderColor: 'rgba(0, 255, 208, 0.4)',
-    // Shadow for premium floating look
-    shadowColor: '#00ffd0',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  iconWrapperBookActive: {
-    backgroundColor: '#00ffd0',
-    borderColor: '#00ffd0',
-  },
-  activeDot: {
-    position: 'absolute',
-    bottom: -2,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#ffffff', // Sleek white active dot
-  },
-});

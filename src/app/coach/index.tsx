@@ -1,19 +1,26 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, TextInput, Pressable, FlatList } from 'react-native';
-import { Image } from 'expo-image';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+
+import { Screen } from '@/components/layout/screen';
+import { Text } from '@/components/ui/text';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Avatar } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { ChipGroup } from '@/components/ui/chip';
+import { EmptyState } from '@/components/ui/empty-state';
+import { MotionView } from '@/components/motion';
+import { useTokens } from '@/hooks/use-scheme';
 
 type Coach = {
   id: string;
   name: string;
   sport: string;
   rating: number;
-  classes: string[]; // e.g. ['Training', 'Summer Class']
-  image?: any;
+  classes: string[];
+  image?: string;
 };
 
 const COACHES: Coach[] = [
@@ -23,80 +30,84 @@ const COACHES: Coach[] = [
   { id: 'pro_badminton', name: 'Coach Elevate', sport: 'Badminton', rating: 4.8, classes: ['Training', 'Summer Class'], image: 'https://randomuser.me/api/portraits/women/68.jpg' },
 ];
 
+const FILTERS = [
+  { label: 'All', value: 'all' },
+  { label: 'Training', value: 'training' },
+  { label: 'Summer class', value: 'summer' },
+  { label: 'Top rated', value: 'top' },
+] as const;
+
 export default function CoachList() {
-  const theme = useTheme();
   const router = useRouter();
+  const t = useTokens();
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'training' | 'summer'>('all');
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]['value']>('all');
 
   const filtered = useMemo(() => {
-    return COACHES.filter(c => {
-      if (query && !c.name.toLowerCase().includes(query.toLowerCase()) && !c.sport.toLowerCase().includes(query.toLowerCase())) return false;
+    let list = COACHES.filter((c) => {
+      if (
+        query &&
+        !c.name.toLowerCase().includes(query.toLowerCase()) &&
+        !c.sport.toLowerCase().includes(query.toLowerCase())
+      )
+        return false;
       if (filter === 'training' && !c.classes.includes('Training')) return false;
       if (filter === 'summer' && !c.classes.includes('Summer Class')) return false;
       return true;
     });
+    if (filter === 'top') list = [...list].sort((a, b) => b.rating - a.rating);
+    return list;
   }, [query, filter]);
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText type="headlineMd">Coaches</ThemedText>
-        <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Find and filter coaches for classes and training</ThemedText>
+    <Screen header={{ title: 'Coaches', large: true, subtitle: 'Find and filter coaches for classes and training' }}>
+      <View className="gap-3 pt-1">
+        <Input
+          placeholder="Search coach or sport"
+          value={query}
+          onChangeText={setQuery}
+          leftSlot={<Ionicons name="search" size={17} color={t.mutedForeground} />}
+        />
+        <ChipGroup options={FILTERS as any} value={filter} onChange={setFilter} />
       </View>
 
-      <View style={styles.controls}>
-        <View style={styles.searchRow}>
-          <Ionicons name="search" size={18} color={theme.textSecondary} />
-          <TextInput placeholder="Search coach or sport" value={query} onChangeText={setQuery} style={styles.searchInput} />
-        </View>
-
-        <View style={styles.filterRow}>
-          <Pressable style={[styles.filterBtn, filter === 'all' && styles.filterBtnActive]} onPress={() => setFilter('all')}>
-            <ThemedText type="labelSm">All</ThemedText>
-          </Pressable>
-          <Pressable style={[styles.filterBtn, filter === 'training' && styles.filterBtnActive]} onPress={() => setFilter('training')}>
-            <ThemedText type="labelSm">Training</ThemedText>
-          </Pressable>
-          <Pressable style={[styles.filterBtn, filter === 'summer' && styles.filterBtnActive]} onPress={() => setFilter('summer')}>
-            <ThemedText type="labelSm">Summer Class</ThemedText>
-          </Pressable>
-          <Pressable style={styles.filterBtn} onPress={() => setFilter('all')}>
-            <ThemedText type="labelSm">Top Rated</ThemedText>
-          </Pressable>
-        </View>
-      </View>
-
-      <FlatList
-        data={filtered}
-        keyExtractor={i => i.id}
-        contentContainerStyle={{ padding: 20 }}
-        renderItem={({ item }) => (
-          <Pressable style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderWidth: 1 }]} onPress={() => router.push({ pathname: '/coach/[id]', params: { id: item.id } })}>
-            <Image source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={styles.avatar} contentFit="cover" />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <ThemedText type="headlineSm" numberOfLines={1}>{item.name}</ThemedText>
-              <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>{item.sport}</ThemedText>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <ThemedText type="labelMd">{item.rating} ★</ThemedText>
-            </View>
-          </Pressable>
+      <View className="mt-4 gap-3">
+        {filtered.length === 0 ? (
+          <EmptyState icon="search-outline" title="No coaches found" description="Try a different search or filter." />
+        ) : (
+          filtered.map((c, i) => (
+            <MotionView key={c.id} preset="fade-up" delay={i * 0.05}>
+              <Card
+                variant="elevated"
+                onPress={() => router.push({ pathname: '/coach/[id]', params: { id: c.id } })}
+                className="flex-row items-center gap-3"
+              >
+                <Avatar uri={c.image} name={c.name} size="lg" />
+                <View className="flex-1">
+                  <Text className="font-bold text-foreground" numberOfLines={1}>
+                    {c.name}
+                  </Text>
+                  <Text variant="caption">{c.sport}</Text>
+                  <View className="mt-1.5 flex-row gap-1.5">
+                    {c.classes.map((cl) => (
+                      <Badge key={cl} variant="muted" size="sm">
+                        {cl}
+                      </Badge>
+                    ))}
+                  </View>
+                </View>
+                <View className="items-end gap-1">
+                  <View className="flex-row items-center gap-1">
+                    <Ionicons name="star" size={13} color={t.warning} />
+                    <Text className="font-bold text-sm text-foreground">{c.rating}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={t.mutedForeground} />
+                </View>
+              </Card>
+            </MotionView>
+          ))
         )}
-      />
-    </ThemedView>
+      </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { padding: 20 },
-  controls: { paddingHorizontal: 20 },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 8, backgroundColor: '#f6f8ff' },
-  searchInput: { marginLeft: 8, flex: 1 },
-  filterRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  filterBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: 'transparent' },
-  filterBtnActive: { backgroundColor: '#e6f0ff' },
-  card: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10, marginBottom: 12 },
-  avatar: { width: 56, height: 56, borderRadius: 28 },
-});

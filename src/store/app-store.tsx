@@ -10,7 +10,14 @@ import { Booking, createBooking } from './booking-store';
 import { PublishedTournament, TournamentRegistration, createRegistration } from './tournament-store';
 import { Team, Player, Match, createTeam, createMatch } from './match-store';
 import { PublishedTurf, createTurf } from './turf-store';
-import { OwnerOffer, createOffer, defaultOwnerOffers } from './offer-store';
+import {
+  OwnerOffer,
+  OfferRedemptionResult,
+  createOffer,
+  defaultOwnerOffers,
+  redemptionBlocker,
+  redemptionsLeft,
+} from './offer-store';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
 const KEYS = {
@@ -104,6 +111,9 @@ interface AppStoreContextType {
   // True when the code is free to use (case-insensitive), ignoring `exceptId`
   // so an offer being edited doesn't collide with itself.
   isOfferCodeAvailable: (code: string, exceptId?: string) => boolean;
+  // Claims one redemption against a code. This is the only place the
+  // "first N users" cap is enforced, so all redemption must route through it.
+  redeemOffer: (code: string) => OfferRedemptionResult;
 
   // Loading state
   isLoading: boolean;
@@ -512,6 +522,28 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     [offers]
   );
 
+  /**
+   * Claims a single redemption against an owner offer. Enforces the
+   * "first N users" cap: once `redeemedCount` reaches `maxRedemptions` the
+   * code stops working for everyone afterwards.
+   */
+  const redeemOffer = useCallback(
+    (code: string): OfferRedemptionResult => {
+      const key = code.trim().toUpperCase();
+      const offer = offers.find(o => o.code.toUpperCase() === key);
+      if (!offer) return { ok: false, reason: 'not_found' };
+
+      const blocker = redemptionBlocker(offer);
+      if (blocker) return { ok: false, reason: blocker, offer };
+
+      const claimed = { ...offer, redeemedCount: offer.redeemedCount + 1 };
+      setOffers(prev => persistOffers(prev.map(o => (o.id === offer.id ? claimed : o))));
+
+      return { ok: true, offer: claimed, remaining: redemptionsLeft(claimed) };
+    },
+    [offers]
+  );
+
   // ── Wallet actions ──────────────────────────────────────────────────────────
   const addWalletFunds = useCallback((amount: number) => {
     setWalletBalance(prev => {
@@ -540,7 +572,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       classes, addClass,
       walletBalance, addWalletFunds, deductWalletFunds,
       bids, addBid, removeBid,
-      offers, addOffer, updateOffer, deleteOffer, toggleOfferStatus, isOfferCodeAvailable,
+      offers, addOffer, updateOffer, deleteOffer, toggleOfferStatus, isOfferCodeAvailable, redeemOffer,
       isLoading,
     }}>
       {children}
@@ -598,6 +630,7 @@ export function useOfferStore() {
     deleteOffer,
     toggleOfferStatus,
     isOfferCodeAvailable,
+    redeemOffer,
     isLoading,
   } = useAppStore();
   // `isLoading` is exposed so callers can tell "no offers yet" apart from
@@ -609,6 +642,7 @@ export function useOfferStore() {
     deleteOffer,
     toggleOfferStatus,
     isOfferCodeAvailable,
+    redeemOffer,
     offersLoading: isLoading,
   };
 }

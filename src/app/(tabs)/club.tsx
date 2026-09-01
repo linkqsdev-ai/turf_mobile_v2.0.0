@@ -1,134 +1,66 @@
 import React from 'react';
-import { StyleSheet, View, Pressable, Dimensions } from 'react-native';
+import { View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useTheme } from '@/hooks/use-theme';
-import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
+import { Text } from '@/components/ui/text';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { MotionView } from '@/components/motion';
 
-const { width } = Dimensions.get('window');
+const PERKS = [
+  { icon: 'calendar-outline', label: 'Organise fixtures & venues' },
+  { icon: 'people-outline', label: 'Manage multiple squads' },
+  { icon: 'podium-outline', label: 'Localised leaderboards' },
+] as const;
 
 export default function ClubScreen() {
-  const theme = useTheme();
   const router = useRouter();
 
   return (
-    <ThemedView style={styles.container}>
-      {/* Top Banner Background */}
-      <LinearGradient
-        colors={['#1a1c29', '#0d0e15']}
-        style={styles.gradientBg}
-      >
-        <Image
-          source={require('@/assets/images/illustrations/athletes.png')}
-          style={styles.watermarkBg}
-          contentFit="contain"
-        />
+    <View className="flex-1 bg-background">
+      <LinearGradient colors={['#0A0F0D', '#0E1A15', '#0A0F0D']} className="absolute inset-0" />
+      <View className="absolute -right-16 top-24 h-64 w-64 rounded-full bg-primary/15" />
+      <Image
+        source={require('@/assets/images/illustrations/athletes.png')}
+        style={{ position: 'absolute', bottom: 40, alignSelf: 'center', width: '90%', height: '55%', opacity: 0.06 }}
+        contentFit="contain"
+      />
+      <SafeAreaView edges={['top', 'bottom']} className="flex-1 items-center justify-center px-gutter">
+        <MotionView preset="scale-in" className="w-full max-w-[360px] items-center">
+          <View className="h-28 w-28 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10">
+            <Ionicons name="shield-checkmark" size={56} color="#12E68A" />
+          </View>
+          <Badge variant="primary" className="mt-5">
+            Elite clubs
+          </Badge>
+          <Text variant="title" className="mt-3 text-center text-white">
+            Run your club like a pro
+          </Text>
+          <Text className="mt-2 text-center text-white/60">
+            Organise matches, manage squads and compete on localised leaderboards.
+          </Text>
 
-        <View style={styles.content}>
-          {/* Central Illustration container */}
-          <View style={styles.illustrationContainer}>
-            <View style={styles.shieldWrapper}>
-              <Ionicons name="shield-checkmark" size={60} color="#ffd700" />
-            </View>
+          <View className="mt-6 w-full gap-2.5">
+            {PERKS.map((p) => (
+              <View
+                key={p.label}
+                className="flex-row items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+              >
+                <Ionicons name={p.icon} size={18} color="#12E68A" />
+                <Text className="text-sm text-white/80">{p.label}</Text>
+              </View>
+            ))}
           </View>
 
-          {/* Texts */}
-          <ThemedText style={styles.title}>
-            Elite Clubs
-          </ThemedText>
-
-          <ThemedText style={styles.subtitle}>
-            Organize matches, manage team squads, and compete in localized leaderboards.
-          </ThemedText>
-
-          {/* Back button */}
-          <Pressable
-            onPress={() => router.replace('/(tabs)')}
-            style={styles.actionButton}
-          >
-            <ThemedText style={styles.actionButtonText}>
-              Back to Home
-            </ThemedText>
-          </Pressable>
-        </View>
-      </LinearGradient>
-    </ThemedView>
+          <Button block className="mt-7" onPress={() => router.replace('/(tabs)')}>
+            Back to home
+          </Button>
+        </MotionView>
+      </SafeAreaView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0d0e15',
-  },
-  gradientBg: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  watermarkBg: {
-    position: 'absolute',
-    width: width * 0.9,
-    height: width * 0.9,
-    opacity: 0.05,
-    top: Spacing.xxl * 2,
-  },
-  content: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    maxWidth: 340,
-  },
-  illustrationContainer: {
-    marginBottom: Spacing.md,
-  },
-  shieldWrapper: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 215, 0, 0.3)',
-    shadowColor: '#ffd700',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  title: {
-    color: '#ffffff',
-    fontSize: 28,
-    fontFamily: 'Sora_800ExtraBold',
-    textAlign: 'center',
-    marginBottom: Spacing.sm,
-  },
-  subtitle: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 14,
-    fontFamily: 'Sora_500Medium',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: Spacing.xl,
-  },
-  actionButton: {
-    backgroundColor: '#ffffff',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: BorderRadius.full,
-    width: '100%',
-    alignItems: 'center',
-  },
-  actionButtonText: {
-    color: '#0d0e15',
-    fontSize: 14,
-    fontFamily: 'Sora_700Bold',
-  },
-});
