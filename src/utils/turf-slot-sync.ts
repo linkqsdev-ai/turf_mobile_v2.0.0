@@ -113,7 +113,7 @@ export function computeTurfSlotMetrics(
     const timeNorm = normalizeSlotTime(slotDef.time);
     const configStatus = configuredMap[timeNorm];
     
-    const isConfigBlocked = configStatus === 'blocked' || configStatus === 'maintenance';
+    const isConfigBlocked = configStatus === 'blocked' || configStatus === 'maintenance' || (hasExplicitSlots && configStatus === undefined);
 
     const bookingInfo = bookedSlotsSet.get(timeNorm);
     const isBooked = !!bookingInfo;
@@ -145,9 +145,11 @@ export function computeTurfSlotMetrics(
     };
   });
 
-  const totalConfigured = slots.filter(s => !s.isConfigBlocked).length || 18;
+  const totalConfigured = hasExplicitSlots
+    ? slots.filter(s => configuredMap[normalizeSlotTime(s.time)] !== 'blocked' && configuredMap[normalizeSlotTime(s.time)] !== 'maintenance' && configuredMap[normalizeSlotTime(s.time)] !== undefined).length
+    : slots.filter(s => !s.isConfigBlocked).length || 18;
   const totalBooked = slots.filter(s => s.isBooked).length;
-  const totalPassed = slots.filter(s => s.isPassed && !s.isBooked).length;
+  const totalPassed = slots.filter(s => s.isPassed && !s.isBooked && !s.isConfigBlocked).length;
   const totalAvailable = slots.filter(s => s.isAvailable).length;
   
   const occupancyPct = totalConfigured > 0 ? Math.round(((totalConfigured - totalAvailable) / totalConfigured) * 100) : 0;

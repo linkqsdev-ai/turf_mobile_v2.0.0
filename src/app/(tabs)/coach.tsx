@@ -541,11 +541,14 @@ export default function CoachTab() {
                     ];
 
                     const seenManagedIds = new Set<string>();
+                    const seenManagedNames = new Set<string>();
                     const ALL_MANAGED: any[] = [];
-                    // Place newly added user & backend turfs first, followed by static
-                    [...backendTurfsFormatted, ...userTurfsFormatted, ...STATIC_MANAGED_TURFS].forEach(t => {
-                      if (t && t.id && !seenManagedIds.has(t.id)) {
+                    // Place user turfs first with rich slots, followed by backend & static
+                    [...userTurfsFormatted, ...backendTurfsFormatted, ...STATIC_MANAGED_TURFS].forEach(t => {
+                      const nameKey = (t?.name || '').trim().toLowerCase();
+                      if (t && t.id && !seenManagedIds.has(t.id) && (!nameKey || !seenManagedNames.has(nameKey))) {
                         seenManagedIds.add(t.id);
+                        if (nameKey) seenManagedNames.add(nameKey);
                         ALL_MANAGED.push(t);
                       }
                     });

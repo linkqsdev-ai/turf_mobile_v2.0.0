@@ -40,7 +40,6 @@ import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
 import { AVATAR_KEYS, getAvatarSource } from '@/constants/avatars';
 import { useTheme } from '@/hooks/use-theme';
 import { useTypeRamp } from '@/lib/typography';
-import { searchFoFDirectory } from '@/services/fof-network';
 import { isUsablePhone, normalizePhone, playerIdentity } from '@/store/match-store';
 
 export interface SquadPlayer {
@@ -271,7 +270,6 @@ export function SwapPlayersModal({
   onConfirm,
 }: SwapPlayersModalProps) {
   const theme = useTheme();
-  const type = useTypeRamp();
   const [picked, setPicked] = useState<SquadPlayer | null>(right);
 
   useEffect(() => {
@@ -588,24 +586,33 @@ export interface AddPlayerDraft {
 export interface AddPlayerModalProps {
   visible: boolean;
   onClose: () => void;
-  /** Everyone already in the match, so a duplicate is never offered or accepted. */
+  /** Everyone already in the match, so a duplicate is never accepted. */
   existing: { name: string; phone?: string }[];
   /** Wallet credits paid for supplying a mobile number. */
   creditReward?: number;
+  /** Seed values, e.g. carried over from the picker's search box. */
+  initialName?: string;
+  initialPhone?: string;
   onAdd: (player: AddPlayerDraft) => void;
 }
 
+/**
+ * Create-only. Finding an existing player is the search box's job in the picker
+ * that opens this — by the time this popup is up, the decision to create
+ * somebody new has already been made, so there is nothing to search here.
+ */
 export function AddPlayerModal({
   visible,
   onClose,
   existing,
   creditReward = 5,
+  initialName = '',
+  initialPhone = '',
   onAdd,
 }: AddPlayerModalProps) {
   const theme = useTheme();
   const type = useTypeRamp();
 
-  const [query, setQuery] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [avatarKey, setAvatarKey] = useState<string>(AVATAR_KEYS[0]);
@@ -615,9 +622,17 @@ export function AddPlayerModal({
 
   useEffect(() => {
     if (visible) {
-      setQuery(''); setName(''); setPhone('');
-      setAvatarKey(AVATAR_KEYS[0]); setError(null);
+      setName(initialName);
+      setPhone(initialPhone);
+      setAvatarKey(AVATAR_KEYS[0]);
+      setError(null);
+      // Focus whichever field the picker's search did NOT already fill.
+      requestAnimationFrame(() => {
+        if (initialName && !initialPhone) phoneRef.current?.focus();
+        else if (!initialName) nameRef.current?.focus();
+      });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const isTaken = useMemo(() => {
@@ -625,46 +640,9 @@ export function AddPlayerModal({
     return (candidate: { name: string; phone?: string }) => taken.has(playerIdentity(candidate));
   }, [existing]);
 
-  /**
-   * Directory lookup. `searchFoFDirectory` matches on phone digits (3+) as well
-   * as name, so a number is a first-class way to find someone — anyone already
-   * in the match is filtered out so they can't be added twice.
-   */
-  const results = useMemo(() => {
-    const q = query.trim();
-    if (q.length < 3) return [];
-    return searchFoFDirectory(q)
-      .filter(p => !isTaken({ name: p.name, phone: p.phone }))
-      .slice(0, 5);
-  }, [query, isTaken]);
-
   const trimmedName = name.trim();
   const phoneOk = isUsablePhone(phone);
   const canAdd = trimmedName.length > 0;
-
-  /** A query of mostly digits is a phone lookup, otherwise it's a name. */
-  const queryLooksLikePhone = query.replace(/\D/g, '').length >= 6;
-
-  /**
-   * Nothing matched the search, so turn the query into the start of a new
-   * player: a number goes to the mobile field (and lights the credit banner), a
-   * name goes to the name field. The search box clears so the create form is
-   * unambiguously what the user is now filling in.
-   */
-  const adoptQuery = () => {
-    const q = query.trim();
-    if (!q) return;
-    if (queryLooksLikePhone) {
-      setPhone(q);
-      setQuery('');
-      // The number is captured; the name is what's still missing.
-      requestAnimationFrame(() => nameRef.current?.focus());
-    } else {
-      setName(q);
-      setQuery('');
-      requestAnimationFrame(() => phoneRef.current?.focus());
-    }
-  };
 
   const submit = () => {
     if (!canAdd) return;
@@ -685,81 +663,11 @@ export function AddPlayerModal({
       onClose={onClose}
       icon="person-add"
       title="Add Player"
-      subtitle="Search by number or name, or enter someone new"
+      subtitle="Name them, pick a look, and add a mobile number"
       primaryLabel="Add Player"
       primaryEnabled={canAdd}
       onPrimary={submit}
     >
-      {/* ── Find an existing player ── */}
-      <SectionLabel>FIND A PLAYER</SectionLabel>
-      <View style={[styles.search, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}>
-        <Ionicons
-          name={query.replace(/\D/g, '').length >= 3 ? 'call-outline' : 'search'}
-          size={14}
-          color={theme.textSecondary}
-        />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Mobile number or name"
-          placeholderTextColor={theme.placeholder}
-          style={[
-            styles.searchInput,
-            type.body,
-            { color: theme.text },
-            Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
-          ]}
-        />
-      </View>
-
-      {results.length > 0 && (
-        <View style={{ gap: 6 }}>
-          {results.map(p => (
-            <PlayerRow
-              key={p.id}
-              player={{ id: p.id, name: p.name, role: p.team, jerseyNumber: undefined }}
-              onPress={() => onAdd({ name: p.name, phone: p.phone })}
-              trailing={<Ionicons name="add-circle" size={18} color={theme.primary} />}
-            />
-          ))}
-        </View>
-      )}
-      {/* No directory match — offer to create them, carrying the search term
-          straight into the right field so nothing has to be typed twice. */}
-      {query.trim().length >= 3 && results.length === 0 && (
-        <Pressable
-          onPress={adoptQuery}
-          style={({ pressed }) => [
-            styles.notFound,
-            { borderColor: theme.primary + '55', backgroundColor: theme.primary + '0D', opacity: pressed ? 0.75 : 1 },
-          ]}
-        >
-          <View style={[styles.notFoundIcon, { backgroundColor: theme.primary + '1F' }]}>
-            <Ionicons name="person-add" size={15} color={theme.primary} />
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <ThemedText style={[type.bodyStrong, { color: theme.primary }]} numberOfLines={1}>
-              {queryLooksLikePhone
-                ? `Add a player with ${query.trim()}`
-                : `Add “${query.trim()}” as a new player`}
-            </ThemedText>
-            <ThemedText style={[type.micro, { color: theme.textSecondary, marginTop: 1 }]} numberOfLines={1}>
-              {queryLooksLikePhone
-                ? 'Not in the directory — we’ll keep this number'
-                : 'Not in the directory — we’ll keep this name'}
-            </ThemedText>
-          </View>
-          <Ionicons name="arrow-forward" size={15} color={theme.primary} />
-        </Pressable>
-      )}
-
-      {/* ── Or create someone new ── */}
-      <View style={styles.orRow}>
-        <View style={[styles.orLine, { backgroundColor: theme.outlineVariant + '55' }]} />
-        <ThemedText style={[type.micro, { color: theme.textSecondary }]}>OR ADD SOMEONE NEW</ThemedText>
-        <View style={[styles.orLine, { backgroundColor: theme.outlineVariant + '55' }]} />
-      </View>
-
       {/* Avatar + name side by side, so the identity reads as one unit. */}
       <View style={styles.identityRow}>
         <Image source={getAvatarSource(avatarKey)} style={styles.identityAvatar} contentFit="cover" />

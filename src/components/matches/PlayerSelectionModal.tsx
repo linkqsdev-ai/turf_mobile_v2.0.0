@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,6 +39,7 @@ import {
 } from '@/store/match-store';
 import { useWalletStore } from '@/store/app-store';
 import { AddPlayerModal } from '@/components/scoring/squad-modals';
+import { searchFoFDirectory } from '@/services/fof-network';
 
 /** Wallet credits paid the first time a player is added with a mobile number. */
 const CREDIT_REWARD = 5;
@@ -143,6 +146,9 @@ export function PlayerSelectionModal({
     teamB: initialTeamB,
   });
   const [addModalOpen, setAddModalOpen] = useState(false);
+  /** Seeds handed to the create popup when a search finds nobody. */
+  const [addSeed, setAddSeed] = useState<{ name: string; phone: string }>({ name: '', phone: '' });
+  const [searchQuery, setSearchQuery] = useState('');
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
@@ -254,6 +260,7 @@ export function PlayerSelectionModal({
       };
       setBuckets((prev) => ({ ...prev, master: [...prev.master, player] }));
       setAddModalOpen(false);
+      setSearchQuery('');
       setDuplicateWarning(null);
 
       // The incentive is paid once per number, so re-adding the same person
@@ -269,6 +276,31 @@ export function PlayerSelectionModal({
     },
     [isAlreadyIn, addWalletFunds]
   );
+
+  const queryLooksLikePhone = searchQuery.replace(/\D/g, '').length >= 6;
+
+  /**
+   * Directory lookup lives here rather than in the popup: searching is how you
+   * find someone who already exists, and the popup's only job is creating
+   * someone who doesn't. Matches on phone digits (3+) as well as name.
+   */
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim();
+    if (q.length < 3) return [];
+    return searchFoFDirectory(q)
+      .filter((p) => !isAlreadyIn({ name: p.name, phone: p.phone }))
+      .slice(0, 4);
+  }, [searchQuery, isAlreadyIn]);
+
+  /** Opens the create-only popup, carrying whatever was typed into the search. */
+  const openAddPlayer = useCallback((seed: string) => {
+    const q = seed.trim();
+    const digits = q.replace(/\D/g, '');
+    setAddSeed(
+      digits.length >= 6 ? { name: '', phone: q } : { name: q, phone: '' }
+    );
+    setAddModalOpen(true);
+  }, []);
 
   /**
    * Every bubble carries explicit one-tap targets for the moves that make
@@ -381,29 +413,79 @@ export function PlayerSelectionModal({
               players={buckets.master}
               emptyLabel="No players yet — add one below."
             >
-              {/* Adding a player opens the full Add Player popup — same shell
-                  as the batsmen/bowler squad popups, with avatar, mobile +
-                  credit incentive, name, and directory search. */}
-              <Pressable
-                onPress={() => setAddModalOpen(true)}
-                style={({ pressed }) => [
-                  styles.addCta,
-                  { backgroundColor: bubble, opacity: pressed ? 0.75 : 1 },
-                ]}
-              >
-                <View style={[styles.addCtaIcon, { backgroundColor: theme.primary + '18' }]}>
+              {/* Finding an existing player happens HERE. The Add Player popup
+                  is create-only; it opens (pre-filled) when nothing matches. */}
+              <View style={[styles.addRow, { backgroundColor: bubble }]}>
+                <Ionicons
+                  name={queryLooksLikePhone ? 'call-outline' : 'search-outline'}
+                  size={14}
+                  color={theme.textSecondary}
+                />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={(t) => { setSearchQuery(t); if (duplicateWarning) setDuplicateWarning(null); }}
+                  placeholder="Search by mobile number or name"
+                  placeholderTextColor={theme.placeholder}
+                  style={[
+                    styles.addInput,
+                    { color: bubbleText },
+                    Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
+                  ]}
+                  returnKeyType="search"
+                />
+                <Pressable
+                  onPress={() => openAddPlayer(searchQuery)}
+                  accessibilityLabel="Add a new player"
+                  style={[styles.addBtn, { backgroundColor: theme.primary }]}
+                >
+                  <Ionicons name="person-add" size={14} color="#ffffff" />
+                </Pressable>
+              </View>
+
+              {/* Directory matches — tap to add straight into the pool. */}
+              {searchResults.length > 0 && (
+                <View style={styles.suggestList}>
+                  {searchResults.map((s) => (
+                    <Pressable
+                      key={s.id}
+                      onPress={() => commitPlayer({ name: s.name, phone: s.phone })}
+                      style={({ pressed }) => [
+                        styles.suggestRow,
+                        { backgroundColor: bubble, opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <ThemedText style={[styles.suggestName, { color: bubbleText }]} numberOfLines={1}>
+                          {s.name}
+                        </ThemedText>
+                        <ThemedText style={[styles.suggestMeta, { color: theme.textSecondary }]} numberOfLines={1}>
+                          {s.phone} · {s.team}
+                        </ThemedText>
+                      </View>
+                      <Ionicons name="add-circle" size={18} color={theme.primary} />
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
+              {/* Nothing matched — hand the query to the create popup. */}
+              {searchQuery.trim().length >= 3 && searchResults.length === 0 && (
+                <Pressable
+                  onPress={() => openAddPlayer(searchQuery)}
+                  style={({ pressed }) => [
+                    styles.notFound,
+                    { borderColor: theme.primary + '55', opacity: pressed ? 0.75 : 1 },
+                  ]}
+                >
                   <Ionicons name="person-add" size={14} color={theme.primary} />
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <ThemedText style={[styles.addCtaTitle, { color: bubbleText }]} numberOfLines={1}>
-                    Add a player
+                  <ThemedText style={[styles.notFoundText, { color: theme.primary }]} numberOfLines={1}>
+                    {queryLooksLikePhone
+                      ? `Add a player with ${searchQuery.trim()}`
+                      : `Add “${searchQuery.trim()}” as a new player`}
                   </ThemedText>
-                  <ThemedText style={[styles.addCtaSub, { color: theme.textSecondary }]} numberOfLines={1}>
-                    Search by number or name · +{CREDIT_REWARD} credits
-                  </ThemedText>
-                </View>
-                <Ionicons name="chevron-forward" size={15} color={theme.textSecondary} />
-              </Pressable>
+                  <Ionicons name="arrow-forward" size={14} color={theme.primary} />
+                </Pressable>
+              )}
 
               {creditToast && (
                 <View style={styles.warnRow}>
@@ -468,6 +550,8 @@ export function PlayerSelectionModal({
             onClose={() => setAddModalOpen(false)}
             existing={everyone}
             creditReward={CREDIT_REWARD}
+            initialName={addSeed.name}
+            initialPhone={addSeed.phone}
             onAdd={commitPlayer}
           />
 
@@ -800,6 +884,33 @@ const styles = StyleSheet.create({
   addCtaIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   addCtaTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 12 },
   addCtaSub: { fontFamily: 'Sora_400Regular', fontSize: 9.5, marginTop: 1 },
+
+  // Directory results for the picker's search box.
+  suggestList: { marginTop: 6, gap: 5 },
+  suggestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 12,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  suggestName: { fontFamily: 'Sora_600SemiBold', fontSize: 11.5 },
+  suggestMeta: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
+
+  // "Nobody matched" — routes the query into the create-only popup.
+  notFound: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    marginTop: 6,
+  },
+  notFoundText: { fontFamily: 'Sora_600SemiBold', fontSize: 11, flex: 1, minWidth: 0 },
   addBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
 
   // ── Footer ─────────────────────────────────────────────────────────────

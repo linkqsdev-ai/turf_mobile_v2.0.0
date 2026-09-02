@@ -687,10 +687,13 @@ export default function ExploreScreen() {
                 ];
 
                 const seenIds = new Set<string>();
+                const seenNames = new Set<string>();
                 const ALL_TURFS: any[] = [];
-                [...backendFormattedTurfs, ...userFormattedTurfs, ...STATIC_TURFS].forEach(t => {
-                  if (t && t.id && !seenIds.has(t.id)) {
+                [...userFormattedTurfs, ...backendFormattedTurfs, ...STATIC_TURFS].forEach(t => {
+                  const nameKey = (t?.name || '').trim().toLowerCase();
+                  if (t && t.id && !seenIds.has(t.id) && (!nameKey || !seenNames.has(nameKey))) {
                     seenIds.add(t.id);
+                    if (nameKey) seenNames.add(nameKey);
                     ALL_TURFS.push(t);
                   }
                 });

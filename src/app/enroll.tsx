@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Alert, View, Pressable, ScrollView, TextInput } from 'react-native';
+import { Alert, View, Pressable, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -13,6 +13,7 @@ import { Chip } from '@/components/ui/chip';
 import { Section } from '@/components/ui/section';
 import { Separator } from '@/components/ui/separator';
 import { MotionView } from '@/components/motion';
+import { useTokens } from '@/hooks/use-scheme';
 import { useOfferStore, useClassStore } from '@/store/app-store';
 import { getOffersForTurf, formatDiscount, isRedeemable, OwnerOffer } from '@/store/offer-store';
 
@@ -21,6 +22,8 @@ export default function EnrollScreen() {
   const params = useLocalSearchParams();
   const { offers } = useOfferStore();
   const { enrollInClass } = useClassStore();
+  // Icon colours can't take className, so pull the same tokens the classes use.
+  const t = useTokens();
 
   const title = (params.title as string) || 'Summer Camp Enrollment';
   const priceRaw = (params.price as string) || '4999';
@@ -144,13 +147,20 @@ export default function EnrollScreen() {
           <View className="flex-1">
             <Text variant="caption">Total incl. taxes</Text>
             <View className="flex-row items-baseline gap-2">
-              <Text className="font-semibold text-lg text-foreground">₹{total}</Text>
+              <Text variant="heading">₹{total}</Text>
               {discountAmount > 0 && (
-                <Text className="text-xs line-through text-muted-foreground">₹{basePrice + serviceFee}</Text>
+                <Text variant="caption" className="line-through">
+                  ₹{basePrice + serviceFee}
+                </Text>
               )}
             </View>
           </View>
-          <Button className="px-7" leftIcon={<Ionicons name="card-outline" size={17} color="#04140D" />} onPress={handleEnroll}>
+          <Button
+            className="px-7"
+            leftIcon={<Ionicons name="card-outline" size={17} color={t.primaryForeground} />}
+            onPress={handleEnroll}
+            accessibilityLabel={`Pay ₹${total} and enrol`}
+          >
             Pay &amp; enrol
           </Button>
         </View>
@@ -158,23 +168,32 @@ export default function EnrollScreen() {
     >
       <MotionView preset="fade-up" className="mt-3 h-48 overflow-hidden rounded-2xl">
         <Image source={imageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+        {/* Scrim keeps the title legible over any class photo. White here is
+            deliberate — it sits on the image, not on the themed surface. */}
         <View className="absolute inset-0 justify-end bg-black/45 p-4">
-          <Text className="font-semibold text-lg text-white">{title}</Text>
-          <View className="mt-2 flex-row gap-4">
+          <Text variant="heading" className="text-white" numberOfLines={2}>
+            {title}
+          </Text>
+          <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-1">
             <View className="flex-row items-center gap-1">
               <Ionicons name="calendar-outline" size={13} color="#ffffffaa" />
-              <Text className="text-xs text-white/80">{dates}</Text>
+              <Text variant="caption" className="text-white/80">
+                {dates}
+              </Text>
             </View>
             <View className="flex-row items-center gap-1">
               <Ionicons name="location-outline" size={13} color="#ffffffaa" />
-              <Text className="text-xs text-white/80">{location}</Text>
+              <Text variant="caption" className="text-white/80">
+                {location}
+              </Text>
             </View>
           </View>
         </View>
       </MotionView>
 
-      <Section title="Participant details" className="mt-6">
-        <Card variant="elevated" className="gap-4">
+      <MotionView preset="fade-up" delay={0.04}>
+        <Section title="Participant details" className="mt-6">
+          <Card variant="elevated" className="gap-4">
           <Input label="Full name" placeholder="e.g. Rahul Sharma" value={name} onChangeText={setName} />
           <View className="flex-row gap-3">
             <Input
@@ -209,105 +228,129 @@ export default function EnrollScreen() {
                 />
               ))}
             </View>
-          </View>
-        </Card>
-      </Section>
+            </View>
+          </Card>
+        </Section>
+      </MotionView>
 
       {/* Available Vouchers & Promo Code Section */}
-      <Section title="Promotions & Vouchers" className="mt-6">
-        <Card variant="elevated" className="gap-3 p-4">
-          <View className="flex-row items-center gap-2">
-            <View className="flex-1 flex-row items-center bg-surface-low rounded-xl px-3 py-2 border border-border/40">
-              <Ionicons name="pricetag-outline" size={16} color="#10b981" style={{ marginRight: 6 }} />
-              <TextInput
+      <MotionView preset="fade-up" delay={0.08}>
+        <Section title="Promotions & Vouchers" className="mt-6">
+          <Card variant="elevated" className="gap-3">
+            <View className="flex-row items-end gap-2">
+              <Input
+                containerClassName="flex-1"
+                label="Promo code"
                 value={promoInput}
-                onChangeText={(t) => {
-                  setPromoInput(t);
+                onChangeText={(v) => {
+                  setPromoInput(v);
                   if (promoError) setPromoError('');
                 }}
-                placeholder="Enter Promo Code"
-                placeholderTextColor="#94a3b8"
+                placeholder="Enter promo code"
                 autoCapitalize="characters"
-                style={{ flex: 1, fontSize: 13, fontWeight: '500', color: '#111827' }}
+                error={promoError || undefined}
+                leftSlot={<Ionicons name="pricetag-outline" size={16} color={t.success} />}
+                rightSlot={
+                  appliedOffer ? (
+                    <Pressable
+                      onPress={handleRemovePromo}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove code ${appliedOffer.code}`}
+                    >
+                      <Ionicons name="close-circle" size={18} color={t.destructive} />
+                    </Pressable>
+                  ) : undefined
+                }
               />
-              {appliedOffer && (
-                <Pressable onPress={handleRemovePromo} hitSlop={8}>
-                  <Ionicons name="close-circle" size={18} color="#ef4444" />
-                </Pressable>
-              )}
-            </View>
-            <Pressable
-              onPress={() => handleApplyPromo()}
-              className="bg-primary px-4 py-2.5 rounded-xl justify-center items-center"
-            >
-              <Text className="text-white text-xs font-bold">
+              <Button
+                variant={appliedOffer ? 'outline' : 'primary'}
+                size="md"
+                onPress={() => handleApplyPromo()}
+                disabled={!!appliedOffer}
+                accessibilityLabel="Apply promo code"
+              >
                 {appliedOffer ? 'Applied' : 'Apply'}
-              </Text>
-            </Pressable>
-          </View>
+              </Button>
+            </View>
 
-          {promoError ? (
-            <Text className="text-xs text-red-500 font-medium">{promoError}</Text>
-          ) : null}
-
-          {appliedOffer && (
-            <View className="flex-row items-center justify-between bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/30">
-              <View className="flex-row items-center gap-2">
-                <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-                <Text className="text-xs font-bold text-emerald-700">
-                  {appliedOffer.code} Applied ({formatDiscount(appliedOffer)})
+            {appliedOffer && (
+              <View className="flex-row items-center justify-between rounded-xl border border-success/30 bg-success/10 p-2.5">
+                <View className="flex-1 flex-row items-center gap-2">
+                  <Ionicons name="checkmark-circle" size={16} color={t.success} />
+                  <Text variant="callout" className="flex-1 text-success" numberOfLines={2}>
+                    {appliedOffer.code} applied ({formatDiscount(appliedOffer)})
+                  </Text>
+                </View>
+                <Text variant="callout" className="text-success">
+                  -₹{discountAmount}
                 </Text>
               </View>
-              <Text className="text-xs font-bold text-emerald-700">-₹{discountAmount}</Text>
-            </View>
-          )}
+            )}
 
-          {classOffers.length > 0 && !appliedOffer && (
-            <View className="mt-2">
-              <Text variant="caption" className="text-muted-foreground mb-2">Available Offers:</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                {classOffers.map((o) => (
-                  <Pressable
-                    key={o.id}
-                    onPress={() => handleApplyPromo(o.code)}
-                    className="flex-row items-center gap-2 bg-surface-low px-3 py-2 rounded-xl border border-border/40"
-                  >
-                    <View className="bg-emerald-500/15 px-2 py-0.5 rounded-md">
-                      <Text className="text-[10px] font-bold text-emerald-600">{formatDiscount(o)}</Text>
-                    </View>
-                    <Text className="text-xs font-bold text-foreground">{o.code}</Text>
-                    <Ionicons name="arrow-forward-circle-outline" size={14} color="#10b981" />
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-        </Card>
-      </Section>
+            {classOffers.length > 0 && !appliedOffer && (
+              <View className="gap-2">
+                <Text variant="overline">Available offers</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 8 }}
+                >
+                  {classOffers.map((o) => (
+                    <Pressable
+                      key={o.id}
+                      onPress={() => handleApplyPromo(o.code)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Apply ${o.code}, ${formatDiscount(o)}`}
+                      className="flex-row items-center gap-2 rounded-xl border border-border/40 bg-muted px-3 py-2"
+                    >
+                      <View className="rounded-md bg-success/15 px-2 py-0.5">
+                        <Text variant="caption" className="text-success">
+                          {formatDiscount(o)}
+                        </Text>
+                      </View>
+                      <Text variant="callout">{o.code}</Text>
+                      <Ionicons name="arrow-forward-circle-outline" size={14} color={t.success} />
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </Card>
+        </Section>
+      </MotionView>
 
-      <Section title="Payment summary" className="my-6">
-        <Card variant="elevated" className="gap-2.5">
-          <View className="flex-row justify-between">
-            <Text variant="subtle">Enrollment fee</Text>
-            <Text className="font-semibold text-foreground">₹{basePrice}</Text>
-          </View>
-          <View className="flex-row justify-between">
-            <Text variant="subtle">Taxes &amp; service fee</Text>
-            <Text className="font-semibold text-foreground">₹{serviceFee}</Text>
-          </View>
-          {discountAmount > 0 && (
+      <MotionView preset="fade-up" delay={0.16}>
+        <Section title="Payment summary" className="my-6">
+          <Card variant="elevated" className="gap-2.5">
             <View className="flex-row justify-between">
-              <Text className="text-emerald-600 font-semibold text-sm">Voucher Discount ({appliedOffer?.code})</Text>
-              <Text className="font-bold text-emerald-600 text-sm">-₹{discountAmount}</Text>
+              <Text variant="subtle">Enrollment fee</Text>
+              <Text variant="callout">₹{basePrice}</Text>
             </View>
-          )}
-          <Separator className="my-1" />
-          <View className="flex-row justify-between">
-            <Text variant="subheading">Total due</Text>
-            <Text className="font-semibold text-base text-primary">₹{total}</Text>
-          </View>
-        </Card>
-      </Section>
+            <View className="flex-row justify-between">
+              <Text variant="subtle">Taxes &amp; service fee</Text>
+              <Text variant="callout">₹{serviceFee}</Text>
+            </View>
+            {discountAmount > 0 && (
+              <View className="flex-row justify-between gap-3">
+                <Text variant="subtle" className="flex-1 text-success" numberOfLines={1}>
+                  Voucher discount ({appliedOffer?.code})
+                </Text>
+                <Text variant="callout" className="text-success">
+                  -₹{discountAmount}
+                </Text>
+              </View>
+            )}
+            <Separator className="my-1" />
+            <View className="flex-row justify-between">
+              <Text variant="subheading">Total due</Text>
+              <Text variant="subheading" className="text-primary">
+                ₹{total}
+              </Text>
+            </View>
+          </Card>
+        </Section>
+      </MotionView>
     </Screen>
   );
 }
