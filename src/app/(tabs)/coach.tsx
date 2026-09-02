@@ -640,46 +640,43 @@ export default function CoachTab() {
                             </View>
                           </View>
 
-                          {/* 7 Day Cards Row */}
-                          <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={{ gap: 5, paddingVertical: 1 }}
-                          >
+                          {/* 7 Day Non-Scrolling Fixed Grid */}
+                          <View style={{ flexDirection: 'row', gap: 4, marginTop: 1 }}>
                             {Array.from({ length: 7 }, (_, i) => {
                               const d = new Date();
                               d.setDate(d.getDate() + i);
                               const metrics = computeTurfSlotMetrics((turf as any).rawTurf || turf, d, bookings || []);
                               const isToday = i === 0;
-                              const dayName = isToday ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' });
+                              const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
                               const dateNum = d.getDate();
 
                               return (
                                 <View
                                   key={i}
                                   style={{
-                                    width: 70,
-                                    backgroundColor: theme.surfaceLowest,
-                                    borderRadius: 7,
+                                    flex: 1,
+                                    backgroundColor: isToday ? theme.primary + '0c' : theme.surfaceLowest,
+                                    borderRadius: 6,
                                     paddingVertical: 5,
-                                    paddingHorizontal: 4,
+                                    paddingHorizontal: 1,
                                     borderWidth: 1,
-                                    borderColor: isToday ? theme.primary + '60' : theme.outlineVariant + '25',
+                                    borderColor: isToday ? theme.primary + '60' : theme.outlineVariant + '22',
                                     alignItems: 'center',
-                                    gap: 2,
+                                    justifyContent: 'space-between',
                                   }}
                                 >
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2.5 }}>
-                                    <ThemedText style={{ fontSize: 8.5, fontFamily: isToday ? 'Sora_600SemiBold' : 'Sora_500Medium', color: isToday ? theme.primary : theme.textSecondary }}>
-                                      {dayName}
+                                  {/* Day & Date Header */}
+                                  <View style={{ alignItems: 'center' }}>
+                                    <ThemedText style={{ fontSize: 7.5, fontFamily: isToday ? 'Sora_600SemiBold' : 'Sora_500Medium', color: isToday ? theme.primary : theme.textSecondary }}>
+                                      {isToday ? 'TODAY' : dayName.toUpperCase()}
                                     </ThemedText>
-                                    <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: theme.text, marginTop: 0.5 }}>
                                       {dateNum}
                                     </ThemedText>
                                   </View>
 
                                   {/* Mini 2-part colored progress bar */}
-                                  <View style={{ width: '100%', height: 3, borderRadius: 1.5, backgroundColor: theme.outlineVariant + '28', overflow: 'hidden', flexDirection: 'row', marginVertical: 1 }}>
+                                  <View style={{ width: '84%', height: 2.5, borderRadius: 1.5, backgroundColor: theme.outlineVariant + '28', overflow: 'hidden', flexDirection: 'row', marginVertical: 3 }}>
                                     {metrics.totalBooked > 0 && (
                                       <View
                                         style={{
@@ -700,19 +697,19 @@ export default function CoachTab() {
                                     )}
                                   </View>
 
-                                  {/* Slot counts */}
-                                  <View style={{ width: '100%', alignItems: 'center', gap: 1 }}>
-                                    <ThemedText style={{ fontSize: 8, color: '#059669', fontFamily: 'Sora_500Medium' }}>
-                                      {metrics.totalAvailable} Avail
+                                  {/* Available & Booked slot counts */}
+                                  <View style={{ alignItems: 'center', gap: 0.5 }}>
+                                    <ThemedText style={{ fontSize: 8, color: '#059669', fontFamily: 'Sora_600SemiBold' }}>
+                                      {metrics.totalAvailable} <ThemedText style={{ fontSize: 6.5, color: '#059669', fontFamily: 'Sora_400Regular' }}>avail</ThemedText>
                                     </ThemedText>
-                                    <ThemedText style={{ fontSize: 7.5, color: metrics.totalBooked > 0 ? '#7c3aed' : theme.textSecondary + 'aa', fontFamily: 'Sora_400Regular' }}>
-                                      {metrics.totalBooked} Booked
+                                    <ThemedText style={{ fontSize: 7.5, color: metrics.totalBooked > 0 ? '#7c3aed' : theme.textSecondary + '77', fontFamily: 'Sora_500Medium' }}>
+                                      {metrics.totalBooked} <ThemedText style={{ fontSize: 6.5, color: theme.textSecondary + '77', fontFamily: 'Sora_400Regular' }}>bkd</ThemedText>
                                     </ThemedText>
                                   </View>
                                 </View>
                               );
                             })}
-                          </ScrollView>
+                          </View>
                         </View>
 
                         {/* Action Buttons Row */}
