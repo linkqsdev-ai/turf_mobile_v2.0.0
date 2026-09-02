@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   title: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 16,
     color: '#ffffff',
     marginBottom: 3,
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   titleVertical: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 18,
     color: '#ffffff',
     marginBottom: 5,
@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
   },
   highlightText: {
     fontSize: 9.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.4,
   },
   button: {
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
     }),
   },
   buttonText: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 11,
     letterSpacing: 0.2,
   },

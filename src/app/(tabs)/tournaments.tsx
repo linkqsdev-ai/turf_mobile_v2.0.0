@@ -268,7 +268,7 @@ export default function TournamentsScreen() {
               />
             </Pressable>
             <View style={styles.headerTextGroup}>
-              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', lineHeight: 18 }}>
+              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'Sora_500Medium', lineHeight: 18 }}>
                 {profile.name}
               </ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
@@ -332,7 +332,7 @@ export default function TournamentsScreen() {
                       type="labelMd"
                       style={{
                         color: isSelected ? '#ffffff' : theme.textSecondary,
-                        fontFamily: 'Sora_600SemiBold',
+                        fontFamily: 'Sora_500Medium',
                         fontSize: 10,
                         letterSpacing: 0.2,
                       }}
@@ -386,7 +386,7 @@ export default function TournamentsScreen() {
               onPress={() => setSortBy(sortBy === 'Date' ? 'Prize' : 'Date')}
             >
               <Ionicons name="swap-vertical" size={12} color={theme.text} style={{ marginRight: 2 }} />
-              <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '600' }}>
+              <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '500' }}>
                 {sortBy === 'Date' ? 'Date' : 'Prize'}
               </ThemedText>
             </Pressable>
@@ -516,7 +516,7 @@ export default function TournamentsScreen() {
                               {t.isLive ? null : (
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                   <ThemedText style={[
-                                    { fontSize: 8.5, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.2 },
+                                    { fontSize: 8.5, fontFamily: 'Sora_500Medium', letterSpacing: 0.2 },
                                     t.registrationStatus === 'Registering' && { color: '#0f9f58' },
                                     t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
                                     t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
@@ -556,7 +556,7 @@ export default function TournamentsScreen() {
                                 <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9.5, fontFamily: 'Sora_400Regular' }}>
                                   Registration Progress
                                 </ThemedText>
-                                <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 10 }}>
+                                <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 10 }}>
                                   {t.teamsCount}/{t.maxTeams} Teams
                                 </ThemedText>
                               </View>
@@ -576,7 +576,7 @@ export default function TournamentsScreen() {
                               <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 6.5, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>Prize Pool</ThemedText>
                               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 1 }}>
                                 <Image source={require('@/assets/images/illustrations/wallet_blue.png')} style={{ width: 13, height: 13 }} contentFit="contain" />
-                                <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold', textAlign: 'center', fontSize: 12 }}>
+                                <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium', textAlign: 'center', fontSize: 12 }}>
                                   {t.prizePool}
                                 </ThemedText>
                               </View>
@@ -595,7 +595,7 @@ export default function TournamentsScreen() {
                                 params: { id: t.id, name: t.name }
                               })}
                             >
-                              <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 10 }}>Register</ThemedText>
+                              <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 10 }}>Register</ThemedText>
                             </Pressable>
                           </View>
                         </Pressable>
@@ -650,7 +650,7 @@ export default function TournamentsScreen() {
                               {t.isLive ? null : (
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                   <ThemedText style={[
-                                    { fontSize: 8.5, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.2 },
+                                    { fontSize: 8.5, fontFamily: 'Sora_500Medium', letterSpacing: 0.2 },
                                     t.registrationStatus === 'Registering' && { color: '#0f9f58' },
                                     t.registrationStatus === 'Filling Fast' && { color: '#e67e22' },
                                     t.registrationStatus === 'Upcoming' && { color: '#2980b9' },
@@ -665,7 +665,7 @@ export default function TournamentsScreen() {
                             <ThemedText
                               type="bodyMd"
                               numberOfLines={1}
-                              style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', marginTop: 4 }}
+                              style={{ color: theme.text, fontFamily: 'Sora_500Medium', marginTop: 4 }}
                             >
                               {t.name}
                             </ThemedText>
@@ -688,7 +688,7 @@ export default function TournamentsScreen() {
                             <View style={{ marginTop: 6 }}>
                               <View style={styles.progressTextRow}>
                                 <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8 }}>Progress</ThemedText>
-                                <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '600', fontSize: 9 }}>
+                                <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '500', fontSize: 9 }}>
                                   {t.teamsCount}/{t.maxTeams}
                                 </ThemedText>
                               </View>
@@ -705,7 +705,7 @@ export default function TournamentsScreen() {
                           <View style={styles.gridCardFooter}>
                             <View style={[styles.gridPriceHighlight, { backgroundColor: theme.primary + '0a', borderColor: theme.primary + '22' }]}>
                               <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 7 }}>Prize</ThemedText>
-                              <ThemedText type="bodySm" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>
+                              <ThemedText type="bodySm" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium', fontSize: 11 }}>
                                 {t.prizePool}
                               </ThemedText>
                             </View>
@@ -717,7 +717,7 @@ export default function TournamentsScreen() {
                                 params: { id: t.id, name: t.name }
                               })}
                             >
-                              <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '600', fontSize: 9 }}>Register</ThemedText>
+                              <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '500', fontSize: 9 }}>Register</ThemedText>
                             </Pressable>
                           </View>
                         </Pressable>

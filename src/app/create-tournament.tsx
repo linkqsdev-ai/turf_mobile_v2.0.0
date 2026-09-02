@@ -577,7 +577,7 @@ export default function CreateTournamentScreen() {
                     ]}
                   >
                     <Ionicons name={form.selectedGround === g ? "checkmark-circle" : "ellipse-outline"} size={16} color={form.selectedGround === g ? theme.primary : theme.textSecondary} />
-                    <ThemedText style={{ marginLeft: 8, color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>{g}</ThemedText>
+                    <ThemedText style={{ marginLeft: 8, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 13 }}>{g}</ThemedText>
                   </Pressable>
                 ))}
               </View>
@@ -821,7 +821,7 @@ export default function CreateTournamentScreen() {
             </Pressable>
             
             <Pressable style={[styles.draftBtn, { paddingVertical: 4, paddingLeft: 2, paddingRight: 4 }]} onPress={handleSaveDraft}>
-              <ThemedText type="labelSm" style={{ color: theme.secondaryContainer, fontFamily: 'Sora_600SemiBold' }}>Save Draft</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.secondaryContainer, fontFamily: 'Sora_500Medium' }}>Save Draft</ThemedText>
             </Pressable>
           </View>
         </View>
@@ -902,12 +902,12 @@ export default function CreateTournamentScreen() {
                   {form.sportType === 'Football' && <MaterialCommunityIcons name="soccer" size={11} color={theme.secondary} />}
                   {form.sportType === 'Cricket' && <MaterialCommunityIcons name="cricket" size={11} color={theme.secondary} />}
                   {form.sportType === 'Tennis' && <MaterialCommunityIcons name="tennis" size={11} color={theme.secondary} />}
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, marginLeft: 4, fontWeight: '600' }}>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, marginLeft: 4, fontWeight: '500' }}>
                     {form.sportType.toUpperCase()}
                   </ThemedText>
                 </View>
 
-                <ThemedText type="bodyLg" numberOfLines={1} style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', marginTop: 2, fontSize: 13 }}>
+                <ThemedText type="bodyLg" numberOfLines={1} style={{ color: theme.text, fontFamily: 'Sora_500Medium', marginTop: 2, fontSize: 13 }}>
                   {form.name || 'Unnamed Tournament'}
                 </ThemedText>
 
@@ -933,14 +933,14 @@ export default function CreateTournamentScreen() {
               <View style={styles.previewTicketRight}>
                 <View style={{ alignItems: 'center' }}>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 7 }}>Prize Pool</ThemedText>
-                  <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold', fontSize: 12, marginTop: 1 }}>
+                  <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium', fontSize: 12, marginTop: 1 }}>
                     {form.winnerPrize ? form.winnerPrize.split(' ')[0] : 'TBD'}
                   </ThemedText>
                 </View>
 
                 <View style={{ alignItems: 'center', marginTop: 4 }}>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 7 }}>Entry Fee</ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '600', fontSize: 9 }}>
+                  <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '500', fontSize: 9 }}>
                     {form.entryFee || 'Free'}
                   </ThemedText>
                 </View>
@@ -980,7 +980,7 @@ export default function CreateTournamentScreen() {
           ) : (
             <Pressable style={[styles.footerNextBtn, { backgroundColor: theme.secondaryContainer }]} onPress={handlePublish}>
               <Ionicons name="cloud-upload-outline" size={16} color="#ffffff" style={{ marginRight: 4 }} />
-              <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '600' }}>Publish Tournament</ThemedText>
+              <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '500' }}>Publish Tournament</ThemedText>
             </Pressable>
           )}
         </View>
@@ -1035,7 +1035,7 @@ export default function CreateTournamentScreen() {
                         {draft.sportType === 'Tennis' && <MaterialCommunityIcons name="tennis" size={16} color={theme.primary} />}
                       </View>
                       <View style={{ flex: 1, marginLeft: 10 }}>
-                        <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13 }} numberOfLines={1}>
+                        <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 13 }} numberOfLines={1}>
                           {draft.name || 'Untitled Draft'}
                         </ThemedText>
                         <ThemedText style={{ color: theme.textSecondary, fontSize: 10, marginTop: 2 }}>
@@ -1049,7 +1049,7 @@ export default function CreateTournamentScreen() {
                         style={[styles.draftLoadBtn, { backgroundColor: theme.primary }]}
                         onPress={() => handleSelectDraft(draft)}
                       >
-                        <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 10, fontWeight: '600' }}>Load</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 10, fontWeight: '500' }}>Load</ThemedText>
                       </Pressable>
                       <Pressable 
                         style={styles.draftDeleteBtn}
@@ -1094,7 +1094,7 @@ export default function CreateTournamentScreen() {
               <Pressable onPress={() => setPickerDate(new Date(pickerDate.getFullYear(), pickerDate.getMonth() - 1, 1))} style={{ padding: 6 }}>
                 <Ionicons name="chevron-back" size={20} color={theme.text} />
               </Pressable>
-              <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 14 }}>
+              <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 14 }}>
                 {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][pickerDate.getMonth()]} {pickerDate.getFullYear()}
               </ThemedText>
               <Pressable onPress={() => setPickerDate(new Date(pickerDate.getFullYear(), pickerDate.getMonth() + 1, 1))} style={{ padding: 6 }}>
@@ -1105,7 +1105,7 @@ export default function CreateTournamentScreen() {
             {/* Days of week labels */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
               {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d) => (
-                <ThemedText key={d} style={{ color: theme.textSecondary, width: 40, textAlign: 'center', fontSize: 10, fontWeight: '600' }}>
+                <ThemedText key={d} style={{ color: theme.textSecondary, width: 40, textAlign: 'center', fontSize: 10, fontWeight: '500' }}>
                   {d}
                 </ThemedText>
               ))}
@@ -1247,7 +1247,7 @@ const styles = StyleSheet.create({
   },
   wizardActiveLabel: {
     marginTop: 8,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     fontSize: 11,
@@ -1465,7 +1465,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 16,
   },
   cardSubtitle: {
@@ -1474,7 +1474,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   fieldLabel: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 12,
     marginBottom: 6,
   },
@@ -1507,7 +1507,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   sportChipText: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 10,
     marginLeft: 4,
   },
@@ -1531,7 +1531,7 @@ const styles = StyleSheet.create({
   },
   coverPresetLabel: {
     fontSize: 9,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginTop: 3,
     textAlign: 'center',
   },

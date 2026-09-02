@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 22,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: -0.3,
   },
   heroSubtitle: {
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
   cashbackTitle: {
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#059669',
   },
   cashbackSub: {
@@ -314,12 +314,12 @@ const styles = StyleSheet.create({
   },
   refLabel: {
     fontSize: 9.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.5,
   },
   refValue: {
     fontSize: 17,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 1,
     marginTop: 2,
   },
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   },
   copyBtnText: {
     fontSize: 11,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   dashedDivider: {
     height: 1,
@@ -359,12 +359,12 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 9,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.4,
   },
   infoValue: {
     fontSize: 12.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginTop: 1,
   },
   priceRow: {
@@ -374,12 +374,12 @@ const styles = StyleSheet.create({
   },
   paidAmount: {
     fontSize: 19,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginTop: 2,
   },
   totalAmount: {
     fontSize: 17,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginTop: 2,
   },
   noticeCard: {
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   },
   outlineBtnText: {
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   primaryBtn: {
     flex: 1,
@@ -429,6 +429,6 @@ const styles = StyleSheet.create({
   primaryBtnText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
 });

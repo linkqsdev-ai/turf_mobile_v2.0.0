@@ -232,22 +232,22 @@ export default function TeamManagementScreen() {
                     <View style={[styles.statsGrid, { backgroundColor: theme.surfaceLow }]}>
                       <View style={styles.statCell}>
                         <Ionicons name="stats-chart" size={13} color={theme.textSecondary} />
-                        <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: '600', marginTop: 3 }}>{played}</ThemedText>
+                        <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: '500', marginTop: 3 }}>{played}</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8.5 }}>PLAYED</ThemedText>
                       </View>
                       <View style={styles.statCell}>
                         <Ionicons name="trophy" size={13} color="#0f9f58" />
-                        <ThemedText type="bodySm" style={{ color: '#0f9f58', fontWeight: '600', marginTop: 3 }}>{team.wins}</ThemedText>
+                        <ThemedText type="bodySm" style={{ color: '#0f9f58', fontWeight: '500', marginTop: 3 }}>{team.wins}</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8.5 }}>WINS</ThemedText>
                       </View>
                       <View style={styles.statCell}>
                         <Ionicons name="close-circle" size={13} color="#ba1a1a" />
-                        <ThemedText type="bodySm" style={{ color: '#ba1a1a', fontWeight: '600', marginTop: 3 }}>{team.losses}</ThemedText>
+                        <ThemedText type="bodySm" style={{ color: '#ba1a1a', fontWeight: '500', marginTop: 3 }}>{team.losses}</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8.5 }}>LOSSES</ThemedText>
                       </View>
                       <View style={styles.statCell}>
                         <Ionicons name="remove-circle" size={13} color={theme.secondaryContainer} />
-                        <ThemedText type="bodySm" style={{ color: theme.secondaryContainer, fontWeight: '600', marginTop: 3 }}>{team.draws}</ThemedText>
+                        <ThemedText type="bodySm" style={{ color: theme.secondaryContainer, fontWeight: '500', marginTop: 3 }}>{team.draws}</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 8.5 }}>DRAWS</ThemedText>
                       </View>
                     </View>
@@ -453,7 +453,7 @@ export default function TeamManagementScreen() {
                             { borderColor: active ? theme.primary : theme.outlineVariant, backgroundColor: active ? theme.primary : 'transparent' },
                           ]}
                         >
-                          <ThemedText style={{ fontSize: 9.5, color: active ? '#ffffff' : theme.textSecondary, fontWeight: '600' }}>{lvl}</ThemedText>
+                          <ThemedText style={{ fontSize: 9.5, color: active ? '#ffffff' : theme.textSecondary, fontWeight: '500' }}>{lvl}</ThemedText>
                         </Pressable>
                       );
                     })}
@@ -488,7 +488,7 @@ export default function TeamManagementScreen() {
               <Ionicons name="warning" size={48} color="#ba1a1a" style={{ alignSelf: 'center', marginBottom: 12 }} />
               <ThemedText type="headlineSm" style={{ textAlign: 'center', color: theme.text }}>Remove Team?</ThemedText>
               <ThemedText type="bodySm" style={{ textAlign: 'center', color: theme.textSecondary, marginVertical: 12 }}>
-                Are you sure you want to remove <ThemedText style={{ fontWeight: '600', color: theme.text }}>{activeTeam?.name}</ThemedText>? This action will delete their squad and match logs.
+                Are you sure you want to remove <ThemedText style={{ fontWeight: '500', color: theme.text }}>{activeTeam?.name}</ThemedText>? This action will delete their squad and match logs.
               </ThemedText>
 
               {activeTeam?.isFavourite && (
@@ -505,7 +505,7 @@ export default function TeamManagementScreen() {
                   <ThemedText type="labelSm" style={{ color: theme.text }}>Cancel</ThemedText>
                 </Pressable>
                 <Pressable style={[styles.modalBtn, { backgroundColor: '#ffdad6' }]} onPress={handleDeleteConfirm}>
-                  <ThemedText type="labelSm" style={{ color: '#ba1a1a', fontWeight: '600' }}>Yes, Remove</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: '#ba1a1a', fontWeight: '500' }}>Yes, Remove</ThemedText>
                 </Pressable>
               </View>
             </View>
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
   },
   favCountText: {
     fontSize: 11,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   cardsContainer: {
     paddingHorizontal: Spacing.containerMargin,
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
   },
   sportPillText: {
     fontSize: 9.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.2,
   },
   favToggleBtn: {
@@ -703,7 +703,7 @@ const styles = StyleSheet.create({
     bottom: height / 3,
   },
   modalTitle: {
-    fontWeight: '600',
+    fontWeight: '500',
   },
   inputGroup: {
     marginBottom: Spacing.sm,
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
   squadAvatarText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   squadPlayerInfo: {
     flex: 1,
@@ -790,7 +790,7 @@ const styles = StyleSheet.create({
   },
   squadPlayerName: {
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   squadPlayerPosition: {
     fontSize: 11,

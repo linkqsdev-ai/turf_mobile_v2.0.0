@@ -195,7 +195,7 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
               <Ionicons name="bookmark-outline" size={13} color={theme.textSecondary} />
             )}
             <ThemedText style={{ 
-              fontFamily: 'Sora_600SemiBold', 
+              fontFamily: 'Sora_500Medium', 
               fontSize: 10, 
               color: isFavourite ? "#FFA751" : theme.textSecondary 
             }}>
@@ -440,13 +440,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   badgeText: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 10,
     color: '#ffffff',
     letterSpacing: 0.5,
   },
   bannerTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 24,
     color: '#ffffff',
     marginBottom: 6,
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   featureText: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 12,
     color: '#ffffff',
   },
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 12.5,
   },
   cardSubtitle: {
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoUploadTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 9,
     marginTop: 2,
   },
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sportChipText: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 10,
     marginLeft: 4,
   },
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButtonText: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 13,
     color: '#ffffff',
   },

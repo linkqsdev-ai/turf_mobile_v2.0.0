@@ -160,7 +160,7 @@ export default function FixtureManagementScreen() {
             onPress={() => openEditModal(fix)}
           >
             <View style={styles.rowBetween}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontWeight: '600' }}>{fix.matchNo} • {fix.date}</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontWeight: '500' }}>{fix.matchNo} • {fix.date}</ThemedText>
               
               <View style={[
                 styles.statusTag,
@@ -170,7 +170,7 @@ export default function FixtureManagementScreen() {
                 fix.status === 'Cancelled' && { backgroundColor: '#feebeb' }
               ]}>
                 <ThemedText type="labelSm" style={[
-                  { fontSize: 9, fontWeight: '600' },
+                  { fontSize: 9, fontWeight: '500' },
                   fix.status === 'Finished' && { color: '#7f8c8d' },
                   fix.status === 'Live' && { color: '#ba1a1a' },
                   fix.status === 'Scheduled' && { color: '#2980b9' },
@@ -221,11 +221,11 @@ export default function FixtureManagementScreen() {
               <View key={idx} style={[styles.bracketMatchBox, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}>
                 <View style={[styles.bracketTeamRow, { borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '22' }]}>
                   <ThemedText type="bodySm" numberOfLines={1} style={{ flex: 1, color: theme.text }}>{m.teamA}</ThemedText>
-                  <ThemedText type="bodySm" style={{ fontWeight: '600', color: theme.text }}>{m.scoreA}</ThemedText>
+                  <ThemedText type="bodySm" style={{ fontWeight: '500', color: theme.text }}>{m.scoreA}</ThemedText>
                 </View>
                 <View style={styles.bracketTeamRow}>
                   <ThemedText type="bodySm" numberOfLines={1} style={{ flex: 1, color: theme.text }}>{m.teamB}</ThemedText>
-                  <ThemedText type="bodySm" style={{ fontWeight: '600', color: theme.text }}>{m.scoreB}</ThemedText>
+                  <ThemedText type="bodySm" style={{ fontWeight: '500', color: theme.text }}>{m.scoreB}</ThemedText>
                 </View>
               </View>
             ))}
@@ -321,7 +321,7 @@ export default function FixtureManagementScreen() {
               <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>{fix.matchNo} • {fix.time}</ThemedText>
               <ThemedText type="labelSm" style={{ color: theme.secondaryContainer }}>{fix.pitch}</ThemedText>
             </View>
-            <ThemedText type="bodySm" style={{ fontWeight: '600', color: theme.text, marginVertical: 6 }}>
+            <ThemedText type="bodySm" style={{ fontWeight: '500', color: theme.text, marginVertical: 6 }}>
               {fix.teamA} VS {fix.teamB}
             </ThemedText>
           </Pressable>
@@ -380,7 +380,7 @@ export default function FixtureManagementScreen() {
           <View style={styles.rowBetween}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="options-outline" size={18} color={theme.secondaryContainer} />
-              <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '600', marginLeft: 6 }}>SCHEDULE TOOLS</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '500', marginLeft: 6 }}>SCHEDULE TOOLS</ThemedText>
             </View>
             {isOptimizing || isGenerating ? (
               <ActivityIndicator size="small" color={theme.secondaryContainer} />
@@ -405,12 +405,12 @@ export default function FixtureManagementScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
               <Ionicons name="warning-sharp" size={20} color="#ffb300" style={{ marginTop: 2 }} />
               <View style={{ flex: 1, marginLeft: 8 }}>
-                <ThemedText type="labelSm" style={{ color: '#6b4500', fontWeight: '600' }}>Schedule Conflict Detected</ThemedText>
+                <ThemedText type="labelSm" style={{ color: '#6b4500', fontWeight: '500' }}>Schedule Conflict Detected</ThemedText>
                 <ThemedText type="bodySm" style={{ color: '#7f5800', marginTop: 2 }}>
                   Blue Tigers vs London United scheduled on Pitch A at 12:30 PM, overlapping with Red Devils FC.
                 </ThemedText>
                 <Pressable style={styles.conflictResolveBtn} onPress={handleResolveConflict}>
-                  <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '600' }}>AUTO RESOLVE</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '500' }}>AUTO RESOLVE</ThemedText>
                 </Pressable>
               </View>
             </View>
@@ -428,7 +428,7 @@ export default function FixtureManagementScreen() {
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest }]}>
               <View style={styles.rowBetween}>
-                <ThemedText type="headlineSm" style={{ color: theme.text, fontWeight: '600' }}>Modify Fixture</ThemedText>
+                <ThemedText type="headlineSm" style={{ color: theme.text, fontWeight: '500' }}>Modify Fixture</ThemedText>
                 <Pressable onPress={() => setIsEditVisible(false)}>
                   <Ionicons name="close" size={24} color={theme.text} />
                 </Pressable>
@@ -474,7 +474,7 @@ export default function FixtureManagementScreen() {
               </View>
 
               <Pressable style={[styles.modalSaveBtn, { backgroundColor: theme.secondaryContainer }]} onPress={saveFixtureEdits}>
-                <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '600' }}>Save Changes</ThemedText>
+                <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '500' }}>Save Changes</ThemedText>
               </Pressable>
             </View>
           </View>
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sectionHeader: {
-    fontWeight: '600',
+    fontWeight: '500',
     marginBottom: Spacing.sm,
   },
   fixturesList: {
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
   },
   teamNameText: {
     flex: 1,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   fixtureFooter: {
     flexDirection: 'row',
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
   },
   bracketStageTitle: {
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '500',
     marginBottom: Spacing.md,
     letterSpacing: 1,
   },

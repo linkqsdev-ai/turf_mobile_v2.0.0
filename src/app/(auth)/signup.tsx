@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
   },
   titleNormal: {
     fontSize: 22,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     lineHeight: 28,
     letterSpacing: -0.5,
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   titleHighlightWrap: { position: 'relative' },
   titleHighlight: {
     fontSize: 22,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     lineHeight: 28,
     letterSpacing: -0.5,
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     marginBottom: 5,
     marginLeft: 4,
@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: TEXT_DARK,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
 
   inputWrapper: {
@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
 
   otpTriggerText: {
     fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: ACCENT,
     letterSpacing: 0.2,
   },
@@ -796,7 +796,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 2,
     color: TEXT_DARK,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   otpVerifyBtn: {
     height: 40,
@@ -809,7 +809,7 @@ const styles = StyleSheet.create({
   otpVerifyText: {
     color: '#fff',
     fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   otpErrorText: {
     fontSize: 11,
@@ -861,7 +861,7 @@ const styles = StyleSheet.create({
   },
   pwChipText: {
     fontSize: 9.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#94a3b8',
   },
   pwChipTextActive: {
@@ -885,7 +885,7 @@ const styles = StyleSheet.create({
   ctaText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 1.0,
   },
 
@@ -940,7 +940,7 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 13,
     color: TEXT_DARK,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
 
   // ── Role dropdown sheet ──
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
   },
   roleSheetTitle: {
     fontSize: 15,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     marginBottom: 12,
   },
@@ -994,7 +994,7 @@ const styles = StyleSheet.create({
   roleOptionTextWrap: { flex: 1 },
   roleOptionLabel: {
     fontSize: 14,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
   },
   roleOptionDesc: {

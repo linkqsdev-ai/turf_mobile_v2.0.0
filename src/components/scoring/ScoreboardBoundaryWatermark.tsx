@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   },
   numText: {
     fontSize: 130,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     lineHeight: 140,
   },
   monkeyWrap: {
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   ribbonText: {
     color: '#ffffff',
     fontSize: 9,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.3,
   },
 });

@@ -143,7 +143,7 @@ export default function ExploreScreen() {
               />
             </Pressable>
             <View style={styles.headerTextGroup}>
-              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', lineHeight: 18 }}>
+              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'Sora_500Medium', lineHeight: 18 }}>
                 {profile.name}
               </ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
@@ -160,7 +160,7 @@ export default function ExploreScreen() {
               onPress={() => router.push('/wallet')}
             >
               <Ionicons name="wallet-outline" size={16} color={theme.primary} />
-              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.primary }}>
                 ₹{walletBalance.toFixed(0)}
               </ThemedText>
             </Pressable>
@@ -187,7 +187,7 @@ export default function ExploreScreen() {
           {/* Compact Calendar Picker Row */}
           <View style={[styles.section, { marginTop: 4, marginBottom: 4 }]}>
             <View style={[styles.sectionHeader, { marginBottom: 2 }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, fontFamily: 'Sora_500Medium' }}>
                 {rolling14Days[0].rawDate.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}
               </ThemedText>
             </View>
@@ -213,7 +213,7 @@ export default function ExploreScreen() {
                       type="labelSm"
                       style={{
                         color: isActive ? '#ffffff' : theme.textSecondary,
-                        fontFamily: 'Sora_600SemiBold',
+                        fontFamily: 'Sora_500Medium',
                         fontSize: 9,
                         letterSpacing: 0.3,
                       }}
@@ -224,7 +224,7 @@ export default function ExploreScreen() {
                       type="headlineSm"
                       style={{
                         color: isActive ? '#ffffff' : theme.text,
-                        fontFamily: 'Sora_600SemiBold',
+                        fontFamily: 'Sora_500Medium',
                         marginTop: 2,
                         fontSize: 14,
                       }}
@@ -573,7 +573,7 @@ export default function ExploreScreen() {
                           </View>
                           <View style={styles.ratingBadge}>
                             <Ionicons name="star" size={11} color="#f59e0b" />
-                            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>
+                            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10.5, fontFamily: 'Sora_500Medium' }}>
                               {turf.rating}
                             </ThemedText>
                           </View>
@@ -594,14 +594,14 @@ export default function ExploreScreen() {
 
                         {/* Clean Small Offer Text (no badge, no decorative icons) */}
                         {!!activeOffer && (
-                          <ThemedText style={{ fontSize: 9, color: '#059669', fontFamily: 'Sora_600SemiBold', marginTop: 1, marginBottom: 1 }} numberOfLines={1}>
-                            {formatDiscount(activeOffer)} · Use code <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: '#047857' }}>{activeOffer.code}</ThemedText>
+                          <ThemedText style={{ fontSize: 9, color: '#059669', fontFamily: 'Sora_500Medium', marginTop: 1, marginBottom: 1 }} numberOfLines={1}>
+                            {formatDiscount(activeOffer)} · Use code <ThemedText style={{ fontFamily: 'Sora_500Medium', color: '#047857' }}>{activeOffer.code}</ThemedText>
                           </ThemedText>
                         )}
 
                         <View style={styles.cardActions}>
                           <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                            <ThemedText type="headlineSm" style={{ color: theme.primary, fontSize: 15.5, fontFamily: 'Sora_600SemiBold' }}>
+                            <ThemedText type="headlineSm" style={{ color: theme.primary, fontSize: 15.5, fontFamily: 'Sora_500Medium' }}>
                               ₹{turf.price}
                             </ThemedText>
                             <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>
@@ -613,7 +613,7 @@ export default function ExploreScreen() {
                               onPress={() => handleTurfSelect(turf.id, turf.name, activeOffer?.code)}
                               style={[styles.actionButton, { backgroundColor: theme.primary }]}
                             >
-                              <ThemedText type="labelMd" style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
+                              <ThemedText type="labelMd" style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_500Medium' }}>
                                 Book Now
                               </ThemedText>
                             </Pressable>
@@ -641,7 +641,7 @@ export default function ExploreScreen() {
                   return (
                     <View style={{ padding: Spacing.xl, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.xl, marginVertical: Spacing.md, borderColor: theme.outlineVariant + '33', borderWidth: 1 }}>
                       <Ionicons name="search-outline" size={44} color={theme.textSecondary} style={{ opacity: 0.5, marginBottom: 10 }} />
-                      <ThemedText type="headlineSm" style={{ color: theme.text, textAlign: 'center', fontFamily: 'Sora_600SemiBold' }}>
+                      <ThemedText type="headlineSm" style={{ color: theme.text, textAlign: 'center', fontFamily: 'Sora_500Medium' }}>
                         No {selectedSport} Turfs Found
                       </ThemedText>
                       <ThemedText style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 6, fontSize: 12, lineHeight: 18 }}>
@@ -651,7 +651,7 @@ export default function ExploreScreen() {
                         onPress={() => setSelectedSport('All')}
                         style={{ backgroundColor: theme.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: BorderRadius.lg, marginTop: 14 }}
                       >
-                        <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>Show All Sports</ThemedText>
+                        <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_500Medium' }}>Show All Sports</ThemedText>
                       </Pressable>
                     </View>
                   );
@@ -869,7 +869,7 @@ const styles = StyleSheet.create({
   bannerTitle: {
     color: '#ffffff',
     fontSize: 18,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginBottom: Spacing.base,
     lineHeight: 22,
   },
@@ -921,7 +921,7 @@ const styles = StyleSheet.create({
   cardBadgeText: {
     color: '#ffffff',
     fontSize: 8.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.3,
   },
   cardOfferBadge: {
@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
   cardOfferBadgeText: {
     color: '#ffffff',
     fontSize: 8.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.2,
   },
   cardOfferStrip: {
@@ -959,7 +959,7 @@ const styles = StyleSheet.create({
   },
   cardOfferStripText: {
     fontSize: 9.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#047857',
     flex: 1,
   },
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
   slotsPillText: {
     color: '#059669',
     fontSize: 9,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.4,
   },
   cardActions: {
@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   createPillText: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 11,
     color: '#ffffff',
     letterSpacing: 0.2,

@@ -58,7 +58,7 @@ export default function CoachDetail() {
           <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/coach')} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={theme.text} />
           </Pressable>
-          <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_600SemiBold' }}>Coach Profile</ThemedText>
+          <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_500Medium' }}>Coach Profile</ThemedText>
           <View style={{ width: 22 }} />
         </View>
 
@@ -74,12 +74,12 @@ export default function CoachDetail() {
               <Image source={typeof avatar === 'string' && !/^\d+$/.test(avatar) ? { uri: avatar } : (typeof avatar === 'number' ? avatar : parseInt(avatar as string, 10))} style={styles.avatar} contentFit="cover" />
             </View>
 
-            <ThemedText type="headlineMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
+            <ThemedText type="headlineMd" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium' }}>
               {name}
             </ThemedText>
 
             {/* Specialty */}
-            <ThemedText type="bodySm" style={{ color: 'rgba(255,255,255,0.85)', marginTop: 5, fontFamily: 'Sora_600SemiBold' }}>
+            <ThemedText type="bodySm" style={{ color: 'rgba(255,255,255,0.85)', marginTop: 5, fontFamily: 'Sora_500Medium' }}>
               {specialty}
             </ThemedText>
 
@@ -93,7 +93,7 @@ export default function CoachDetail() {
                   color="#fbbf24"
                 />
               ))}
-              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', marginLeft: 6 }}>
+              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', marginLeft: 6 }}>
                 {rating}
               </ThemedText>
               <ThemedText type="labelSm" style={{ color: 'rgba(255,255,255,0.75)', marginLeft: 4 }}>
@@ -105,21 +105,21 @@ export default function CoachDetail() {
           {/* Stats Row */}
           <View style={[styles.statsRow, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
             <View style={styles.statItem}>
-              <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
+              <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'Sora_500Medium' }}>
                 {trainees}
               </ThemedText>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 5 }}>Trainees</ThemedText>
             </View>
             <View style={[styles.statDivider, { backgroundColor: theme.outlineVariant + '44' }]} />
             <View style={styles.statItem}>
-              <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
+              <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'Sora_500Medium' }}>
                 {reviews}
               </ThemedText>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 5 }}>Reviews</ThemedText>
             </View>
             <View style={[styles.statDivider, { backgroundColor: theme.outlineVariant + '44' }]} />
             <View style={styles.statItem}>
-              <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
+              <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'Sora_500Medium' }}>
                 {rating}⭐
               </ThemedText>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 5 }}>Rating</ThemedText>
@@ -131,7 +131,7 @@ export default function CoachDetail() {
             <View style={{ backgroundColor: theme.primary + '15', borderColor: theme.primary + '44', borderWidth: 1, padding: 12, borderRadius: BorderRadius.lg, marginTop: Spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                 <Ionicons name="shield-checkmark" size={16} color={theme.primary} style={{ marginRight: 6 }} />
-                <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
+                <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_500Medium', fontSize: 12 }}>
                   YOUR PUBLISHED COACH CLASS
                 </ThemedText>
               </View>
@@ -157,7 +157,7 @@ export default function CoachDetail() {
               }}
             >
               <Ionicons name="school-outline" size={15} color={activeTab === 'class' ? '#ffffff' : theme.textSecondary} />
-              <ThemedText style={{ color: activeTab === 'class' ? '#ffffff' : theme.textSecondary, fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
+              <ThemedText style={{ color: activeTab === 'class' ? '#ffffff' : theme.textSecondary, fontFamily: 'Sora_500Medium', fontSize: 12 }}>
                 Class Details
               </ThemedText>
             </Pressable>
@@ -176,7 +176,7 @@ export default function CoachDetail() {
               }}
             >
               <Ionicons name="person-outline" size={15} color={activeTab === 'profile' ? '#ffffff' : theme.textSecondary} />
-              <ThemedText style={{ color: activeTab === 'profile' ? '#ffffff' : theme.textSecondary, fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
+              <ThemedText style={{ color: activeTab === 'profile' ? '#ffffff' : theme.textSecondary, fontFamily: 'Sora_500Medium', fontSize: 12 }}>
                 Coach Credentials
               </ThemedText>
             </Pressable>
@@ -197,7 +197,7 @@ export default function CoachDetail() {
                   </View>
                   <View style={{ flex: 1, marginLeft: Spacing.md }}>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Class Type & Target</ThemedText>
-                    <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>Regular Coaching • All Age Groups</ThemedText>
+                    <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>Regular Coaching • All Age Groups</ThemedText>
                   </View>
                 </View>
 
@@ -207,8 +207,8 @@ export default function CoachDetail() {
                   </View>
                   <View style={{ flex: 1, marginLeft: Spacing.md }}>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Batch Capacity</ThemedText>
-                    <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
-                      20 Students Max <ThemedText style={{ color: '#10b981', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>(5 Seats Left)</ThemedText>
+                    <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>
+                      20 Students Max <ThemedText style={{ color: '#10b981', fontSize: 11, fontFamily: 'Sora_500Medium' }}>(5 Seats Left)</ThemedText>
                     </ThemedText>
                   </View>
                 </View>
@@ -219,7 +219,7 @@ export default function CoachDetail() {
                   </View>
                   <View style={{ flex: 1, marginLeft: Spacing.md }}>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Venue & Turf Location</ThemedText>
-                    <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>{location}</ThemedText>
+                    <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>{location}</ThemedText>
                   </View>
                 </View>
 
@@ -229,7 +229,7 @@ export default function CoachDetail() {
                   </View>
                   <View style={{ flex: 1, marginLeft: Spacing.md }}>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Coach Accreditation & Certificate</ThemedText>
-                    <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>
                       🏅 BWF Level 2 Certified • UEFA B License
                     </ThemedText>
                   </View>
@@ -244,7 +244,7 @@ export default function CoachDetail() {
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
                   <Ionicons name="calendar" size={16} color={theme.primary} style={{ marginRight: 8 }} />
-                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>
                     Weekly Batches: Mon, Wed, Fri
                   </ThemedText>
                 </View>
@@ -252,11 +252,11 @@ export default function CoachDetail() {
                 <View style={{ backgroundColor: theme.surfaceLow, padding: 10, borderRadius: BorderRadius.md, gap: 6 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <ThemedText style={{ fontSize: 11, color: theme.textSecondary }}>☀️ Morning Slot:</ThemedText>
-                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>7.00 AM - 9.00 AM</ThemedText>
+                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_500Medium', color: theme.text }}>7.00 AM - 9.00 AM</ThemedText>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <ThemedText style={{ fontSize: 11, color: theme.textSecondary }}>🌙 Evening Slot:</ThemedText>
-                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>7.00 PM - 9.00 PM</ThemedText>
+                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_500Medium', color: theme.text }}>7.00 PM - 9.00 PM</ThemedText>
                   </View>
                 </View>
               </View>
@@ -299,7 +299,7 @@ export default function CoachDetail() {
                       <Ionicons name="checkmark-circle" size={16} color="#10b981" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>
                         {cert.title}
                       </ThemedText>
                       <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>
@@ -327,10 +327,10 @@ export default function CoachDetail() {
                 </ThemedText>
                 <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: BorderRadius.lg }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <ThemedText style={{ fontFamily: 'Sora_600SemiBold', fontSize: 12, color: theme.text }}>
+                    <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 12, color: theme.text }}>
                       Rahul S. (Senior Trainee)
                     </ThemedText>
-                    <ThemedText style={{ color: '#fbbf24', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText style={{ color: '#fbbf24', fontSize: 11, fontFamily: 'Sora_500Medium' }}>
                       ⭐⭐⭐⭐⭐ 5.0
                     </ThemedText>
                   </View>
@@ -370,7 +370,7 @@ export default function CoachDetail() {
         <View style={[styles.stickyFooter, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '22' }]}>
           <View style={styles.footerRate}>
             <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Session Rate</ThemedText>
-            <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>{rate}</ThemedText>
+            <ThemedText type="headlineSm" style={{ color: theme.primary, fontFamily: 'Sora_500Medium' }}>{rate}</ThemedText>
           </View>
           {badge === 'OWNER' ? (
             <Pressable 
@@ -378,14 +378,14 @@ export default function CoachDetail() {
               onPress={navigateToEditClass}
             >
               <Ionicons name="create-outline" size={18} color="#ffffff" style={{ marginRight: 8 }} />
-              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 15 }}>
+              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 15 }}>
                 Edit Coach Class
               </ThemedText>
             </Pressable>
           ) : (
             <Pressable style={[styles.bookBtn, { backgroundColor: theme.primary }]} onPress={navigateToBooking}>
               <Ionicons name="flash" size={18} color="#ffffff" style={{ marginRight: 8 }} />
-              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 15 }}>
+              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 15 }}>
                 Book & Pay Now
               </ThemedText>
             </Pressable>

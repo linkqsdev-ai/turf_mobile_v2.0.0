@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   titleNormal: {
     fontSize: 30,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     lineHeight: 38,
     letterSpacing: -0.5,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   titleHighlightWrap: { position: 'relative' },
   titleHighlight: {
     fontSize: 30,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     lineHeight: 38,
     letterSpacing: -0.5,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     marginBottom: 8,
     marginLeft: 4,
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   ctaText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 1.0,
   },
 
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
   backLink: {
     fontSize: 14,
     color: TEXT_DARK,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
 
   // Success state
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: 24,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     marginTop: 12,
     marginBottom: 12,
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
   },
   emailBadgeText: {
     fontSize: 14,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
   },
   successHint: {

@@ -545,7 +545,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
               {/* Modal Header */}
               <View style={styles.header}>
                 <FontAwesome5 name="coins" size={18} color="#5D68E8" style={{ marginBottom: 3 }} />
-                <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 14 }}>
+                <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 14 }}>
                   Kickoff Coin Toss
                 </ThemedText>
                 <ThemedText style={{ color: theme.textSecondary, textAlign: 'center', fontSize: 9.5, marginTop: 1 }}>
@@ -558,7 +558,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
 
               {/* Sport selector */}
               <View style={{ width: '100%', marginBottom: 8 }}>
-                <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: '#64748b', marginBottom: 4, letterSpacing: 0.8 }}>
+                <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: '#64748b', marginBottom: 4, letterSpacing: 0.8 }}>
                   SPORT
                 </ThemedText>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 1 }}>
@@ -658,7 +658,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                           return <Image source={getMascotAsset(matchedTeam.mascot)} style={{ width: 26, height: 26 }} contentFit="contain" />;
                         }
                         return (
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#5D68E8', letterSpacing: 0.5 }}>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#5D68E8', letterSpacing: 0.5 }}>
                             {generateShortName(teamAName) || 'TA'}
                           </ThemedText>
                         );
@@ -671,7 +671,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       onPress={() => openNewTeamModal('A')}
                       style={{ marginBottom: 3 }}
                     >
-                      <ThemedText style={{ fontSize: 8.5, color: '#5D68E8', fontFamily: 'Sora_600SemiBold' }}>
+                      <ThemedText style={{ fontSize: 8.5, color: '#5D68E8', fontFamily: 'Sora_500Medium' }}>
                         + New Team
                       </ThemedText>
                     </Pressable>
@@ -685,7 +685,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                           color: '#0f172a',
                           textAlign: 'center',
                           fontSize: 10.5,
-                          fontFamily: 'Sora_600SemiBold',
+                          fontFamily: 'Sora_500Medium',
                           height: 30,
                           borderRadius: 6,
                           paddingHorizontal: 6,
@@ -714,7 +714,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                         }}
                       />
                       {teamAError !== '' && (
-                        <ThemedText style={{ color: '#ef4444', fontSize: 8, textAlign: 'center', marginTop: 1, fontFamily: 'Sora_600SemiBold' }}>
+                        <ThemedText style={{ color: '#ef4444', fontSize: 8, textAlign: 'center', marginTop: 1, fontFamily: 'Sora_500Medium' }}>
                           {teamAError}
                         </ThemedText>
                       )}
@@ -753,7 +753,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                             onPress={() => openNewTeamModal('A')}
                           >
                             <Ionicons name="add-circle" size={14} color="#5D68E8" />
-                            <ThemedText style={{ color: '#5D68E8', fontFamily: 'Sora_600SemiBold', fontSize: 10.5 }}>
+                            <ThemedText style={{ color: '#5D68E8', fontFamily: 'Sora_500Medium', fontSize: 10.5 }}>
                               + Add New Team
                             </ThemedText>
                           </Pressable>
@@ -787,7 +787,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                                 {team.isFavourite && (
                                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#fef3c7', paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 3 }}>
                                     <FavouriteTeamIcon size={9} />
-                                    <ThemedText style={{ color: '#d97706', fontSize: 7.5, fontFamily: 'Sora_600SemiBold' }}>FAV</ThemedText>
+                                    <ThemedText style={{ color: '#d97706', fontSize: 7.5, fontFamily: 'Sora_500Medium' }}>FAV</ThemedText>
                                   </View>
                                 )}
                               </Pressable>
@@ -799,7 +799,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                   </View>
 
                   {/* VS Center */}
-                  <ThemedText style={{ color: '#94a3b8', fontSize: 11, fontFamily: 'Sora_600SemiBold', letterSpacing: 1, marginHorizontal: 2 }}>
+                  <ThemedText style={{ color: '#94a3b8', fontSize: 11, fontFamily: 'Sora_500Medium', letterSpacing: 1, marginHorizontal: 2 }}>
                     VS
                   </ThemedText>
 
@@ -823,7 +823,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                           return <Image source={getMascotAsset(matchedTeam.mascot)} style={{ width: 26, height: 26 }} contentFit="contain" />;
                         }
                         return (
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#5D68E8', letterSpacing: 0.5 }}>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#5D68E8', letterSpacing: 0.5 }}>
                             {generateShortName(teamBName) || 'TB'}
                           </ThemedText>
                         );
@@ -836,7 +836,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       onPress={() => openNewTeamModal('B')}
                       style={{ marginBottom: 3 }}
                     >
-                      <ThemedText style={{ fontSize: 8.5, color: '#5D68E8', fontFamily: 'Sora_600SemiBold' }}>
+                      <ThemedText style={{ fontSize: 8.5, color: '#5D68E8', fontFamily: 'Sora_500Medium' }}>
                         + New Team
                       </ThemedText>
                     </Pressable>
@@ -850,7 +850,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                           color: '#0f172a',
                           textAlign: 'center',
                           fontSize: 10.5,
-                          fontFamily: 'Sora_600SemiBold',
+                          fontFamily: 'Sora_500Medium',
                           height: 30,
                           borderRadius: 6,
                           paddingHorizontal: 6,
@@ -879,7 +879,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                         }}
                       />
                       {teamBError !== '' && (
-                        <ThemedText style={{ color: '#ef4444', fontSize: 8, textAlign: 'center', marginTop: 1, fontFamily: 'Sora_600SemiBold' }}>
+                        <ThemedText style={{ color: '#ef4444', fontSize: 8, textAlign: 'center', marginTop: 1, fontFamily: 'Sora_500Medium' }}>
                           {teamBError}
                         </ThemedText>
                       )}
@@ -916,7 +916,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                             onPress={() => openNewTeamModal('B')}
                           >
                             <Ionicons name="add-circle" size={14} color="#5D68E8" />
-                            <ThemedText style={{ color: '#5D68E8', fontFamily: 'Sora_600SemiBold', fontSize: 10.5 }}>
+                            <ThemedText style={{ color: '#5D68E8', fontFamily: 'Sora_500Medium', fontSize: 10.5 }}>
                               + Add New Team
                             </ThemedText>
                           </Pressable>
@@ -950,7 +950,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                                 {team.isFavourite && (
                                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#fef3c7', paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 3 }}>
                                     <FavouriteTeamIcon size={9} />
-                                    <ThemedText style={{ color: '#d97706', fontSize: 7.5, fontFamily: 'Sora_600SemiBold' }}>FAV</ThemedText>
+                                    <ThemedText style={{ color: '#d97706', fontSize: 7.5, fontFamily: 'Sora_500Medium' }}>FAV</ThemedText>
                                   </View>
                                 )}
                               </Pressable>
@@ -969,8 +969,8 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                 <View style={{ marginBottom: 6 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>Match Timing</ThemedText>
-                      <ThemedText style={{ color: '#ef4444', fontSize: 12, fontFamily: 'Sora_600SemiBold', marginLeft: 3 }}>*</ThemedText>
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>Match Timing</ThemedText>
+                      <ThemedText style={{ color: '#ef4444', fontSize: 12, fontFamily: 'Sora_500Medium', marginLeft: 3 }}>*</ThemedText>
                     </View>
 
                     <Pressable
@@ -989,7 +989,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       ]}
                     >
                       <Ionicons name="time-outline" size={12} color={theme.primary} />
-                      <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
+                      <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_500Medium' }}>
                         {selectedTiming}
                       </ThemedText>
                       <Ionicons name="chevron-forward" size={11} color={theme.primary} />
@@ -1000,8 +1000,8 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                 {/* Type Toggle */}
                 <View style={{ marginBottom: 6 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>Type</ThemedText>
-                    <ThemedText style={{ color: '#ef4444', fontSize: 12, fontFamily: 'Sora_600SemiBold', marginLeft: 3 }}>*</ThemedText>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>Type</ThemedText>
+                    <ThemedText style={{ color: '#ef4444', fontSize: 12, fontFamily: 'Sora_500Medium', marginLeft: 3 }}>*</ThemedText>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
                     {[
@@ -1041,8 +1041,8 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                 {selectedTurfType === 'Turf' ? (
                   <View style={{ zIndex: 30, position: 'relative' }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>Turf Name</ThemedText>
-                      <ThemedText style={{ color: theme.primary, fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>Search & Select</ThemedText>
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>Turf Name</ThemedText>
+                      <ThemedText style={{ color: theme.primary, fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>Search & Select</ThemedText>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 6, borderWidth: 1, borderColor: showTurfDropdown ? theme.primary : theme.outlineVariant + '40', paddingHorizontal: 10, height: 32 }}>
                       <Ionicons name="search-outline" size={14} color={theme.primary} style={{ marginRight: 6 }} />
@@ -1104,7 +1104,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                                 ]}
                               >
                                 <Ionicons name="location-sharp" size={13} color={theme.primary} />
-                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#0f172a' }}>
+                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#0f172a' }}>
                                   {tName}
                                 </ThemedText>
                               </Pressable>
@@ -1116,7 +1116,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                 ) : (
                   <View>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>Ground Name</ThemedText>
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>Ground Name</ThemedText>
                       <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5 }}>Optional</ThemedText>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 6, borderWidth: 1, borderColor: theme.outlineVariant + '40', paddingHorizontal: 10, height: 32 }}>
@@ -1140,7 +1140,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 6, width: '100%' }}>
                 {/* CALLER */}
                 <View style={{ flex: 1 }}>
-                  <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: '#64748b', marginBottom: 3, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                  <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: '#64748b', marginBottom: 3, letterSpacing: 0.5, textTransform: 'uppercase' }}>
                     CALLER:
                   </ThemedText>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -1157,7 +1157,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                         justifyContent: 'center',
                       }}
                     >
-                      <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: tossCaller === 'A' ? '#000000' : '#475569' }} numberOfLines={1}>
+                      <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: tossCaller === 'A' ? '#000000' : '#475569' }} numberOfLines={1}>
                         {teamAName.trim() || 'Team A'}
                       </ThemedText>
                     </Pressable>
@@ -1174,7 +1174,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                         justifyContent: 'center',
                       }}
                     >
-                      <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: tossCaller === 'B' ? '#000000' : '#475569' }} numberOfLines={1}>
+                      <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: tossCaller === 'B' ? '#000000' : '#475569' }} numberOfLines={1}>
                         {teamBName.trim() || 'Team B'}
                       </ThemedText>
                     </Pressable>
@@ -1183,7 +1183,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
 
                 {/* CALL */}
                 <View style={{ flex: 1 }}>
-                  <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: '#64748b', marginBottom: 3, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                  <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: '#64748b', marginBottom: 3, letterSpacing: 0.5, textTransform: 'uppercase' }}>
                     CALL:
                   </ThemedText>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -1200,7 +1200,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                         justifyContent: 'center',
                       }}
                     >
-                      <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: tossCall === 'HEADS' ? '#000000' : '#475569' }}>
+                      <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: tossCall === 'HEADS' ? '#000000' : '#475569' }}>
                         H
                       </ThemedText>
                     </Pressable>
@@ -1217,7 +1217,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                         justifyContent: 'center',
                       }}
                     >
-                      <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: tossCall === 'TAILS' ? '#000000' : '#475569' }}>
+                      <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: tossCall === 'TAILS' ? '#000000' : '#475569' }}>
                         T
                       </ThemedText>
                     </Pressable>
@@ -1257,7 +1257,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       colors={['#FFE259', '#FACC15', '#FFE259']}
                       style={{ width: '100%', height: '100%', borderRadius: 29, justifyContent: 'center', alignItems: 'center' }}
                     >
-                      <ThemedText style={{ fontSize: 24, fontFamily: 'Sora_600SemiBold', color: '#000000' }}>
+                      <ThemedText style={{ fontSize: 24, fontFamily: 'Sora_500Medium', color: '#000000' }}>
                         {displaySide === 'HEADS' ? 'H' : 'T'}
                       </ThemedText>
                     </LinearGradient>
@@ -1289,19 +1289,19 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Ionicons name="sparkles" size={13} color="#FFB800" />
-                      <ThemedText style={{ color: theme.textSecondary, fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>Coin landed</ThemedText>
+                      <ThemedText style={{ color: theme.textSecondary, fontSize: 10.5, fontFamily: 'Sora_500Medium' }}>Coin landed</ThemedText>
                     </View>
                     <View style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 4 }}>
-                      <ThemedText style={{ color: theme.primary, fontSize: 9, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5 }}>{result}</ThemedText>
+                      <ThemedText style={{ color: theme.primary, fontSize: 9, fontFamily: 'Sora_500Medium', letterSpacing: 0.5 }}>{result}</ThemedText>
                     </View>
                   </View>
 
-                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>
                     🎉 {tossWinnerName} won the toss!
                   </ThemedText>
 
                   <View style={{ marginTop: 4, borderTopWidth: 1, borderTopColor: '#00000008', paddingTop: 4 }}>
-                    <ThemedText style={{ color: theme.textSecondary, marginBottom: 4, fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>Choose decision action</ThemedText>
+                    <ThemedText style={{ color: theme.textSecondary, marginBottom: 4, fontSize: 9, fontFamily: 'Sora_500Medium' }}>Choose decision action</ThemedText>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                       {selectedSport.toLowerCase() === 'cricket' ? (
                         <>
@@ -1315,7 +1315,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                               tossDecision === 'Bat' && { backgroundColor: theme.primary, borderColor: theme.primary }
                             ]}
                           >
-                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: tossDecision === 'Bat' ? '#ffffff' : '#64748b' }}>🏏 Batting</ThemedText>
+                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: tossDecision === 'Bat' ? '#ffffff' : '#64748b' }}>🏏 Batting</ThemedText>
                           </Pressable>
                           <Pressable
                             onPress={() => {
@@ -1327,7 +1327,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                               tossDecision === 'Bowl' && { backgroundColor: theme.primary, borderColor: theme.primary }
                             ]}
                           >
-                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: tossDecision === 'Bowl' ? '#ffffff' : '#64748b' }}>🥎 Bowling</ThemedText>
+                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: tossDecision === 'Bowl' ? '#ffffff' : '#64748b' }}>🥎 Bowling</ThemedText>
                           </Pressable>
                         </>
                       ) : (
@@ -1342,7 +1342,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                               tossDecision === 'Kickoff' && { backgroundColor: theme.primary, borderColor: theme.primary }
                             ]}
                           >
-                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: tossDecision === 'Kickoff' ? '#ffffff' : '#64748b' }}>⚽ Serve / Kickoff</ThemedText>
+                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: tossDecision === 'Kickoff' ? '#ffffff' : '#64748b' }}>⚽ Serve / Kickoff</ThemedText>
                           </Pressable>
                           <Pressable
                             onPress={() => {
@@ -1354,7 +1354,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                               tossDecision === 'Receive' && { backgroundColor: theme.primary, borderColor: theme.primary }
                             ]}
                           >
-                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: tossDecision === 'Receive' ? '#ffffff' : '#64748b' }}>🛡️ Receive / Side</ThemedText>
+                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: tossDecision === 'Receive' ? '#ffffff' : '#64748b' }}>🛡️ Receive / Side</ThemedText>
                           </Pressable>
                         </>
                       )}
@@ -1378,7 +1378,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <Ionicons name="options-outline" size={13} color="#5D68E8" />
-                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#1e293b' }}>
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#1e293b' }}>
                         Pre-Match Rules Verification
                       </ThemedText>
                     </View>
@@ -1386,7 +1386,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
 
                   {/* Total Overs Selector */}
                   <View style={{ marginBottom: 6 }}>
-                    <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>
+                    <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>
                       Total Match Overs:
                     </ThemedText>
                     <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
@@ -1408,7 +1408,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                               borderColor: isSelected ? '#5D68E8' : '#cbd5e1',
                             }}
                           >
-                            <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: isSelected ? '#ffffff' : '#334155' }}>
+                            <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: isSelected ? '#ffffff' : '#334155' }}>
                               {ov} Ov
                             </ThemedText>
                           </Pressable>
@@ -1436,7 +1436,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                             gap: 2,
                           }}
                         >
-                          <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#5D68E8' }}>
+                          <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#5D68E8' }}>
                             Custom +
                           </ThemedText>
                         </Pressable>
@@ -1454,7 +1454,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                         }}>
                           <TextInput
                             style={{
-                              fontFamily: 'Sora_600SemiBold',
+                              fontFamily: 'Sora_500Medium',
                               fontSize: 10,
                               color: '#1e293b',
                               minWidth: 26,
@@ -1476,7 +1476,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                               }
                             }}
                           />
-                          <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#5D68E8' }}>
+                          <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: '#5D68E8' }}>
                             Ov
                           </ThemedText>
                           <Pressable
@@ -1501,11 +1501,11 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         <Ionicons name={autoWideRule ? 'checkbox' : 'square-outline'} size={14} color={autoWideRule ? '#5D68E8' : '#94a3b8'} />
-                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#334155' }}>
+                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#334155' }}>
                           Wide Ball = 1 Extra Run (Supports Wide + 1, 2 runs)
                         </ThemedText>
                       </View>
-                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_600SemiBold', color: autoWideRule ? '#5D68E8' : '#94a3b8' }}>
+                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: autoWideRule ? '#5D68E8' : '#94a3b8' }}>
                         {autoWideRule ? 'ACTIVE' : 'OFF'}
                       </ThemedText>
                     </Pressable>
@@ -1516,11 +1516,11 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         <Ionicons name={autoNoBallRule ? 'checkbox' : 'square-outline'} size={14} color={autoNoBallRule ? '#5D68E8' : '#94a3b8'} />
-                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#334155' }}>
+                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#334155' }}>
                           No Ball = 1 Extra Run & Free Hit
                         </ThemedText>
                       </View>
-                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_600SemiBold', color: autoNoBallRule ? '#5D68E8' : '#94a3b8' }}>
+                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: autoNoBallRule ? '#5D68E8' : '#94a3b8' }}>
                         {autoNoBallRule ? 'ACTIVE' : 'OFF'}
                       </ThemedText>
                     </Pressable>
@@ -1531,11 +1531,11 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         <Ionicons name={allowByesRule ? 'checkbox' : 'square-outline'} size={14} color={allowByesRule ? '#5D68E8' : '#94a3b8'} />
-                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#334155' }}>
+                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#334155' }}>
                           Byes & Leg Byes Allowed
                         </ThemedText>
                       </View>
-                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_600SemiBold', color: allowByesRule ? '#5D68E8' : '#94a3b8' }}>
+                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: allowByesRule ? '#5D68E8' : '#94a3b8' }}>
                         {allowByesRule ? 'ACTIVE' : 'OFF'}
                       </ThemedText>
                     </Pressable>
@@ -1546,11 +1546,11 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         <Ionicons name={allowWicketRunsRule ? 'checkbox' : 'square-outline'} size={14} color={allowWicketRunsRule ? '#5D68E8' : '#94a3b8'} />
-                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#334155' }}>
+                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#334155' }}>
                           Wicket + Runs Allowed (Run Outs: W+1, W+2)
                         </ThemedText>
                       </View>
-                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_600SemiBold', color: allowWicketRunsRule ? '#5D68E8' : '#94a3b8' }}>
+                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: allowWicketRunsRule ? '#5D68E8' : '#94a3b8' }}>
                         {allowWicketRunsRule ? 'ACTIVE' : 'OFF'}
                       </ThemedText>
                     </Pressable>
@@ -1559,7 +1559,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                   {/* Guide Pill */}
                   <View style={{ backgroundColor: '#5D68E812', borderRadius: 6, padding: 6, marginTop: 5 }}>
                     <ThemedText style={{ fontSize: 8.5, color: '#475569', lineHeight: 12 }}>
-                      💡 <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: '#5D68E8' }}>Match Scenarios:</ThemedText> Long-press 'WD' on pad for Wide + 1, 2 runs. Tap 'Wicket' → pick 'W+1' or 'W+2' for Run Outs.
+                      💡 <ThemedText style={{ fontFamily: 'Sora_500Medium', color: '#5D68E8' }}>Match Scenarios:</ThemedText> Long-press 'WD' on pad for Wide + 1, 2 runs. Tap 'Wicket' → pick 'W+1' or 'W+2' for Run Outs.
                     </ThemedText>
                   </View>
                 </View>
@@ -1639,7 +1639,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                 <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center' }}>
                   <Ionicons name="calendar" size={18} color={theme.primary} />
                 </View>
-                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_500Medium', color: theme.text }}>
                   Select Start Date
                 </ThemedText>
               </View>
@@ -1653,7 +1653,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
               <Pressable style={{ padding: 6 }}>
                 <Ionicons name="chevron-back" size={20} color={theme.text} />
               </Pressable>
-              <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+              <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_500Medium', color: theme.text }}>
                 August 2026
               </ThemedText>
               <Pressable style={{ padding: 6 }}>
@@ -1704,7 +1704,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
 
             {/* Time Selection Header & Slots */}
             <View>
-              <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, marginBottom: 8 }}>
+              <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 8 }}>
                 SELECT MATCH TIME
               </ThemedText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
@@ -1732,7 +1732,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                         style={{
                           color: isSelected ? theme.primary : isPassed ? theme.textSecondary : theme.text,
                           fontSize: 11.5,
-                          fontFamily: 'Sora_600SemiBold',
+                          fontFamily: 'Sora_500Medium',
                           textDecorationLine: isPassed ? 'line-through' : 'none',
                         }}
                       >
@@ -1752,7 +1752,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
               }}
               style={{ backgroundColor: theme.primary, paddingVertical: 13, borderRadius: 8, alignItems: 'center', marginTop: 4 }}
             >
-              <ThemedText style={{ color: '#ffffff', fontSize: 13.5, fontFamily: 'Sora_600SemiBold' }}>
+              <ThemedText style={{ color: '#ffffff', fontSize: 13.5, fontFamily: 'Sora_500Medium' }}>
                 Confirm Timing ({selectedDay} Aug 2026, {tempTime})
               </ThemedText>
             </Pressable>
@@ -1857,7 +1857,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                   {newPhone !== '' && newPhone.replace(/[^0-9]/g, '').length < 7 ? (
                     <ThemedText style={{ color: '#ef4444', fontSize: 10, marginTop: 3 }}>Min 7 digits required</ThemedText>
                   ) : (
-                    <ThemedText style={{ color: '#10B981', fontSize: 10, fontFamily: 'Sora_600SemiBold', marginTop: 3 }}>
+                    <ThemedText style={{ color: '#10B981', fontSize: 10, fontFamily: 'Sora_500Medium', marginTop: 3 }}>
                       ✓ Auto-placed from logged user
                     </ThemedText>
                   )}
@@ -1916,11 +1916,11 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                     />
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <ThemedText style={{ fontFamily: 'Sora_600SemiBold', fontSize: 12, color: theme.text }}>
+                        <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 12, color: theme.text }}>
                           Mark as Favourite Team
                         </ThemedText>
                         <View style={{ backgroundColor: '#FACC1525', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }}>
-                          <ThemedText style={{ fontFamily: 'Sora_600SemiBold', fontSize: 9.5, color: '#D97706' }}>
+                          <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 9.5, color: '#D97706' }}>
                             {newIsFavourite ? `${favTeamsForNewPhone.length + 1}/2` : `${favTeamsForNewPhone.length}/2`}
                           </ThemedText>
                         </View>
@@ -1946,13 +1946,13 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                   onPress={() => setIsNewTeamModalOpen(false)}
                   style={[styles.modalBtn, { backgroundColor: theme.surfaceLow }]}
                 >
-                  <ThemedText style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>Cancel</ThemedText>
+                  <ThemedText style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium', fontSize: 12 }}>Cancel</ThemedText>
                 </Pressable>
                 <Pressable
                   onPress={handleCreateTeamFromModal}
                   style={[styles.modalBtn, { backgroundColor: theme.primary }]}
                 >
-                  <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>Create Team</ThemedText>
+                  <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 12 }}>Create Team</ThemedText>
                 </Pressable>
               </View>
             </ScrollView>
@@ -2022,7 +2022,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tossBtnTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 12.5,
   },
   tossBtnSub: {
@@ -2067,7 +2067,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 16,
   },
   modalCloseBtn: {
@@ -2082,7 +2082,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   fieldLabel: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 11,
   },
   input: {
@@ -2151,7 +2151,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   userLinkName: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 12.5,
   },
   userLinkBadge: {
@@ -2164,7 +2164,7 @@ const styles = StyleSheet.create({
   },
   userLinkBadgeText: {
     fontSize: 9.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#10B981',
   },
   userLinkSub: {

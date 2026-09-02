@@ -245,14 +245,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#ffffff',
     letterSpacing: 0.2,
   },
   headerSubtitle: {
     fontSize: 11,
     color: 'rgba(255, 255, 255, 0.85)',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginTop: 2,
   },
   closeBtn: {
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   },
   playerName: {
     fontSize: 14.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#0f172a',
     flex: 1,
   },
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   playerRoleText: {
     fontSize: 11,
     color: '#64748b',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   metaDot: {
     fontSize: 10,
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   },
   phoneText: {
     fontSize: 10.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#3730a3',
   },
   chainRouteContainer: {
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   },
   chainHeaderTitle: {
     fontSize: 9.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#6366f1',
     letterSpacing: 0.6,
   },
@@ -377,12 +377,12 @@ const styles = StyleSheet.create({
   },
   nodeIndexText: {
     fontSize: 9,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#ffffff',
   },
   nodeNameText: {
     fontSize: 11,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#0f172a',
   },
   nodePhoneHint: {
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   doneBtnText: {
     color: '#ffffff',
     fontSize: 13.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.3,
   },
 });

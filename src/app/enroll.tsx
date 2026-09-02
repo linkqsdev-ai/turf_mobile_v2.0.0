@@ -210,7 +210,7 @@ export default function EnrollScreen() {
                 placeholder="Enter Promo Code"
                 placeholderTextColor="#94a3b8"
                 autoCapitalize="characters"
-                style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#111827' }}
+                style={{ flex: 1, fontSize: 13, fontWeight: '500', color: '#111827' }}
               />
               {appliedOffer && (
                 <Pressable onPress={handleRemovePromo} hitSlop={8}>

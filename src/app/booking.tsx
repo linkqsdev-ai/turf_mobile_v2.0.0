@@ -631,7 +631,7 @@ export default function BookingConfigurationScreen() {
                   </View>
                   <View style={[styles.heroSubItem, { borderLeftWidth: 1, borderLeftColor: '#ffffff22', paddingLeft: 12, marginLeft: 12 }]}>
                     <Ionicons name="star" size={14} color="#ffffff" />
-                    <ThemedText type="bodySm" style={[styles.heroSubText, { color: '#ffffff', fontWeight: '600' }]}>
+                    <ThemedText type="bodySm" style={[styles.heroSubText, { color: '#ffffff', fontWeight: '500' }]}>
                       {venue.rating || '5.0'} <ThemedText type="labelSm" style={{ color: '#ffffffaa' }}>({(venue.reviews || '10+').split(' ')[0]})</ThemedText>
                     </ThemedText>
                   </View>
@@ -683,7 +683,7 @@ export default function BookingConfigurationScreen() {
               {!selectedDate && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 4, backgroundColor: theme.error + '15', borderRadius: 8, padding: 8 }}>
                   <Ionicons name="calendar-outline" size={13} color={theme.error} />
-                  <ThemedText style={{ fontSize: 11, color: theme.error, fontFamily: 'Sora_600SemiBold' }}>Please select a date to continue</ThemedText>
+                  <ThemedText style={{ fontSize: 11, color: theme.error, fontFamily: 'Sora_500Medium' }}>Please select a date to continue</ThemedText>
                 </View>
               )}
 
@@ -749,7 +749,7 @@ export default function BookingConfigurationScreen() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="time" size={15} color={theme.primary} />
-                  <ThemedText type="labelMd" style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                  <ThemedText type="labelMd" style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
                     Select Day & Time Slot
                   </ThemedText>
                 </View>
@@ -817,19 +817,19 @@ export default function BookingConfigurationScreen() {
 
                   {/* Time Slots Header with Live Occupancy Count */}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
                       Select Time Slots
                     </ThemedText>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       {bookedSlotsForSelectedDate.size > 0 && (
                         <View style={{ backgroundColor: '#ef444418', paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 4 }}>
-                          <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#ef4444' }}>
+                          <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#ef4444' }}>
                             {bookedSlotsForSelectedDate.size} Booked
                           </ThemedText>
                         </View>
                       )}
                       <View style={{ backgroundColor: '#10b98118', paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 4 }}>
-                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#047857' }}>
+                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#047857' }}>
                           {activeAvailableSlots.length} Available
                         </ThemedText>
                       </View>
@@ -869,7 +869,7 @@ export default function BookingConfigurationScreen() {
                             type="bodyMd"
                             style={{
                               color: isSelected ? '#ffffff' : isBooked ? '#ef4444' : isConfigBlocked ? '#f59e0b' : isDisabled ? theme.textSecondary + '60' : theme.text,
-                              fontFamily: 'Sora_600SemiBold',
+                              fontFamily: 'Sora_500Medium',
                               fontSize: 11,
                               marginLeft: 3,
                               textDecorationLine: (isDisabled && !isBooked && !isConfigBlocked) ? 'line-through' : 'none',
@@ -879,14 +879,14 @@ export default function BookingConfigurationScreen() {
                           </ThemedText>
                           {isBooked && (
                             <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 4 }}>
-                              <ThemedText style={{ color: '#ffffff', fontSize: 8, fontFamily: 'Sora_600SemiBold' }}>
+                              <ThemedText style={{ color: '#ffffff', fontSize: 8, fontFamily: 'Sora_500Medium' }}>
                                 Booked
                               </ThemedText>
                             </View>
                           )}
                           {isConfigBlocked && !isBooked && (
                             <View style={{ backgroundColor: '#f59e0b', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 4 }}>
-                              <ThemedText style={{ color: '#ffffff', fontSize: 8, fontFamily: 'Sora_600SemiBold' }}>
+                              <ThemedText style={{ color: '#ffffff', fontSize: 8, fontFamily: 'Sora_500Medium' }}>
                                 {configStatus === 'maintenance' ? 'Maint' : 'Blocked'}
                               </ThemedText>
                             </View>
@@ -906,7 +906,7 @@ export default function BookingConfigurationScreen() {
                 </>
               ) : (
                 <Pressable onPress={() => setIsSlotsExpanded(true)} style={{ padding: 10, backgroundColor: theme.primary + '0A', borderRadius: BorderRadius.lg, alignItems: 'center' }}>
-                  <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
+                  <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_500Medium', fontSize: 12 }}>
                     📅 {selectedDayOfWeek} • {selectedSlots.length > 0 ? `${selectedSlots.length} slot(s) selected (${selectedSlots[0]})` : 'Tap to select slot'}
                   </ThemedText>
                 </Pressable>
@@ -944,7 +944,7 @@ export default function BookingConfigurationScreen() {
                   <Ionicons name="fitness" size={20} color={theme.textSecondary} />
                 </View>
                 <View style={{ marginLeft: Spacing.sm }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', fontSize: 14, color: theme.textSecondary }}>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', fontSize: 14, color: theme.textSecondary }}>
                     Pro Net Coach
                   </ThemedText>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 2, fontSize: 10 }}>
@@ -974,7 +974,7 @@ export default function BookingConfigurationScreen() {
                   <Ionicons name="videocam" size={20} color={theme.textSecondary} />
                 </View>
                 <View style={{ marginLeft: Spacing.sm }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', fontSize: 14, color: theme.textSecondary }}>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', fontSize: 14, color: theme.textSecondary }}>
                     HD Match Recording
                   </ThemedText>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 2, fontSize: 10 }}>
@@ -997,11 +997,11 @@ export default function BookingConfigurationScreen() {
                     <Ionicons name="cash" size={18} color="#5D68E8" />
                   </View>
                   <View style={{ marginLeft: Spacing.sm }}>
-                    <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>Pay in Advance</ThemedText>
+                    <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>Pay in Advance</ThemedText>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Remaining due at venue</ThemedText>
                   </View>
                 </View>
-                <ThemedText type="headlineSm" style={{ color: '#5D68E8', fontFamily: 'Sora_600SemiBold' }}>
+                <ThemedText type="headlineSm" style={{ color: '#5D68E8', fontFamily: 'Sora_500Medium' }}>
                   ₹{advanceAmount}
                 </ThemedText>
               </View>
@@ -1023,7 +1023,7 @@ export default function BookingConfigurationScreen() {
                     >
                       <ThemedText style={{
                         color: isActive ? '#05151e' : theme.textSecondary,
-                        fontFamily: 'Sora_600SemiBold',
+                        fontFamily: 'Sora_500Medium',
                         fontSize: 12,
                       }}>{opt.label}</ThemedText>
                     </Pressable>
@@ -1059,7 +1059,7 @@ export default function BookingConfigurationScreen() {
                 <Ionicons name="gift" size={16} color="#10B981" />
               </View>
               <View style={{ flex: 1 }}>
-                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: '#10B981' }}>
+                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: '#10B981' }}>
                   Cashback Offer Activated!
                 </ThemedText>
                 <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 1 }}>
@@ -1075,7 +1075,7 @@ export default function BookingConfigurationScreen() {
                   <Ionicons name="wallet-outline" size={20} color={theme.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text }}>
                     Pay with Wallet Balance
                   </ThemedText>
                   <ThemedText style={{ fontSize: 11, color: theme.textSecondary }}>
@@ -1088,7 +1088,7 @@ export default function BookingConfigurationScreen() {
                   onPress={() => setUseWallet(!useWallet)}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: useWallet ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 }}
                 >
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: useWallet ? '#ffffff' : theme.textSecondary }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: useWallet ? '#ffffff' : theme.textSecondary }}>
                     {useWallet ? 'Applied' : 'Apply'}
                   </ThemedText>
                   <Ionicons name={useWallet ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={useWallet ? '#ffffff' : theme.textSecondary} />
@@ -1103,7 +1103,7 @@ export default function BookingConfigurationScreen() {
             {finalPayable === 0 ? (
               <View style={{ backgroundColor: theme.primary + '10', padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: theme.primary + '22', alignItems: 'center', marginVertical: Spacing.sm }}>
                 <Ionicons name="shield-checkmark-outline" size={32} color={theme.primary} />
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text, marginTop: 8 }}>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text, marginTop: 8 }}>
                   Wallet Balance Applied Fully
                 </ThemedText>
                 <ThemedText style={{ fontSize: 11, color: theme.textSecondary, textAlign: 'center', marginTop: 4, paddingHorizontal: Spacing.md }}>
@@ -1186,7 +1186,7 @@ export default function BookingConfigurationScreen() {
             <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.lg, padding: 16, ...Shadows.level1 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md }}>
                 <View style={{ flex: 1, marginRight: 8 }}>
-                  <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_500Medium', color: theme.text }}>
                     Split Cost among Players
                   </ThemedText>
                   <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
@@ -1197,7 +1197,7 @@ export default function BookingConfigurationScreen() {
                   onPress={() => setIsSplitEnabled(!isSplitEnabled)}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: isSplitEnabled ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 }}
                 >
-                  <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: isSplitEnabled ? '#ffffff' : theme.textSecondary }}>
+                  <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: isSplitEnabled ? '#ffffff' : theme.textSecondary }}>
                     {isSplitEnabled ? 'Active' : 'Enable'}
                   </ThemedText>
                   <Ionicons name={isSplitEnabled ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={isSplitEnabled ? '#ffffff' : theme.textSecondary} />
@@ -1216,7 +1216,7 @@ export default function BookingConfigurationScreen() {
                       return (
                         <View key={player.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '15' }}>
                           <View style={{ flex: 1 }}>
-                            <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                            <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text }}>
                               {player.name}
                             </ThemedText>
                             <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 1 }}>
@@ -1240,7 +1240,7 @@ export default function BookingConfigurationScreen() {
                               <Ionicons name={player.hours > 1 ? "remove" : "trash-outline"} size={14} color={theme.text} />
                             </Pressable>
 
-                            <ThemedText style={{ width: 32, textAlign: 'center', fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                            <ThemedText style={{ width: 32, textAlign: 'center', fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>
                               {player.hours} {player.hours === 1 ? 'hr' : 'hrs'}
                             </ThemedText>
 
@@ -1280,7 +1280,7 @@ export default function BookingConfigurationScreen() {
                       }}
                       style={{ backgroundColor: theme.primary, height: 38, paddingHorizontal: 14, borderRadius: BorderRadius.md, justifyContent: 'center', alignItems: 'center' }}
                     >
-                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: '#ffffff' }}>
                         + Add
                       </ThemedText>
                     </Pressable>
@@ -1290,7 +1290,7 @@ export default function BookingConfigurationScreen() {
                   <View style={{ backgroundColor: theme.primary + '10', borderRadius: BorderRadius.md, padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
                     <Ionicons name="calculator-outline" size={16} color={theme.primary} style={{ marginTop: 1 }} />
                     <View style={{ flex: 1 }}>
-                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.primary }}>
                         Proportional Split Calculation
                       </ThemedText>
                       <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 3, lineHeight: 15 }}>
@@ -1334,7 +1334,7 @@ export default function BookingConfigurationScreen() {
                 </View>
 
                 {/* Bold title & location */}
-                <ThemedText type="bodyLg" style={{ color: theme.text, marginTop: 10, fontFamily: 'Sora_600SemiBold' }}>
+                <ThemedText type="bodyLg" style={{ color: theme.text, marginTop: 10, fontFamily: 'Sora_500Medium' }}>
                   {venue.name}
                 </ThemedText>
                 <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 2 }}>
@@ -1407,7 +1407,7 @@ export default function BookingConfigurationScreen() {
                 <View style={[styles.couponSection, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                     <Ionicons name="pricetag" size={14} color={theme.primary} />
-                    <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>Coupon & Offers</ThemedText>
+                    <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 13 }}>Coupon & Offers</ThemedText>
                   </View>
 
                   {couponApplied ? (
@@ -1416,7 +1416,7 @@ export default function BookingConfigurationScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
                         <View>
-                          <ThemedText style={{ color: '#15803d', fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>{couponCode} applied!</ThemedText>
+                          <ThemedText style={{ color: '#15803d', fontFamily: 'Sora_500Medium', fontSize: 12 }}>{couponCode} applied!</ThemedText>
                           <ThemedText style={{ color: '#16a34a', fontSize: 10, marginTop: 2 }}>You save ₹{couponDiscount}</ThemedText>
                         </View>
                       </View>
@@ -1444,7 +1444,7 @@ export default function BookingConfigurationScreen() {
                         onPress={() => applyCoupon()}
                         style={[styles.couponApplyBtn, { backgroundColor: theme.primary }]}
                       >
-                        <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>Apply</ThemedText>
+                        <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 12 }}>Apply</ThemedText>
                       </Pressable>
                     </View>
                   )}
@@ -1457,7 +1457,7 @@ export default function BookingConfigurationScreen() {
                   {cashbackOffer && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#eff6ff', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginTop: 8 }}>
                       <Ionicons name="wallet" size={14} color="#2563eb" />
-                      <ThemedText style={{ color: '#1d4ed8', fontSize: 10, fontFamily: 'Sora_600SemiBold', flex: 1 }}>
+                      <ThemedText style={{ color: '#1d4ed8', fontSize: 10, fontFamily: 'Sora_500Medium', flex: 1 }}>
                         🎉 Cashback ₹{cashbackOffer.cashback} will be credited to your wallet after booking!
                       </ThemedText>
                     </View>
@@ -1468,7 +1468,7 @@ export default function BookingConfigurationScreen() {
                     <View style={{ marginTop: 10 }}>
                       {turfOffers.length > 0 && (
                         <View style={{ marginBottom: 10 }}>
-                          <ThemedText style={{ color: '#047857', fontSize: 9.5, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.4, marginBottom: 5 }}>
+                          <ThemedText style={{ color: '#047857', fontSize: 9.5, fontFamily: 'Sora_500Medium', letterSpacing: 0.4, marginBottom: 5 }}>
                             EXCLUSIVE OFFERS FOR {venue.name.toUpperCase()}
                           </ThemedText>
                           <View style={{ gap: 6 }}>
@@ -1493,22 +1493,22 @@ export default function BookingConfigurationScreen() {
                               >
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                                   <View style={{ backgroundColor: '#10b981', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                                    <ThemedText style={{ color: '#ffffff', fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
+                                    <ThemedText style={{ color: '#ffffff', fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>
                                       {formatDiscount(o)}
                                     </ThemedText>
                                   </View>
                                   <View style={{ flex: 1 }}>
-                                    <ThemedText style={{ color: theme.text, fontSize: 11, fontFamily: 'Sora_600SemiBold' }} numberOfLines={1}>
+                                    <ThemedText style={{ color: theme.text, fontSize: 11, fontFamily: 'Sora_500Medium' }} numberOfLines={1}>
                                       {o.title || `${o.code} Voucher`}
                                     </ThemedText>
                                     <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5 }} numberOfLines={1}>
-                                      Use code <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: '#047857' }}>{o.code}</ThemedText>
+                                      Use code <ThemedText style={{ fontFamily: 'Sora_500Medium', color: '#047857' }}>{o.code}</ThemedText>
                                       {o.minBooking > 0 ? ` • Min ₹${o.minBooking}` : ''}
                                     </ThemedText>
                                   </View>
                                 </View>
                                 <View style={{ backgroundColor: '#10b981', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-                                  <ThemedText style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>Apply</ThemedText>
+                                  <ThemedText style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_500Medium' }}>Apply</ThemedText>
                                 </View>
                               </Pressable>
                             ))}
@@ -1532,7 +1532,7 @@ export default function BookingConfigurationScreen() {
                             }}
                             style={[styles.offerPill, { borderColor: theme.primary + '44', backgroundColor: theme.primary + '0a' }]}
                           >
-                            <ThemedText style={{ color: theme.primary, fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>{code}</ThemedText>
+                            <ThemedText style={{ color: theme.primary, fontSize: 9, fontFamily: 'Sora_500Medium' }}>{code}</ThemedText>
                             <ThemedText style={{ color: theme.textSecondary, fontSize: 8 }}>{label}</ThemedText>
                           </Pressable>
                         ))}
@@ -1566,8 +1566,8 @@ export default function BookingConfigurationScreen() {
 
                   {couponApplied && couponDiscount > 0 && (
                     <View style={styles.ticketPriceRow}>
-                      <ThemedText style={[styles.ticketPriceLabel, { color: '#16a34a', fontWeight: '600' }]}>Coupon Discount ({couponCode})</ThemedText>
-                      <ThemedText style={{ fontSize: 12, color: '#16a34a', fontWeight: '600' }}>-₹{couponDiscount.toFixed(2)}</ThemedText>
+                      <ThemedText style={[styles.ticketPriceLabel, { color: '#16a34a', fontWeight: '500' }]}>Coupon Discount ({couponCode})</ThemedText>
+                      <ThemedText style={{ fontSize: 12, color: '#16a34a', fontWeight: '500' }}>-₹{couponDiscount.toFixed(2)}</ThemedText>
                     </View>
                   )}
 
@@ -1577,15 +1577,15 @@ export default function BookingConfigurationScreen() {
                   </View>
                   {useWallet && walletDeduction > 0 && (
                     <View style={styles.ticketPriceRow}>
-                      <ThemedText style={[styles.ticketPriceLabel, { color: '#10B981', fontWeight: '600' }]}>Wallet Discount</ThemedText>
-                      <ThemedText style={{ fontSize: 12, color: '#10B981', fontWeight: '600' }}>-₹{walletDeduction.toFixed(2)}</ThemedText>
+                      <ThemedText style={[styles.ticketPriceLabel, { color: '#10B981', fontWeight: '500' }]}>Wallet Discount</ThemedText>
+                      <ThemedText style={{ fontSize: 12, color: '#10B981', fontWeight: '500' }}>-₹{walletDeduction.toFixed(2)}</ThemedText>
                     </View>
                   )}
                   <View style={[styles.ticketPriceRow, { marginTop: 6, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '15', paddingTop: 6 }]}>
-                    <ThemedText style={{ color: theme.text, fontSize: 12, fontWeight: '600' }}>
+                    <ThemedText style={{ color: theme.text, fontSize: 12, fontWeight: '500' }}>
                       {advancePct < 100 ? `Amount to Pay Now (${advancePct}%)` : 'Amount to Pay Now'}
                     </ThemedText>
-                    <ThemedText style={{ color: theme.primary, fontSize: 13, fontWeight: '600' }}>
+                    <ThemedText style={{ color: theme.primary, fontSize: 13, fontWeight: '500' }}>
                       ₹{finalPayable.toFixed(2)}
                     </ThemedText>
                   </View>
@@ -1668,7 +1668,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   headerTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 16,
   },
   scrollContent: {
@@ -1709,7 +1709,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: '#ffffff',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 20,
     lineHeight: 24,
   },
@@ -1757,7 +1757,7 @@ const styles = StyleSheet.create({
   dayLabelText: {
     width: `${100 / 7}%`,
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   calendarGrid: {
     flexDirection: 'row',
@@ -1855,7 +1855,7 @@ const styles = StyleSheet.create({
   },
   ticketHeroTitle: {
     color: '#ffffff',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 20,
   },
   ticketDottedLineContainer: {
@@ -1924,7 +1924,7 @@ const styles = StyleSheet.create({
   ticketGridLabel: {
     color: 'rgba(128, 128, 128, 0.6)',
     fontSize: 10,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
@@ -1955,7 +1955,7 @@ const styles = StyleSheet.create({
   },
   ticketPriceValue: {
     fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   ticketPriceTotalRow: {
     flexDirection: 'row',
@@ -1968,11 +1968,11 @@ const styles = StyleSheet.create({
   },
   ticketPriceTotalLabel: {
     fontSize: 14,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   ticketPriceTotalVal: {
     fontSize: 16,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   barcodeWrapper: {
     alignItems: 'center',
@@ -1987,7 +1987,7 @@ const styles = StyleSheet.create({
   },
   barcodeSubText: {
     fontSize: 10,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginTop: 4,
     letterSpacing: 1.5,
   },
@@ -2014,7 +2014,7 @@ const styles = StyleSheet.create({
   },
   ticketConfirmBtnTitle: {
     color: '#ffffff',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 13,
     letterSpacing: 0.3,
   },

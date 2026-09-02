@@ -237,7 +237,7 @@ export default function ProfileScreen() {
                 style={[styles.pillActionBtn, { flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1 }]}
               >
                 <Ionicons name="create-outline" size={14} color="#ffffff" style={{ marginRight: 6 }} />
-                <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '600' }}>Edit Profile</ThemedText>
+                <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '500' }}>Edit Profile</ThemedText>
               </Pressable>
 
               <Pressable 
@@ -247,7 +247,7 @@ export default function ProfileScreen() {
                 style={[styles.pillActionBtn, { flex: 1, backgroundColor: theme.secondaryContainer }]}
               >
                 <Ionicons name="share-social-outline" size={14} color={theme.onSecondaryContainer} style={{ marginRight: 6 }} />
-                <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontWeight: '600' }}>Share Stats</ThemedText>
+                <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontWeight: '500' }}>Share Stats</ThemedText>
               </Pressable>
             </View>
 
@@ -426,14 +426,14 @@ export default function ProfileScreen() {
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>TURF OCCUPANCY</ThemedText>
                       <View style={styles.bentoValRow}>
                         <ThemedText type="displayLgMobile" style={{ color: theme.text }}>82%</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: '#16a34a', fontFamily: 'Sora_600SemiBold' }}>+8% W/W</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: '#16a34a', fontFamily: 'Sora_500Medium' }}>+8% W/W</ThemedText>
                       </View>
                     </View>
                     <View style={[styles.bentoCell, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>TOTAL BOOKINGS</ThemedText>
                       <View style={styles.bentoValRow}>
                         <ThemedText type="displayLgMobile" style={{ color: theme.text }}>312</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>58 New</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium' }}>58 New</ThemedText>
                       </View>
                     </View>
                   </View>
@@ -459,14 +459,14 @@ export default function ProfileScreen() {
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>HOURS COACHED</ThemedText>
                       <View style={styles.bentoValRow}>
                         <ThemedText type="displayLgMobile" style={{ color: theme.text }}>180</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: '#16a34a', fontFamily: 'Sora_600SemiBold' }}>+15h Mo</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: '#16a34a', fontFamily: 'Sora_500Medium' }}>+15h Mo</ThemedText>
                       </View>
                     </View>
                     <View style={[styles.bentoCell, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>ACTIVE STUDENTS</ThemedText>
                       <View style={styles.bentoValRow}>
                         <ThemedText type="displayLgMobile" style={{ color: theme.text }}>24</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>Pro Badge</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium' }}>Pro Badge</ThemedText>
                       </View>
                     </View>
                   </View>
@@ -492,14 +492,14 @@ export default function ProfileScreen() {
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>LEAGUES HOSTED</ThemedText>
                       <View style={styles.bentoValRow}>
                         <ThemedText type="displayLgMobile" style={{ color: theme.text }}>18</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: '#16a34a', fontFamily: 'Sora_600SemiBold' }}>3 Active</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: '#16a34a', fontFamily: 'Sora_500Medium' }}>3 Active</ThemedText>
                       </View>
                     </View>
                     <View style={[styles.bentoCell, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>TEAMS MANAGED</ThemedText>
                       <View style={styles.bentoValRow}>
                         <ThemedText type="displayLgMobile" style={{ color: theme.text }}>112</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>16 New</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium' }}>16 New</ThemedText>
                       </View>
                     </View>
                   </View>
@@ -525,14 +525,14 @@ export default function ProfileScreen() {
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>MATCHES PLAYED</ThemedText>
                       <View style={styles.bentoValRow}>
                         <ThemedText type="displayLgMobile" style={{ color: theme.text }}>142</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>+12% LY</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium' }}>+12% LY</ThemedText>
                       </View>
                     </View>
                     <View style={[styles.bentoCell, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>TOTAL WINS</ThemedText>
                       <View style={styles.bentoValRow}>
                         <ThemedText type="displayLgMobile" style={{ color: theme.text }}>89</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: '#16a34a', fontFamily: 'Sora_600SemiBold' }}>62.6% WR</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: '#16a34a', fontFamily: 'Sora_500Medium' }}>62.6% WR</ThemedText>
                       </View>
                     </View>
                   </View>
@@ -662,7 +662,7 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.feedContent}>
                         <View style={styles.rowBetween}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Arena Pitch Refurbished</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Arena Pitch Refurbished</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>5 hrs ago</ThemedText>
                         </View>
                         <ThemedText style={{ color: theme.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 }}>
@@ -677,7 +677,7 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.feedContent}>
                         <View style={styles.rowBetween}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Summer Promo Success</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Summer Promo Success</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Yesterday</ThemedText>
                         </View>
                         <ThemedText style={{ color: theme.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 }}>
@@ -692,7 +692,7 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.feedContent}>
                         <View style={styles.rowBetween}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Staff Training Complete</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Staff Training Complete</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>3 days ago</ThemedText>
                         </View>
                         <ThemedText style={{ color: theme.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 }}>
@@ -709,7 +709,7 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.feedContent}>
                         <View style={styles.rowBetween}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>U-16 Striking Clinic Complete</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>U-16 Striking Clinic Complete</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>5 hrs ago</ThemedText>
                         </View>
                         <ThemedText style={{ color: theme.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 }}>
@@ -724,7 +724,7 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.feedContent}>
                         <View style={styles.rowBetween}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Marcus Vance Level Up</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Marcus Vance Level Up</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Yesterday</ThemedText>
                         </View>
                         <ThemedText style={{ color: theme.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 }}>
@@ -739,7 +739,7 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.feedContent}>
                         <View style={styles.rowBetween}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Tactical Blueprint Shared</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Tactical Blueprint Shared</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>3 days ago</ThemedText>
                         </View>
                         <ThemedText style={{ color: theme.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 }}>
@@ -756,7 +756,7 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.feedContent}>
                         <View style={styles.rowBetween}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Regents T10 Schedule</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Regents T10 Schedule</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>5 hrs ago</ThemedText>
                         </View>
                         <ThemedText style={{ color: theme.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 }}>
@@ -771,7 +771,7 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.feedContent}>
                         <View style={styles.rowBetween}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Rules Update: Player Subs</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Rules Update: Player Subs</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Yesterday</ThemedText>
                         </View>
                         <ThemedText style={{ color: theme.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 }}>
@@ -786,7 +786,7 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.feedContent}>
                         <View style={styles.rowBetween}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Referee Appointments</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Referee Appointments</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>3 days ago</ThemedText>
                         </View>
                         <ThemedText style={{ color: theme.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 }}>
@@ -803,7 +803,7 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.feedContent}>
                         <View style={styles.rowBetween}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Victory vs Titans XI</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Victory vs Titans XI</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>5 hrs ago</ThemedText>
                         </View>
                         <ThemedText style={{ color: theme.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 }}>
@@ -818,7 +818,7 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.feedContent}>
                         <View style={styles.rowBetween}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Strength Training</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Strength Training</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Yesterday</ThemedText>
                         </View>
                         <ThemedText style={{ color: theme.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 }}>
@@ -833,7 +833,7 @@ export default function ProfileScreen() {
                       </View>
                       <View style={styles.feedContent}>
                         <View style={styles.rowBetween}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Achievement Unlocked</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Achievement Unlocked</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>3 days ago</ThemedText>
                         </View>
                         <ThemedText style={{ color: theme.textSecondary, marginTop: 2, fontSize: 12.5, lineHeight: 18 }}>
@@ -909,11 +909,11 @@ export default function ProfileScreen() {
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#eab308' }]}>1</ThemedText>
                       <Image source={require('@/assets/images/sports/sport_football.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Wembley Indoor Hub</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Wembley Indoor Hub</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4.9 Rating • London</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>4,920</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>4,920</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>BKS</ThemedText>
                       </View>
                     </View>
@@ -921,11 +921,11 @@ export default function ProfileScreen() {
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#94a3b8' }]}>2</ThemedText>
                       <Image source={require('@/assets/images/sports/sport_booking.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Chelsea Astro Arena</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Chelsea Astro Arena</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4.8 Rating • London</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>4,810</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>4,810</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>BKS</ThemedText>
                       </View>
                     </View>
@@ -934,12 +934,12 @@ export default function ProfileScreen() {
                       <Image source={getAvatarSource(profile.avatarUrl)} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <ThemedText type="bodyMd" numberOfLines={1} style={{ fontFamily: 'Sora_600SemiBold', color: theme.primary }}>{profile.name} Arena (You)</ThemedText>
+                          <ThemedText type="bodyMd" numberOfLines={1} style={{ fontFamily: 'Sora_500Medium', color: theme.primary }}>{profile.name} Arena (You)</ThemedText>
                         </View>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4.7 Rating • London</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.primary }}>4,240</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.primary }}>4,240</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>BKS</ThemedText>
                       </View>
                     </View>
@@ -947,11 +947,11 @@ export default function ProfileScreen() {
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#b45309' }]}>4</ThemedText>
                       <Image source={require('@/assets/images/sports/sport_all.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Stratford Green Fields</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Stratford Green Fields</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4.6 Rating • London</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>3,780</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>3,780</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>BKS</ThemedText>
                       </View>
                     </View>
@@ -962,11 +962,11 @@ export default function ProfileScreen() {
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#eab308' }]}>1</ThemedText>
                       <Image source={require('@/assets/images/avatars/avatar_2.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Coach Alan Shearer</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Coach Alan Shearer</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>UEFA Pro • London</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>340</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>340</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>STUDENTS</ThemedText>
                       </View>
                     </View>
@@ -974,11 +974,11 @@ export default function ProfileScreen() {
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#94a3b8' }]}>2</ThemedText>
                       <Image source={require('@/assets/images/avatars/avatar_3.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Coach Alex Ferguson</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Coach Alex Ferguson</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>UEFA Pro • London</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>290</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>290</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>STUDENTS</ThemedText>
                       </View>
                     </View>
@@ -987,12 +987,12 @@ export default function ProfileScreen() {
                       <Image source={getAvatarSource(profile.avatarUrl)} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.primary }}>Coach {profile.name} (You)</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.primary }}>Coach {profile.name} (You)</ThemedText>
                         </View>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>UEFA A • London</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.primary }}>240</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.primary }}>240</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>STUDENTS</ThemedText>
                       </View>
                     </View>
@@ -1000,11 +1000,11 @@ export default function ProfileScreen() {
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#b45309' }]}>4</ThemedText>
                       <Image source={require('@/assets/images/avatars/avatar_4.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Coach Pep Guardiola</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Coach Pep Guardiola</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>UEFA Pro • Manchester</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>210</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>210</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>STUDENTS</ThemedText>
                       </View>
                     </View>
@@ -1015,11 +1015,11 @@ export default function ProfileScreen() {
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#eab308' }]}>1</ThemedText>
                       <Image source={require('@/assets/images/sports/sport_tournament.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Premier League Org</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Premier League Org</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Gold Status • London</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>142</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>142</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>LEAGUES</ThemedText>
                       </View>
                     </View>
@@ -1027,11 +1027,11 @@ export default function ProfileScreen() {
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#94a3b8' }]}>2</ThemedText>
                       <Image source={require('@/assets/images/sports/sport_football.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>London Futsal Comm.</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>London Futsal Comm.</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Gold Status • London</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>98</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>98</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>LEAGUES</ThemedText>
                       </View>
                     </View>
@@ -1040,12 +1040,12 @@ export default function ProfileScreen() {
                       <Image source={getAvatarSource(profile.avatarUrl)} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <ThemedText type="bodyMd" numberOfLines={1} style={{ fontFamily: 'Sora_600SemiBold', color: theme.primary }}>{profile.name} (You)</ThemedText>
+                          <ThemedText type="bodyMd" numberOfLines={1} style={{ fontFamily: 'Sora_500Medium', color: theme.primary }}>{profile.name} (You)</ThemedText>
                         </View>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Silver Status • London</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.primary }}>89</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.primary }}>89</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>LEAGUES</ThemedText>
                       </View>
                     </View>
@@ -1053,11 +1053,11 @@ export default function ProfileScreen() {
                       <ThemedText type="headlineSm" style={[styles.rankNumber, { color: '#b45309' }]}>4</ThemedText>
                       <Image source={require('@/assets/images/sports/sport_all.png')} style={styles.rankAvatar} />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>City Sports Assoc.</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>City Sports Assoc.</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Silver Status • Bristol</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>76</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>76</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>LEAGUES</ThemedText>
                       </View>
                     </View>
@@ -1075,12 +1075,12 @@ export default function ProfileScreen() {
                       />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Marcus V.</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Marcus V.</ThemedText>
                         </View>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Forward • London</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>2,980</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>2,980</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>PTS</ThemedText>
                       </View>
                     </Pressable>
@@ -1092,11 +1092,11 @@ export default function ProfileScreen() {
                         style={styles.rankAvatar}
                       />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Sarah K.</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Sarah K.</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Midfielder • Bristol</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>2,910</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>2,910</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>PTS</ThemedText>
                       </View>
                     </View>
@@ -1109,12 +1109,12 @@ export default function ProfileScreen() {
                       />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <ThemedText type="bodyMd" numberOfLines={1} style={{ fontFamily: 'Sora_600SemiBold', color: theme.primary }}>{profile.name} (You)</ThemedText>
+                          <ThemedText type="bodyMd" numberOfLines={1} style={{ fontFamily: 'Sora_500Medium', color: theme.primary }}>{profile.name} (You)</ThemedText>
                         </View>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>{profile.position} • {profile.location.split(',')[0]}</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.primary }}>2,840</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.primary }}>2,840</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>PTS</ThemedText>
                       </View>
                     </View>
@@ -1126,11 +1126,11 @@ export default function ProfileScreen() {
                         style={styles.rankAvatar}
                       />
                       <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Elena S.</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Elena S.</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Midfielder • London</ThemedText>
                       </View>
                       <View style={styles.rankScoreCol}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>2,780</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>2,780</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>PTS</ThemedText>
                       </View>
                     </View>
@@ -1173,10 +1173,10 @@ export default function ProfileScreen() {
                 }}
               >
                 <View style={{ flex: 1, marginRight: 8 }}>
-                  <ThemedText style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.6 }}>
+                  <ThemedText style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_500Medium', letterSpacing: 0.6 }}>
                     WALLET BALANCE
                   </ThemedText>
-                  <ThemedText style={{ color: theme.text, fontSize: 20, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
+                  <ThemedText style={{ color: theme.text, fontSize: 20, fontFamily: 'Sora_500Medium', marginTop: 2 }}>
                     ₹{walletBalance.toFixed(2)}
                   </ThemedText>
 
@@ -1190,7 +1190,7 @@ export default function ProfileScreen() {
                         paddingVertical: 6,
                       }}
                     >
-                      <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
+                      <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_500Medium' }}>
                         View Wallet & Offers →
                       </ThemedText>
                     </Pressable>
@@ -1226,7 +1226,7 @@ export default function ProfileScreen() {
                     <Ionicons name="pricetag" size={17} color="#f59e0b" />
                   </View>
                   <View>
-                    <ThemedText style={{ fontFamily: 'Sora_600SemiBold', fontSize: 12.5, color: theme.text }}>
+                    <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 12.5, color: theme.text }}>
                       Offers, Vouchers & Rewards
                     </ThemedText>
                     <ThemedText style={{ fontSize: 10, color: theme.textSecondary, marginTop: 1, fontFamily: 'Sora_500Medium' }}>
@@ -1286,82 +1286,82 @@ export default function ProfileScreen() {
                   <View style={styles.bioGrid}>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>FACILITY PITCHES</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>3 Astro, 1 Woodcourt</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>3 Astro, 1 Woodcourt</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>CATEGORY</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>Turf Provider</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>Turf Provider</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>PEAK HOURS</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>17:00-22:00 Daily</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>17:00-22:00 Daily</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>OPERATING SINCE</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>March 2023</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>March 2023</ThemedText>
                     </View>
                   </View>
                 ) : role === 'Coach' ? (
                   <View style={styles.bioGrid}>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>FOCUS AGE GROUP</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>U12, U16, Adults</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>U12, U16, Adults</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>CERTIFICATIONS</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>UEFA A, FA L3</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>UEFA A, FA L3</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>TRAINING RATE</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>₹800/hr (Indiv)</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>₹800/hr (Indiv)</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>COACHING EXP</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>8+ Years</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>8+ Years</ThemedText>
                     </View>
                   </View>
                 ) : role === 'Organizer' ? (
                   <View style={styles.bioGrid}>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>TOURNAMENT TYPES</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>Knockout, Leagues</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>Knockout, Leagues</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>HOSTING SCOPE</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>Local, Corporate</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>Local, Corporate</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>ENTRY FEE RULES</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>Paid / Sponsored</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>Paid / Sponsored</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>EQUIPMENT</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>Refs, Balls, Kits</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>Refs, Balls, Kits</ThemedText>
                     </View>
                   </View>
                 ) : (
                   <View style={styles.bioGrid}>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>PREFERRED FOOT</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>{profile.preferredFoot}</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>{profile.preferredFoot}</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>PLAYING POSITION</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>{profile.position}</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>{profile.position}</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>PREFERRED STYLE</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>{profile.playingStyle}</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>{profile.playingStyle}</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
                       <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>MEMBER SINCE</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', marginTop: 4, fontSize: 12 }}>{profile.memberSince}</ThemedText>
+                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>{profile.memberSince}</ThemedText>
                     </View>
                   </View>
                 )}
                 
                 <View style={{ borderTopWidth: 1, borderTopColor: theme.outlineVariant + '33', paddingTop: Spacing.md, marginTop: Spacing.md }}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: Spacing.sm, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5, fontSize: 9 }}>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: Spacing.sm, fontFamily: 'Sora_500Medium', letterSpacing: 0.5, fontSize: 9 }}>
                     {role === 'Owner' 
                       ? 'FACILITY DESCRIPTION' 
                       : role === 'Coach' 
@@ -1399,7 +1399,7 @@ export default function ProfileScreen() {
                         <Ionicons name="football" size={18} color={theme.primary} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Footy Club Match Booking</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Footy Club Match Booking</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Pitch A • 17:00 - 18:00</ThemedText>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.outline} />
@@ -1410,7 +1410,7 @@ export default function ProfileScreen() {
                         <MaterialCommunityIcons name="cricket" size={18} color={theme.secondary} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Corporate Cricket Match</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Corporate Cricket Match</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Pitch B • 18:30 - 20:00</ThemedText>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.outline} />
@@ -1421,7 +1421,7 @@ export default function ProfileScreen() {
                 <View style={[styles.section, { paddingBottom: 60 }]}>
                   <View style={[styles.upcomingCard, { backgroundColor: theme.primaryContainer }]}>
                     <ThemedText type="labelSm" style={{ color: '#ffffff' }}>TODAY&apos;S ESTIMATED REVENUE</ThemedText>
-                    <ThemedText type="headlineLg" style={{ color: '#ffffff', marginTop: Spacing.half, fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText type="headlineLg" style={{ color: '#ffffff', marginTop: Spacing.half, fontFamily: 'Sora_500Medium' }}>
                       ₹20,900
                     </ThemedText>
                     <ThemedText type="bodySm" style={{ color: '#ffffff', opacity: 0.8, marginTop: 4 }}>
@@ -1429,7 +1429,7 @@ export default function ProfileScreen() {
                     </ThemedText>
                     
                     <Pressable style={[styles.briefBtn, { backgroundColor: '#ffffff', marginTop: Spacing.md }]}>
-                      <ThemedText type="labelMd" style={{ color: theme.primary, fontWeight: '600' }}>
+                      <ThemedText type="labelMd" style={{ color: theme.primary, fontWeight: '500' }}>
                         VIEW DAILY INVOICES
                       </ThemedText>
                     </Pressable>
@@ -1452,7 +1452,7 @@ export default function ProfileScreen() {
                         <Ionicons name="people-outline" size={18} color={theme.primary} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Under-16 Advanced Class</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Under-16 Advanced Class</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Pitch A • 15:30 - 17:00</ThemedText>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.outline} />
@@ -1463,7 +1463,7 @@ export default function ProfileScreen() {
                         <Ionicons name="person-outline" size={18} color={theme.secondary} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Individual Mentoring Class</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Individual Mentoring Class</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Gym Area • 18:00 - 19:30</ThemedText>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.outline} />
@@ -1474,7 +1474,7 @@ export default function ProfileScreen() {
                 <View style={[styles.section, { paddingBottom: 60 }]}>
                   <View style={[styles.upcomingCard, { backgroundColor: theme.primaryContainer }]}>
                     <ThemedText type="labelSm" style={{ color: '#ffffff' }}>UPCOMING ACADEMY WORKSHOP</ThemedText>
-                    <ThemedText type="labelMd" style={{ color: '#ffffff', marginTop: Spacing.half, fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText type="labelMd" style={{ color: '#ffffff', marginTop: Spacing.half, fontFamily: 'Sora_500Medium' }}>
                       SUNDAY, 10:00 GMT
                     </ThemedText>
                     <ThemedText type="bodySm" style={{ color: '#ffffff', opacity: 0.8, marginTop: 4 }}>
@@ -1482,7 +1482,7 @@ export default function ProfileScreen() {
                     </ThemedText>
                     
                     <Pressable style={[styles.briefBtn, { backgroundColor: '#ffffff', marginTop: Spacing.md }]}>
-                      <ThemedText type="labelMd" style={{ color: theme.primary, fontWeight: '600' }}>
+                      <ThemedText type="labelMd" style={{ color: theme.primary, fontWeight: '500' }}>
                         SHARE SIGNUP LINK
                       </ThemedText>
                     </Pressable>
@@ -1505,7 +1505,7 @@ export default function ProfileScreen() {
                         <Ionicons name="trophy-outline" size={18} color={theme.primary} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Regents T10 Super League</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Regents T10 Super League</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Falcons FC vs Wolves (Bracket)</ThemedText>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.outline} />
@@ -1516,7 +1516,7 @@ export default function ProfileScreen() {
                         <Ionicons name="flag-outline" size={18} color={theme.secondary} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>London Futsal Fete Cup</ThemedText>
+                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>London Futsal Fete Cup</ThemedText>
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Tigers XI vs Mavericks (Futsal)</ThemedText>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.outline} />
@@ -1527,7 +1527,7 @@ export default function ProfileScreen() {
                 <View style={[styles.section, { paddingBottom: 60 }]}>
                   <View style={[styles.upcomingCard, { backgroundColor: theme.primaryContainer }]}>
                     <ThemedText type="labelSm" style={{ color: '#ffffff' }}>UPCOMING LEAGUE FINALS</ThemedText>
-                    <ThemedText type="labelMd" style={{ color: '#ffffff', marginTop: Spacing.half, fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText type="labelMd" style={{ color: '#ffffff', marginTop: Spacing.half, fontFamily: 'Sora_500Medium' }}>
                       SATURDAY, 15:00 GMT
                     </ThemedText>
                     <ThemedText type="bodySm" style={{ color: '#ffffff', opacity: 0.8, marginTop: 4 }}>
@@ -1535,7 +1535,7 @@ export default function ProfileScreen() {
                     </ThemedText>
                     
                     <Pressable style={[styles.briefBtn, { backgroundColor: '#ffffff', marginTop: Spacing.md }]}>
-                      <ThemedText type="labelMd" style={{ color: theme.primary, fontWeight: '600' }}>
+                      <ThemedText type="labelMd" style={{ color: theme.primary, fontWeight: '500' }}>
                         VIEW BRACKET & RULES
                       </ThemedText>
                     </Pressable>
@@ -1563,7 +1563,7 @@ export default function ProfileScreen() {
                         >
                           <Image source={getMascotImage(team.mascot)} style={styles.teamItemLogo} contentFit="cover" />
                           <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                            <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }} numberOfLines={1}>{team.name}</ThemedText>
+                            <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }} numberOfLines={1}>{team.name}</ThemedText>
                             <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>
                               {team.sport} • {team.players.length} squad members
                             </ThemedText>
@@ -1597,7 +1597,7 @@ export default function ProfileScreen() {
                       >
                         <Image source={getMascotImage(pt.mascot)} style={styles.playedTeamCrest} contentFit="contain" />
                         <View style={{ flex: 1, marginLeft: Spacing.sm }}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }} numberOfLines={1}>{pt.name}</ThemedText>
+                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }} numberOfLines={1}>{pt.name}</ThemedText>
                           <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>{pt.sport}</ThemedText>
                         </View>
                         <View style={styles.playedTeamStats}>
@@ -1761,7 +1761,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   headerTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 16,
   },
   iconButton: {
@@ -1983,7 +1983,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   tabHeaderTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 12,
     letterSpacing: 0.6,
   },
@@ -2090,14 +2090,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(93, 104, 232, 0.08)',
   },
   vitalLabel: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 9.5,
     textTransform: 'uppercase',
     textAlign: 'center',
     letterSpacing: 0.3,
   },
   vitalValue: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 13.5,
     marginTop: 4,
     textAlign: 'center',
@@ -2156,7 +2156,7 @@ const styles = StyleSheet.create({
   rankNumber: {
     width: 24,
     textAlign: 'center',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginRight: Spacing.xs,
   },
   rankAvatar: {
@@ -2270,11 +2270,11 @@ const styles = StyleSheet.create({
   },
   playedTeamStatValue: {
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   playedTeamStatLabel: {
     fontSize: 8,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.3,
     marginTop: 1,
   },
@@ -2298,7 +2298,7 @@ const styles = StyleSheet.create({
   squadAvatarText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   squadPlayerInfo: {
     flex: 1,
@@ -2306,7 +2306,7 @@ const styles = StyleSheet.create({
   },
   squadPlayerName: {
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   squadPlayerPosition: {
     fontSize: 11,
@@ -2322,7 +2322,7 @@ const styles = StyleSheet.create({
   },
   squadJerseyText: {
     fontSize: 10.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   themeCard: {
     borderRadius: BorderRadius.xl,
@@ -2346,7 +2346,7 @@ const styles = StyleSheet.create({
   },
   themeOptionText: {
     fontSize: 11,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
 
   // Modal Sheet Styles
@@ -2389,7 +2389,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
   },
   modalSectionLabel: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 10,
     letterSpacing: 0.8,
     marginBottom: Spacing.sm,
@@ -2405,7 +2405,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   inputLabel: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 10,
     letterSpacing: 0.6,
     marginBottom: Spacing.xs,
@@ -2508,7 +2508,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   confirmTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 18,
     marginBottom: Spacing.xs,
     textAlign: 'center',
@@ -2551,7 +2551,7 @@ const styles = StyleSheet.create({
   profileNameText: {
     color: '#ffffff',
     fontSize: 20,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   profileMetaRow: {
     flexDirection: 'row',

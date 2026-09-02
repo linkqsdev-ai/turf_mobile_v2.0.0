@@ -429,7 +429,7 @@ export default function LoginScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
                         <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
                         <ThemedText style={styles.sentPhoneText}>
-                          OTP sent to <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: TEXT_DARK }}>+91 {phone}</ThemedText>
+                          OTP sent to <ThemedText style={{ fontFamily: 'Sora_500Medium', color: TEXT_DARK }}>+91 {phone}</ThemedText>
                         </ThemedText>
                       </View>
                       <Pressable onPress={() => { setOtpStage('phone'); setOtpCode(''); setErrorMessage(null); }}>
@@ -442,7 +442,7 @@ export default function LoginScreen() {
                     <View style={[styles.inputWrapper, isOtpFocused && styles.inputFocused]}>
                       <Ionicons name="key-outline" size={18} color={isOtpFocused ? ACCENT : TEXT_MID} style={styles.inputIcon} />
                       <TextInput
-                        style={[styles.input, { letterSpacing: 6, fontSize: 18, fontFamily: 'Sora_600SemiBold' }]}
+                        style={[styles.input, { letterSpacing: 6, fontSize: 18, fontFamily: 'Sora_500Medium' }]}
                         placeholder="••••••"
                         placeholderTextColor="#cbd5e1"
                         value={otpCode}
@@ -462,7 +462,7 @@ export default function LoginScreen() {
                         </ThemedText>
                       ) : (
                         <Pressable onPress={handleSendOtp}>
-                          <ThemedText style={[styles.resendTimerText, { color: ACCENT, fontFamily: 'Sora_600SemiBold' }]}>
+                          <ThemedText style={[styles.resendTimerText, { color: ACCENT, fontFamily: 'Sora_500Medium' }]}>
                             Resend OTP
                           </ThemedText>
                         </Pressable>
@@ -539,7 +539,7 @@ export default function LoginScreen() {
                       <ThemedText style={styles.optionText}>Remember me</ThemedText>
                     </Pressable>
                     <Pressable onPress={() => router.push('/forgot-password')}>
-                      <ThemedText style={[styles.optionText, { color: ACCENT, fontFamily: 'Sora_600SemiBold' }]}>
+                      <ThemedText style={[styles.optionText, { color: ACCENT, fontFamily: 'Sora_500Medium' }]}>
                         Forgot Password?
                       </ThemedText>
                     </Pressable>
@@ -709,7 +709,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 9,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: ACCENT,
     letterSpacing: 1.4,
   },
@@ -721,7 +721,7 @@ const styles = StyleSheet.create({
   },
   titleNormal: {
     fontSize: 30,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     lineHeight: 38,
     letterSpacing: -0.5,
@@ -731,7 +731,7 @@ const styles = StyleSheet.create({
   },
   titleHighlight: {
     fontSize: 30,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     lineHeight: 38,
     letterSpacing: -0.5,
@@ -792,12 +792,12 @@ const styles = StyleSheet.create({
   },
   authModeText: {
     fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
   },
   authModeTextActive: {
     color: '#ffffff',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
 
   // Sent phone banner
@@ -821,7 +821,7 @@ const styles = StyleSheet.create({
   editPhoneBtn: {
     fontSize: 12,
     color: ACCENT,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     textDecorationLine: 'underline',
   },
   resendRow: {
@@ -855,7 +855,7 @@ const styles = StyleSheet.create({
   // Inputs
   label: {
     fontSize: 12.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     marginBottom: 6,
     marginLeft: 2,
@@ -920,7 +920,7 @@ const styles = StyleSheet.create({
   ctaText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.8,
   },
 
@@ -978,7 +978,7 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 13,
     color: TEXT_DARK,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
 
   // Demo section
@@ -992,7 +992,7 @@ const styles = StyleSheet.create({
   },
   demoTitle: {
     fontSize: 9.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_MID,
     textAlign: 'center',
     marginBottom: 8,

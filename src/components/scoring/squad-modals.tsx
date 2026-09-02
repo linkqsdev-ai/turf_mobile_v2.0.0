@@ -44,11 +44,11 @@ import { useTheme } from '@/hooks/use-theme';
  * uses five steps only. All three popups draw from here — no literal fontSize.
  */
 export const SquadType = {
-  micro: { fontFamily: 'Sora_600SemiBold', fontSize: 10, lineHeight: 13 },
+  micro: { fontFamily: 'Sora_500Medium', fontSize: 10, lineHeight: 13 },
   small: { fontFamily: 'Sora_500Medium', fontSize: 11, lineHeight: 15 },
   body: { fontFamily: 'Sora_500Medium', fontSize: 12.5, lineHeight: 17 },
-  bodyStrong: { fontFamily: 'Sora_600SemiBold', fontSize: 12.5, lineHeight: 17 },
-  title: { fontFamily: 'Sora_600SemiBold', fontSize: 14, lineHeight: 19 },
+  bodyStrong: { fontFamily: 'Sora_500Medium', fontSize: 12.5, lineHeight: 17 },
+  title: { fontFamily: 'Sora_500Medium', fontSize: 14, lineHeight: 19 },
 } as const;
 
 export interface SquadPlayer {

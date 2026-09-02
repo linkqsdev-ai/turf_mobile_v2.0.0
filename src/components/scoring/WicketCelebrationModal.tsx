@@ -142,14 +142,14 @@ export function WicketCelebrationModal({
               <View style={styles.bowlerPill}>
                 <Ionicons name="sparkles" size={12} color="#10b981" />
                 <ThemedText style={styles.bowlerText}>
-                  Wicket by <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: '#047857' }}>{bowlerName}</ThemedText>
+                  Wicket by <ThemedText style={{ fontFamily: 'Sora_500Medium', color: '#047857' }}>{bowlerName}</ThemedText>
                 </ThemedText>
               </View>
             ) : null}
 
             {scoreText ? (
               <ThemedText style={styles.scoreSubtext}>
-                Match Score: <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: '#0f172a' }}>{scoreText}</ThemedText>
+                Match Score: <ThemedText style={{ fontFamily: 'Sora_500Medium', color: '#0f172a' }}>{scoreText}</ThemedText>
               </ThemedText>
             ) : null}
           </View>
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   },
   batsmanName: {
     fontSize: 15,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#991b1b',
   },
   bowlerPill: {
@@ -251,13 +251,13 @@ const styles = StyleSheet.create({
   bowlerText: {
     color: '#065f46',
     fontSize: 11,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   scoreSubtext: {
     fontSize: 11,
     color: '#64748b',
     marginTop: 2,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   dismissBtn: {
     marginTop: 14,
@@ -271,6 +271,6 @@ const styles = StyleSheet.create({
   dismissBtnText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
 });

@@ -1069,7 +1069,7 @@ export default function CreateTurfScreen() {
                     isActive && { backgroundColor: theme.secondary, borderColor: theme.secondary }
                   ]}
                 >
-                  <ThemedText style={{ color: isActive ? '#ffffff' : theme.textSecondary, fontFamily: 'Sora_600SemiBold', fontSize: 10, letterSpacing: 0.2 }}>{s}</ThemedText>
+                  <ThemedText style={{ color: isActive ? '#ffffff' : theme.textSecondary, fontFamily: 'Sora_500Medium', fontSize: 10, letterSpacing: 0.2 }}>{s}</ThemedText>
                 </Pressable>
               );
             })}
@@ -1249,7 +1249,7 @@ export default function CreateTurfScreen() {
           <View style={styles.fieldGroup}>
             <View style={styles.labelRow}>
               <ThemedText style={styles.fieldLabel}>
-                Quick Slot Setup <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>({slotDay})</ThemedText>
+                Quick Slot Setup <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_500Medium' }}>({slotDay})</ThemedText>
               </ThemedText>
               <Pressable
                 onPress={() => {
@@ -1271,7 +1271,7 @@ export default function CreateTurfScreen() {
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
               >
                 <Ionicons name="copy-outline" size={11} color={theme.primary} />
-                <ThemedText style={{ color: theme.primary, fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>Copy to All Days</ThemedText>
+                <ThemedText style={{ color: theme.primary, fontSize: 10.5, fontFamily: 'Sora_500Medium' }}>Copy to All Days</ThemedText>
               </Pressable>
             </View>
 
@@ -1386,7 +1386,7 @@ export default function CreateTurfScreen() {
           <View style={styles.fieldGroup}>
             <View style={styles.labelRow}>
               <ThemedText style={styles.fieldLabel}>Select Day Schedule</ThemedText>
-              <ThemedText style={[styles.fieldLabelSub, { color: theme.secondary, fontFamily: 'Sora_600SemiBold' }]}>
+              <ThemedText style={[styles.fieldLabelSub, { color: theme.secondary, fontFamily: 'Sora_500Medium' }]}>
                 {configuredCount} Active Slots
               </ThemedText>
             </View>
@@ -1515,7 +1515,7 @@ export default function CreateTurfScreen() {
 
           {/* Clear Button */}
           <Pressable onPress={clearAllSlots} style={{ marginTop: Spacing.md, alignSelf: 'flex-start' }}>
-            <ThemedText style={{ fontSize: 11, color: '#ef4444', fontFamily: 'Sora_600SemiBold' }}>
+            <ThemedText style={{ fontSize: 11, color: '#ef4444', fontFamily: 'Sora_500Medium' }}>
               Clear All Slots
             </ThemedText>
           </Pressable>
@@ -1620,7 +1620,7 @@ export default function CreateTurfScreen() {
           <View style={styles.kakaoStubFooter}>
             <View style={{ flex: 1, paddingRight: 8 }}>
               <ThemedText style={styles.kakaoStubCode}>
-                Code: <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: '#FF1E70' }}>{code}</ThemedText>
+                Code: <ThemedText style={{ fontFamily: 'Sora_500Medium', color: '#FF1E70' }}>{code}</ThemedText>
                 {minBook > 0 ? ` · Min ₹${minBook}` : ''}
               </ThemedText>
               <ThemedText style={styles.kakaoStubDesc} numberOfLines={1}>
@@ -1687,7 +1687,7 @@ export default function CreateTurfScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPad}>
         <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 15 }}>
+            <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 15 }}>
               Vouchers & Offers
             </ThemedText>
             <View style={[styles.optionalTag, { backgroundColor: theme.surfaceLow }]}>
@@ -1717,7 +1717,7 @@ export default function CreateTurfScreen() {
                 ]}
               >
                 <View style={styles.offerRowHeader}>
-                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 12.5 }}>
+                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 12.5 }}>
                     Offer {idx + 1}
                     {draft.offerId ? '' : '  ·  New'}
                   </ThemedText>
@@ -1779,7 +1779,7 @@ export default function CreateTurfScreen() {
 
                   {/* Quick Curated Preset Selector */}
                   <View style={{ marginTop: 8 }}>
-                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, marginBottom: 5 }}>
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 5 }}>
                       Or select a curated sports preset:
                     </ThemedText>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
@@ -1835,7 +1835,7 @@ export default function CreateTurfScreen() {
                           <ThemedText
                             style={{
                               fontSize: 11.5,
-                              fontFamily: 'Sora_600SemiBold',
+                              fontFamily: 'Sora_500Medium',
                               color: active ? '#ffffff' : theme.textSecondary,
                             }}
                           >
@@ -1889,7 +1889,7 @@ export default function CreateTurfScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <Ionicons name="color-palette-outline" size={14} color={theme.primary} />
-                      <ThemedText style={{ fontFamily: 'Sora_600SemiBold', fontSize: 11, color: theme.primary, letterSpacing: 0.3 }}>
+                      <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 11, color: theme.primary, letterSpacing: 0.3 }}>
                         VOUCHER DESIGN OUTPUT
                       </ThemedText>
                     </View>
@@ -1914,7 +1914,7 @@ export default function CreateTurfScreen() {
             style={[styles.addOfferBtn, { borderColor: theme.primary }]}
           >
             <Ionicons name="add" size={16} color={theme.primary} />
-            <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 12.5 }}>
+            <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_500Medium', fontSize: 12.5 }}>
               {turfOffers.length === 0 ? 'Add a voucher' : 'Add another voucher'}
             </ThemedText>
           </Pressable>
@@ -1949,7 +1949,7 @@ export default function CreateTurfScreen() {
                 <ThemedText style={[styles.previewName, { fontSize: 20, marginTop: 2 }]}>{turfName || 'Untitled Turf'}</ThemedText>
               </View>
               <View style={{ backgroundColor: '#10b981', paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full }}>
-                <ThemedText style={{ color: '#fff', fontSize: 12, fontFamily: 'Sora_600SemiBold' }}>
+                <ThemedText style={{ color: '#fff', fontSize: 12, fontFamily: 'Sora_500Medium' }}>
                   {pricePerSlot ? `₹${pricePerSlot}/slot` : 'Price not set'}
                 </ThemedText>
               </View>
@@ -2004,7 +2004,7 @@ export default function CreateTurfScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <ThemedText style={styles.fieldLabel}>Vouchers & Offers</ThemedText>
               <Pressable onPress={() => setCurrentStep(OFFERS_STEP)} hitSlop={8} accessibilityRole="button">
-                <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>
+                <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_500Medium', fontSize: 11 }}>
                   Edit
                 </ThemedText>
               </Pressable>
@@ -2104,20 +2104,20 @@ export default function CreateTurfScreen() {
           {currentStep > 0 && (
             <Pressable onPress={() => setCurrentStep(currentStep - 1)} style={[styles.navBtnOutline, { borderColor: theme.outlineVariant }]}>
               <Ionicons name="chevron-back" size={16} color={theme.text} />
-              <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13, marginLeft: 4 }}>Back</ThemedText>
+              <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 13, marginLeft: 4 }}>Back</ThemedText>
             </Pressable>
           )}
 
           {currentStep === PUBLISH_STEP ? (
             <Pressable onPress={handlePublish} style={[styles.navBtnFill, { backgroundColor: '#10b981', flex: 1, marginLeft: Spacing.sm }]}>
               <Ionicons name={params.editId ? "checkmark-done-circle-outline" : "cloud-upload-outline"} size={18} color="#fff" style={{ marginRight: 6 }} />
-              <ThemedText style={{ color: '#fff', fontFamily: 'Sora_600SemiBold', fontSize: 14 }}>
+              <ThemedText style={{ color: '#fff', fontFamily: 'Sora_500Medium', fontSize: 14 }}>
                 {params.editId ? 'Save & Update Pitch' : 'Publish Turf Now'}
               </ThemedText>
             </Pressable>
           ) : (
             <Pressable onPress={handleNext} style={[styles.navBtnFill, { backgroundColor: theme.primary, flex: currentStep > 0 ? 1 : undefined, width: currentStep === 0 ? '100%' : undefined, marginLeft: currentStep > 0 ? Spacing.sm : 0 }]}>
-              <ThemedText style={{ color: '#fff', fontFamily: 'Sora_600SemiBold', fontSize: 13, marginRight: 4 }}>
+              <ThemedText style={{ color: '#fff', fontFamily: 'Sora_500Medium', fontSize: 13, marginRight: 4 }}>
                 {currentStep === PUBLISH_STEP - 1 ? (params.editId ? 'Review Updates' : 'Preview & Publish') : 'Next'}
               </ThemedText>
               <Ionicons name="chevron-forward" size={16} color="#fff" />
@@ -2127,7 +2127,7 @@ export default function CreateTurfScreen() {
 
         {!!toastMsg && (
           <Animated.View style={[styles.toast, { opacity: toastOpacity, backgroundColor: theme.primaryContainer }]}>
-            <ThemedText style={{ color: '#fff', fontSize: 12, fontFamily: 'Sora_600SemiBold' }}>{toastMsg}</ThemedText>
+            <ThemedText style={{ color: '#fff', fontSize: 12, fontFamily: 'Sora_500Medium' }}>{toastMsg}</ThemedText>
           </Animated.View>
         )}
       </SafeAreaView>
@@ -2142,7 +2142,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.containerMargin, paddingVertical: Spacing.sm, zIndex: 10 },
   backBtn: { padding: 4 },
-  headerTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 17, flex: 1, marginLeft: 10 },
+  headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 17, flex: 1, marginLeft: 10 },
   progressTrackerCard: {
     marginHorizontal: Spacing.containerMargin,
     marginTop: Spacing.sm,
@@ -2198,8 +2198,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   fieldGroup: { marginBottom: Spacing.lg },
-  fieldLabel: { fontFamily: 'Sora_600SemiBold', fontSize: 11, letterSpacing: 0.2, marginBottom: Spacing.xs, color: '#81919c' },
-  requiredStar: { color: '#ef4444', fontFamily: 'Sora_600SemiBold' },
+  fieldLabel: { fontFamily: 'Sora_500Medium', fontSize: 11, letterSpacing: 0.2, marginBottom: Spacing.xs, color: '#81919c' },
+  requiredStar: { color: '#ef4444', fontFamily: 'Sora_500Medium' },
   errorText: { color: '#ef4444', fontSize: 11, fontFamily: 'Sora_500Medium', marginTop: 4 },
   fieldLabelSub: { fontFamily: 'Sora_400Regular', fontSize: 10 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xs },
@@ -2238,7 +2238,7 @@ const styles = StyleSheet.create({
   pinnedCoverBadgeText: {
     color: '#ffffff',
     fontSize: 9,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   imageSlotActionOverlay: {
     position: 'absolute',
@@ -2278,7 +2278,7 @@ const styles = StyleSheet.create({
   },
   uploadSlotTitle: {
     fontSize: 10.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   uploadSlotSub: {
     fontSize: 9,
@@ -2307,7 +2307,7 @@ const styles = StyleSheet.create({
   },
   sportChipText: {
     fontSize: 8.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     textAlign: 'center',
   },
 
@@ -2317,52 +2317,52 @@ const styles = StyleSheet.create({
   input: { height: 42, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.sm, fontSize: 13, borderWidth: 1, fontFamily: 'Sora_500Medium' },
   inputRow: { height: 42, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.sm, borderWidth: 1, flexDirection: 'row', alignItems: 'center' },
   countryCodeBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 8 },
-  countryCodeText: { fontSize: 13, fontFamily: 'Sora_600SemiBold' },
+  countryCodeText: { fontSize: 13, fontFamily: 'Sora_500Medium' },
   inputRowInner: { flex: 1, fontSize: 13, fontFamily: 'Sora_500Medium' },
   textArea: { height: 84, paddingTop: Spacing.sm, textAlignVertical: 'top' },
-  currencyPrefix: { fontFamily: 'Sora_600SemiBold', fontSize: 15, marginRight: 6 },
+  currencyPrefix: { fontFamily: 'Sora_500Medium', fontSize: 15, marginRight: 6 },
   inputSuffix: { fontFamily: 'Sora_400Regular', fontSize: 11, marginLeft: 4 },
 
   togglePill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full, borderWidth: 1 },
-  togglePillText: { fontFamily: 'Sora_600SemiBold', fontSize: 10 },
+  togglePillText: { fontFamily: 'Sora_500Medium', fontSize: 10 },
   locationCard: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: BorderRadius.md, borderWidth: 1, padding: Spacing.md },
   locationIconBg: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  locationText: { fontFamily: 'Sora_600SemiBold', fontSize: 13 },
+  locationText: { fontFamily: 'Sora_500Medium', fontSize: 13 },
   locationHint: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 2 },
 
   // Bulk Apply Buttons
   bulkBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, borderRadius: BorderRadius.md, borderWidth: 1 },
-  bulkBtnText: { fontFamily: 'Sora_600SemiBold', fontSize: 11 },
+  bulkBtnText: { fontFamily: 'Sora_500Medium', fontSize: 11 },
 
   // Unified Day Tabs
   dayTabRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2, marginBottom: Spacing.sm },
   dayTab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, marginHorizontal: 2, paddingVertical: 7, borderRadius: BorderRadius.md, borderWidth: 1 },
-  dayTabText: { fontFamily: 'Sora_600SemiBold', fontSize: 10 },
+  dayTabText: { fontFamily: 'Sora_500Medium', fontSize: 10 },
 
   // Slot Edit Mode Toolbar
   editToolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: 8, borderRadius: BorderRadius.md, borderWidth: 1, marginBottom: Spacing.sm },
-  editToolbarText: { fontFamily: 'Sora_600SemiBold', fontSize: 11 },
+  editToolbarText: { fontFamily: 'Sora_500Medium', fontSize: 11 },
   modeBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: BorderRadius.sm, borderWidth: 1 },
   modeDot: { width: 6, height: 6, borderRadius: 3 },
-  modeBtnText: { fontFamily: 'Sora_600SemiBold', fontSize: 9 },
+  modeBtnText: { fontFamily: 'Sora_500Medium', fontSize: 9 },
 
   slotGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   slotCell: { width: 48, height: 38, borderRadius: BorderRadius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  slotCellText: { fontFamily: 'Sora_600SemiBold', fontSize: 10 },
+  slotCellText: { fontFamily: 'Sora_500Medium', fontSize: 10 },
   helperText: { fontSize: 11, lineHeight: 16, marginTop: Spacing.sm },
 
   // Price Guider
   priceGuiderCard: { padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, marginTop: Spacing.md, marginBottom: Spacing.xs },
   priceGuiderRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   priceGuiderIconCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  priceGuiderTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 12 },
+  priceGuiderTitle: { fontFamily: 'Sora_500Medium', fontSize: 12 },
   priceGuiderSub: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
   proNoteText: { fontFamily: 'Sora_400Regular', fontSize: 9.5, marginTop: 6 },
 
   previewCard: { borderRadius: BorderRadius['2xl'], padding: Spacing.lg, marginBottom: Spacing.lg },
   previewCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: Spacing.md },
-  previewSuperLabel: { fontFamily: 'Sora_600SemiBold', fontSize: 9, letterSpacing: 0.4, marginBottom: 4 },
-  previewName: { fontFamily: 'Sora_600SemiBold', fontSize: 20, color: '#ffffff' },
+  previewSuperLabel: { fontFamily: 'Sora_500Medium', fontSize: 9, letterSpacing: 0.4, marginBottom: 4 },
+  previewName: { fontFamily: 'Sora_500Medium', fontSize: 20, color: '#ffffff' },
   previewMeta: { flexDirection: 'row', gap: Spacing.md, flexWrap: 'wrap' },
   previewMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   previewMetaText: { fontFamily: 'Sora_500Medium', fontSize: 11, color: 'rgba(255,255,255,0.8)' },
@@ -2371,15 +2371,15 @@ const styles = StyleSheet.create({
   amenityChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 6, borderRadius: BorderRadius.xl, borderWidth: 1 },
   offerHint: { fontSize: 10.5, lineHeight: 15, fontFamily: 'Sora_400Regular', marginTop: 8 },
   optionalTag: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
-  optionalTagText: { fontSize: 9.5, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.3 },
+  optionalTagText: { fontSize: 9.5, fontFamily: 'Sora_500Medium', letterSpacing: 0.3 },
   offerRowCard: { borderRadius: BorderRadius.lg, borderWidth: 1, padding: Spacing.md, marginTop: Spacing.md },
   offerRowHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   offerEmptyBox: { alignItems: 'center', gap: 8, paddingVertical: Spacing.lg, marginTop: Spacing.sm },
   offerEmptyText: { fontSize: 12, fontFamily: 'Sora_500Medium' },
   addOfferBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 40, borderRadius: BorderRadius.md, borderWidth: 1.5, borderStyle: 'dashed', marginTop: Spacing.md },
   offerPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7 },
-  offerPreviewCode: { fontSize: 12, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.8 },
-  amenityText: { fontFamily: 'Sora_600SemiBold', fontSize: 11 },
+  offerPreviewCode: { fontSize: 12, fontFamily: 'Sora_500Medium', letterSpacing: 0.8 },
+  amenityText: { fontFamily: 'Sora_500Medium', fontSize: 11 },
   uploadHint: { fontFamily: 'Sora_400Regular', fontSize: 10 },
 
   // Voucher Banner Image Picker & Presets
@@ -2387,16 +2387,16 @@ const styles = StyleSheet.create({
   voucherBannerThumb: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   voucherBannerActions: { flexDirection: 'row', gap: 8, zIndex: 3 },
   bannerUploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BorderRadius.full },
-  bannerUploadBtnText: { color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 10.5 },
+  bannerUploadBtnText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 10.5 },
   bannerRemoveBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: BorderRadius.full, backgroundColor: 'rgba(0,0,0,0.55)' },
-  bannerRemoveBtnText: { color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 10 },
+  bannerRemoveBtnText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 10 },
   presetChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: BorderRadius.full, borderWidth: 1 },
-  presetChipText: { fontFamily: 'Sora_600SemiBold', fontSize: 10.5 },
+  presetChipText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
 
   // Live Output Badges
   livePreviewBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full },
   liveDot: { width: 5, height: 5, borderRadius: 2.5 },
-  livePreviewText: { fontFamily: 'Sora_600SemiBold', fontSize: 9.5 },
+  livePreviewText: { fontFamily: 'Sora_500Medium', fontSize: 9.5 },
 
   // Live Voucher Output Design (Template Binding Card)
   voucherOutputCard: { borderRadius: BorderRadius.xl, borderWidth: 1, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 3 },
@@ -2404,10 +2404,10 @@ const styles = StyleSheet.create({
   voucherOutputImg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   voucherOutputTopBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 2 },
   voucherDiscountBadge: { backgroundColor: '#10b981', flexDirection: 'row', alignItems: 'baseline', gap: 3, paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 4, elevation: 2 },
-  voucherDiscountValue: { color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 13.5 },
-  voucherDiscountSuffix: { color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 8.5 },
+  voucherDiscountValue: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 13.5 },
+  voucherDiscountSuffix: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 8.5 },
   voucherBrandPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.65)', paddingHorizontal: 9, paddingVertical: 3.5, borderRadius: BorderRadius.full },
-  voucherBrandPillText: { color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 9.5, letterSpacing: 0.3, textTransform: 'uppercase' },
+  voucherBrandPillText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 9.5, letterSpacing: 0.3, textTransform: 'uppercase' },
 
   // Ticket Perforation Divider
   ticketDividerRow: { flexDirection: 'row', alignItems: 'center', height: 16, position: 'relative' },
@@ -2417,14 +2417,14 @@ const styles = StyleSheet.create({
 
   // Ticket Content Body
   voucherOutputBody: { paddingHorizontal: Spacing.md, paddingBottom: Spacing.md, paddingTop: 2 },
-  voucherOutputTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 13.5 },
+  voucherOutputTitle: { fontFamily: 'Sora_500Medium', fontSize: 13.5 },
   voucherOutputDesc: { fontFamily: 'Sora_400Regular', fontSize: 10.5, lineHeight: 15, marginTop: 2 },
   voucherOutputFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, flexWrap: 'wrap', gap: 6 },
   voucherCodePill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: BorderRadius.md, borderWidth: 1.2, borderStyle: 'dashed' },
-  voucherCodeText: { fontFamily: 'Sora_600SemiBold', fontSize: 12, letterSpacing: 0.8 },
+  voucherCodeText: { fontFamily: 'Sora_500Medium', fontSize: 12, letterSpacing: 0.8 },
   voucherMetaPills: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
   voucherMetaPill: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: BorderRadius.full },
-  voucherMetaPillText: { fontFamily: 'Sora_600SemiBold', fontSize: 9.5 },
+  voucherMetaPillText: { fontFamily: 'Sora_500Medium', fontSize: 9.5 },
 
   // KakaoStyle Trendy Ticket Voucher
   kakaoCouponCard: {
@@ -2467,7 +2467,7 @@ const styles = StyleSheet.create({
     right: -10,
     bottom: -15,
     fontSize: 88,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: 'rgba(255, 255, 255, 0.13)',
     letterSpacing: 2,
     transform: [{ rotate: '-12deg' }],
@@ -2484,19 +2484,19 @@ const styles = StyleSheet.create({
   },
   kakaoBrandTitle: {
     fontSize: 12.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#18181b',
     letterSpacing: 0.5,
   },
   kakaoBrandSub: {
     fontSize: 11,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#18181b',
     lineHeight: 13,
   },
   kakaoBrandCoupon: {
     fontSize: 10,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#18181b',
     lineHeight: 12,
   },
@@ -2521,7 +2521,7 @@ const styles = StyleSheet.create({
   },
   kakaoYellowBadgeText: {
     fontSize: 8.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#18181b',
     lineHeight: 10.5,
     textAlign: 'center',
@@ -2532,14 +2532,14 @@ const styles = StyleSheet.create({
   },
   kakaoBigDiscount: {
     fontSize: 48,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#ffffff',
     lineHeight: 48,
     letterSpacing: -1,
   },
   kakaoBigOff: {
     fontSize: 40,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#ffffff',
     lineHeight: 40,
     letterSpacing: 0.5,
@@ -2554,13 +2554,13 @@ const styles = StyleSheet.create({
   },
   kakaoStubLabel: {
     fontSize: 9.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#FF1E70',
     letterSpacing: 0.4,
   },
   kakaoStubDays: {
     fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#0f172a',
     marginTop: 2,
   },
@@ -2572,7 +2572,7 @@ const styles = StyleSheet.create({
   },
   kakaoStubCode: {
     fontSize: 10.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: '#334155',
   },
   kakaoStubDesc: {

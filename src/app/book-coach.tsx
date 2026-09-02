@@ -311,7 +311,7 @@ export default function BookCoachScreen() {
                   <Ionicons name="videocam" size={18} color={theme.secondaryContainer} />
                 </View>
                 <View style={{ marginLeft: Spacing.sm }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Detailed Video Analysis</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Detailed Video Analysis</ThemedText>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>+₹500 / Session</ThemedText>
                 </View>
               </View>
@@ -334,7 +334,7 @@ export default function BookCoachScreen() {
                   <Ionicons name="nutrition" size={18} color={theme.secondaryContainer} />
                 </View>
                 <View style={{ marginLeft: Spacing.sm }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Personalized Diet Plan</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Personalized Diet Plan</ThemedText>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>+₹300</ThemedText>
                 </View>
               </View>
@@ -387,7 +387,7 @@ export default function BookCoachScreen() {
         <View style={[styles.stickyFooter, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '22' }, Shadows.level3]}>
           <View style={styles.footerLeft}>
             <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Total Due</ThemedText>
-            <ThemedText type="headlineMd" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
+            <ThemedText type="headlineMd" style={{ color: theme.primary, fontFamily: 'Sora_500Medium' }}>
               ₹{total.toLocaleString()}
             </ThemedText>
           </View>
@@ -396,7 +396,7 @@ export default function BookCoachScreen() {
             onPress={handleConfirmBooking}
             disabled={!selectedSessionId}
           >
-            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 14 }}>
+            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 14 }}>
               Confirm Booking
             </ThemedText>
             <Ionicons name="chevron-forward" size={16} color="#ffffff" style={{ marginLeft: 4 }} />
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     height: 56,
   },
   backButton: { padding: 6 },
-  headerTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 16 },
+  headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 16 },
   scrollContent: { paddingBottom: 40 },
   section: {
     marginTop: Spacing.lg,
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   dayLabelText: {
     width: `${100 / 7}%`,
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   calendarGrid: {
     flexDirection: 'row',

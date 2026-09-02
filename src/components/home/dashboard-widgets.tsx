@@ -394,9 +394,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statValue: { fontFamily: 'Sora_600SemiBold', fontSize: 16 },
+  statValue: { fontFamily: 'Sora_500Medium', fontSize: 16 },
   statLabel: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 8.5,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   tileBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999 },
   tileBadgeText: {
     color: '#ffffff',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 8.5,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
@@ -432,10 +432,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   ticketStub: { width: 78, alignItems: 'center', justifyContent: 'center' },
-  ticketValue: { color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 19 },
+  ticketValue: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 19 },
   ticketSuffix: {
     color: 'rgba(255,255,255,0.85)',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 8.5,
     letterSpacing: 1,
     textTransform: 'uppercase',
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: 'dashed',
   },
-  codeText: { fontFamily: 'Sora_600SemiBold', fontSize: 9, letterSpacing: 1 },
+  codeText: { fontFamily: 'Sora_500Medium', fontSize: 9, letterSpacing: 1 },
 
   // section heading
   headingRow: {
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
   headingLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   headingRule: { width: 3.5, height: 14, borderRadius: 2 },
   headingText: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 10,
     letterSpacing: 0.9,
     textTransform: 'uppercase',
@@ -491,5 +491,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  formPillText: { fontFamily: 'Sora_600SemiBold', fontSize: 10 },
+  formPillText: { fontFamily: 'Sora_500Medium', fontSize: 10 },
 });

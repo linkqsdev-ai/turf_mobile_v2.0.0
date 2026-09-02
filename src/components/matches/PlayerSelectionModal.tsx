@@ -29,7 +29,7 @@ import { Shadows, Spacing } from '@/constants/theme';
 import { AVATAR_KEYS, getAvatarSource } from '@/constants/avatars';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
-import { generatePlayerId, type Player } from '@/store/match-store';
+import { dedupePlayers, generatePlayerId, playerIdentity, type Player } from '@/store/match-store';
 
 type BucketId = 'master' | 'teamA' | 'teamB';
 
@@ -135,16 +135,24 @@ export function PlayerSelectionModal({
   const [newPlayerName, setNewPlayerName] = useState('');
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   // Re-seed whenever the sheet is (re)opened, so a cancelled session doesn't
-  // leak into the next one.
+  // leak into the next one. Everything is deduped by person (not id) and the
+  // already-assigned players are removed from the pool, so nobody can appear in
+  // two places at once — the same human is seeded into every team they create
+  // and so arrives here once per roster.
   useEffect(() => {
     if (visible) {
-      const assignedIds = new Set([...initialTeamA, ...initialTeamB].map((p) => p.id));
+      const teamA = dedupePlayers(initialTeamA);
+      const teamB = dedupePlayers(initialTeamB).filter(
+        (p) => !teamA.some((a) => playerIdentity(a) === playerIdentity(p))
+      );
+      const assigned = new Set([...teamA, ...teamB].map(playerIdentity));
       setBuckets({
-        master: [...initialPool.filter((p) => !assignedIds.has(p.id))],
-        teamA: initialTeamA,
-        teamB: initialTeamB,
+        master: dedupePlayers(initialPool).filter((p) => !assigned.has(playerIdentity(p))),
+        teamA,
+        teamB,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -202,6 +210,15 @@ export function PlayerSelectionModal({
   const handleAddPlayer = useCallback(() => {
     const name = newPlayerName.trim();
     if (!name) return;
+    const identity = playerIdentity({ name });
+    // Someone already in the pool or on either team must not be added again.
+    const clash = [...buckets.master, ...buckets.teamA, ...buckets.teamB].some(
+      (p) => playerIdentity(p) === identity
+    );
+    if (clash) {
+      setDuplicateWarning(`${name} is already in this match`);
+      return;
+    }
     const player: Player = {
       id: generatePlayerId(),
       name,
@@ -210,7 +227,8 @@ export function PlayerSelectionModal({
     };
     setBuckets((prev) => ({ ...prev, master: [...prev.master, player] }));
     setNewPlayerName('');
-  }, [newPlayerName]);
+    setDuplicateWarning(null);
+  }, [newPlayerName, buckets]);
 
   /**
    * Every bubble carries explicit one-tap targets for the moves that make
@@ -326,7 +344,7 @@ export function PlayerSelectionModal({
               <View style={[styles.addRow, { backgroundColor: bubble }]}>
                 <TextInput
                   value={newPlayerName}
-                  onChangeText={setNewPlayerName}
+                  onChangeText={(t) => { setNewPlayerName(t); if (duplicateWarning) setDuplicateWarning(null); }}
                   placeholder="Add a player by name"
                   placeholderTextColor={theme.placeholder}
                   style={[
@@ -349,6 +367,14 @@ export function PlayerSelectionModal({
                   <Ionicons name="add" size={15} color="#ffffff" />
                 </Pressable>
               </View>
+              {duplicateWarning && (
+                <View style={styles.warnRow}>
+                  <Ionicons name="alert-circle" size={12} color={theme.error} />
+                  <ThemedText style={[styles.warnText, { color: theme.error }]}>
+                    {duplicateWarning}
+                  </ThemedText>
+                </View>
+              )}
             </PlayerZone>
 
             {/* ── Team zones, stacked full width ── */}
@@ -606,7 +632,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.xs,
     paddingBottom: Spacing.sm,
   },
-  title: { fontFamily: 'Sora_600SemiBold', fontSize: 14.5, letterSpacing: -0.2 },
+  title: { fontFamily: 'Sora_500Medium', fontSize: 14.5, letterSpacing: -0.2 },
   subtitle: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 2 },
   closeBtn: {
     width: 28,
@@ -643,8 +669,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  legendCodeText: { fontFamily: 'Sora_600SemiBold', fontSize: 8.5, color: '#ffffff' },
-  legendName: { fontFamily: 'Sora_600SemiBold', fontSize: 10, flexShrink: 1 },
+  legendCodeText: { fontFamily: 'Sora_500Medium', fontSize: 8.5, color: '#ffffff' },
+  legendName: { fontFamily: 'Sora_500Medium', fontSize: 10, flexShrink: 1 },
 
   scrollContent: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.lg },
 
@@ -657,7 +683,7 @@ const styles = StyleSheet.create({
   },
   zoneHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm, gap: 5 },
   zoneDot: { width: 7, height: 7, borderRadius: 4 },
-  zoneTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 11.5, flexShrink: 1 },
+  zoneTitle: { fontFamily: 'Sora_500Medium', fontSize: 11.5, flexShrink: 1 },
   zoneMeta: { fontFamily: 'Sora_500Medium', fontSize: 9.5, marginLeft: 'auto' },
 
   // ── Bubbles ────────────────────────────────────────────────────────────
@@ -683,7 +709,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionText: { fontFamily: 'Sora_600SemiBold', fontSize: 8, color: '#ffffff' },
+  actionText: { fontFamily: 'Sora_500Medium', fontSize: 8, color: '#ffffff' },
   emptyLabel: {
     fontFamily: 'Sora_400Regular',
     fontSize: 10.5,
@@ -703,6 +729,8 @@ const styles = StyleSheet.create({
     ...Shadows.level1,
   },
   addInput: { flex: 1, height: 30, fontFamily: 'Sora_500Medium', fontSize: 11.5 },
+  warnRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, paddingHorizontal: 4 },
+  warnText: { fontFamily: 'Sora_600SemiBold', fontSize: 10.5, flexShrink: 1 },
   addBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
 
   // ── Footer ─────────────────────────────────────────────────────────────
@@ -714,7 +742,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
   },
   skipBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 6, paddingHorizontal: 6 },
-  skipText: { fontFamily: 'Sora_600SemiBold', fontSize: 11 },
+  skipText: { fontFamily: 'Sora_500Medium', fontSize: 11 },
   confirmBtn: {
     flex: 1,
     alignItems: 'center',
@@ -723,7 +751,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     ...Shadows.primary,
   },
-  confirmText: { fontFamily: 'Sora_600SemiBold', fontSize: 12, color: '#ffffff' },
+  confirmText: { fontFamily: 'Sora_500Medium', fontSize: 12, color: '#ffffff' },
 
   ghost: {
     position: 'absolute',

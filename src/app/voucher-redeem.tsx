@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: '#ffffff',
     fontSize: 16,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: Spacing.sm,
@@ -314,14 +314,14 @@ const styles = StyleSheet.create({
     color: BRAND_BLUE,
     fontSize: 42,
     lineHeight: 46,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: -1.5,
   },
   discountSuffix: {
     color: BRAND_BLUE,
     fontSize: 19,
     lineHeight: 22,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.5,
     marginTop: -2,
   },
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     fontSize: 16,
     lineHeight: 22,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   validRow: {
     flexDirection: 'row',
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   minBookingText: {
     color: BRAND_BLUE,
     fontSize: 11,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
 
   perforation: {
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   codeLabel: {
     color: '#64748b',
     fontSize: 11,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 1.6,
   },
   codeBox: {
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
   codeText: {
     color: BRAND_BLUE,
     fontSize: 25,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 2,
   },
   actionRow: {
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   barcodeCaption: {
     color: '#0f172a',
     fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 3,
     marginTop: 7,
   },
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
   ctaText: {
     color: BRAND_BLUE,
     fontSize: 14,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
 
   missingWrap: {

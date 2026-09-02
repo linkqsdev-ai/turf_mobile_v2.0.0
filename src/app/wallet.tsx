@@ -479,7 +479,7 @@ export default function WalletScreen() {
                         { backgroundColor: historyFilter === f.key ? theme.primary : theme.surfaceLow, borderColor: historyFilter === f.key ? theme.primary : theme.outlineVariant + '33' }
                       ]}
                     >
-                      <ThemedText style={{ fontSize: 11, color: historyFilter === f.key ? '#fff' : theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>
+                      <ThemedText style={{ fontSize: 11, color: historyFilter === f.key ? '#fff' : theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
                         {f.label}
                       </ThemedText>
                     </Pressable>
@@ -529,7 +529,7 @@ export default function WalletScreen() {
             <Pressable style={styles.modalBackdrop} onPress={() => setTopUpModalVisible(false)} />
             <View style={[styles.modalSheet, { backgroundColor: theme.surfaceLowest }]}>
               <View style={styles.modalHeader}>
-                <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
+                <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>
                   + Add Wallet Funds
                 </ThemedText>
                 <Pressable onPress={() => setTopUpModalVisible(false)}>
@@ -560,7 +560,7 @@ export default function WalletScreen() {
                       { backgroundColor: customAmount === String(amt) ? theme.primary + '18' : theme.surfaceLow, borderColor: customAmount === String(amt) ? theme.primary : theme.outlineVariant + '33' }
                     ]}
                   >
-                    <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: customAmount === String(amt) ? theme.primary : theme.text }}>
+                    <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: customAmount === String(amt) ? theme.primary : theme.text }}>
                       +₹{amt}
                     </ThemedText>
                   </Pressable>
@@ -584,7 +584,7 @@ export default function WalletScreen() {
                     ]}
                   >
                     <Ionicons name={p.icon as any} size={18} color={paymentMethod === p.key ? theme.primary : theme.textSecondary} />
-                    <ThemedText style={{ flex: 1, fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                    <ThemedText style={{ flex: 1, fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>
                       {p.label}
                     </ThemedText>
                     {paymentMethod === p.key && <Ionicons name="checkmark-circle" size={16} color={theme.primary} />}
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
   },
   toastText: {
     fontSize: 10,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   header: {
     flexDirection: 'row',
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 16,
   },
   vipBadge: {
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
   },
   vipBadgeText: {
     fontSize: 10,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.4,
   },
   scrollPad: {
@@ -699,13 +699,13 @@ const styles = StyleSheet.create({
   heroCardLabel: {
     color: 'rgba(255, 255, 255, 0.75)',
     fontSize: 9,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.6,
   },
   heroCardBalance: {
     color: '#ffffff',
     fontSize: 20,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginTop: 2,
   },
   heroActionRow: {
@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
   },
   heroAddBtnText: {
     color: '#3b3691',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 11.5,
   },
   heroVoucherBtn: {
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
   },
   heroVoucherBtnText: {
     color: '#ffffff',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 11.5,
   },
   promoBarCard: {
@@ -766,7 +766,7 @@ const styles = StyleSheet.create({
   },
   applyBtnText: {
     color: '#ffffff',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 11.5,
   },
   tabBarContainer: {
@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
   },
   couponSectionTitle: {
     fontSize: 15,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   viewAllBtn: {
     flexDirection: 'row',
@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     fontSize: 11.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   couponGrid: {
     flexDirection: 'row',
@@ -842,7 +842,7 @@ const styles = StyleSheet.create({
   couponBadgeText: {
     color: '#ffffff',
     fontSize: 11,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   couponLogoBox: {
     height: 66,
@@ -858,7 +858,7 @@ const styles = StyleSheet.create({
   couponTitle: {
     fontSize: 12.5,
     lineHeight: 17,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     textAlign: 'center',
   },
   couponValid: {
@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
   voucherDiscountText: {
     color: '#ffffff',
     fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     textAlign: 'center',
   },
   dashedDivider: {
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   voucherTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 12.5,
   },
   voucherSub: {
@@ -919,7 +919,7 @@ const styles = StyleSheet.create({
   },
   copyCodeText: {
     fontSize: 10.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   offerCard: {
     borderRadius: BorderRadius.lg,
@@ -929,7 +929,7 @@ const styles = StyleSheet.create({
   offerTitle: {
     color: '#ffffff',
     fontSize: 14,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginTop: 8,
   },
   offerSub: {
@@ -949,7 +949,7 @@ const styles = StyleSheet.create({
   },
   claimBtnText: {
     color: '#111827',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 11.5,
   },
   historyFilterChip: {
@@ -984,7 +984,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   txAmount: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 13.5,
   },
   modalOverlay: {
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
   },
   modalLabel: {
     fontSize: 11.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginBottom: 6,
   },
   modalInputRow: {
@@ -1022,13 +1022,13 @@ const styles = StyleSheet.create({
   },
   currencyPrefix: {
     fontSize: 18,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginRight: 6,
   },
   modalInput: {
     flex: 1,
     fontSize: 18,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   quickAmtChip: {
     flex: 1,
@@ -1057,7 +1057,7 @@ const styles = StyleSheet.create({
   },
   modalSubmitText: {
     color: '#ffffff',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 13,
   },
 });

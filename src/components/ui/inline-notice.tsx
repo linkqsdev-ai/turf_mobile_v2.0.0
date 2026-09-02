@@ -94,6 +94,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: { flex: 1 },
-  title: { fontFamily: 'Sora_600SemiBold', fontSize: 12 },
+  title: { fontFamily: 'Sora_500Medium', fontSize: 12 },
   message: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1 },
 });

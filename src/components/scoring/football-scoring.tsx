@@ -200,7 +200,7 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
               <ThemedText type="labelSm" style={{ color: '#ffffffaa', letterSpacing: 1 }}>
                 Match Time
               </ThemedText>
-              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 40, fontFamily: 'Sora_600SemiBold', marginTop: 4 }}>
+              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 40, fontFamily: 'Sora_500Medium', marginTop: 4 }}>
                 {String(Math.floor(seconds / 60)).padStart(2, '0')}:{String(seconds % 60).padStart(2, '0')}
               </ThemedText>
             </View>
@@ -287,8 +287,8 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
           {/* Possession Bar */}
           <View style={styles.statAdjusterRow}>
             <View style={styles.statLabelRow}>
-              <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Possession</ThemedText>
-              <ThemedText type="bodyMd" style={{ color: theme.secondaryContainer, fontFamily: 'Sora_600SemiBold' }}>{possessionA}% - {100 - possessionA}%</ThemedText>
+              <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Possession</ThemedText>
+              <ThemedText type="bodyMd" style={{ color: theme.secondaryContainer, fontFamily: 'Sora_500Medium' }}>{possessionA}% - {100 - possessionA}%</ThemedText>
             </View>
             <View style={styles.sliderButtons}>
               <Pressable
@@ -318,7 +318,7 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
                 <Pressable onPress={() => setShotsA(prev => Math.max(0, prev - 1))} style={styles.iconBtn}>
                   <Ionicons name="remove-circle-outline" size={16} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold' }}>{shotsA}|{shotsB}</ThemedText>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium' }}>{shotsA}|{shotsB}</ThemedText>
                 <Pressable onPress={() => setShotsB(prev => prev + 1)} style={styles.iconBtn}>
                   <Ionicons name="add-circle-outline" size={16} color={theme.text} />
                 </Pressable>
@@ -335,7 +335,7 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
                 <Pressable onPress={() => setCornersA(prev => Math.max(0, prev - 1))} style={styles.iconBtn}>
                   <Ionicons name="remove-circle-outline" size={16} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold' }}>{cornersA}|{cornersB}</ThemedText>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium' }}>{cornersA}|{cornersB}</ThemedText>
                 <Pressable onPress={() => setCornersB(prev => prev + 1)} style={styles.iconBtn}>
                   <Ionicons name="add-circle-outline" size={16} color={theme.text} />
                 </Pressable>
@@ -352,7 +352,7 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
                 <Pressable onPress={() => setFoulsA(prev => Math.max(0, prev - 1))} style={styles.iconBtn}>
                   <Ionicons name="remove-circle-outline" size={16} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold' }}>{foulsA}|{foulsB}</ThemedText>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium' }}>{foulsA}|{foulsB}</ThemedText>
                 <Pressable onPress={() => setFoulsB(prev => prev + 1)} style={styles.iconBtn}>
                   <Ionicons name="add-circle-outline" size={16} color={theme.text} />
                 </Pressable>
@@ -432,7 +432,7 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
                     />
                   </View>
                   <View style={styles.timelineDescCol}>
-                    <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>
                       {isGoal ? 'GOAL!' : event.type === 'yellow' ? 'Yellow Card' : 'Red Card'}
                     </ThemedText>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>

@@ -221,7 +221,7 @@ export default function SettingsScreen() {
                     ]}
                   >
                     <Ionicons name={opt.icon} size={16} color={active ? theme.onPrimary : theme.text} />
-                    <ThemedText style={{ color: active ? theme.onPrimary : theme.text, fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>{opt.label}</ThemedText>
+                    <ThemedText style={{ color: active ? theme.onPrimary : theme.text, fontSize: 11, fontFamily: 'Sora_500Medium' }}>{opt.label}</ThemedText>
                   </Pressable>
                 );
               })}
@@ -257,7 +257,7 @@ export default function SettingsScreen() {
                     ]}
                   >
                     <Ionicons name={v === 'public' ? 'globe-outline' : 'lock-closed-outline'} size={14} color={active ? theme.onPrimary : theme.text} />
-                    <ThemedText style={{ color: active ? theme.onPrimary : theme.text, fontSize: 12, fontFamily: 'Sora_600SemiBold', marginLeft: 6 }}>
+                    <ThemedText style={{ color: active ? theme.onPrimary : theme.text, fontSize: 12, fontFamily: 'Sora_500Medium', marginLeft: 6 }}>
                       {v === 'public' ? 'Public' : 'Private'}
                     </ThemedText>
                   </Pressable>
@@ -360,7 +360,7 @@ export default function SettingsScreen() {
                     <ThemedText style={{ color: theme.text, fontSize: 14, fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium' }}>{lang.name}</ThemedText>
                     {lang.comingSoon && (
                       <View style={[styles.comingSoonBadge, { backgroundColor: theme.surfaceLow }]}>
-                        <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, letterSpacing: 0.3 }}>COMING SOON</ThemedText>
+                        <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary, letterSpacing: 0.3 }}>COMING SOON</ThemedText>
                       </View>
                     )}
                   </View>
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 11,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.6,
   },
   sectionCard: {
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   },
   accountName: {
     fontSize: 15,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   accountMeta: {
     fontSize: 11,
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   rowSubtitle: {
     fontSize: 11,

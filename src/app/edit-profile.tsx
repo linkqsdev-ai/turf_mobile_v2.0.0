@@ -195,7 +195,7 @@ export default function EditProfileScreen() {
                   Pick a preset avatar or upload your own photo.
                 </ThemedText>
                 <Pressable style={[styles.changePhotoBtn, { backgroundColor: theme.primary + '15' }]} onPress={() => setAvatarPickerVisible(true)}>
-                  <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>Change Photo</ThemedText>
+                  <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_500Medium' }}>Change Photo</ThemedText>
                 </Pressable>
               </View>
             </View>
@@ -304,7 +304,7 @@ export default function EditProfileScreen() {
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, backgroundColor: theme.primary + '18' }}
                   >
                     <Ionicons name="locate" size={11} color={theme.primary} />
-                    <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_500Medium' }}>
                       {isLocating ? 'Fetching GPS...' : 'GPS Auto-Detect'}
                     </ThemedText>
                   </Pressable>
@@ -453,7 +453,7 @@ export default function EditProfileScreen() {
         {/* Actions buttons Fixed at Bottom */}
         <View style={[styles.actionSection, { paddingBottom: Spacing.md }]}>
           <Pressable onPress={handleSave} style={[styles.primaryActionBtn, { backgroundColor: theme.primary }]}>
-            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
+            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium' }}>
               SAVE CHANGES
             </ThemedText>
           </Pressable>
@@ -468,7 +468,7 @@ export default function EditProfileScreen() {
             }}
             style={[styles.secondaryActionBtn, { borderColor: theme.outline }]}
           >
-            <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
+            <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>
               CANCEL
             </ThemedText>
           </Pressable>
@@ -490,11 +490,11 @@ export default function EditProfileScreen() {
             <View style={styles.pickerActionsRow}>
               <Pressable style={[styles.pickerActionBtn, { backgroundColor: theme.surfaceLow }]} onPress={pickFromCamera}>
                 <Ionicons name="camera-outline" size={18} color={theme.primary} />
-                <ThemedText style={{ color: theme.text, fontSize: 12, fontFamily: 'Sora_600SemiBold', marginLeft: 8 }}>Take Photo</ThemedText>
+                <ThemedText style={{ color: theme.text, fontSize: 12, fontFamily: 'Sora_500Medium', marginLeft: 8 }}>Take Photo</ThemedText>
               </Pressable>
               <Pressable style={[styles.pickerActionBtn, { backgroundColor: theme.surfaceLow }]} onPress={pickFromGallery}>
                 <Ionicons name="image-outline" size={18} color={theme.primary} />
-                <ThemedText style={{ color: theme.text, fontSize: 12, fontFamily: 'Sora_600SemiBold', marginLeft: 8 }}>Choose from Gallery</ThemedText>
+                <ThemedText style={{ color: theme.text, fontSize: 12, fontFamily: 'Sora_500Medium', marginLeft: 8 }}>Choose from Gallery</ThemedText>
               </Pressable>
             </View>
 
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   headerTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 16,
   },
   scrollContent: {
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   sectionTitleText: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 1,
     fontSize: 10,
   },
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   inputLabel: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 9,
     letterSpacing: 0.5,
     color: '#73787b',

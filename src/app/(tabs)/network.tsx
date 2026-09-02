@@ -453,7 +453,7 @@ export default function NetworkScreen() {
               />
             </Pressable>
             <View style={styles.headerTextGroup}>
-              <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', lineHeight: 18 }}>
+              <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_500Medium', lineHeight: 18 }}>
                 {profile.name}
               </ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
@@ -560,7 +560,7 @@ export default function NetworkScreen() {
               style={styles.challengeBanner}
             >
               <View style={{ flex: 1 }}>
-                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
+                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium' }}>
                   Host Quick Challenge
                 </ThemedText>
                 <ThemedText type="bodySm" style={{ color: 'rgba(255, 255, 255, 0.85)', marginTop: 4, fontSize: 11 }}>
@@ -580,10 +580,10 @@ export default function NetworkScreen() {
           {/* Connected Player Cards List */}
           <View style={styles.playersListSection}>
             <View style={styles.sectionHeader}>
-              <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
+              <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>
                 Nearby Connections ({filteredPlayers.length})
               </ThemedText>
-              <ThemedText type="labelSm" style={{ color: '#8b5cf6', fontFamily: 'Sora_600SemiBold' }}>
+              <ThemedText type="labelSm" style={{ color: '#8b5cf6', fontFamily: 'Sora_500Medium' }}>
                 LIVE RADAR
               </ThemedText>
             </View>
@@ -608,7 +608,7 @@ export default function NetworkScreen() {
 
                     <View style={styles.playerInfo}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
+                        <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>
                           {player.name}
                         </ThemedText>
                         <View style={styles.skillBadge}>
@@ -627,7 +627,7 @@ export default function NetworkScreen() {
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
                           <Ionicons name="people" size={11} color="#8b5cf6" />
-                          <ThemedText style={[styles.metaText, { color: '#8b5cf6', fontWeight: '600' }]}>
+                          <ThemedText style={[styles.metaText, { color: '#8b5cf6', fontWeight: '500' }]}>
                             {player.mutualCount} mutual
                           </ThemedText>
                         </View>
@@ -752,13 +752,13 @@ const styles = StyleSheet.create({
   },
   communityBadgeText: {
     color: '#FFA751',
-    fontWeight: '600',
+    fontWeight: '500',
     fontSize: 10,
     marginLeft: 4,
     letterSpacing: 1.2,
   },
   mainHeadline: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 22,
     lineHeight: 28,
   },
@@ -811,7 +811,7 @@ const styles = StyleSheet.create({
   floatingPillText: {
     color: '#ffffff',
     fontSize: 10.5,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   searchSection: {
     marginVertical: 8,
@@ -828,7 +828,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   filterScroll: {
     flexDirection: 'row',
@@ -868,7 +868,7 @@ const styles = StyleSheet.create({
   challengeButtonText: {
     color: '#7e22ce',
     fontSize: 11,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   playersListSection: {
     marginTop: 8,
@@ -924,7 +924,7 @@ const styles = StyleSheet.create({
   playerHandle: {
     color: '#6b7280',
     fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     marginTop: 1,
   },
   skillBadge: {
@@ -936,7 +936,7 @@ const styles = StyleSheet.create({
   skillBadgeText: {
     color: '#7e22ce',
     fontSize: 10,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   playerStatsRow: {
     flexDirection: 'row',
@@ -960,7 +960,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 11,
     color: '#374151',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   playerActionsRow: {
     flexDirection: 'row',
@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
   },
   connectButtonText: {
     fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   challengeActionBtn: {
     flex: 1,
@@ -1002,7 +1002,7 @@ const styles = StyleSheet.create({
   challengeActionText: {
     color: '#8b5cf6',
     fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   comingSoonScreen: {
     flex: 1,

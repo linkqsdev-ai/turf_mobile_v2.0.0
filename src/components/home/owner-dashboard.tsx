@@ -228,7 +228,7 @@ export function OwnerDashboard({
               <View style={styles.headerTextGroup}>
                 <ThemedText
                   type="bodyMd"
-                  style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', lineHeight: 18 }}
+                  style={{ color: theme.text, fontFamily: 'Sora_500Medium', lineHeight: 18 }}
                 >
                   {profile.name}
                 </ThemedText>
@@ -352,7 +352,7 @@ export function OwnerDashboard({
                   <View style={[styles.bentoIconWrap, { backgroundColor: theme.surface }]}>
                     <Ionicons name="cash-outline" size={17} color={theme.primary} />
                   </View>
-                  <ThemedText style={{ color: success, fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
+                  <ThemedText style={{ color: success, fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>
                     +15% vs Wk
                   </ThemedText>
                 </View>
@@ -385,7 +385,7 @@ export function OwnerDashboard({
                   <View style={[styles.bentoIconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.18)' }]}>
                     <Ionicons name="wallet-outline" size={17} color="#ffffff" />
                   </View>
-                  <ThemedText style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
+                  <ThemedText style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>
                     3 Pending
                   </ThemedText>
                 </View>
@@ -418,7 +418,7 @@ export function OwnerDashboard({
                   <ThemedText style={[styles.cardHeading, { color: theme.text }]}>
                     Weekly Revenue Trend (₹)
                   </ThemedText>
-                  <ThemedText style={{ color: success, fontSize: 10.5, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
+                  <ThemedText style={{ color: success, fontSize: 10.5, fontFamily: 'Sora_500Medium', marginTop: 2 }}>
                     Total: ₹1,35,000 · +18.4% vs Last Week
                   </ThemedText>
                 </View>
@@ -443,7 +443,7 @@ export function OwnerDashboard({
                       onPress={() => setSelectedBar(bar)}
                       style={styles.barColumn}
                     >
-                      <ThemedText style={{ color: isSelected ? theme.primary : theme.textSecondary, fontSize: 8.5, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>
+                      <ThemedText style={{ color: isSelected ? theme.primary : theme.textSecondary, fontSize: 8.5, fontFamily: 'Sora_500Medium', marginBottom: 3 }}>
                         {bar.label}
                       </ThemedText>
                       <View
@@ -469,10 +469,10 @@ export function OwnerDashboard({
               {selectedBar && (
                 <View style={[styles.tooltipBox, { backgroundColor: theme.surfaceLow, borderLeftColor: theme.primary }]}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
-                      {selectedBar.fullDay}: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>{selectedBar.revenue}</ThemedText>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                      {selectedBar.fullDay}: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_500Medium' }}>{selectedBar.revenue}</ThemedText>
                     </ThemedText>
-                    <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
                       🔥 Peak: {selectedBar.peak}
                     </ThemedText>
                   </View>
@@ -493,7 +493,7 @@ export function OwnerDashboard({
                   <ThemedText style={[styles.cardHeading, { color: theme.text }]}>
                     Calendar Heatmap
                   </ThemedText>
-                  <ThemedText style={{ color: success, fontSize: 10.5, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
+                  <ThemedText style={{ color: success, fontSize: 10.5, fontFamily: 'Sora_500Medium', marginTop: 2 }}>
                     82% Average Daily Occupancy · 384 Bookings
                   </ThemedText>
                 </View>
@@ -504,11 +504,11 @@ export function OwnerDashboard({
               {selectedHeatmapDay && (
                 <View style={[styles.tooltipBox, { backgroundColor: theme.surfaceLow, borderLeftColor: selectedHeatmapDay.level === 'Peak' ? '#ef4444' : selectedHeatmapDay.level === 'Medium' ? '#f59e0b' : '#94a3b8' }]}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.text }}>
                       {selectedHeatmapDay.label}
                     </ThemedText>
                     <View style={{ backgroundColor: selectedHeatmapDay.level === 'Peak' ? '#ef444420' : selectedHeatmapDay.level === 'Medium' ? '#f59e0b20' : '#94a3b820', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                      <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: selectedHeatmapDay.level === 'Peak' ? '#ef4444' : selectedHeatmapDay.level === 'Medium' ? '#d97706' : '#64748b' }}>
+                      <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: selectedHeatmapDay.level === 'Peak' ? '#ef4444' : selectedHeatmapDay.level === 'Medium' ? '#d97706' : '#64748b' }}>
                         {selectedHeatmapDay.occupancy} {selectedHeatmapDay.level}
                       </ThemedText>
                     </View>
@@ -523,7 +523,7 @@ export function OwnerDashboard({
               <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
                 {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
                   <View key={i} style={{ flex: 1, alignItems: 'center' }}>
-                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>
                       {d}
                     </ThemedText>
                   </View>
@@ -565,7 +565,7 @@ export function OwnerDashboard({
                             borderColor: isSelected ? theme.text : 'transparent',
                           }}
                         >
-                          <ThemedText style={{ color: textColor, fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
+                          <ThemedText style={{ color: textColor, fontSize: 11, fontFamily: 'Sora_500Medium' }}>
                             {dayNum}
                           </ThemedText>
                         </Pressable>
@@ -626,7 +626,7 @@ export function OwnerDashboard({
                   </View>
                   <View style={styles.paymentRow}>
                     <ThemedText style={[styles.priceTag, { color: theme.text }]}>₹2,500</ThemedText>
-                    <ThemedText style={{ color: success, fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText style={{ color: success, fontSize: 9, fontFamily: 'Sora_500Medium' }}>
                       Fully Paid
                     </ThemedText>
                     <ThemedText style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_400Regular' }}>
@@ -636,7 +636,7 @@ export function OwnerDashboard({
                 </View>
                 <View style={[styles.statusTag, { backgroundColor: '#ef444415' }]}>
                   <PulseDot color="#ef4444" size={6} />
-                  <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#ef4444' }}>LIVE</ThemedText>
+                  <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: '#ef4444' }}>LIVE</ThemedText>
                 </View>
               </View>
 
@@ -666,16 +666,16 @@ export function OwnerDashboard({
                   </View>
                   <View style={styles.paymentRow}>
                     <ThemedText style={[styles.priceTag, { color: theme.text }]}>₹3,600</ThemedText>
-                    <ThemedText style={{ color: '#d97706', fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText style={{ color: '#d97706', fontSize: 9, fontFamily: 'Sora_500Medium' }}>
                       Advance Paid (₹1,000)
                     </ThemedText>
-                    <ThemedText style={{ color: '#ef4444', fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText style={{ color: '#ef4444', fontSize: 9, fontFamily: 'Sora_500Medium' }}>
                       · ₹2,600 Due
                     </ThemedText>
                   </View>
                 </View>
                 <View style={[styles.statusTag, { backgroundColor: accent + '15' }]}>
-                  <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#d97706' }}>UPCOMING</ThemedText>
+                  <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: '#d97706' }}>UPCOMING</ThemedText>
                 </View>
               </View>
             </View>
@@ -773,74 +773,74 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     marginBottom: 7,
   },
-  heroBadgeText: { fontFamily: 'Sora_600SemiBold', fontSize: 8.5, letterSpacing: 0.8 },
-  heroTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 17, letterSpacing: -0.2 },
-  heroSub: { fontFamily: 'Sora_400Regular', fontSize: 11.5, marginTop: 3, lineHeight: 16 },
+  heroBadgeText: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.8 },
+  heroTitle: { fontFamily: 'Sora_500Medium', fontSize: 15.5, letterSpacing: -0.2 },
+  heroSub: { fontFamily: 'Sora_400Regular', fontSize: 11, marginTop: 2, lineHeight: 15 },
 
   // stats
-  statRow: { flexDirection: 'row', gap: 8, paddingHorizontal: GUTTER, marginTop: 12 },
+  statRow: { flexDirection: 'row', gap: 8, paddingHorizontal: GUTTER, marginTop: 10 },
 
   // tiles
-  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   gridTile: { flexBasis: '47.5%', flexGrow: 1, minWidth: 140 },
 
   // bento
-  bentoRow: { flexDirection: 'row', gap: 10 },
+  bentoRow: { flexDirection: 'row', gap: 8 },
   bentoCard: {
     flex: 1,
-    borderRadius: BorderRadius.premium,
-    padding: Spacing.md,
-    minHeight: 140,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.sm,
+    minHeight: 120,
     justifyContent: 'space-between',
     borderWidth: 1,
     overflow: 'hidden',
     position: 'relative',
   },
-  bentoArt: { position: 'absolute', right: -12, bottom: -12, width: 115, height: 115, opacity: 0.18 },
+  bentoArt: { position: 'absolute', right: -12, bottom: -12, width: 100, height: 100, opacity: 0.16 },
   bentoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 2 },
-  bentoIconWrap: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  bentoLabel: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
-  bentoValue: { fontFamily: 'Sora_600SemiBold', fontSize: 16, marginTop: 2 },
-  bentoFooter: { borderTopWidth: 1, paddingTop: 6, marginTop: 6, zIndex: 2 },
-  bentoFooterText: { fontFamily: 'Sora_400Regular', fontSize: 9.5 },
-  bentoTag: { fontFamily: 'Sora_600SemiBold', fontSize: 8.5, marginTop: 2 },
+  bentoIconWrap: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  bentoLabel: { fontFamily: 'Sora_500Medium', fontSize: 10 },
+  bentoValue: { fontFamily: 'Sora_500Medium', fontSize: 14.5, marginTop: 2 },
+  bentoFooter: { borderTopWidth: 1, paddingTop: 4, marginTop: 4, zIndex: 2 },
+  bentoFooterText: { fontFamily: 'Sora_400Regular', fontSize: 9 },
+  bentoTag: { fontFamily: 'Sora_500Medium', fontSize: 8, marginTop: 2 },
 
   // card & graphs
-  card: { borderRadius: BorderRadius.premium, padding: Spacing.md, borderWidth: 1 },
-  graphHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  cardHeading: { fontFamily: 'Sora_500Medium', fontSize: 14, letterSpacing: -0.1 },
-  barChartRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 110, marginTop: 14, marginBottom: 8 },
+  card: { borderRadius: BorderRadius.lg, padding: Spacing.sm, borderWidth: 1 },
+  graphHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  cardHeading: { fontFamily: 'Sora_500Medium', fontSize: 13, letterSpacing: -0.1 },
+  barChartRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 100, marginTop: 10, marginBottom: 6 },
   barColumn: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' },
-  barPill: { width: 18, borderRadius: 9 },
-  tooltipBox: { padding: 10, borderRadius: 10, marginTop: 6, borderLeftWidth: 3 },
+  barPill: { width: 16, borderRadius: 8 },
+  tooltipBox: { padding: 8, borderRadius: 8, marginTop: 6, borderLeftWidth: 3 },
 
   // legend
-  legendRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 14, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#0000000f' },
+  legendRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#0000000f' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  legendBox: { width: 10, height: 10, borderRadius: 2 },
-  legendText: { fontSize: 9.5, fontFamily: 'Sora_400Regular', color: '#64748b' },
+  legendBox: { width: 8, height: 8, borderRadius: 2 },
+  legendText: { fontSize: 9, fontFamily: 'Sora_400Regular', color: '#64748b' },
 
   // bookings timeline
   bookingCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.premium,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
   },
-  bookingIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  bookingTitle: { fontFamily: 'Sora_500Medium', fontSize: 13 },
-  bookingRef: { fontFamily: 'Sora_400Regular', fontSize: 9.5 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  metaText: { fontFamily: 'Sora_400Regular', fontSize: 10.5 },
-  paymentRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, paddingTop: 4, borderTopWidth: 1, borderTopColor: '#0000000f' },
-  priceTag: { fontFamily: 'Sora_600SemiBold', fontSize: 12 },
+  bookingIconWrap: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  bookingTitle: { fontFamily: 'Sora_500Medium', fontSize: 12.5 },
+  bookingRef: { fontFamily: 'Sora_400Regular', fontSize: 9 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  metaText: { fontFamily: 'Sora_400Regular', fontSize: 10 },
+  paymentRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3, paddingTop: 3, borderTopWidth: 1, borderTopColor: '#0000000f' },
+  priceTag: { fontFamily: 'Sora_500Medium', fontSize: 11.5 },
   statusTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
     borderRadius: 999,
   },
 });

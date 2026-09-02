@@ -107,14 +107,14 @@ export default function PlayerProfileScreen() {
                 {/* Follower Stats */}
                 <View style={styles.statsRow}>
                   <View style={styles.statCol}>
-                    <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>
                       {(followersCount / 1000).toFixed(1)}k
                     </ThemedText>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Followers</ThemedText>
                   </View>
                   <View style={[styles.statsDivider, { backgroundColor: theme.outlineVariant + '33' }]} />
                   <View style={styles.statCol}>
-                    <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
+                    <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>
                       842
                     </ThemedText>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Following</ThemedText>
@@ -243,7 +243,7 @@ export default function PlayerProfileScreen() {
             <View style={styles.rowBetween}>
               <ThemedText type="headlineSm">Achievements</ThemedText>
               <Pressable>
-                <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '600' }}>SEE ALL</ThemedText>
+                <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '500' }}>SEE ALL</ThemedText>
               </Pressable>
             </View>
 
@@ -252,7 +252,7 @@ export default function PlayerProfileScreen() {
                 <View style={[styles.achievementIconContainer, { backgroundColor: theme.secondaryContainer + '22' }]}>
                   <Ionicons name="trophy" size={24} color={theme.secondaryContainer} />
                 </View>
-                <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_600SemiBold', color: theme.text, fontSize: 9 }}>
+                <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_500Medium', color: theme.text, fontSize: 9 }}>
                   MVP 2024
                 </ThemedText>
               </View>
@@ -261,7 +261,7 @@ export default function PlayerProfileScreen() {
                 <View style={[styles.achievementIconContainer, { backgroundColor: theme.secondaryContainer + '22' }]}>
                   <Ionicons name="ribbon" size={24} color={theme.secondaryContainer} />
                 </View>
-                <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_600SemiBold', color: theme.text, fontSize: 9 }}>
+                <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_500Medium', color: theme.text, fontSize: 9 }}>
                   CENTURY CLUB
                 </ThemedText>
               </View>
@@ -270,7 +270,7 @@ export default function PlayerProfileScreen() {
                 <View style={[styles.achievementIconContainer, { backgroundColor: theme.secondaryContainer + '22' }]}>
                   <Ionicons name="medal" size={24} color={theme.secondaryContainer} />
                 </View>
-                <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_600SemiBold', color: theme.text, fontSize: 9 }}>
+                <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_500Medium', color: theme.text, fontSize: 9 }}>
                   TOP BOWLER
                 </ThemedText>
               </View>
@@ -285,14 +285,14 @@ export default function PlayerProfileScreen() {
               {/* History Item 1 */}
               <View style={styles.historyRow}>
                 <View style={[styles.teamInitials, { backgroundColor: theme.primaryContainer }]}>
-                  <ThemedText style={{ color: theme.secondaryContainer, fontWeight: '600', fontSize: 11 }}>LL</ThemedText>
+                  <ThemedText style={{ color: theme.secondaryContainer, fontWeight: '500', fontSize: 11 }}>LL</ThemedText>
                 </View>
                 <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>London Lions vs Kent Kings</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>London Lions vs Kent Kings</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>T20 Blast • 12 Feb 2024</ThemedText>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>42 Runs (28b)</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>42 Runs (28b)</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>1 Wicket (2/18)</ThemedText>
                 </View>
               </View>
@@ -302,14 +302,14 @@ export default function PlayerProfileScreen() {
               {/* History Item 2 */}
               <View style={styles.historyRow}>
                 <View style={[styles.teamInitials, { backgroundColor: theme.surfaceHigh }]}>
-                  <ThemedText style={{ color: theme.text, fontWeight: '600', fontSize: 11 }}>KS</ThemedText>
+                  <ThemedText style={{ color: theme.text, fontWeight: '500', fontSize: 11 }}>KS</ThemedText>
                 </View>
                 <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>Kent Kings vs Sussex Sharks</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Kent Kings vs Sussex Sharks</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>One Day Cup • 08 Feb 2024</ThemedText>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>15 Runs (12b)</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>15 Runs (12b)</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>3 Wickets (3/42)</ThemedText>
                 </View>
               </View>
@@ -319,14 +319,14 @@ export default function PlayerProfileScreen() {
               {/* History Item 3 */}
               <View style={styles.historyRow}>
                 <View style={[styles.teamInitials, { backgroundColor: theme.primaryContainer }]}>
-                  <ThemedText style={{ color: theme.secondaryContainer, fontWeight: '600', fontSize: 11 }}>LL</ThemedText>
+                  <ThemedText style={{ color: theme.secondaryContainer, fontWeight: '500', fontSize: 11 }}>LL</ThemedText>
                 </View>
                 <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>London Lions vs Yorkshire Vikings</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>London Lions vs Yorkshire Vikings</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>T20 Blast • 05 Feb 2024</ThemedText>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.secondaryContainer }}>112* Runs (54b)</ThemedText>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.secondaryContainer }}>112* Runs (54b)</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontSize: 11 }}>0 Wickets (0/24)</ThemedText>
                 </View>
               </View>
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   headerTitle: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 16,
   },
   iconButton: {
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 18,
     marginTop: 2,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   skillRatingCell: {
     flex: 1,
@@ -520,9 +520,9 @@ const styles = StyleSheet.create({
   },
   circularProgressText: {
     fontSize: 28,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#ffffff',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
   },
   actionBanner: {
     borderRadius: BorderRadius.xl,

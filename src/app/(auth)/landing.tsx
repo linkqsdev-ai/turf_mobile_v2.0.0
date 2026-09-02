@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 9,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 1.4,
   },
 
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   },
   titleNormal: {
     fontSize: 28,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     lineHeight: 36,
     letterSpacing: -0.5,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   },
   titleHighlight: {
     fontSize: 28,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     lineHeight: 36,
     letterSpacing: -0.5,
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   featurePillText: {
     fontSize: 10,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.3,
   },
 
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 1.0,
   },
   secondaryRow: {
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.8,
   },
 });
