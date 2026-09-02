@@ -25,6 +25,7 @@ import { getAvatarSource } from '@/constants/avatars';
 import { useClassStore, useTurfStore, useBookings } from '@/store/app-store';
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
+import { computeTurfSlotMetrics } from '@/utils/turf-slot-sync';
 
 // Mock Players Data
 const PLAYERS = [
@@ -144,7 +145,33 @@ export default function CoachTab() {
   const theme = useTheme();
   const router = useRouter();
   const { profile } = useUserProfile();
-  const { classes } = useClassStore();
+  const { classes, deleteClass, enrollmentCountForClass } = useClassStore();
+
+  // Deleting is destructive and irreversible, so it always confirms. The store
+  // re-checks enrolments itself, which is what actually guarantees a class with
+  // students can't be removed even if this screen's state were stale.
+  const handleDeleteClass = React.useCallback((cls: any) => {
+    Alert.alert(
+      'Delete this class?',
+      `"${cls.className}" will be removed and will stop appearing for players.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            const removed = deleteClass(cls.id);
+            if (!removed) {
+              Alert.alert(
+                'Cannot delete',
+                'A student has enrolled in this class since it loaded, so it can no longer be deleted.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  }, [deleteClass]);
   const { ownedTurfs } = useTurfStore();
   const { bookings } = useBookings();
   const [backendTurfs, setBackendTurfs] = useState<any[]>([]);
@@ -325,46 +352,86 @@ export default function CoachTab() {
                     </Pressable>
                   </View>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginTop: 8 }}>
-                    {classes.map((cls: any, i: number) => (
-                      <Pressable
-                        key={cls.id || i}
-                        onPress={() => router.push({ pathname: '/create-class', params: { editId: cls.id } })}
-                        style={({ pressed }) => [
-                          styles.teamCard,
-                          {
-                            width: 240,
-                            backgroundColor: theme.surfaceLowest,
-                            borderColor: theme.primary + '30',
-                            borderWidth: 1,
-                            padding: 12,
-                            borderRadius: BorderRadius.lg,
-                            opacity: pressed ? 0.9 : 1,
-                            transform: [{ scale: pressed ? 0.98 : 1 }],
-                          },
-                          Shadows.level2
-                        ]}
-                      >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                          <View style={{ backgroundColor: theme.primary + '18', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                            <ThemedText style={{ color: theme.primary, fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>
-                              ✏️ Tap to Edit
+                    {classes.map((cls: any, i: number) => {
+                      // A class with even one enrolment is frozen: someone has
+                      // paid to attend, so its details and existence are no
+                      // longer the coach's alone to change.
+                      const enrolled = enrollmentCountForClass(cls.id);
+                      const locked = enrolled > 0;
+
+                      return (
+                        <Pressable
+                          key={cls.id || i}
+                          onPress={() =>
+                            locked
+                              ? router.push('/coach-students')
+                              : router.push({ pathname: '/create-class', params: { editId: cls.id } })
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            locked
+                              ? `${cls.className}, ${enrolled} enrolled, locked for editing. Opens students directory.`
+                              : `Edit ${cls.className}`
+                          }
+                          style={({ pressed }) => [
+                            styles.teamCard,
+                            {
+                              width: 240,
+                              backgroundColor: theme.surfaceLowest,
+                              borderColor: locked ? theme.outlineVariant + '55' : theme.primary + '30',
+                              borderWidth: 1,
+                              padding: 12,
+                              borderRadius: BorderRadius.lg,
+                              opacity: pressed ? 0.9 : 1,
+                              transform: [{ scale: pressed ? 0.98 : 1 }],
+                            },
+                            Shadows.level2
+                          ]}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <View style={{ backgroundColor: locked ? theme.outlineVariant + '25' : theme.primary + '18', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                              <ThemedText style={{ color: locked ? theme.textSecondary : theme.primary, fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>
+                                {locked ? `🔒 ${enrolled} enrolled` : '✏️ Tap to Edit'}
+                              </ThemedText>
+                            </View>
+                            <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_500Medium' }}>
+                              {cls.feeAmount ? `₹${cls.feeAmount}` : 'Free'}
                             </ThemedText>
                           </View>
-                          <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_500Medium' }}>
-                            {cls.feeAmount ? `₹${cls.feeAmount}` : 'Free'}
+                          <ThemedText type="headlineSm" style={{ fontSize: 14, color: theme.text }} numberOfLines={1}>
+                            {cls.className}
                           </ThemedText>
-                        </View>
-                        <ThemedText type="headlineSm" style={{ fontSize: 14, color: theme.text }} numberOfLines={1}>
-                          {cls.className}
-                        </ThemedText>
-                        <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
-                          {cls.sportType} • {cls.classType}
-                        </ThemedText>
-                        <ThemedText style={{ color: theme.textSecondary, fontSize: 10, marginTop: 4 }} numberOfLines={1}>
-                          📍 {cls.venue || 'Main Pitch'}
-                        </ThemedText>
-                      </Pressable>
-                    ))}
+                          <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
+                            {cls.sportType} • {cls.classType}
+                          </ThemedText>
+                          <ThemedText style={{ color: theme.textSecondary, fontSize: 10, marginTop: 4 }} numberOfLines={1}>
+                            📍 {cls.venue || 'Main Pitch'}
+                          </ThemedText>
+
+                          {locked ? (
+                            <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5, marginTop: 8, lineHeight: 13 }}>
+                              Locked — students have already booked. Tap to view them.
+                            </ThemedText>
+                          ) : (
+                            <Pressable
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClass(cls);
+                              }}
+                              hitSlop={8}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Delete ${cls.className}`}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, alignSelf: 'flex-start' }}
+                            >
+                              <Ionicons name="trash-outline" size={12} color="#b91c1c" />
+                              <ThemedText style={{ color: '#b91c1c', fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
+                                Delete class
+                              </ThemedText>
+                            </Pressable>
+                          )}
+                        </Pressable>
+                      );
+                    })}
                   </ScrollView>
                 </View>
               )}
@@ -382,49 +449,16 @@ export default function CoachTab() {
 
                 <View style={[styles.teamGrid, { marginTop: Spacing.sm }]}>
                   {(() => {
-                    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                     const now = new Date();
-                    const currentToday = daysOfWeek[now.getDay()];
-                    const todayISO = now.toISOString().split('T')[0];
 
                     const computeOccupancy = (turf: any) => {
-                      let todayTotal = 12;
-                      if (Array.isArray(turf.slots) && turf.slots.length > 0) {
-                        const configuredToday = turf.slots.filter(
-                          (s: any) => s.day === currentToday && s.status !== 'maintenance' && s.status !== 'blocked'
-                        );
-                        if (configuredToday.length > 0) {
-                          todayTotal = configuredToday.length;
-                        }
-                      }
-
-                      // Find actual confirmed bookings for this venue today
-                      const confirmedTodayBookings = (bookings || []).filter((b: any) => {
-                        const isVenueMatch =
-                          (b.venueId === turf.id) ||
-                          (b.venueName && turf.name && b.venueName.toLowerCase() === turf.name.toLowerCase());
-                        const isToday =
-                          b.date === todayISO ||
-                          (b.dayLabel && (b.dayLabel.includes(todayISO) || b.dayLabel.includes(currentToday)));
-                        const isConfirmed = b.status !== 'cancelled';
-                        return isVenueMatch && isToday && isConfirmed;
-                      });
-
-                      let todayBooked = 0;
-                      confirmedTodayBookings.forEach((b: any) => {
-                        todayBooked += Array.isArray(b.slots) ? b.slots.length : 1;
-                      });
-
-                      todayBooked = Math.min(todayTotal, todayBooked);
-                      const todayAvailable = Math.max(0, todayTotal - todayBooked);
-                      const occupancyPct = todayTotal > 0 ? Math.round((todayBooked / todayTotal) * 100) : 0;
-
+                      const metrics = computeTurfSlotMetrics(turf, now, bookings || []);
                       return {
-                        todayBooked,
-                        todayTotal,
-                        todayAvailable,
-                        occupancyPct,
-                        slotsText: `${todayBooked}/${todayTotal} slots booked today (${todayAvailable} active)`,
+                        todayBooked: metrics.totalBooked,
+                        todayTotal: metrics.totalConfigured,
+                        todayAvailable: metrics.totalAvailable,
+                        occupancyPct: metrics.occupancyPct,
+                        slotsText: metrics.slotsText,
                       };
                     };
 

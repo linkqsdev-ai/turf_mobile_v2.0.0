@@ -13,6 +13,7 @@ import { ChipGroup } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MotionView } from '@/components/motion';
 import { useTokens } from '@/hooks/use-scheme';
+import { useClassStore } from '@/store/app-store';
 
 type Coach = {
   id: string;
@@ -42,6 +43,19 @@ export default function CoachList() {
   const t = useTokens();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['value']>('all');
+  const { classes, enrollmentCountForClass } = useClassStore();
+
+  // Coach-created classes, filtered by the same search box as the coach list.
+  const liveClasses = useMemo(() => {
+    if (!query) return classes;
+    const q = query.toLowerCase();
+    return classes.filter(
+      (c: any) =>
+        String(c.className || '').toLowerCase().includes(q) ||
+        String(c.sportType || '').toLowerCase().includes(q) ||
+        String(c.venue || '').toLowerCase().includes(q)
+    );
+  }, [classes, query]);
 
   const filtered = useMemo(() => {
     let list = COACHES.filter((c) => {
@@ -70,6 +84,75 @@ export default function CoachList() {
         />
         <ChipGroup options={FILTERS as any} value={filter} onChange={setFilter} />
       </View>
+
+      {/* Classes published by coaches in-app. These come from the store, so a
+          class a coach creates shows up here for players immediately. */}
+      {liveClasses.length > 0 && (
+        <View className="mt-5 gap-3">
+          <Text className="font-semibold text-sm text-foreground">
+            Live classes ({liveClasses.length})
+          </Text>
+
+          {liveClasses.map((cls, i) => {
+            const taken = enrollmentCountForClass(cls.id);
+            const capacity = parseInt(String(cls.maxStudents || ''), 10);
+            const seatsLeft = isNaN(capacity) ? null : Math.max(0, capacity - taken);
+            const full = seatsLeft === 0;
+            const fee = cls.feeAmount ? `₹${cls.feeAmount}` : 'Free';
+
+            return (
+              <MotionView key={cls.id} preset="fade-up" delay={i * 0.05}>
+                <Card
+                  variant="elevated"
+                  onPress={() =>
+                    router.push({
+                      pathname: '/enroll',
+                      params: {
+                        classId: cls.id,
+                        title: cls.className,
+                        price: String(cls.feeAmount || 0),
+                        dates: [cls.startDate, cls.endDate].filter(Boolean).join(' – '),
+                        location: cls.venue || 'TBD',
+                      },
+                    })
+                  }
+                  className="gap-2"
+                >
+                  <View className="flex-row items-start gap-3">
+                    <View className="flex-1">
+                      <Text className="font-medium text-sm text-foreground" numberOfLines={2}>
+                        {cls.className}
+                      </Text>
+                      <Text variant="caption">
+                        {[cls.sportType, cls.classType, cls.venue].filter(Boolean).join(' • ')}
+                      </Text>
+                    </View>
+                    <Text className="font-semibold text-sm text-foreground">{fee}</Text>
+                  </View>
+
+                  <View className="flex-row items-center gap-1.5">
+                    {!!cls.ageGroup && (
+                      <Badge variant="muted" size="sm">
+                        {cls.ageGroup}
+                      </Badge>
+                    )}
+                    {!!cls.skillLevel && (
+                      <Badge variant="muted" size="sm">
+                        {cls.skillLevel}
+                      </Badge>
+                    )}
+                    {seatsLeft !== null && (
+                      <Badge variant="muted" size="sm">
+                        {full ? 'Full' : `${seatsLeft} seats left`}
+                      </Badge>
+                    )}
+                  </View>
+                </Card>
+              </MotionView>
+            );
+          })}
+        </View>
+      )}
 
       <View className="mt-4 gap-3">
         {filtered.length === 0 ? (

@@ -89,7 +89,7 @@ export default function CreateClassScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ editId?: string; id?: string; showDrafts?: string }>();
   const editId = params.editId || params.id;
-  const { classes, addClass, updateClass } = useClassStore();
+  const { classes, addClass, updateClass, isClassEditable, enrollmentCountForClass } = useClassStore();
   const { addOffer } = useOfferStore();
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -573,6 +573,20 @@ export default function CreateClassScreen() {
     };
 
     if (editId) {
+      // Last line of defence: the coach tab hides Edit once a class has
+      // enrolments, but this screen is reachable by deep link and the class
+      // could also have gained its first student while the form was open.
+      if (!isClassEditable(editId)) {
+        const enrolled = enrollmentCountForClass(editId);
+        const msg = `This class can no longer be edited — ${enrolled} student${enrolled === 1 ? ' has' : 's have'} already enrolled.`;
+        if (Platform.OS === 'web') {
+          alert(msg);
+        } else {
+          Alert.alert('Class locked', msg);
+        }
+        return;
+      }
+
       updateClass(editId, classPayload);
 
       if (Platform.OS === 'web') {

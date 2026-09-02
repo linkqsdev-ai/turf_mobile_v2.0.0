@@ -2,10 +2,14 @@
  * squad-modals.tsx
  *
  * The three squad-management popups used across the scoring console. They are
- * deliberately built on ONE shell (`SquadModalShell`) and ONE type scale
- * (`SquadType`) so every squad interaction has the same header, body rhythm,
- * footer and text sizing — the structural consistency the console previously
- * lacked, where each modal hand-rolled its own paddings and font sizes.
+ * deliberately built on ONE shell (`SquadModalShell`) and ONE responsive type
+ * ramp (`useTypeRamp`, see lib/typography.ts) so every squad interaction has the
+ * same header, body rhythm, footer and text sizing — the structural consistency
+ * the console previously lacked, where each modal hand-rolled its own paddings
+ * and font sizes. No literal `fontSize` appears below.
+ *
+ * Entrance animation goes through `@/components/motion`, which resolves to
+ * Framer Motion + GSAP on web and Moti/Reanimated on native.
  *
  * The three are a non-overlapping taxonomy:
  *
@@ -31,25 +35,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 
 import { ThemedText } from '@/components/themed-text';
+import { MotionView } from '@/components/motion';
 import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
 import { AVATAR_KEYS, getAvatarSource } from '@/constants/avatars';
 import { useTheme } from '@/hooks/use-theme';
-
-/**
- * Mobile type scale for every squad popup.
- *
- * The console had 26 distinct font sizes between 7 and 32, including eight
- * half-point steps that served no design purpose. Anything under 10 is not
- * reliably legible at arm's length on a phone, so this scale floors at 10 and
- * uses five steps only. All three popups draw from here — no literal fontSize.
- */
-export const SquadType = {
-  micro: { fontFamily: 'Sora_500Medium', fontSize: 10, lineHeight: 13 },
-  small: { fontFamily: 'Sora_500Medium', fontSize: 11, lineHeight: 15 },
-  body: { fontFamily: 'Sora_500Medium', fontSize: 12.5, lineHeight: 17 },
-  bodyStrong: { fontFamily: 'Sora_500Medium', fontSize: 12.5, lineHeight: 17 },
-  title: { fontFamily: 'Sora_500Medium', fontSize: 14, lineHeight: 19 },
-} as const;
+import { useTypeRamp } from '@/lib/typography';
 
 export interface SquadPlayer {
   id?: string;
@@ -117,57 +107,69 @@ function SquadModalShell({
   children: React.ReactNode;
 }) {
   const theme = useTheme();
+  const type = useTypeRamp();
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.overlay}>
-        <View style={[styles.sheet, { backgroundColor: theme.surfaceLowest }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: theme.outlineVariant + '33' }]}>
-            <View style={[styles.headerIcon, { backgroundColor: theme.primary + '18' }]}>
-              <Ionicons name={icon} size={15} color={theme.primary} />
+        {/* Tapping the scrim dismisses, matching the app's other sheets. */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Dismiss" />
+        {/* MotionView routes to Framer Motion + GSAP on web and Moti/Reanimated
+            on native, so the entrance is identical on both without importing a
+            DOM-only animation library into a shared component. */}
+        <MotionView preset="scale-in" duration={0.22} animateKey={title} style={styles.sheetWrap}>
+          <View style={[styles.sheet, { backgroundColor: theme.surfaceLowest }]}>
+            {/* Header */}
+            <View style={[styles.header, { borderBottomColor: theme.outlineVariant + '33' }]}>
+              <View style={[styles.headerIcon, { backgroundColor: theme.primary + '18' }]}>
+                <Ionicons name={icon} size={15} color={theme.primary} />
+              </View>
+              <View style={styles.headerText}>
+                <ThemedText style={[type.title, { color: theme.text }]} numberOfLines={1}>
+                  {title}
+                </ThemedText>
+                <ThemedText style={[type.micro, { color: theme.textSecondary, marginTop: 1 }]} numberOfLines={2}>
+                  {subtitle}
+                </ThemedText>
+              </View>
+              <Pressable onPress={onClose} hitSlop={8} accessibilityLabel="Close" style={styles.closeBtn}>
+                <Ionicons name="close" size={17} color={theme.textSecondary} />
+              </Pressable>
             </View>
-            <View style={{ flex: 1 }}>
-              <ThemedText style={[SquadType.title, { color: theme.text }]} numberOfLines={1}>
-                {title}
-              </ThemedText>
-              <ThemedText style={[SquadType.micro, { color: theme.textSecondary, marginTop: 1 }]} numberOfLines={1}>
-                {subtitle}
-              </ThemedText>
-            </View>
-            <Pressable onPress={onClose} hitSlop={8} accessibilityLabel="Close" style={styles.closeBtn}>
-              <Ionicons name="close" size={17} color={theme.textSecondary} />
-            </Pressable>
-          </View>
 
-          {/* Body */}
-          <ScrollView
-            style={styles.bodyScroll}
-            contentContainerStyle={styles.body}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {children}
-          </ScrollView>
-
-          {/* Footer */}
-          <View style={[styles.footer, { borderTopColor: theme.outlineVariant + '33' }]}>
-            <Pressable onPress={onClose} style={[styles.btn, styles.btnGhost, { borderColor: theme.outlineVariant + '66' }]}>
-              <ThemedText style={[SquadType.bodyStrong, { color: theme.textSecondary }]}>Cancel</ThemedText>
-            </Pressable>
-            <Pressable
-              onPress={onPrimary}
-              disabled={!primaryEnabled}
-              style={[
-                styles.btn,
-                styles.btnPrimary,
-                { backgroundColor: primaryEnabled ? theme.primary : theme.outlineVariant },
-              ]}
+            {/* Body */}
+            <ScrollView
+              style={styles.bodyScroll}
+              contentContainerStyle={styles.body}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
-              <ThemedText style={[SquadType.bodyStrong, { color: '#ffffff' }]}>{primaryLabel}</ThemedText>
-            </Pressable>
+              {children}
+            </ScrollView>
+
+            {/* Footer */}
+            <View style={[styles.footer, { borderTopColor: theme.outlineVariant + '33' }]}>
+              <Pressable onPress={onClose} style={[styles.btn, styles.btnGhost, { borderColor: theme.outlineVariant + '66' }]}>
+                <ThemedText style={[type.bodyStrong, { color: theme.textSecondary }]} numberOfLines={1}>
+                  Cancel
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={onPrimary}
+                disabled={!primaryEnabled}
+                style={[
+                  styles.btn,
+                  styles.btnPrimary,
+                  { backgroundColor: primaryEnabled ? theme.primary : theme.outlineVariant },
+                ]}
+              >
+                <ThemedText style={[type.bodyStrong, { color: '#ffffff' }]} numberOfLines={1}>
+                  {primaryLabel}
+                </ThemedText>
+              </Pressable>
+            </View>
           </View>
-        </View>
+        </MotionView>
       </View>
     </Modal>
   );
@@ -188,6 +190,7 @@ function PlayerRow({
   dense?: boolean;
 }) {
   const theme = useTheme();
+  const type = useTypeRamp();
   const body = (
     <View
       style={[
@@ -200,12 +203,14 @@ function PlayerRow({
       ]}
     >
       <Image source={avatarFor(player)} style={styles.rowAvatar} contentFit="cover" />
-      <View style={{ flex: 1 }}>
-        <ThemedText style={[SquadType.body, { color: theme.text }]} numberOfLines={1}>
+      {/* minWidth:0 is what actually lets the text truncate inside a flex row —
+          without it a long name pushes the trailing badge out of the card. */}
+      <View style={styles.rowText}>
+        <ThemedText style={[type.body, { color: theme.text }]} numberOfLines={1}>
           {player.name}
         </ThemedText>
         {(player.role || player.jerseyNumber !== undefined) && (
-          <ThemedText style={[SquadType.micro, { color: theme.textSecondary, marginTop: 1 }]} numberOfLines={1}>
+          <ThemedText style={[type.micro, { color: theme.textSecondary, marginTop: 1 }]} numberOfLines={1}>
             {[player.role, player.jerseyNumber !== undefined ? `#${player.jerseyNumber}` : null]
               .filter(Boolean)
               .join(' · ')}
@@ -226,8 +231,9 @@ function PlayerRow({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
+  const type = useTypeRamp();
   return (
-    <ThemedText style={[SquadType.micro, styles.sectionLabel, { color: theme.textSecondary }]}>
+    <ThemedText style={[type.micro, styles.sectionLabel, { color: theme.textSecondary }]}>
       {children}
     </ThemedText>
   );
@@ -263,6 +269,7 @@ export function SwapPlayersModal({
   onConfirm,
 }: SwapPlayersModalProps) {
   const theme = useTheme();
+  const type = useTypeRamp();
   const [picked, setPicked] = useState<SquadPlayer | null>(right);
 
   useEffect(() => {
@@ -354,6 +361,7 @@ export function ChangePlayerModal({
   onCreateNew,
 }: ChangePlayerModalProps) {
   const theme = useTheme();
+  const type = useTypeRamp();
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<SquadPlayer | null>(null);
 
@@ -384,7 +392,7 @@ export function ChangePlayerModal({
           player={current}
           trailing={
             <View style={[styles.outTag, { backgroundColor: theme.error + '1F' }]}>
-              <ThemedText style={[SquadType.micro, { color: theme.error }]}>OUT</ThemedText>
+              <ThemedText style={[type.micro, { color: theme.error }]}>OUT</ThemedText>
             </View>
           }
         />
@@ -403,7 +411,7 @@ export function ChangePlayerModal({
           placeholderTextColor={theme.placeholder}
           style={[
             styles.searchInput,
-            SquadType.body,
+            type.body,
             { color: theme.text },
             Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
           ]}
@@ -435,7 +443,7 @@ export function ChangePlayerModal({
           style={[styles.createRow, { borderColor: theme.primary + '55', backgroundColor: theme.primary + '0D' }]}
         >
           <Ionicons name="add-circle-outline" size={15} color={theme.primary} />
-          <ThemedText style={[SquadType.bodyStrong, { color: theme.primary }]}>Add a new player</ThemedText>
+          <ThemedText style={[type.bodyStrong, { color: theme.primary }]}>Add a new player</ThemedText>
         </Pressable>
       )}
     </SquadModalShell>
@@ -455,6 +463,7 @@ export interface EditPlayerModalProps {
 
 export function EditPlayerModal({ visible, onClose, player, onSave }: EditPlayerModalProps) {
   const theme = useTheme();
+  const type = useTypeRamp();
   const [name, setName] = useState('');
   const [role, setRole] = useState<string>(SQUAD_ROLES[0]);
   const [jersey, setJersey] = useState('');
@@ -499,7 +508,7 @@ export function EditPlayerModal({ visible, onClose, player, onSave }: EditPlayer
         placeholderTextColor={theme.placeholder}
         style={[
           styles.input,
-          SquadType.body,
+          type.body,
           { color: theme.text, backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
           Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
         ]}
@@ -521,7 +530,7 @@ export function EditPlayerModal({ visible, onClose, player, onSave }: EditPlayer
                 },
               ]}
             >
-              <ThemedText style={[SquadType.small, { color: on ? '#ffffff' : theme.textSecondary }]}>{r}</ThemedText>
+              <ThemedText style={[type.small, { color: on ? '#ffffff' : theme.textSecondary }]}>{r}</ThemedText>
             </Pressable>
           );
         })}
@@ -536,7 +545,7 @@ export function EditPlayerModal({ visible, onClose, player, onSave }: EditPlayer
         placeholderTextColor={theme.placeholder}
         style={[
           styles.input,
-          SquadType.body,
+          type.body,
           { color: theme.text, backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
           Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
         ]}
@@ -566,9 +575,10 @@ export function EditPlayerModal({ visible, onClose, player, onSave }: EditPlayer
 
 function EmptySlot({ label }: { label: string }) {
   const theme = useTheme();
+  const type = useTypeRamp();
   return (
     <View style={[styles.emptySlot, { borderColor: theme.outlineVariant + '55' }]}>
-      <ThemedText style={[SquadType.small, { color: theme.textSecondary }]}>{label}</ThemedText>
+      <ThemedText style={[type.small, { color: theme.textSecondary }]}>{label}</ThemedText>
     </View>
   );
 }
@@ -578,14 +588,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.lg,
   },
+  /**
+   * Height chain that keeps the body scrollable instead of clipped:
+   *   sheetWrap  caps the whole popup (maxHeight lives HERE, on the animated
+   *              wrapper, because a percentage maxHeight on a shrink-wrapped
+   *              child of it resolved against the wrong box and let the body
+   *              run under the footer);
+   *   sheet      flexShrink:1 so it gives way rather than overflowing;
+   *   bodyScroll flexShrink:1 so the ScrollView takes the leftover space
+   *              between the fixed header and footer and scrolls inside it.
+   */
+  sheetWrap: { width: '100%', maxWidth: 460, alignSelf: 'center', maxHeight: '100%' },
   sheet: {
     borderRadius: BorderRadius.xl,
-    maxHeight: '86%',
+    flexShrink: 1,
     overflow: 'hidden',
     ...Shadows.level3,
   },
+  // flexShrink lets a long title ellipsize instead of pushing the close button
+  // off the edge — the overflow this header used to have with long team names.
+  headerText: { flex: 1, flexShrink: 1, minWidth: 0 },
 
   header: {
     flexDirection: 'row',
@@ -598,7 +624,7 @@ const styles = StyleSheet.create({
   headerIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   closeBtn: { width: 26, height: 26, alignItems: 'center', justifyContent: 'center' },
 
-  bodyScroll: { flexGrow: 0 },
+  bodyScroll: { flexShrink: 1 },
   body: { paddingHorizontal: Spacing.md, paddingTop: Spacing.sm, paddingBottom: Spacing.md },
 
   sectionLabel: { letterSpacing: 0.5, marginTop: Spacing.md, marginBottom: 5 },
@@ -614,6 +640,7 @@ const styles = StyleSheet.create({
   },
   playerRowDense: { paddingVertical: 5 },
   rowAvatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#00000010' },
+  rowText: { flex: 1, minWidth: 0 },
 
   outTag: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: BorderRadius.full },
 

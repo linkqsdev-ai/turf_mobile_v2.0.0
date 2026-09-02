@@ -22,6 +22,7 @@ import {
 } from '@/components/home/dashboard-widgets';
 import { useOfferStore, useBookings, useTurfStore } from '@/store/app-store';
 import { isExpired } from '@/store/offer-store';
+import { computeTurfSlotMetrics } from '@/utils/turf-slot-sync';
 
 /** Announcement banners — tournament news surfaced in the feed. */
 const announcementBanners = (go: (path: any) => void): PromoBannerProps[] => [
@@ -187,6 +188,11 @@ export function OwnerDashboard({
     level: 'Peak',
   });
 
+  const todayTurfMetrics = useMemo(() => {
+    const turf = ownedTurfs[0] || { name: 'Grand Turf', id: 'grand-turf' };
+    return computeTurfSlotMetrics(turf, new Date(), bookings || []);
+  }, [ownedTurfs, bookings]);
+
   const accent = '#F59E0B';
   const info = '#3B82F6';
   const success = '#10B981';
@@ -291,7 +297,9 @@ export function OwnerDashboard({
                     Manage Your Arena
                   </ThemedText>
                   <ThemedText style={[styles.heroSub, { color: theme.textSecondary }]}>
-                    8 of 12 slots booked today (67% occupancy)
+                    {todayTurfMetrics.totalBooked > 0
+                      ? `${todayTurfMetrics.totalBooked} of ${todayTurfMetrics.totalConfigured} slots booked today (${todayTurfMetrics.occupancyPct}% occupancy)`
+                      : `${todayTurfMetrics.totalAvailable} of ${todayTurfMetrics.totalConfigured} slots available today`}
                   </ThemedText>
                 </View>
                 <MotionIllustration
@@ -312,8 +320,8 @@ export function OwnerDashboard({
           {/* ── Stat Ribbon ─────────────────────────────────────────── */}
           <Reanimated.View entering={FadeInDown.delay(170).duration(460)} style={styles.statRow}>
             <StatTile label="Revenue" value={18500} prefix="₹" icon="trending-up-outline" tint={success} />
-            <StatTile label="Occupancy" value={67} suffix="%" icon="pie-chart-outline" tint={theme.primary} />
-            <StatTile label="Bookings" value={8} icon="time-outline" tint={info} />
+            <StatTile label="Occupancy" value={todayTurfMetrics.occupancyPct} suffix="%" icon="pie-chart-outline" tint={theme.primary} />
+            <StatTile label="Bookings" value={todayTurfMetrics.totalBooked} icon="time-outline" tint={info} />
             <StatTile label="Dues" value={2400} prefix="₹" icon="wallet-outline" tint={accent} />
           </Reanimated.View>
 

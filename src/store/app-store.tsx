@@ -18,6 +18,12 @@ import {
   redemptionBlocker,
   redemptionsLeft,
 } from './offer-store';
+import {
+  ClassEnrollment,
+  createEnrollment,
+  countForClass,
+  isClassLocked,
+} from './enrollment-store';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
 const KEYS = {
@@ -31,6 +37,7 @@ const KEYS = {
   wallet: '@turf_wallet',
   bids: '@turf_bids',
   offers: '@turf_owner_offers',
+  enrollments: '@turf_class_enrollments',
 };
 
 // A team can only be marked favourite while fewer than this many are already set.
@@ -92,6 +99,14 @@ interface AppStoreContextType {
   classes: any[];
   addClass: (params: any) => void;
   updateClass: (id: string, params: any) => void;
+  // Refuses to delete a class that already has enrolments; returns false then.
+  deleteClass: (id: string) => boolean;
+
+  // Class enrolments — the record that locks a class against edit/delete
+  enrollments: ClassEnrollment[];
+  enrollInClass: (params: Parameters<typeof createEnrollment>[0]) => ClassEnrollment;
+  enrollmentCountForClass: (classId: string) => number;
+  isClassEditable: (classId: string) => boolean;
 
   // Wallet
   walletBalance: number;
@@ -134,6 +149,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [classes, setClasses] = useState<any[]>([]);
   const [walletBalance, setWalletBalance] = useState<number>(200); // Initial ₹200 wallet balance
   const [offers, setOffers] = useState<OwnerOffer[]>([]);
+  const [enrollments, setEnrollments] = useState<ClassEnrollment[]>([]);
   const [bids, setBids] = useState<any[]>([
     {
       id: 'bid-demo-1',
@@ -165,7 +181,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const [b, t, r, te, m, tu, cl, w, of] = await Promise.all([
+        const [b, t, r, te, m, tu, cl, w, of, en] = await Promise.all([
           AsyncStorage.getItem(KEYS.bookings),
           AsyncStorage.getItem(KEYS.tournaments),
           AsyncStorage.getItem(KEYS.registrations),
@@ -175,7 +191,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           AsyncStorage.getItem(KEYS.classes),
           AsyncStorage.getItem(KEYS.wallet),
           AsyncStorage.getItem(KEYS.offers),
+          AsyncStorage.getItem(KEYS.enrollments),
         ]);
+        if (en) setEnrollments(JSON.parse(en));
         if (b) setBookings(JSON.parse(b));
         if (t) setPublishedTournaments(JSON.parse(t));
         if (r) setRegistrations(JSON.parse(r));
@@ -467,6 +485,42 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  /**
+   * Deletes a class only while it has no enrolments. Returns false (leaving
+   * state untouched) if a player has already booked, so a stale UI that still
+   * shows the delete button can't wipe a class somebody paid for.
+   */
+  const deleteClass = useCallback((id: string) => {
+    if (isClassLocked(enrollments, id)) return false;
+    setClasses(prev => {
+      const next = prev.filter(c => c.id !== id);
+      AsyncStorage.setItem(KEYS.classes, JSON.stringify(next));
+      return next;
+    });
+    return true;
+  }, [enrollments]);
+
+  // ── Class enrolment actions ─────────────────────────────────────────────────
+  const enrollInClass = useCallback((params: Parameters<typeof createEnrollment>[0]) => {
+    const record = createEnrollment(params);
+    setEnrollments(prev => {
+      const next = [record, ...prev];
+      AsyncStorage.setItem(KEYS.enrollments, JSON.stringify(next));
+      return next;
+    });
+    return record;
+  }, []);
+
+  const enrollmentCountForClass = useCallback(
+    (classId: string) => countForClass(enrollments, classId),
+    [enrollments]
+  );
+
+  const isClassEditable = useCallback(
+    (classId: string) => !isClassLocked(enrollments, classId),
+    [enrollments]
+  );
+
   // ── Bid actions ─────────────────────────────────────────────────────────────
   const addBid = useCallback((bidData: any) => {
     setBids(prev => {
@@ -578,7 +632,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       teams, addTeam, addPlayerToTeam, updateTeam, deleteTeam, toggleTeamFavourite, addPlayerToTeamById, removePlayerFromTeam, MAX_FAVOURITE_TEAMS,
       matches, addMatch, updateMatchScore, completeMatch,
       ownedTurfs, addTurf, updateTurf,
-      classes, addClass, updateClass,
+      classes, addClass, updateClass, deleteClass,
+      enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
       walletBalance, addWalletFunds, deductWalletFunds,
       bids, addBid, removeBid,
       offers, addOffer, updateOffer, deleteOffer, toggleOfferStatus, isOfferCodeAvailable, redeemOffer,
@@ -617,8 +672,14 @@ export function useTurfStore() {
 }
 
 export function useClassStore() {
-  const { classes, addClass, updateClass } = useAppStore();
-  return { classes, addClass, updateClass };
+  const {
+    classes, addClass, updateClass, deleteClass,
+    enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
+  } = useAppStore();
+  return {
+    classes, addClass, updateClass, deleteClass,
+    enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
+  };
 }
 
 export function useWalletStore() {

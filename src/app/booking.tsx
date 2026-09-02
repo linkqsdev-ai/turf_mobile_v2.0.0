@@ -26,6 +26,7 @@ import { getOffersForTurf, formatDiscount, isRedeemable } from '@/store/offer-st
 import { getCalendarGrid, formatDateFull, formatDateShort, formatDateISO, MONTH_NAMES, advanceMonth, isTimeSlotPassed, formatSlotsRange } from '@/utils/date-utils';
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
+import { computeTurfSlotMetrics } from '@/utils/turf-slot-sync';
 
 // Slots details (Full 6 AM - 11 PM range in 12-hour AM/PM format)
 const TIME_SLOTS = [
@@ -255,52 +256,15 @@ export default function BookingConfigurationScreen() {
 
   const calendarGrid = useMemo(() => getCalendarGrid(calYear, calMonth), [calYear, calMonth]);
 
-  // Live occupancy tracking: find slots already booked by users for this venue on selectedDate
-  const bookedSlotsForSelectedDate = useMemo(() => {
-    const targetISO = formatDateISO(selectedDate);
-    const targetDayLabel = formatDateFull(selectedDate);
-
-    const venueBookings = bookings.filter(b => {
-      const isVenueMatch = (b.venueId === venueId) ||
-        (b.venueName && venue.name && b.venueName.toLowerCase() === venue.name.toLowerCase());
-      const isDateMatch = (b.date === targetISO) || (b.dayLabel === targetDayLabel);
-      const isConfirmed = b.status !== 'cancelled';
-      return isVenueMatch && isDateMatch && isConfirmed;
-    });
-
-    const set = new Set<string>();
-    venueBookings.forEach(b => {
-      if (Array.isArray(b.slots)) {
-        b.slots.forEach(s => set.add(s));
-      }
-    });
-    return set;
-  }, [bookings, venueId, venue.name, selectedDate]);
-
-  // Active slot config from turf
-  const dayShortName = selectedDate.toLocaleDateString('en-US', { weekday: 'short' });
-  const configuredSlotsMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    const turf = userTurf || remoteTurf;
-    if (turf && Array.isArray(turf.slots)) {
-      turf.slots.forEach((s: any) => {
-        if (s.day === dayShortName) {
-          map[s.time] = s.status;
-        }
-      });
-    }
-    return map;
-  }, [userTurf, remoteTurf, dayShortName]);
+  // Synchronized slot metrics: availability, booked status, and active counts
+  const slotMetrics = useMemo(() => {
+    const targetTurf = userTurf || remoteTurf || { id: venueId, name: venue.name };
+    return computeTurfSlotMetrics(targetTurf, selectedDate, bookings || []);
+  }, [userTurf, remoteTurf, venueId, venue.name, selectedDate, bookings]);
 
   const activeAvailableSlots = useMemo(() => {
-    return TIME_SLOTS.filter(slot => {
-      const isPassed = isTimeSlotPassed(slot.time, selectedDate);
-      const isBooked = bookedSlotsForSelectedDate.has(slot.time);
-      const configStatus = configuredSlotsMap[slot.time];
-      const isConfigBlocked = configStatus === 'blocked' || configStatus === 'maintenance';
-      return !isPassed && !isBooked && !isConfigBlocked;
-    });
-  }, [selectedDate, bookedSlotsForSelectedDate, configuredSlotsMap]);
+    return slotMetrics.slots.filter(s => s.isAvailable);
+  }, [slotMetrics]);
 
   const handlePrevMonth = () => {
     const prev = advanceMonth(calYear, calMonth, -1);
@@ -439,9 +403,17 @@ export default function BookingConfigurationScreen() {
   const remainingAmount = total - advanceAmount;
 
   const toggleSlot = (time: string) => {
-    const effectiveDate = selectedDate || selectedDayOfWeek;
-    if (isTimeSlotPassed(time, effectiveDate)) return;
-    if (bookedSlotsForSelectedDate.has(time)) return;
+    const slot = slotMetrics.slots.find(s => s.time === time);
+    if (slot && !slot.isAvailable) {
+      if (slot.isBooked) {
+        showError('Slot Unavailable', 'This slot is already booked by another player.');
+      } else if (slot.isConfigBlocked) {
+        showError('Slot Blocked', 'This slot is unavailable for maintenance or blocked by owner.');
+      } else if (slot.isPassed) {
+        showError('Slot Expired', 'This time slot has already passed for today.');
+      }
+      return;
+    }
     if (selectedSlots.includes(time)) {
       setSelectedSlots(selectedSlots.filter(s => s !== time));
     } else {
@@ -821,16 +793,16 @@ export default function BookingConfigurationScreen() {
                       Select Time Slots
                     </ThemedText>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      {bookedSlotsForSelectedDate.size > 0 && (
+                      {slotMetrics.totalBooked > 0 && (
                         <View style={{ backgroundColor: '#ef444418', paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 4 }}>
                           <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#ef4444' }}>
-                            {bookedSlotsForSelectedDate.size} Booked
+                            {slotMetrics.totalBooked} Booked
                           </ThemedText>
                         </View>
                       )}
                       <View style={{ backgroundColor: '#10b98118', paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 4 }}>
                         <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#047857' }}>
-                          {activeAvailableSlots.length} Available
+                          {slotMetrics.totalAvailable} Available
                         </ThemedText>
                       </View>
                     </View>
@@ -838,13 +810,12 @@ export default function BookingConfigurationScreen() {
 
                   {/* Time Slots Grid */}
                   <View style={styles.slotsGrid}>
-                    {TIME_SLOTS.map((slot) => {
-                      const isPassed = isTimeSlotPassed(slot.time, selectedDate);
-                      const isBooked = bookedSlotsForSelectedDate.has(slot.time);
+                    {slotMetrics.slots.map((slot) => {
                       const isSelected = selectedSlots.includes(slot.time);
-                      const configStatus = configuredSlotsMap[slot.time];
-                      const isConfigBlocked = configStatus === 'blocked' || configStatus === 'maintenance';
-                      const isDisabled = slot.disabled || isPassed || isBooked || isConfigBlocked;
+                      const isBooked = slot.isBooked;
+                      const isConfigBlocked = slot.isConfigBlocked;
+                      const isPassed = slot.isPassed;
+                      const isDisabled = !slot.isAvailable;
 
                       return (
                         <Pressable
@@ -855,9 +826,9 @@ export default function BookingConfigurationScreen() {
                             styles.slotItem,
                             { backgroundColor: theme.surfaceLow },
                             isSelected && { backgroundColor: theme.primary },
-                            isBooked && { backgroundColor: '#ef444412', borderColor: '#ef444440', borderWidth: 1 },
-                            isConfigBlocked && { backgroundColor: '#f59e0b12', borderColor: '#f59e0b40', borderWidth: 1 },
-                            isDisabled && !isBooked && !isConfigBlocked && { opacity: 0.35, backgroundColor: theme.surfaceLow + '60' },
+                            isBooked && { backgroundColor: '#ef444414', borderColor: '#ef444440', borderWidth: 1, opacity: 0.7 },
+                            isConfigBlocked && { backgroundColor: '#f59e0b12', borderColor: '#f59e0b40', borderWidth: 1, opacity: 0.6 },
+                            isPassed && !isBooked && !isConfigBlocked && { opacity: 0.35, backgroundColor: theme.surfaceLow + '60' },
                           ]}
                         >
                           <Ionicons
@@ -872,7 +843,7 @@ export default function BookingConfigurationScreen() {
                               fontFamily: 'Sora_500Medium',
                               fontSize: 11,
                               marginLeft: 3,
-                              textDecorationLine: (isDisabled && !isBooked && !isConfigBlocked) ? 'line-through' : 'none',
+                              textDecorationLine: (isPassed && !isBooked && !isConfigBlocked) ? 'line-through' : 'none',
                             }}
                           >
                             {slot.time}
@@ -887,7 +858,7 @@ export default function BookingConfigurationScreen() {
                           {isConfigBlocked && !isBooked && (
                             <View style={{ backgroundColor: '#f59e0b', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 4 }}>
                               <ThemedText style={{ color: '#ffffff', fontSize: 8, fontFamily: 'Sora_500Medium' }}>
-                                {configStatus === 'maintenance' ? 'Maint' : 'Blocked'}
+                                {slot.status === 'maintenance' ? 'Maint' : 'Blocked'}
                               </ThemedText>
                             </View>
                           )}

@@ -13,18 +13,22 @@ import { Chip } from '@/components/ui/chip';
 import { Section } from '@/components/ui/section';
 import { Separator } from '@/components/ui/separator';
 import { MotionView } from '@/components/motion';
-import { useOfferStore } from '@/store/app-store';
+import { useOfferStore, useClassStore } from '@/store/app-store';
 import { getOffersForTurf, formatDiscount, isRedeemable, OwnerOffer } from '@/store/offer-store';
 
 export default function EnrollScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { offers } = useOfferStore();
+  const { enrollInClass } = useClassStore();
 
   const title = (params.title as string) || 'Summer Camp Enrollment';
   const priceRaw = (params.price as string) || '4999';
   const dates = (params.dates as string) || 'Summer 2024';
   const location = (params.location as string) || 'TBD';
+  // Present when arriving from a real coach-created class; absent for the
+  // static marketing cards, which have nothing to enrol against.
+  const classId = (params.classId as string) || '';
   const image =
     (params.image as string) || require('@/assets/images/illustrations/coaching_class_premium.png');
 
@@ -96,6 +100,20 @@ export default function EnrollScreen() {
       Alert.alert('Missing fields', 'Please fill out all participant details before enrolling.');
       return;
     }
+    // Record the enrolment before confirming — this is what locks the class
+    // against further edits/deletion by its coach.
+    if (classId) {
+      enrollInClass({
+        classId,
+        className: title,
+        studentName: name,
+        studentAge: age,
+        contactNumber: phone,
+        amountPaid: total,
+        appliedCode: appliedOffer?.code,
+      });
+    }
+
     Alert.alert(
       'Enrollment confirmed',
       `You have successfully enrolled ${name} in ${title}.\nTotal paid: ₹${total}${appliedOffer ? ` (Saved ₹${discountAmount} with code ${appliedOffer.code})` : ''}`,

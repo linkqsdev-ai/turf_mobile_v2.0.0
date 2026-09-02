@@ -10,6 +10,27 @@ export interface Player {
   avatarUrl?: string;
   jerseyNumber?: number;
   skillLevel: 'Beginner' | 'Intermediate' | 'Advanced' | 'Pro';
+  /**
+   * The player's mobile number — the canonical identity key across the app.
+   *
+   * Optional at entry (a casual player can be added by name alone), but it is
+   * what makes a player record durable: team rosters sync on it, score history
+   * is attributed to it across matches and devices, and the friend-of-friend
+   * graph is built from phone-to-phone edges (see services/fof-network.ts).
+   * A player without one exists only inside the match they were typed into.
+   */
+  phone?: string;
+}
+
+/** Digits only, last 10 — tolerates +91 / spaces / dashes between sources. */
+export function normalizePhone(phone?: string | null): string {
+  const digits = (phone || '').replace(/\D/g, '');
+  return digits.length >= 10 ? digits.slice(-10) : digits;
+}
+
+/** A mobile number is usable as an identity key once it has enough digits. */
+export function isUsablePhone(phone?: string | null): boolean {
+  return normalizePhone(phone).length >= 10;
 }
 
 export interface Team {
@@ -64,8 +85,13 @@ export function generatePlayerId(): string {
  * from more than one team must therefore compare people by normalized name,
  * not by id, or the same person appears twice.
  */
-export function playerIdentity(player: Pick<Player, 'name'>): string {
-  return player.name.trim().toLowerCase().replace(/\s+/g, ' ');
+export function playerIdentity(player: Pick<Player, 'name'> & { phone?: string }): string {
+  // Phone wins when present: it distinguishes two different people who share a
+  // name, and merges one person entered under different spellings. Name is only
+  // the fallback for players added without a number.
+  const digits = normalizePhone(player.phone);
+  if (digits.length >= 10) return `tel:${digits}`;
+  return `name:${player.name.trim().toLowerCase().replace(/\s+/g, ' ')}`;
 }
 
 /**
@@ -73,7 +99,7 @@ export function playerIdentity(player: Pick<Player, 'name'>): string {
  * occurrence (which is the richer roster record when a curated list is
  * concatenated ahead of raw team rosters).
  */
-export function dedupePlayers<T extends Pick<Player, 'id' | 'name'>>(players: T[]): T[] {
+export function dedupePlayers<T extends Pick<Player, 'id' | 'name'> & { phone?: string }>(players: T[]): T[] {
   const seenIds = new Set<string>();
   const seenPeople = new Set<string>();
   const out: T[] = [];

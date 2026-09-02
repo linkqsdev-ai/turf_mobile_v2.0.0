@@ -29,7 +29,19 @@ import { Shadows, Spacing } from '@/constants/theme';
 import { AVATAR_KEYS, getAvatarSource } from '@/constants/avatars';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
-import { dedupePlayers, generatePlayerId, playerIdentity, type Player } from '@/store/match-store';
+import {
+  dedupePlayers,
+  generatePlayerId,
+  isUsablePhone,
+  normalizePhone,
+  playerIdentity,
+  type Player,
+} from '@/store/match-store';
+import { useWalletStore } from '@/store/app-store';
+import { searchFoFDirectory } from '@/services/fof-network';
+
+/** Wallet credits paid the first time a player is added with a mobile number. */
+const CREDIT_REWARD = 5;
 
 type BucketId = 'master' | 'teamA' | 'teamB';
 
@@ -132,10 +144,17 @@ export function PlayerSelectionModal({
     teamA: initialTeamA,
     teamB: initialTeamB,
   });
-  const [newPlayerName, setNewPlayerName] = useState('');
+  // Mobile-number-first entry: one field searches the directory by number or
+  // name; `newPlayerPhone` holds a number captured before its owner is named.
+  const [playerQuery, setPlayerQuery] = useState('');
+  const [newPlayerPhone, setNewPlayerPhone] = useState('');
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [creditToast, setCreditToast] = useState<string | null>(null);
+  /** Numbers already paid out this session — the bonus is once per number. */
+  const creditedPhones = useRef<Set<string>>(new Set());
+  const { addWalletFunds } = useWalletStore();
 
   // Re-seed whenever the sheet is (re)opened, so a cancelled session doesn't
   // leak into the next one. Everything is deduped by person (not id) and the
@@ -207,28 +226,83 @@ export function PlayerSelectionModal({
     setScrollEnabled(true);
   }, [resolveDropTarget, moveToBucket]);
 
-  const handleAddPlayer = useCallback(() => {
-    const name = newPlayerName.trim();
-    if (!name) return;
-    const identity = playerIdentity({ name });
-    // Someone already in the pool or on either team must not be added again.
-    const clash = [...buckets.master, ...buckets.teamA, ...buckets.teamB].some(
-      (p) => playerIdentity(p) === identity
-    );
-    if (clash) {
-      setDuplicateWarning(`${name} is already in this match`);
+  const everyone = useMemo(
+    () => [...buckets.master, ...buckets.teamA, ...buckets.teamB],
+    [buckets]
+  );
+
+  /** Already in this match? Compared on phone-first identity. */
+  const isAlreadyIn = useCallback(
+    (candidate: { name: string; phone?: string }) => {
+      const identity = playerIdentity(candidate);
+      return everyone.some((p) => playerIdentity(p) === identity);
+    },
+    [everyone]
+  );
+
+  /**
+   * Directory suggestions for the current query. Searching by mobile number is
+   * the primary path — `searchFoFDirectory` matches on phone digits (3+) as well
+   * as name, and each hit carries its friend-of-friend degree, so adding someone
+   * by number also tells you how you know them.
+   */
+  const suggestions = useMemo(() => {
+    const q = playerQuery.trim();
+    if (q.length < 3) return [];
+    return searchFoFDirectory(q)
+      .filter((p) => !isAlreadyIn({ name: p.name, phone: p.phone }))
+      .slice(0, 4);
+  }, [playerQuery, isAlreadyIn]);
+
+  const queryDigits = playerQuery.replace(/\D/g, '');
+  const queryIsPhone = queryDigits.length >= 6;
+
+  /** Adds a player and, when a usable mobile is supplied, pays the 5-credit bonus. */
+  const commitPlayer = useCallback(
+    (name: string, phone?: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      if (isAlreadyIn({ name: trimmed, phone })) {
+        setDuplicateWarning(`${trimmed} is already in this match`);
+        return;
+      }
+      const player: Player = {
+        id: generatePlayerId(),
+        name: trimmed,
+        position: 'Player',
+        skillLevel: 'Intermediate',
+        ...(isUsablePhone(phone) ? { phone: normalizePhone(phone) } : {}),
+      };
+      setBuckets((prev) => ({ ...prev, master: [...prev.master, player] }));
+      setPlayerQuery('');
+      setNewPlayerPhone('');
+      setDuplicateWarning(null);
+
+      // The incentive is paid once per number, so re-adding the same person
+      // after removing them can't farm credits.
+      if (isUsablePhone(phone)) {
+        const key = normalizePhone(phone);
+        if (!creditedPhones.current.has(key)) {
+          creditedPhones.current.add(key);
+          addWalletFunds(CREDIT_REWARD);
+          setCreditToast(`+${CREDIT_REWARD} credits for adding a mobile number`);
+        }
+      }
+    },
+    [isAlreadyIn, addWalletFunds]
+  );
+
+  const handleAddTyped = useCallback(() => {
+    const q = playerQuery.trim();
+    if (!q) return;
+    // A bare number needs a name before it can become a player.
+    if (queryIsPhone && !newPlayerPhone) {
+      setNewPlayerPhone(q);
+      setPlayerQuery('');
       return;
     }
-    const player: Player = {
-      id: generatePlayerId(),
-      name,
-      position: 'Player',
-      skillLevel: 'Intermediate',
-    };
-    setBuckets((prev) => ({ ...prev, master: [...prev.master, player] }));
-    setNewPlayerName('');
-    setDuplicateWarning(null);
-  }, [newPlayerName, buckets]);
+    commitPlayer(q, newPlayerPhone);
+  }, [playerQuery, queryIsPhone, newPlayerPhone, commitPlayer]);
 
   /**
    * Every bubble carries explicit one-tap targets for the moves that make
@@ -341,32 +415,100 @@ export function PlayerSelectionModal({
               players={buckets.master}
               emptyLabel="No players yet — add one below."
             >
+              {/* A captured number waiting for its owner's name. */}
+              {newPlayerPhone !== '' && (
+                <View style={[styles.phoneChip, { backgroundColor: theme.primary + '14', borderColor: theme.primary + '44' }]}>
+                  <Ionicons name="call" size={11} color={theme.primary} />
+                  <ThemedText style={[styles.phoneChipText, { color: theme.primary }]}>
+                    {newPlayerPhone}
+                  </ThemedText>
+                  <Pressable onPress={() => setNewPlayerPhone('')} hitSlop={6} accessibilityLabel="Clear mobile number">
+                    <Ionicons name="close-circle" size={13} color={theme.primary} />
+                  </Pressable>
+                </View>
+              )}
+
               <View style={[styles.addRow, { backgroundColor: bubble }]}>
+                <Ionicons
+                  name={queryIsPhone ? 'call-outline' : 'search-outline'}
+                  size={14}
+                  color={theme.textSecondary}
+                  style={{ marginRight: 6 }}
+                />
                 <TextInput
-                  value={newPlayerName}
-                  onChangeText={(t) => { setNewPlayerName(t); if (duplicateWarning) setDuplicateWarning(null); }}
-                  placeholder="Add a player by name"
+                  value={playerQuery}
+                  onChangeText={(t) => { setPlayerQuery(t); if (duplicateWarning) setDuplicateWarning(null); }}
+                  placeholder={newPlayerPhone ? 'Name for this number' : 'Mobile number or name'}
                   placeholderTextColor={theme.placeholder}
+                  keyboardType={newPlayerPhone ? 'default' : 'default'}
                   style={[
                     styles.addInput,
                     { color: bubbleText },
                     Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
                   ]}
-                  onSubmitEditing={handleAddPlayer}
+                  onSubmitEditing={handleAddTyped}
                   returnKeyType="done"
                 />
                 <Pressable
-                  onPress={handleAddPlayer}
-                  disabled={!newPlayerName.trim()}
-                  accessibilityLabel="Add player"
+                  onPress={handleAddTyped}
+                  disabled={!playerQuery.trim()}
+                  accessibilityLabel={queryIsPhone && !newPlayerPhone ? 'Use this mobile number' : 'Add player'}
                   style={[
                     styles.addBtn,
-                    { backgroundColor: newPlayerName.trim() ? theme.primary : theme.outlineVariant },
+                    { backgroundColor: playerQuery.trim() ? theme.primary : theme.outlineVariant },
                   ]}
                 >
-                  <Ionicons name="add" size={15} color="#ffffff" />
+                  <Ionicons
+                    name={queryIsPhone && !newPlayerPhone ? 'arrow-forward' : 'add'}
+                    size={15}
+                    color="#ffffff"
+                  />
                 </Pressable>
               </View>
+
+              {/* Directory matches — searching by number is the primary path. */}
+              {suggestions.length > 0 && (
+                <View style={styles.suggestList}>
+                  {suggestions.map((s) => (
+                    <Pressable
+                      key={s.id}
+                      onPress={() => commitPlayer(s.name, s.phone)}
+                      style={({ pressed }) => [
+                        styles.suggestRow,
+                        { backgroundColor: bubble, opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <ThemedText style={[styles.suggestName, { color: bubbleText }]} numberOfLines={1}>
+                          {s.name}
+                        </ThemedText>
+                        <ThemedText style={[styles.suggestMeta, { color: theme.textSecondary }]} numberOfLines={1}>
+                          {s.phone} · {s.team}
+                        </ThemedText>
+                      </View>
+                      <Ionicons name="add-circle" size={18} color={theme.primary} />
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
+              {/* Incentive — why giving a number is worth it. */}
+              <View style={[styles.incentive, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '33' }]}>
+                <Ionicons name="gift" size={13} color={theme.primary} />
+                <ThemedText style={[styles.incentiveText, { color: theme.primary }]}>
+                  Get {CREDIT_REWARD} credits upon entering your mobile number
+                </ThemedText>
+              </View>
+              <ThemedText style={[styles.incentiveSub, { color: theme.textSecondary }]}>
+                Optional — but it syncs the squad, keeps score history, and connects friends of friends.
+              </ThemedText>
+
+              {creditToast && (
+                <View style={styles.warnRow}>
+                  <Ionicons name="checkmark-circle" size={12} color="#10B981" />
+                  <ThemedText style={[styles.warnText, { color: '#10B981' }]}>{creditToast}</ThemedText>
+                </View>
+              )}
               {duplicateWarning && (
                 <View style={styles.warnRow}>
                   <Ionicons name="alert-circle" size={12} color={theme.error} />
