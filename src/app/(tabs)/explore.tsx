@@ -297,21 +297,18 @@ export default function ExploreScreen() {
                 style={StyleSheet.absoluteFill}
               />
 
-              {/* Top Row: Avatar + Minimalist Share Button */}
+              {/* Top Row: Avatar with Sport / Level badge */}
               <View style={styles.coachCardTopRow}>
                 <Image
                   source={{ uri: coach.avatar }}
                   style={styles.coachAvatar}
                   contentFit="cover"
                 />
-                <Pressable
-                  onPress={() => handleShareCoach(coach)}
-                  style={styles.coachShareBtn}
-                  hitSlop={8}
-                  accessibilityLabel="Share profile"
-                >
-                  <Ionicons name="share-outline" size={18} color={theme.text} />
-                </Pressable>
+                <View style={styles.coachSportPill}>
+                  <ThemedText style={styles.coachSportPillText}>
+                    {coach.sportType}
+                  </ThemedText>
+                </View>
               </View>
 
               {/* Coach Name & Role Title */}
@@ -337,8 +334,8 @@ export default function ExploreScreen() {
               <View style={styles.coachMetricsRibbon}>
                 {/* Metric 1: Rating */}
                 <View style={styles.coachMetricCol}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                    <Ionicons name="star" size={13} color="#f59e0b" />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2.5 }}>
+                    <Ionicons name="star" size={11} color="#f59e0b" />
                     <ThemedText style={[styles.coachMetricVal, { color: theme.text }]}>
                       {coach.rating}
                     </ThemedText>
@@ -369,60 +366,42 @@ export default function ExploreScreen() {
                 </View>
               </View>
 
-              {/* Bottom Action Buttons: Get In Touch + Bookmark */}
-              <View style={styles.coachActionsRow}>
-                <Pressable
-                  style={styles.coachGetInTouchBtn}
-                  onPress={() => {
-                    if (coach.rawClass) {
-                      router.push({
-                        pathname: '/enroll',
-                        params: {
-                          classId: coach.rawClass.id,
-                          title: coach.rawClass.className,
-                          price: String(coach.rawClass.feeAmount || 0),
-                          dates: [coach.rawClass.startDate, coach.rawClass.endDate].filter(Boolean).join(' – '),
-                          location: coach.rawClass.venue || 'TBD',
-                        },
-                      });
-                    } else {
-                      router.push({
-                        pathname: '/coach/[id]',
-                        params: {
-                          id: coach.id,
-                          name: coach.coachName,
-                          specialty: coach.roleTitle,
-                          rating: String(coach.rating),
-                          rate: coach.rateText,
-                          avatar: coach.avatar,
-                        },
-                      });
-                    }
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Get in touch with ${coach.coachName}`}
-                >
-                  <ThemedText style={[styles.coachGetInTouchText, { color: theme.text }]}>
-                    Get in touch
-                  </ThemedText>
-                </Pressable>
-
-                <Pressable
-                  style={[
-                    styles.coachBookmarkBtn,
-                    isBookmarked && { backgroundColor: theme.primary + '18', borderColor: theme.primary },
-                  ]}
-                  onPress={() => toggleBookmarkCoach(coach.id)}
-                  hitSlop={6}
-                  accessibilityLabel="Bookmark coach"
-                >
-                  <Ionicons
-                    name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-                    size={18}
-                    color={isBookmarked ? theme.primary : theme.text}
-                  />
-                </Pressable>
-              </View>
+              {/* Bottom Action Button: Full-width clean Get in touch */}
+              <Pressable
+                style={styles.coachGetInTouchBtn}
+                onPress={() => {
+                  if (coach.rawClass) {
+                    router.push({
+                      pathname: '/enroll',
+                      params: {
+                        classId: coach.rawClass.id,
+                        title: coach.rawClass.className,
+                        price: String(coach.rawClass.feeAmount || 0),
+                        dates: [coach.rawClass.startDate, coach.rawClass.endDate].filter(Boolean).join(' – '),
+                        location: coach.rawClass.venue || 'TBD',
+                      },
+                    });
+                  } else {
+                    router.push({
+                      pathname: '/coach/[id]',
+                      params: {
+                        id: coach.id,
+                        name: coach.coachName,
+                        specialty: coach.roleTitle,
+                        rating: String(coach.rating),
+                        rate: coach.rateText,
+                        avatar: coach.avatar,
+                      },
+                    });
+                  }
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Get in touch with ${coach.coachName}`}
+              >
+                <ThemedText style={[styles.coachGetInTouchText, { color: theme.text }]}>
+                  Get in touch
+                </ThemedText>
+              </Pressable>
             </Reanimated.View>
           );
         })
@@ -1144,80 +1123,83 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   frostedCoachCard: {
-    borderRadius: 26,
-    borderWidth: 1.5,
+    borderRadius: 18,
+    borderWidth: 1,
     borderColor: '#ffffff',
-    padding: 22,
-    paddingBottom: 20,
+    padding: 16,
+    paddingBottom: 14,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#e0f2fe',
     shadowColor: '#0284c7',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
   },
   coachCardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   coachAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2.5,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
     borderColor: '#ffffff',
     backgroundColor: '#cbd5e1',
   },
-  coachShareBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+  coachSportPill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.95)',
+    borderColor: 'rgba(255, 255, 255, 0.9)',
+  },
+  coachSportPillText: {
+    fontSize: 10,
+    fontFamily: 'Sora_500Medium',
+    color: '#475569',
   },
   coachNameText: {
     fontFamily: 'Sora_600SemiBold',
-    fontSize: 16.5,
-    lineHeight: 22,
-    marginTop: 12,
+    fontSize: 15.5,
+    lineHeight: 20,
+    marginTop: 8,
     letterSpacing: -0.2,
   },
   coachRoleText: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2,
+    fontSize: 11.5,
+    lineHeight: 15,
+    marginTop: 1,
   },
   coachSkillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 10,
+    gap: 5,
+    marginTop: 8,
   },
   coachSkillPill: {
     backgroundColor: 'rgba(255, 255, 255, 0.75)',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 3.5,
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.95)',
+    borderColor: 'rgba(255, 255, 255, 0.9)',
   },
   coachSkillText: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 10.5,
+    fontSize: 10,
   },
   coachMetricsRibbon: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 18,
-    paddingHorizontal: 6,
+    marginTop: 14,
+    paddingHorizontal: 2,
   },
   coachMetricCol: {
     alignItems: 'center',
@@ -1225,56 +1207,35 @@ const styles = StyleSheet.create({
   },
   coachMetricVal: {
     fontFamily: 'Sora_600SemiBold',
-    fontSize: 15,
-    lineHeight: 19,
+    fontSize: 13.5,
+    lineHeight: 17,
   },
   coachMetricLabel: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 10.5,
-    lineHeight: 14,
-    marginTop: 2,
+    fontSize: 9.5,
+    lineHeight: 13,
+    marginTop: 1,
     letterSpacing: 0.2,
   },
-  coachActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 18,
-  },
   coachGetInTouchBtn: {
-    flex: 1,
-    height: 44,
+    height: 38,
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    borderWidth: 1.5,
+    marginTop: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.98)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 3,
+    shadowRadius: 2,
     elevation: 1,
   },
   coachGetInTouchText: {
     fontFamily: 'Sora_600SemiBold',
-    fontSize: 13,
+    fontSize: 12.5,
     letterSpacing: 0.1,
-  },
-  coachBookmarkBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#ffffff',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.95)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   scrollContent: {
     paddingBottom: 40,
