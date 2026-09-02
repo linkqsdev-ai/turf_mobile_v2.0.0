@@ -18,7 +18,6 @@ import {
   StatTile,
   IllustratedTile,
   SectionHeading,
-  PressCard,
   PulseDot,
 } from '@/components/home/dashboard-widgets';
 import { useOfferStore, useBookings, useTurfStore } from '@/store/app-store';
@@ -104,6 +103,53 @@ export function OwnerDashboard({
     () => offers.reduce((sum, o) => sum + o.redeemedCount, 0),
     [offers]
   );
+
+  const ownerTiles: {
+    title: string;
+    subtitle: string;
+    art: any;
+    tint: string;
+    icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    badge: string;
+    href: any;
+  }[] = useMemo(() => [
+    {
+      title: 'Create Slot',
+      subtitle: 'Open peak slots & timings',
+      art: require('@/assets/images/illustrations/turf_booking_premium.png'),
+      tint: '#00C878',
+      icon: 'clock-plus-outline',
+      badge: 'Slots',
+      href: '/create-turf',
+    },
+    {
+      title: 'Pricing / Rates',
+      subtitle: 'Configure peak & slot rates',
+      art: require('@/assets/images/illustrations/quick_matches_premium.png'),
+      tint: '#FFB020',
+      icon: 'currency-inr',
+      badge: 'Rates',
+      href: '/create-turf',
+    },
+    {
+      title: 'My Pitches',
+      subtitle: 'Facility status & courts',
+      art: require('@/assets/images/illustrations/coaching_class_premium.png'),
+      tint: '#3B9EFF',
+      icon: 'stadium-variant',
+      badge: 'Courts',
+      href: '/(tabs)/coach',
+    },
+    {
+      title: 'Vouchers',
+      subtitle: `${ownerLiveOfferCount} live · ${ownerRedemptionCount} used`,
+      art: require('@/assets/images/illustrations/tournament_bracket_premium.png'),
+      tint: '#A66BFF',
+      icon: 'ticket-percent-outline',
+      badge: 'Promo',
+      href: '/owner-offers',
+    },
+  ], [ownerLiveOfferCount, ownerRedemptionCount]);
 
   // Weekly bar selection state
   const [selectedBar, setSelectedBar] = useState<{
@@ -275,50 +321,19 @@ export function OwnerDashboard({
           <Reanimated.View entering={FadeInDown.delay(220).duration(460)} style={styles.section}>
             <SectionHeading title="Venue Management" />
             <View style={styles.tileGrid}>
-              <View style={styles.gridTile}>
+              {ownerTiles.map((tile) => (
                 <IllustratedTile
-                  title="Create Slot"
-                  subtitle="Open peak slots & court timings"
-                  art={require('@/assets/images/illustrations/turf_booking_premium.png')}
-                  tint="#00C878"
-                  icon="clock-plus-outline"
-                  badge="Slots"
-                  onPress={() => go('/create-turf')}
+                  key={tile.title}
+                  style={styles.gridTile}
+                  title={tile.title}
+                  subtitle={tile.subtitle}
+                  art={tile.art}
+                  tint={tile.tint}
+                  icon={tile.icon}
+                  badge={tile.badge}
+                  onPress={() => go(tile.href)}
                 />
-              </View>
-              <View style={styles.gridTile}>
-                <IllustratedTile
-                  title="Pricing / Rates"
-                  subtitle="Configure peak & off-peak rates"
-                  art={require('@/assets/images/illustrations/quick_matches_premium.png')}
-                  tint="#FFB020"
-                  icon="currency-inr"
-                  badge="Rates"
-                  onPress={() => go('/create-turf')}
-                />
-              </View>
-              <View style={styles.gridTile}>
-                <IllustratedTile
-                  title="My Pitches"
-                  subtitle="Facility status & maintenance"
-                  art={require('@/assets/images/illustrations/coaching_class_premium.png')}
-                  tint="#3B9EFF"
-                  icon="stadium-variant"
-                  badge="Courts"
-                  onPress={() => go('/(tabs)/coach')}
-                />
-              </View>
-              <View style={styles.gridTile}>
-                <IllustratedTile
-                  title="Vouchers"
-                  subtitle={`${ownerLiveOfferCount} live · ${ownerRedemptionCount} redeemed`}
-                  art={require('@/assets/images/illustrations/tournament_bracket_premium.png')}
-                  tint="#A66BFF"
-                  icon="ticket-percent-outline"
-                  badge="Promo"
-                  onPress={() => go('/owner-offers')}
-                />
-              </View>
+              ))}
             </View>
           </Reanimated.View>
 
@@ -709,14 +724,14 @@ export function OwnerDashboard({
 const GUTTER = Spacing.containerMargin;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, overflow: 'hidden', width: '100%' },
-  flex: { flex: 1, overflow: 'hidden', width: '100%' },
+  container: { flex: 1 },
+  flex: { flex: 1 },
   ambient: { position: 'absolute', top: 0, left: 0, right: 0, height: 340 },
-  scrollContent: { paddingBottom: 130, width: '100%', maxWidth: '100%' },
+  scrollContent: { paddingBottom: 130 },
 
-  section: { paddingHorizontal: GUTTER, marginTop: Spacing.lg, width: '100%', maxWidth: '100%' },
-  sectionBleed: { marginTop: Spacing.lg, width: '100%', maxWidth: '100%', overflow: 'hidden' },
-  sectionInset: { paddingHorizontal: GUTTER, width: '100%' },
+  section: { paddingHorizontal: GUTTER, marginTop: Spacing.lg },
+  sectionBleed: { marginTop: Spacing.lg },
+  sectionInset: { paddingHorizontal: GUTTER },
 
   // top app bar
   header: {
@@ -728,7 +743,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',
     zIndex: 10,
-    width: '100%',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerAvatar: {
@@ -744,7 +758,7 @@ const styles = StyleSheet.create({
   profileIconButton: { padding: 2 },
 
   // hero
-  heroCard: { borderRadius: BorderRadius.premium, borderWidth: 1, overflow: 'hidden', width: '100%' },
+  heroCard: { borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
   heroBody: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -764,14 +778,14 @@ const styles = StyleSheet.create({
   heroSub: { fontFamily: 'Sora_400Regular', fontSize: 11.5, marginTop: 3, lineHeight: 16 },
 
   // stats
-  statRow: { flexDirection: 'row', gap: 8, paddingHorizontal: GUTTER, marginTop: 12, width: '100%' },
+  statRow: { flexDirection: 'row', gap: 8, paddingHorizontal: GUTTER, marginTop: 12 },
 
   // tiles
-  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between', width: '100%' },
-  gridTile: { width: '48.5%' },
+  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  gridTile: { width: '47.8%' },
 
   // bento
-  bentoRow: { flexDirection: 'row', gap: 10, width: '100%' },
+  bentoRow: { flexDirection: 'row', gap: 10 },
   bentoCard: {
     flex: 1,
     borderRadius: BorderRadius.premium,
