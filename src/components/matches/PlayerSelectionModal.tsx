@@ -864,15 +864,62 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 9999,
-    paddingLeft: 14,
+    paddingLeft: 12,
     paddingRight: 3,
     paddingVertical: 3,
     marginTop: Spacing.sm,
     ...Shadows.level1,
   },
-  addInput: { flex: 1, height: 30, fontFamily: 'Sora_500Medium', fontSize: 11.5 },
+  addInput: { flex: 1, minWidth: 0, height: 30, fontFamily: 'Sora_500Medium', fontSize: 11.5 },
   warnRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, paddingHorizontal: 4 },
   warnText: { fontFamily: 'Sora_600SemiBold', fontSize: 10.5, flexShrink: 1 },
+
+  // Captured-number chip shown while the number waits for a name.
+  phoneChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    borderRadius: 9999,
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    marginTop: Spacing.sm,
+  },
+  phoneChipText: { fontFamily: 'Sora_600SemiBold', fontSize: 11 },
+
+  // Directory suggestions (phone-first search).
+  suggestList: { marginTop: 6, gap: 5 },
+  suggestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 12,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  suggestName: { fontFamily: 'Sora_600SemiBold', fontSize: 11.5 },
+  suggestMeta: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
+
+  // Credit incentive.
+  incentive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: Spacing.sm,
+  },
+  incentiveText: { fontFamily: 'Sora_700Bold', fontSize: 10.5, flexShrink: 1 },
+  incentiveSub: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 9.5,
+    lineHeight: 13,
+    marginTop: 4,
+    paddingHorizontal: 4,
+  },
   addBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
 
   // ── Footer ─────────────────────────────────────────────────────────────

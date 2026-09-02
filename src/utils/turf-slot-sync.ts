@@ -113,10 +113,7 @@ export function computeTurfSlotMetrics(
     const timeNorm = normalizeSlotTime(slotDef.time);
     const configStatus = configuredMap[timeNorm];
     
-    // If owner explicitly configured slots, unconfigured slots are blocked
-    const isConfigBlocked = hasExplicitSlots
-      ? (!configStatus || configStatus === 'blocked' || configStatus === 'maintenance')
-      : (configStatus === 'blocked' || configStatus === 'maintenance');
+    const isConfigBlocked = configStatus === 'blocked' || configStatus === 'maintenance';
 
     const bookingInfo = bookedSlotsSet.get(timeNorm);
     const isBooked = !!bookingInfo;

@@ -826,42 +826,39 @@ export default function BookingConfigurationScreen() {
                             styles.slotItem,
                             { backgroundColor: theme.surfaceLow },
                             isSelected && { backgroundColor: theme.primary },
-                            isBooked && { backgroundColor: '#ef444414', borderColor: '#ef444440', borderWidth: 1, opacity: 0.7 },
-                            isConfigBlocked && { backgroundColor: '#f59e0b12', borderColor: '#f59e0b40', borderWidth: 1, opacity: 0.6 },
-                            isPassed && !isBooked && !isConfigBlocked && { opacity: 0.35, backgroundColor: theme.surfaceLow + '60' },
+                            isDisabled && {
+                              opacity: isPassed ? 0.35 : 0.45,
+                              backgroundColor: theme.surfaceLow + '50',
+                            },
                           ]}
                         >
                           <Ionicons
-                            name={isBooked ? 'lock-closed' : isConfigBlocked ? 'close-circle-outline' : (slot.icon as any)}
+                            name={isBooked ? 'lock-closed-outline' : (slot.icon as any)}
                             size={13}
-                            color={isSelected ? '#ffffff' : isBooked ? '#ef4444' : isConfigBlocked ? '#f59e0b' : isDisabled ? theme.textSecondary + '40' : theme.textSecondary}
+                            color={
+                              isSelected
+                                ? '#ffffff'
+                                : isDisabled
+                                ? theme.textSecondary + '60'
+                                : theme.textSecondary
+                            }
                           />
                           <ThemedText
                             type="bodyMd"
                             style={{
-                              color: isSelected ? '#ffffff' : isBooked ? '#ef4444' : isConfigBlocked ? '#f59e0b' : isDisabled ? theme.textSecondary + '60' : theme.text,
+                              color: isSelected
+                                ? '#ffffff'
+                                : isDisabled
+                                ? theme.textSecondary + '70'
+                                : theme.text,
                               fontFamily: 'Sora_500Medium',
                               fontSize: 11,
-                              marginLeft: 3,
-                              textDecorationLine: (isPassed && !isBooked && !isConfigBlocked) ? 'line-through' : 'none',
+                              marginLeft: 4,
+                              textDecorationLine: isPassed ? 'line-through' : 'none',
                             }}
                           >
                             {slot.time}
                           </ThemedText>
-                          {isBooked && (
-                            <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 4 }}>
-                              <ThemedText style={{ color: '#ffffff', fontSize: 8, fontFamily: 'Sora_500Medium' }}>
-                                Booked
-                              </ThemedText>
-                            </View>
-                          )}
-                          {isConfigBlocked && !isBooked && (
-                            <View style={{ backgroundColor: '#f59e0b', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 4 }}>
-                              <ThemedText style={{ color: '#ffffff', fontSize: 8, fontFamily: 'Sora_500Medium' }}>
-                                {slot.status === 'maintenance' ? 'Maint' : 'Blocked'}
-                              </ThemedText>
-                            </View>
-                          )}
                         </Pressable>
                       );
                     })}
