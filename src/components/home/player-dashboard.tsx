@@ -639,14 +639,14 @@ export function PlayerDashboard({
 const GUTTER = Spacing.containerMargin;
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  flex: { flex: 1 },
+  container: { flex: 1, overflow: 'hidden', width: '100%' },
+  flex: { flex: 1, overflow: 'hidden', width: '100%' },
   ambient: { position: 'absolute', top: 0, left: 0, right: 0, height: 340 },
-  scrollContent: { paddingBottom: 130 },
+  scrollContent: { paddingBottom: 130, width: '100%', maxWidth: '100%' },
 
-  section: { paddingHorizontal: GUTTER, marginTop: Spacing.lg },
-  sectionBleed: { marginTop: Spacing.lg },
-  sectionInset: { paddingHorizontal: GUTTER },
+  section: { paddingHorizontal: GUTTER, marginTop: Spacing.lg, width: '100%', maxWidth: '100%' },
+  sectionBleed: { marginTop: Spacing.lg, width: '100%', maxWidth: '100%', overflow: 'hidden' },
+  sectionInset: { paddingHorizontal: GUTTER, width: '100%' },
 
   // top app bar — mirrors styles.header/headerLeft/… on the other tab screens
   header: {
@@ -658,6 +658,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',
     zIndex: 10,
+    width: '100%',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerAvatar: {

@@ -709,14 +709,14 @@ export function OwnerDashboard({
 const GUTTER = Spacing.containerMargin;
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  flex: { flex: 1 },
+  container: { flex: 1, overflow: 'hidden', width: '100%' },
+  flex: { flex: 1, overflow: 'hidden', width: '100%' },
   ambient: { position: 'absolute', top: 0, left: 0, right: 0, height: 340 },
-  scrollContent: { paddingBottom: 130 },
+  scrollContent: { paddingBottom: 130, width: '100%', maxWidth: '100%' },
 
-  section: { paddingHorizontal: GUTTER, marginTop: Spacing.lg },
-  sectionBleed: { marginTop: Spacing.lg },
-  sectionInset: { paddingHorizontal: GUTTER },
+  section: { paddingHorizontal: GUTTER, marginTop: Spacing.lg, width: '100%', maxWidth: '100%' },
+  sectionBleed: { marginTop: Spacing.lg, width: '100%', maxWidth: '100%', overflow: 'hidden' },
+  sectionInset: { paddingHorizontal: GUTTER, width: '100%' },
 
   // top app bar
   header: {
@@ -728,6 +728,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',
     zIndex: 10,
+    width: '100%',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerAvatar: {
@@ -743,7 +744,7 @@ const styles = StyleSheet.create({
   profileIconButton: { padding: 2 },
 
   // hero
-  heroCard: { borderRadius: BorderRadius.premium, borderWidth: 1, overflow: 'hidden' },
+  heroCard: { borderRadius: BorderRadius.premium, borderWidth: 1, overflow: 'hidden', width: '100%' },
   heroBody: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -763,14 +764,14 @@ const styles = StyleSheet.create({
   heroSub: { fontFamily: 'Sora_400Regular', fontSize: 11.5, marginTop: 3, lineHeight: 16 },
 
   // stats
-  statRow: { flexDirection: 'row', gap: 8, paddingHorizontal: GUTTER, marginTop: 12 },
+  statRow: { flexDirection: 'row', gap: 8, paddingHorizontal: GUTTER, marginTop: 12, width: '100%' },
 
   // tiles
-  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  gridTile: { width: '47.8%' },
+  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between', width: '100%' },
+  gridTile: { width: '48.5%' },
 
   // bento
-  bentoRow: { flexDirection: 'row', gap: 10 },
+  bentoRow: { flexDirection: 'row', gap: 10, width: '100%' },
   bentoCard: {
     flex: 1,
     borderRadius: BorderRadius.premium,

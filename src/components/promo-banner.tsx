@@ -272,7 +272,7 @@ export function AutoScrollingHorizontalBanners({
   }, [banners.length, step]);
 
   return (
-    <View style={{ height: 185, marginVertical: Spacing.sm }}>
+    <View style={{ height: 185, marginVertical: Spacing.sm, width: '100%', overflow: 'hidden' }}>
       <ScrollView
         ref={scrollViewRef}
         horizontal
