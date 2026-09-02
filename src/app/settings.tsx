@@ -300,6 +300,10 @@ export default function SettingsScreen() {
             <LinkRow theme={theme} icon="calendar-outline" title="Booking History" subtitle="View active, completed & cancelled reservations" onPress={() => router.push('/booking-history')} />
             <Divider theme={theme} />
             <LinkRow theme={theme} icon="wallet-outline" title="My Sports Wallet" subtitle={`Balance: ₹${walletBalance.toFixed(2)}`} onPress={() => router.push('/wallet')} />
+            <Divider theme={theme} />
+            {/* Reachable from Settings rather than only the owner hub, because
+                coaches and organizers get paid through the same profile. */}
+            <LinkRow theme={theme} icon="card-outline" title="Payout & Tax Details" subtitle="Address, GST and how you get paid" onPress={() => router.push('/payout-settings')} />
           </SectionCard>
 
           {/* ── Language & Region ── */}

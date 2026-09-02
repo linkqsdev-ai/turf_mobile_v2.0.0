@@ -56,6 +56,20 @@ interface Bowler {
   avatar?: string;
 }
 
+import {
+  isLegalDelivery,
+  countsAsBallFaced,
+  ranRuns,
+  shouldRotateStrike,
+  batsmanRunsFromExtra,
+  extraLogSymbol,
+  wicketLogSymbol,
+  bowlerGetsCredit,
+  dismissedBatsmanIndex,
+  isTargetReached,
+  BALLS_PER_OVER,
+} from '@/lib/cricket-engine';
+
 export function formatMobileNumber(phone?: string | null): string {
   if (!phone) return '';
   const digits = String(phone).replace(/\D/g, '');
@@ -2469,15 +2483,14 @@ export default function CricketScoring({
       // Add to current over log
       setOverLog(prev => [...prev, runVal.toString()]);
 
-      // Strike Rotation: Rotate strike on odd runs (1, 3, 5), keep strike on even (0, 2, 4, 6)
-      if (runVal % 2 !== 0) {
+      // Strike Rotation: odd runs mean the batsmen finished at opposite ends.
+      if (shouldRotateStrike(runVal)) {
         setBatsmen(prev => prev.map(b => ({ ...b, active: !b.active })));
       }
 
       // Check if 2nd Innings target reached to end match immediately
       if (currentInnings === 2 && firstInningsScore) {
-        const target = firstInningsScore.runs + 1;
-        if (newTotalRuns >= target) {
+        if (isTargetReached(newTotalRuns, firstInningsScore.runs)) {
           const updatedBalls = ballsInCurrentOver + 1;
           const updatedOvers = updatedBalls >= 6 ? overs + 1 : overs;
           const finalBalls = updatedBalls >= 6 ? 0 : updatedBalls;
@@ -2505,26 +2518,24 @@ export default function CricketScoring({
       const whoIsOut = wicketOptions?.whoIsOut ?? 'striker';
       const creditBowler = wicketOptions?.creditBowler !== undefined
         ? wicketOptions.creditBowler
-        : (dismissalType !== 'run_out' && dismissalType !== 'retired');
+        : bowlerGetsCredit(dismissalType);
       // Odd runs means the batsmen crossed, so the striker's end changes.
       const crossed = runsCompleted % 2 !== 0;
 
       const strikerIdx = batsmen.findIndex(b => b.active);
       const safeStrikerIdx = strikerIdx >= 0 ? strikerIdx : 0;
       const nonStrikerIdx = safeStrikerIdx === 0 ? 1 : 0;
+      const dismissedIdx = dismissedBatsmanIndex(strikerIdx, whoIsOut);
       // The striker faced the ball and scores whatever was run off it; the
       // dismissed player may be either of them on a run out.
-      const targetIdx = whoIsOut === 'non-striker' ? nonStrikerIdx : safeStrikerIdx;
+      const targetIdx = dismissedIdx;
       const dismissedPlayer = batsmen[targetIdx];
       const isLastBallOfOver = ballsInCurrentOver >= 5;
 
       const newTotalRuns = runs + runsCompleted;
       if (runsCompleted > 0) setRuns(newTotalRuns);
 
-      let logSymbol = 'W';
-      if (dismissalType === 'run_out') {
-        logSymbol = runsCompleted > 0 ? `${runsCompleted}W` : 'W';
-      }
+      const logSymbol = wicketLogSymbol(dismissalType, runsCompleted);
       setOverLog(prev => [...prev, logSymbol]);
 
       if (dismissedPlayer && dismissedPlayer.name) {
@@ -2619,8 +2630,7 @@ export default function CricketScoring({
       // A run out can be completed on the winning run, so the chase target has
       // to be checked here too — not just on the plain run/extra paths.
       if (currentInnings === 2 && firstInningsScore && runsCompleted > 0) {
-        const target = firstInningsScore.runs + 1;
-        if (newTotalRuns >= target) {
+        if (isTargetReached(newTotalRuns, firstInningsScore.runs)) {
           const updatedBalls = ballsInCurrentOver + 1;
           const updatedOvers = updatedBalls >= 6 ? overs + 1 : overs;
           const finalBalls = updatedBalls >= 6 ? 0 : updatedBalls;
@@ -2708,7 +2718,7 @@ export default function CricketScoring({
 
     setRuns(prev => prev + runCount);
 
-    const isLegal = isLegalOverride !== undefined ? isLegalOverride : (extraType === 'BYE' || extraType === 'LB');
+    const isLegal = isLegalDelivery(extraType, isLegalOverride);
 
     // Fix #6: Set free-hit flag for NB so the next run delivery doesn't add a ball to batsman stats
     if (extraType === 'NB') {
@@ -2728,14 +2738,14 @@ export default function CricketScoring({
     // the striker still keeps whatever came off the bat (the 1-run penalty stays
     // in extras and never reaches a personal score).
     if (extraType === 'NB' || extraType === 'BYE' || extraType === 'LB') {
-      const countsAsBallFaced = extraType === 'BYE' || extraType === 'LB';
+      const ballFaced = countsAsBallFaced(extraType);
       setBatsmen(prev =>
         prev.map(b =>
           b.active
             ? {
                 ...b,
-                balls: countsAsBallFaced ? b.balls + 1 : b.balls,
-                runs: b.runs + (extraType === 'NB' ? runsOffBat : 0),
+                balls: ballFaced ? b.balls + 1 : b.balls,
+                runs: b.runs + batsmanRunsFromExtra(extraType, runsOffBat),
                 fours: b.fours + (extraType === 'NB' && runsOffBat === 4 ? 1 : 0),
                 sixes: b.sixes + (extraType === 'NB' && runsOffBat === 6 ? 1 : 0),
               }
@@ -2749,23 +2759,19 @@ export default function CricketScoring({
     //   BYE/LB      → every run counted was run, so the total is the ran count
     //   WD/NB       → total minus the 1-run penalty
     // Odd ran count means they finished at opposite ends, so strike swaps.
-    const ranRuns =
-      extraType === 'BYE' || extraType === 'LB'
-        ? runCount
-        : Math.max(0, runCount - 1);
-    if (ranRuns % 2 !== 0) {
+    const ran = ranRuns(extraType, runCount);
+    if (shouldRotateStrike(ran)) {
       setBatsmen(prev => prev.map(b => ({ ...b, active: !b.active })));
     }
 
     // Fix #E: Pure wide/NB with no extra runs logs as 'WD'/'NB', not '0WD'/'0NB'
     // e.g. 1 run wide → 'WD', 3 run wide → '3WD', pure NB → 'NB'
-    const logString = runCount <= 1 ? extraType : `${runCount}${extraType}`;
+    const logString = extraLogSymbol(extraType, runCount);
     setOverLog(prev => [...prev, logString]);
 
     const newTotalRuns = runs + runCount;
     if (currentInnings === 2 && firstInningsScore) {
-      const target = firstInningsScore.runs + 1;
-      if (newTotalRuns >= target) {
+      if (isTargetReached(newTotalRuns, firstInningsScore.runs)) {
         const updatedBalls = isLegal ? ballsInCurrentOver + 1 : ballsInCurrentOver;
         const updatedOvers = updatedBalls >= 6 ? overs + 1 : overs;
         const finalBalls = updatedBalls >= 6 ? 0 : updatedBalls;

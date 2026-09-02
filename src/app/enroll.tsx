@@ -1,36 +1,37 @@
 import React, { useState, useMemo } from 'react';
-import { Alert, View, Pressable, ScrollView } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  TextInput,
+  Pressable,
+  Alert,
+  Platform,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
-import { Screen } from '@/components/layout/screen';
-import { Text } from '@/components/ui/text';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { Chip } from '@/components/ui/chip';
-import { Section } from '@/components/ui/section';
-import { Separator } from '@/components/ui/separator';
-import { MotionView } from '@/components/motion';
-import { useTokens } from '@/hooks/use-scheme';
+import { ThemedText } from '@/components/themed-text';
+import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { useOfferStore, useClassStore } from '@/store/app-store';
 import { getOffersForTurf, formatDiscount, isRedeemable, OwnerOffer } from '@/store/offer-store';
 
 export default function EnrollScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const theme = useTheme();
   const { offers } = useOfferStore();
   const { enrollInClass } = useClassStore();
-  // Icon colours can't take className, so pull the same tokens the classes use.
-  const t = useTokens();
 
   const title = (params.title as string) || 'Summer Camp Enrollment';
   const priceRaw = (params.price as string) || '4999';
-  const dates = (params.dates as string) || 'Summer 2024';
+  const dates = (params.dates as string) || 'Summer 2026';
   const location = (params.location as string) || 'TBD';
-  // Present when arriving from a real coach-created class; absent for the
-  // static marketing cards, which have nothing to enrol against.
   const classId = (params.classId as string) || '';
   const image =
     (params.image as string) || require('@/assets/images/illustrations/coaching_class_premium.png');
@@ -63,7 +64,6 @@ export default function EnrollScreen() {
   const classOffers = useMemo(() => {
     const matched = getOffersForTurf(title, offers);
     if (matched.length > 0) return matched;
-    // Fallback to active general offers
     return offers.filter(o => isRedeemable(o));
   }, [title, offers]);
 
@@ -99,30 +99,29 @@ export default function EnrollScreen() {
   };
 
   const handleEnroll = () => {
-    if (!name || !age || !phone) {
+    if (!name.trim() || !age.trim() || !phone.trim()) {
       Alert.alert('Missing fields', 'Please fill out all participant details before enrolling.');
       return;
     }
-    // Record the enrolment before confirming — this is what locks the class
-    // against further edits/deletion by its coach.
+
     if (classId) {
       enrollInClass({
         classId,
         className: title,
-        studentName: name,
-        studentAge: age,
-        contactNumber: phone,
+        studentName: name.trim(),
+        studentAge: age.trim(),
+        contactNumber: phone.trim(),
         amountPaid: total,
         appliedCode: appliedOffer?.code,
       });
     }
 
     Alert.alert(
-      'Enrollment confirmed',
+      'Enrollment Confirmed! 🎉',
       `You have successfully enrolled ${name} in ${title}.\nTotal paid: ₹${total}${appliedOffer ? ` (Saved ₹${discountAmount} with code ${appliedOffer.code})` : ''}`,
       [
         {
-          text: 'Back to home',
+          text: 'Back to Home',
           onPress: () => {
             router.dismissAll();
             router.replace('/(tabs)');
@@ -140,217 +139,586 @@ export default function EnrollScreen() {
         : image;
 
   return (
-    <Screen
-      header={{ title: 'Registration' }}
-      footer={
-        <View className="flex-row items-center gap-3">
-          <View className="flex-1">
-            <Text variant="caption">Total incl. taxes</Text>
-            <View className="flex-row items-baseline gap-2">
-              <Text variant="heading">₹{total}</Text>
-              {discountAmount > 0 && (
-                <Text variant="caption" className="line-through">
-                  ₹{basePrice + serviceFee}
-                </Text>
-              )}
-            </View>
-          </View>
-          <Button
-            className="px-7"
-            leftIcon={<Ionicons name="card-outline" size={17} color={t.primaryForeground} />}
-            onPress={handleEnroll}
-            accessibilityLabel={`Pay ₹${total} and enrol`}
-          >
-            Pay &amp; enrol
-          </Button>
-        </View>
-      }
-    >
-      <MotionView preset="fade-up" className="mt-3 h-48 overflow-hidden rounded-2xl">
-        <Image source={imageSource} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-        {/* Scrim keeps the title legible over any class photo. White here is
-            deliberate — it sits on the image, not on the themed surface. */}
-        <View className="absolute inset-0 justify-end bg-black/45 p-4">
-          <Text variant="heading" className="text-white" numberOfLines={2}>
-            {title}
-          </Text>
-          <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-1">
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="calendar-outline" size={13} color="#ffffffaa" />
-              <Text variant="caption" className="text-white/80">
-                {dates}
-              </Text>
-            </View>
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="location-outline" size={13} color="#ffffffaa" />
-              <Text variant="caption" className="text-white/80">
-                {location}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </MotionView>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top']}>
+      {/* App Header */}
+      <View style={[styles.header, { borderBottomColor: theme.outlineVariant + '25' }]}>
+        <Pressable
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)');
+            }
+          }}
+          style={[styles.backBtn, { backgroundColor: theme.surfaceLow }]}
+          hitSlop={8}
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="arrow-back" size={20} color={theme.text} />
+        </Pressable>
+        <ThemedText style={styles.headerTitle}>
+          Registration
+        </ThemedText>
+        <View style={{ width: 38 }} />
+      </View>
 
-      <MotionView preset="fade-up" delay={0.04}>
-        <Section title="Participant details" className="mt-6">
-          <Card variant="elevated" className="gap-4">
-          <Input label="Full name" placeholder="e.g. Rahul Sharma" value={name} onChangeText={setName} />
-          <View className="flex-row gap-3">
-            <Input
-              containerClassName="w-24"
-              label="Age"
-              placeholder="14"
-              keyboardType="numeric"
-              value={age}
-              onChangeText={(v) => setAge(v.replace(/[^0-9]/g, ''))}
-            />
-            <Input
-              containerClassName="flex-1"
-              label="Contact phone"
-              placeholder="+91 98765 43210"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={(v) => setPhone(v.replace(/[^0-9+\s\-()]/g, ''))}
-            />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Hero Class Banner Card */}
+        <Reanimated.View
+          entering={FadeInDown.duration(350)}
+          style={[styles.heroCard, Shadows.level2]}
+        >
+          <Image source={imageSource} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.8)']}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.heroContent}>
+            <ThemedText style={styles.heroTitle} numberOfLines={2}>
+              {title}
+            </ThemedText>
+            <View style={styles.heroMetaRow}>
+              <View style={styles.heroMetaBadge}>
+                <Ionicons name="calendar-outline" size={12} color="#ffffff" style={{ marginRight: 4 }} />
+                <ThemedText style={styles.heroMetaText}>{dates}</ThemedText>
+              </View>
+              <View style={styles.heroMetaBadge}>
+                <Ionicons name="location-outline" size={12} color="#ffffff" style={{ marginRight: 4 }} />
+                <ThemedText style={styles.heroMetaText} numberOfLines={1}>{location}</ThemedText>
+              </View>
+            </View>
           </View>
-          <View className="gap-2">
-            <Text variant="caption" className="text-foreground">
-              Skill level
-            </Text>
-            <View className="flex-row gap-2">
-              {['Beginner', 'Intermediate', 'Advanced'].map((lvl) => (
-                <Chip
-                  key={lvl}
-                  label={lvl}
-                  selected={skillLevel === lvl}
-                  onPress={() => setSkillLevel(lvl)}
-                  className="flex-1 justify-center"
-                />
-              ))}
-            </View>
-            </View>
-          </Card>
-        </Section>
-      </MotionView>
+        </Reanimated.View>
 
-      {/* Available Vouchers & Promo Code Section */}
-      <MotionView preset="fade-up" delay={0.08}>
-        <Section title="Promotions & Vouchers" className="mt-6">
-          <Card variant="elevated" className="gap-3">
-            <View className="flex-row items-end gap-2">
-              <Input
-                containerClassName="flex-1"
-                label="Promo code"
-                value={promoInput}
-                onChangeText={(v) => {
-                  setPromoInput(v);
-                  if (promoError) setPromoError('');
-                }}
-                placeholder="Enter promo code"
-                autoCapitalize="characters"
-                error={promoError || undefined}
-                leftSlot={<Ionicons name="pricetag-outline" size={16} color={t.success} />}
-                rightSlot={
-                  appliedOffer ? (
-                    <Pressable
-                      onPress={handleRemovePromo}
-                      hitSlop={8}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Remove code ${appliedOffer.code}`}
-                    >
-                      <Ionicons name="close-circle" size={18} color={t.destructive} />
-                    </Pressable>
-                  ) : undefined
-                }
+        {/* Section 1: Participant Details */}
+        <Reanimated.View entering={FadeInDown.delay(60).duration(350)} style={styles.section}>
+          <ThemedText style={styles.sectionHeader}>
+            PARTICIPANT DETAILS
+          </ThemedText>
+
+          <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+            {/* Full Name */}
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Full name</ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '40', color: theme.text }]}
+                placeholder="e.g. Rahul Sharma"
+                placeholderTextColor={theme.placeholder}
+                value={name}
+                onChangeText={setName}
               />
-              <Button
-                variant={appliedOffer ? 'outline' : 'primary'}
-                size="md"
+            </View>
+
+            {/* Age & Phone Row */}
+            <View style={styles.inputRow}>
+              <View style={[styles.inputGroup, { width: 90 }]}>
+                <ThemedText style={styles.inputLabel}>Age</ThemedText>
+                <TextInput
+                  style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '40', color: theme.text }]}
+                  placeholder="14"
+                  placeholderTextColor={theme.placeholder}
+                  keyboardType="numeric"
+                  value={age}
+                  onChangeText={v => setAge(v.replace(/[^0-9]/g, ''))}
+                />
+              </View>
+
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <ThemedText style={styles.inputLabel}>Contact phone</ThemedText>
+                <TextInput
+                  style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '40', color: theme.text }]}
+                  placeholder="+91 98765 43210"
+                  placeholderTextColor={theme.placeholder}
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={v => setPhone(v.replace(/[^0-9+\s\-()]/g, ''))}
+                />
+              </View>
+            </View>
+
+            {/* Skill Level Selection */}
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Skill level</ThemedText>
+              <View style={styles.skillRow}>
+                {['Beginner', 'Intermediate', 'Advanced'].map(lvl => {
+                  const isSelected = skillLevel === lvl;
+                  return (
+                    <Pressable
+                      key={lvl}
+                      onPress={() => setSkillLevel(lvl)}
+                      style={[
+                        styles.skillChip,
+                        isSelected
+                          ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                          : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '40' },
+                      ]}
+                    >
+                      <ThemedText
+                        style={[
+                          styles.skillChipText,
+                          { color: isSelected ? '#ffffff' : theme.textSecondary, fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium' },
+                        ]}
+                      >
+                        {lvl}
+                      </ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </Reanimated.View>
+
+        {/* Section 2: Promotions & Vouchers */}
+        <Reanimated.View entering={FadeInDown.delay(120).duration(350)} style={styles.section}>
+          <ThemedText style={styles.sectionHeader}>
+            PROMOTIONS & VOUCHERS
+          </ThemedText>
+
+          <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+            {/* Promo Input Row */}
+            <View style={styles.promoInputRow}>
+              <View style={[styles.promoInputContainer, { backgroundColor: theme.surfaceLow, borderColor: promoError ? theme.error : theme.outlineVariant + '40' }]}>
+                <Ionicons name="pricetag-outline" size={16} color={theme.primary} style={{ marginRight: 8 }} />
+                <TextInput
+                  style={[styles.promoInput, { color: theme.text }]}
+                  placeholder="Enter promo code"
+                  placeholderTextColor={theme.placeholder}
+                  autoCapitalize="characters"
+                  value={promoInput}
+                  onChangeText={v => {
+                    setPromoInput(v);
+                    if (promoError) setPromoError('');
+                  }}
+                />
+                {appliedOffer && (
+                  <Pressable onPress={handleRemovePromo} hitSlop={8}>
+                    <Ionicons name="close-circle" size={18} color="#ef4444" />
+                  </Pressable>
+                )}
+              </View>
+
+              <Pressable
                 onPress={() => handleApplyPromo()}
                 disabled={!!appliedOffer}
-                accessibilityLabel="Apply promo code"
+                style={[
+                  styles.promoApplyBtn,
+                  { backgroundColor: appliedOffer ? theme.outlineVariant + '60' : theme.primary },
+                ]}
               >
-                {appliedOffer ? 'Applied' : 'Apply'}
-              </Button>
+                <ThemedText style={styles.promoApplyBtnText}>
+                  {appliedOffer ? 'Applied' : 'Apply'}
+                </ThemedText>
+              </Pressable>
             </View>
 
+            {/* Promo Error */}
+            {!!promoError && (
+              <ThemedText style={styles.promoErrorText}>
+                {promoError}
+              </ThemedText>
+            )}
+
+            {/* Applied Offer Banner */}
             {appliedOffer && (
-              <View className="flex-row items-center justify-between rounded-xl border border-success/30 bg-success/10 p-2.5">
-                <View className="flex-1 flex-row items-center gap-2">
-                  <Ionicons name="checkmark-circle" size={16} color={t.success} />
-                  <Text variant="callout" className="flex-1 text-success" numberOfLines={2}>
+              <View style={[styles.appliedBanner, { backgroundColor: theme.primary + '12', borderColor: theme.primary + '33' }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                  <Ionicons name="checkmark-circle" size={16} color={theme.primary} />
+                  <ThemedText style={[styles.appliedBannerCode, { color: theme.primary }]} numberOfLines={1}>
                     {appliedOffer.code} applied ({formatDiscount(appliedOffer)})
-                  </Text>
+                  </ThemedText>
                 </View>
-                <Text variant="callout" className="text-success">
+                <ThemedText style={[styles.appliedBannerDiscount, { color: theme.primary }]}>
                   -₹{discountAmount}
-                </Text>
+                </ThemedText>
               </View>
             )}
 
+            {/* Available Offers Horizontal Scroll */}
             {classOffers.length > 0 && !appliedOffer && (
-              <View className="gap-2">
-                <Text variant="overline">Available offers</Text>
+              <View style={{ marginTop: 12 }}>
+                <ThemedText style={styles.availableOffersLabel}>
+                  AVAILABLE OFFERS
+                </ThemedText>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ gap: 8 }}
+                  contentContainerStyle={{ gap: 8, paddingTop: 6 }}
                 >
-                  {classOffers.map((o) => (
+                  {classOffers.map(o => (
                     <Pressable
                       key={o.id}
                       onPress={() => handleApplyPromo(o.code)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Apply ${o.code}, ${formatDiscount(o)}`}
-                      className="flex-row items-center gap-2 rounded-xl border border-border/40 bg-muted px-3 py-2"
+                      style={[styles.offerPill, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '40' }]}
                     >
-                      <View className="rounded-md bg-success/15 px-2 py-0.5">
-                        <Text variant="caption" className="text-success">
+                      <View style={[styles.offerDiscountTag, { backgroundColor: theme.primary + '18' }]}>
+                        <ThemedText style={[styles.offerDiscountText, { color: theme.primary }]}>
                           {formatDiscount(o)}
-                        </Text>
+                        </ThemedText>
                       </View>
-                      <Text variant="callout">{o.code}</Text>
-                      <Ionicons name="arrow-forward-circle-outline" size={14} color={t.success} />
+                      <ThemedText style={[styles.offerCodeText, { color: theme.text }]}>
+                        {o.code}
+                      </ThemedText>
+                      <Ionicons name="arrow-forward-circle-outline" size={14} color={theme.primary} />
                     </Pressable>
                   ))}
                 </ScrollView>
               </View>
             )}
-          </Card>
-        </Section>
-      </MotionView>
+          </View>
+        </Reanimated.View>
 
-      <MotionView preset="fade-up" delay={0.16}>
-        <Section title="Payment summary" className="my-6">
-          <Card variant="elevated" className="gap-2.5">
-            <View className="flex-row justify-between">
-              <Text variant="subtle">Enrollment fee</Text>
-              <Text variant="callout">₹{basePrice}</Text>
+        {/* Section 3: Payment Summary */}
+        <Reanimated.View entering={FadeInDown.delay(180).duration(350)} style={styles.section}>
+          <ThemedText style={styles.sectionHeader}>
+            PAYMENT SUMMARY
+          </ThemedText>
+
+          <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+            <View style={styles.summaryRow}>
+              <ThemedText style={[styles.summaryLabel, { color: theme.textSecondary }]}>
+                Enrollment fee
+              </ThemedText>
+              <ThemedText style={[styles.summaryValue, { color: theme.text }]}>
+                ₹{basePrice}
+              </ThemedText>
             </View>
-            <View className="flex-row justify-between">
-              <Text variant="subtle">Taxes &amp; service fee</Text>
-              <Text variant="callout">₹{serviceFee}</Text>
+
+            <View style={styles.summaryRow}>
+              <ThemedText style={[styles.summaryLabel, { color: theme.textSecondary }]}>
+                Taxes & service fee
+              </ThemedText>
+              <ThemedText style={[styles.summaryValue, { color: theme.text }]}>
+                ₹{serviceFee}
+              </ThemedText>
             </View>
+
             {discountAmount > 0 && (
-              <View className="flex-row justify-between gap-3">
-                <Text variant="subtle" className="flex-1 text-success" numberOfLines={1}>
+              <View style={styles.summaryRow}>
+                <ThemedText style={[styles.summaryLabel, { color: '#10b981' }]} numberOfLines={1}>
                   Voucher discount ({appliedOffer?.code})
-                </Text>
-                <Text variant="callout" className="text-success">
+                </ThemedText>
+                <ThemedText style={[styles.summaryValue, { color: '#10b981' }]}>
                   -₹{discountAmount}
-                </Text>
+                </ThemedText>
               </View>
             )}
-            <Separator className="my-1" />
-            <View className="flex-row justify-between">
-              <Text variant="subheading">Total due</Text>
-              <Text variant="subheading" className="text-primary">
+
+            <View style={[styles.divider, { backgroundColor: theme.outlineVariant + '25' }]} />
+
+            <View style={styles.summaryRow}>
+              <ThemedText style={[styles.summaryTotalLabel, { color: theme.text }]}>
+                Total due
+              </ThemedText>
+              <ThemedText style={[styles.summaryTotalValue, { color: theme.primary }]}>
                 ₹{total}
-              </Text>
+              </ThemedText>
             </View>
-          </Card>
-        </Section>
-      </MotionView>
-    </Screen>
+          </View>
+        </Reanimated.View>
+      </ScrollView>
+
+      {/* Sticky Bottom Bar */}
+      <View style={[styles.footer, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '25' }, Shadows.level2]}>
+        <View style={{ flex: 1 }}>
+          <ThemedText style={[styles.footerSubtext, { color: theme.textSecondary }]}>
+            Total incl. taxes
+          </ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+            <ThemedText style={[styles.footerPrice, { color: theme.text }]}>
+              ₹{total}
+            </ThemedText>
+            {discountAmount > 0 && (
+              <ThemedText style={[styles.footerStrikethrough, { color: theme.textSecondary }]}>
+                ₹{basePrice + serviceFee}
+              </ThemedText>
+            )}
+          </View>
+        </View>
+
+        <Pressable
+          onPress={handleEnroll}
+          style={[styles.payBtn, { backgroundColor: theme.primary }]}
+          accessibilityRole="button"
+          accessibilityLabel={`Pay ₹${total} and enrol`}
+        >
+          <Ionicons name="card-outline" size={17} color="#ffffff" style={{ marginRight: 6 }} />
+          <ThemedText style={styles.payBtnText}>
+            Pay & enrol
+          </ThemedText>
+        </Pressable>
+      </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 16,
+    letterSpacing: -0.2,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 120,
+  },
+  heroCard: {
+    height: 170,
+    borderRadius: 18,
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'flex-end',
+  },
+  heroContent: {
+    padding: 16,
+  },
+  heroTitle: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 18,
+    lineHeight: 23,
+    color: '#ffffff',
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  heroMetaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 999,
+  },
+  heroMetaText: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11,
+    color: '#ffffff',
+  },
+  section: {
+    marginTop: 20,
+  },
+  sectionHeader: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 11.5,
+    color: '#64748b',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    marginLeft: 2,
+  },
+  card: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+  },
+  inputGroup: {
+    marginBottom: 12,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  inputLabel: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 12,
+    marginBottom: 6,
+  },
+  input: {
+    height: 42,
+    borderRadius: 11,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    fontFamily: 'Sora_400Regular',
+    fontSize: 13,
+    ...({ outlineStyle: 'none' } as any),
+  },
+  skillRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  skillChip: {
+    flex: 1,
+    height: 38,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  skillChipText: {
+    fontSize: 11.5,
+  },
+  promoInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  promoInputContainer: {
+    flex: 1,
+    height: 42,
+    borderRadius: 11,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  promoInput: {
+    flex: 1,
+    height: '100%',
+    fontFamily: 'Sora_500Medium',
+    fontSize: 13,
+    ...({ outlineStyle: 'none' } as any),
+  },
+  promoApplyBtn: {
+    height: 42,
+    paddingHorizontal: 18,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  promoApplyBtnText: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 12.5,
+    color: '#ffffff',
+  },
+  promoErrorText: {
+    color: '#ef4444',
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11,
+    marginTop: 6,
+  },
+  appliedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 10,
+  },
+  appliedBannerCode: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 11.5,
+  },
+  appliedBannerDiscount: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 12,
+  },
+  availableOffersLabel: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 10,
+    color: '#64748b',
+    letterSpacing: 0.6,
+  },
+  offerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  offerDiscountTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  offerDiscountText: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 10,
+  },
+  offerCodeText: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 11.5,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 12.5,
+  },
+  summaryValue: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 13,
+  },
+  divider: {
+    height: 1,
+    marginVertical: 8,
+  },
+  summaryTotalLabel: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 14,
+  },
+  summaryTotalValue: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 16,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+  },
+  footerSubtext: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11,
+  },
+  footerPrice: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 20,
+    letterSpacing: -0.3,
+  },
+  footerStrikethrough: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 12,
+    textDecorationLine: 'line-through',
+  },
+  payBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 44,
+    paddingHorizontal: 22,
+    borderRadius: 999,
+    ...Shadows.level1,
+  },
+  payBtnText: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 13.5,
+    color: '#ffffff',
+  },
+});
