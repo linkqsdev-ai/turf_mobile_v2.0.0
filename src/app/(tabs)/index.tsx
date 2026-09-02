@@ -26,6 +26,7 @@ import { PromoBanner, AutoScrollingHorizontalBanners, BANNER_DESIGNS_10 } from '
 import { useClassStore, useTurfStore, useOfferStore } from '@/store/app-store';
 import { isExpired } from '@/store/offer-store';
 import { PlayerDashboard } from '@/components/home/player-dashboard';
+import { OwnerDashboard } from '@/components/home/owner-dashboard';
 import { useNotifications } from '@/context/NotificationContext';
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
@@ -77,8 +78,7 @@ export default function HomeScreen() {
   const role: string = profile.role || 'Player';
   const [coinTossVisible, setCoinTossVisible] = useState(false);
 
-
-  // Interactive Chart & Heatmap Selected States
+  // Interactive Chart & Heatmap Selected States for legacy/fallback role views
   const [selectedBar, setSelectedBar] = useState<{ day: string; fullDay: string; revenue: string; label: string; height: number; bookings: string; peak: string } | null>({
     day: 'F',
     fullDay: 'Friday',
@@ -89,14 +89,14 @@ export default function HomeScreen() {
     peak: '5:00 PM - 10:00 PM',
   });
 
-const CALENDAR_WEEKS = [
-  [1, 2, 3, 4, 5, 6, 7],
-  [8, 9, 10, 11, 12, 13, 14],
-  [15, 16, 17, 18, 19, 20, 21],
-  [22, 23, 24, 25, 26, 27, 28],
-];
+  const CALENDAR_WEEKS = [
+    [1, 2, 3, 4, 5, 6, 7],
+    [8, 9, 10, 11, 12, 13, 14],
+    [15, 16, 17, 18, 19, 20, 21],
+    [22, 23, 24, 25, 26, 27, 28],
+  ];
 
-const CALENDAR_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const CALENDAR_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   const [selectedHeatmapDay, setSelectedHeatmapDay] = useState<{ day: number; label: string; occupancy: string; bookings: string; revenue: string; level: 'Low' | 'Medium' | 'Peak' } | null>({
     day: 14,
@@ -110,12 +110,26 @@ const CALENDAR_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
   const handleProfilePress = () => router.push('/profile');
   const handleNetworkPress = () => router.push('/(tabs)/network');
 
-  // Players get the redesigned dashboard; Owner / Coach / Organizer keep the
-  // existing role-specific layout below.
+  // Players get the redesigned player dashboard
   if (role === 'Player') {
     return (
       <>
         <PlayerDashboard
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onOpenNotifications={openNotificationModal}
+          onOpenCoinToss={() => setCoinTossVisible(true)}
+        />
+        <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
+      </>
+    );
+  }
+
+  // Owners get the redesigned owner dashboard matching the player typography & layout
+  if (role === 'Owner') {
+    return (
+      <>
+        <OwnerDashboard
           refreshing={refreshing}
           onRefresh={onRefresh}
           onOpenNotifications={openNotificationModal}
