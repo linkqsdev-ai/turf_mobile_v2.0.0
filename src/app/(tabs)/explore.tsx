@@ -297,18 +297,13 @@ export default function ExploreScreen() {
                 style={StyleSheet.absoluteFill}
               />
 
-              {/* Top Row: Avatar with Sport / Level badge */}
+              {/* Top Row: Avatar only (clean & minimal) */}
               <View style={styles.coachCardTopRow}>
                 <Image
                   source={{ uri: coach.avatar }}
                   style={styles.coachAvatar}
                   contentFit="cover"
                 />
-                <View style={styles.coachSportPill}>
-                  <ThemedText style={styles.coachSportPillText}>
-                    {coach.sportType}
-                  </ThemedText>
-                </View>
               </View>
 
               {/* Coach Name & Role Title */}
@@ -330,16 +325,13 @@ export default function ExploreScreen() {
                 ))}
               </View>
 
-              {/* 3-Column Metrics Ribbon */}
+              {/* 3-Column Metrics Ribbon without decorative icons */}
               <View style={styles.coachMetricsRibbon}>
                 {/* Metric 1: Rating */}
                 <View style={styles.coachMetricCol}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2.5 }}>
-                    <Ionicons name="star" size={11} color="#f59e0b" />
-                    <ThemedText style={[styles.coachMetricVal, { color: theme.text }]}>
-                      {coach.rating}
-                    </ThemedText>
-                  </View>
+                  <ThemedText style={[styles.coachMetricVal, { color: theme.text }]}>
+                    {coach.rating}
+                  </ThemedText>
                   <ThemedText style={[styles.coachMetricLabel, { color: theme.textSecondary }]}>
                     Rating
                   </ThemedText>
@@ -1123,83 +1115,69 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   frostedCoachCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#ffffff',
-    padding: 16,
-    paddingBottom: 14,
+    borderRadius: 14,
+    borderWidth: 0.8,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    padding: 12,
+    paddingBottom: 11,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#e0f2fe',
     shadowColor: '#0284c7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 1,
   },
   coachCardTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
   coachAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1.5,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
     borderColor: '#ffffff',
     backgroundColor: '#cbd5e1',
   },
-  coachSportPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2.5,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-  },
-  coachSportPillText: {
-    fontSize: 10,
-    fontFamily: 'Sora_500Medium',
-    color: '#475569',
-  },
   coachNameText: {
     fontFamily: 'Sora_600SemiBold',
-    fontSize: 15.5,
-    lineHeight: 20,
-    marginTop: 8,
-    letterSpacing: -0.2,
+    fontSize: 14,
+    lineHeight: 18,
+    marginTop: 6,
+    letterSpacing: -0.1,
   },
   coachRoleText: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 11.5,
-    lineHeight: 15,
+    fontSize: 11,
+    lineHeight: 14,
     marginTop: 1,
   },
   coachSkillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 5,
-    marginTop: 8,
+    gap: 4,
+    marginTop: 6,
   },
   coachSkillPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2.5,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderWidth: 0.8,
+    borderColor: 'rgba(255, 255, 255, 0.85)',
   },
   coachSkillText: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 10,
+    fontSize: 9.5,
   },
   coachMetricsRibbon: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 14,
-    paddingHorizontal: 2,
+    marginTop: 10,
+    paddingHorizontal: 0,
   },
   coachMetricCol: {
     alignItems: 'center',
@@ -1207,34 +1185,34 @@ const styles = StyleSheet.create({
   },
   coachMetricVal: {
     fontFamily: 'Sora_600SemiBold',
-    fontSize: 13.5,
-    lineHeight: 17,
+    fontSize: 12.5,
+    lineHeight: 16,
   },
   coachMetricLabel: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 9.5,
-    lineHeight: 13,
+    fontSize: 9,
+    lineHeight: 12,
     marginTop: 1,
     letterSpacing: 0.2,
   },
   coachGetInTouchBtn: {
-    height: 38,
+    height: 32,
     borderRadius: 999,
-    marginTop: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.88)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.98)',
+    marginTop: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 0.8,
+    borderColor: 'rgba(255, 255, 255, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.03,
     shadowRadius: 2,
     elevation: 1,
   },
   coachGetInTouchText: {
     fontFamily: 'Sora_600SemiBold',
-    fontSize: 12.5,
+    fontSize: 11.5,
     letterSpacing: 0.1,
   },
   scrollContent: {
