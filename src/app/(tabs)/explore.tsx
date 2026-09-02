@@ -310,15 +310,15 @@ export default function ExploreScreen() {
                   hitSlop={8}
                   accessibilityLabel="Share profile"
                 >
-                  <Ionicons name="share-outline" size={18} color="#0f172a" />
+                  <Ionicons name="share-outline" size={18} color={theme.text} />
                 </Pressable>
               </View>
 
               {/* Coach Name & Role Title */}
-              <ThemedText style={styles.coachNameText} numberOfLines={1}>
+              <ThemedText style={[styles.coachNameText, { color: theme.text }]} numberOfLines={1}>
                 {coach.coachName}
               </ThemedText>
-              <ThemedText style={styles.coachRoleText} numberOfLines={1}>
+              <ThemedText style={[styles.coachRoleText, { color: theme.textSecondary }]} numberOfLines={1}>
                 {coach.roleTitle}
               </ThemedText>
 
@@ -326,7 +326,7 @@ export default function ExploreScreen() {
               <View style={styles.coachSkillRow}>
                 {coach.skills.slice(0, 3).map((skill: string, sIdx: number) => (
                   <View key={sIdx} style={styles.coachSkillPill}>
-                    <ThemedText style={styles.coachSkillText}>
+                    <ThemedText style={[styles.coachSkillText, { color: theme.textSecondary }]}>
                       {skill}
                     </ThemedText>
                   </View>
@@ -338,32 +338,32 @@ export default function ExploreScreen() {
                 {/* Metric 1: Rating */}
                 <View style={styles.coachMetricCol}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                    <Ionicons name="star" size={13} color="#0f172a" />
-                    <ThemedText style={styles.coachMetricVal}>
+                    <Ionicons name="star" size={13} color="#f59e0b" />
+                    <ThemedText style={[styles.coachMetricVal, { color: theme.text }]}>
                       {coach.rating}
                     </ThemedText>
                   </View>
-                  <ThemedText style={styles.coachMetricLabel}>
+                  <ThemedText style={[styles.coachMetricLabel, { color: theme.textSecondary }]}>
                     Rating
                   </ThemedText>
                 </View>
 
                 {/* Metric 2: Earned / Students */}
                 <View style={styles.coachMetricCol}>
-                  <ThemedText style={styles.coachMetricVal}>
+                  <ThemedText style={[styles.coachMetricVal, { color: theme.text }]}>
                     {coach.studentsText}
                   </ThemedText>
-                  <ThemedText style={styles.coachMetricLabel}>
+                  <ThemedText style={[styles.coachMetricLabel, { color: theme.textSecondary }]}>
                     {coach.studentsLabel}
                   </ThemedText>
                 </View>
 
                 {/* Metric 3: Rate */}
                 <View style={styles.coachMetricCol}>
-                  <ThemedText style={styles.coachMetricVal}>
+                  <ThemedText style={[styles.coachMetricVal, { color: theme.text }]}>
                     {coach.rateText}
                   </ThemedText>
-                  <ThemedText style={styles.coachMetricLabel}>
+                  <ThemedText style={[styles.coachMetricLabel, { color: theme.textSecondary }]}>
                     Rate
                   </ThemedText>
                 </View>
@@ -402,7 +402,7 @@ export default function ExploreScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Get in touch with ${coach.coachName}`}
                 >
-                  <ThemedText style={styles.coachGetInTouchText}>
+                  <ThemedText style={[styles.coachGetInTouchText, { color: theme.text }]}>
                     Get in touch
                   </ThemedText>
                 </Pressable>
@@ -419,7 +419,7 @@ export default function ExploreScreen() {
                   <Ionicons
                     name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
                     size={18}
-                    color={isBookmarked ? theme.primary : '#0f172a'}
+                    color={isBookmarked ? theme.primary : theme.text}
                   />
                 </Pressable>
               </View>
@@ -1183,15 +1183,15 @@ const styles = StyleSheet.create({
   },
   coachNameText: {
     fontFamily: 'Sora_600SemiBold',
-    fontSize: 18,
-    color: '#0f172a',
-    marginTop: 14,
-    letterSpacing: -0.3,
+    fontSize: 16.5,
+    lineHeight: 22,
+    marginTop: 12,
+    letterSpacing: -0.2,
   },
   coachRoleText: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 13,
-    color: '#64748b',
+    fontSize: 12,
+    lineHeight: 16,
     marginTop: 2,
   },
   coachSkillRow: {
@@ -1203,21 +1203,20 @@ const styles = StyleSheet.create({
   coachSkillPill: {
     backgroundColor: 'rgba(255, 255, 255, 0.75)',
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 4.5,
+    paddingHorizontal: 10,
+    paddingVertical: 3.5,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.95)',
   },
   coachSkillText: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 11,
-    color: '#64748b',
+    fontSize: 10.5,
   },
   coachMetricsRibbon: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 18,
     paddingHorizontal: 6,
   },
   coachMetricCol: {
@@ -1226,45 +1225,46 @@ const styles = StyleSheet.create({
   },
   coachMetricVal: {
     fontFamily: 'Sora_600SemiBold',
-    fontSize: 15.5,
-    color: '#0f172a',
+    fontSize: 15,
+    lineHeight: 19,
   },
   coachMetricLabel: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 11,
-    color: '#64748b',
+    fontSize: 10.5,
+    lineHeight: 14,
     marginTop: 2,
+    letterSpacing: 0.2,
   },
   coachActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginTop: 20,
+    gap: 10,
+    marginTop: 18,
   },
   coachGetInTouchBtn: {
     flex: 1,
-    height: 48,
+    height: 44,
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.98)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   coachGetInTouchText: {
     fontFamily: 'Sora_600SemiBold',
-    fontSize: 13.5,
-    color: '#0f172a',
+    fontSize: 13,
+    letterSpacing: 0.1,
   },
   coachBookmarkBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#ffffff',
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.95)',
