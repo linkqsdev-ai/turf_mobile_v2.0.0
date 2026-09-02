@@ -158,6 +158,8 @@ export default function LiveScoringScreen() {
   const params = useLocalSearchParams<{
     matchId: string; sport: string; teamA?: string; teamB?: string;
     totalOvers?: string; autoWide?: string; autoNoBall?: string; allowByes?: string;
+    /** JSON map of lowercased team name -> selected Playing XI. */
+    lineup?: string;
   }>();
 
   const rawSport = Array.isArray(params.sport) ? params.sport[0] : params.sport;
@@ -201,6 +203,7 @@ export default function LiveScoringScreen() {
             matchId={params.matchId} teamA={params.teamA} teamB={params.teamB}
             totalOvers={params.totalOvers} autoWide={params.autoWide}
             autoNoBall={params.autoNoBall} allowByes={params.allowByes}
+            lineup={params.lineup}
           />
         );
     }

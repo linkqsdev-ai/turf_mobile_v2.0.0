@@ -1038,6 +1038,7 @@ export default function CricketScoring({
   autoWide = '1',
   autoNoBall = '1',
   allowByes = '1',
+  lineup,
 }: {
   matchId?: string;
   teamA?: string;
@@ -1046,9 +1047,37 @@ export default function CricketScoring({
   autoWide?: string;
   autoNoBall?: string;
   allowByes?: string;
+  /** JSON map of lowercased team name -> the Playing XI chosen pre-match. */
+  lineup?: string;
 }) {
   const theme = useTheme();
   const router = useRouter();
+
+  /**
+   * The Playing XI picked before the toss, keyed by lowercased team name.
+   * Parsed once; a malformed param degrades to "no lineup" rather than
+   * crashing the console mid-match.
+   */
+  const selectedLineups = React.useMemo<Record<string, any[]>>(() => {
+    if (!lineup) return {};
+    try {
+      const parsed = JSON.parse(lineup);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }, [lineup]);
+
+  /** The squad to use for a side: its chosen XI if there is one, else its roster. */
+  const squadFor = React.useCallback(
+    (teamName: string, rosterPlayers?: any[]): any[] | null => {
+      const xi = selectedLineups[(teamName || '').toLowerCase()];
+      if (Array.isArray(xi) && xi.length > 0) return [...xi];
+      if (rosterPlayers && rosterPlayers.length > 0) return [...rosterPlayers];
+      return null;
+    },
+    [selectedLineups]
+  );
 
   const [showScoringModal, setShowScoringModal] = useState(false);
   const [showScoringPad, setShowScoringPad] = useState(true);
@@ -1412,13 +1441,14 @@ export default function CricketScoring({
     const batTeamObj = teams.find(t => t.name.toLowerCase() === currentBatTeam.toLowerCase());
     const bowlTeamObj = teams.find(t => t.name.toLowerCase() === currentBowlTeam.toLowerCase());
 
-    if (batTeamObj && batTeamObj.players && batTeamObj.players.length > 0) {
-      setYetToBatBatsmen([...batTeamObj.players]);
-    }
-    if (bowlTeamObj && bowlTeamObj.players && bowlTeamObj.players.length > 0) {
-      setOtherBowlers([...bowlTeamObj.players]);
-    }
-  }, [battingTeamName, bowlingTeamName, teamA, teamB, teams, currentInnings]);
+    // A pre-match Playing XI wins over the team's full stored roster — that
+    // selection is the whole point of the picker. Falls back to the roster for
+    // sides the user skipped.
+    const batSquad = squadFor(currentBatTeam, batTeamObj?.players);
+    const bowlSquad = squadFor(currentBowlTeam, bowlTeamObj?.players);
+    if (batSquad) setYetToBatBatsmen(batSquad);
+    if (bowlSquad) setOtherBowlers(bowlSquad);
+  }, [battingTeamName, bowlingTeamName, teamA, teamB, teams, currentInnings, squadFor]);
 
   // Computed bench batsmen (including available yet-to-bat squad AND previously batted/retired batsmen who can resume play!)
   const availableBenchBatsmen = React.useMemo(() => {
@@ -2794,8 +2824,10 @@ export default function CricketScoring({
       // Swap squad bench lists
       const teamAObj = teams.find(t => t.name.toLowerCase() === teamA.toLowerCase());
       const teamBObj = teams.find(t => t.name.toLowerCase() === teamB.toLowerCase());
-      if (teamBObj && teamBObj.players) setYetToBatBatsmen([...teamBObj.players]);
-      if (teamAObj && teamAObj.players) setOtherBowlers([...teamAObj.players]);
+      const nextBatSquad = squadFor(newBatting, teamBObj?.players);
+      const nextBowlSquad = squadFor(newBowling, teamAObj?.players);
+      if (nextBatSquad) setYetToBatBatsmen(nextBatSquad);
+      if (nextBowlSquad) setOtherBowlers(nextBowlSquad);
 
       const target = firstScore.runs + 1;
       const maxOvers = parseInt(totalOvers) || 20;
@@ -2971,8 +3003,10 @@ export default function CricketScoring({
 
     const battingObj = teams.find(t => t.name.toLowerCase() === newBatting.toLowerCase());
     const bowlingObj = teams.find(t => t.name.toLowerCase() === newBowling.toLowerCase());
-    if (battingObj && battingObj.players) setYetToBatBatsmen([...battingObj.players]);
-    if (bowlingObj && bowlingObj.players) setOtherBowlers([...bowlingObj.players]);
+    const rematchBatSquad = squadFor(newBatting, battingObj?.players);
+    const rematchBowlSquad = squadFor(newBowling, bowlingObj?.players);
+    if (rematchBatSquad) setYetToBatBatsmen(rematchBatSquad);
+    if (rematchBowlSquad) setOtherBowlers(rematchBowlSquad);
 
     setShowRematchTossModal(false);
     openEditPlayersModal();

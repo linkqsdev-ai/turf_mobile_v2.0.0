@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import { toPersistableImage, sanitiseStoredImageUri } from '@/utils/persist-image';
 import { useClassStore, useOfferStore } from '@/store/app-store';
 import { OfferDiscountType } from '@/store/offer-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -209,14 +210,39 @@ export default function CreateClassScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [16, 9],
-        quality: 0.85,
+        // Quality is deliberately modest: the picked image is persisted inline
+        // as base64, so a full-quality photo would bloat AsyncStorage.
+        quality: 0.5,
+        // Without this the picker only returns a transient handle (a blob: URL
+        // on web, a cache-dir path on native) which is dead by the time the
+        // class is reopened — that's what made saved banners fail to load.
+        base64: true,
       });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        patchOffer(localId, { bannerImage: result.assets[0].uri });
+      if (result.canceled || !result.assets?.length) return;
+
+      const picked = toPersistableImage(result.assets[0]);
+
+      if (picked.ok) {
+        patchOffer(localId, { bannerImage: picked.uri });
         triggerToast('Voucher banner updated! 🎨');
+        return;
       }
+
+      if (picked.reason === 'too-large') {
+        Alert.alert(
+          'Image too large',
+          'Pick a smaller or less detailed image — this one is too big to store with the class.'
+        );
+        return;
+      }
+
+      // No base64 came back. Use the raw uri so the pick isn't lost, but say
+      // plainly that it won't survive, rather than failing silently later.
+      patchOffer(localId, { bannerImage: result.assets[0].uri });
+      triggerToast('Banner set, but it may not reload after you leave.');
     } catch (err) {
       console.warn('Error picking voucher banner:', err);
+      Alert.alert('Could not load image', 'Something went wrong picking that image.');
     }
   };
 
@@ -279,7 +305,20 @@ export default function CreateClassScreen() {
         if (existing.feeType) setFeeType(existing.feeType);
         if (existing.feeAmount) setFeeAmount(String(existing.feeAmount));
         if (existing.description) setDescription(existing.description);
-        if (existing.vouchers && Array.isArray(existing.vouchers)) setClassOffers(existing.vouchers);
+        if (existing.vouchers && Array.isArray(existing.vouchers)) {
+          // Banners saved before the picker persisted real data are dead
+          // handles (blob:/cache paths). Swap them for the default preset so
+          // the form shows something valid rather than a broken image.
+          setClassOffers(
+            existing.vouchers.map((v: any) => ({
+              ...v,
+              bannerImage: sanitiseStoredImageUri(
+                v?.bannerImage,
+                VOUCHER_BANNER_PRESETS[0].uri
+              ),
+            }))
+          );
+        }
         if (existing.certificates && Array.isArray(existing.certificates)) setCertificates(existing.certificates);
         if (existing.amenities && Array.isArray(existing.amenities)) setSelectedAmenities(existing.amenities);
       }

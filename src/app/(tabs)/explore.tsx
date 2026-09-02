@@ -8,6 +8,7 @@ import {
   Animated,
   Platform,
   RefreshControl,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -101,21 +102,127 @@ export default function ExploreScreen() {
   const [coinTossVisible, setCoinTossVisible] = useState(false);
   // Turf Book now hosts both things a player books here: pitches and coaching.
   const [bookingMode, setBookingMode] = useState<'turf' | 'coaching'>('turf');
-  const { classes, enrollmentCountForClass } = useClassStore();
+  const { classes } = useClassStore();
+  const [bookmarkedCoaches, setBookmarkedCoaches] = useState<Record<string, boolean>>({});
 
-  // Classes matching the screen's existing search + sport filters.
-  const coachingClasses = React.useMemo(() => {
+  const toggleBookmarkCoach = (id: string) => {
+    setBookmarkedCoaches(prev => {
+      const next = !prev[id];
+      triggerToast(next ? 'Coach saved to bookmarks' : 'Coach removed from bookmarks');
+      return { ...prev, [id]: next };
+    });
+  };
+
+  const handleShareCoach = async (coach: any) => {
+    try {
+      await Share.share({
+        message: `🏆 Check out Coach ${coach.coachName} (${coach.roleTitle}) on NonStricker Sports! Rating: ★ ${coach.rating} · Rate: ${coach.rateText}`,
+      });
+    } catch {
+      triggerToast('Coach profile link copied');
+    }
+  };
+
+  const DEFAULT_COACHES = [
+    {
+      id: 'coach-chloe',
+      coachName: 'Chloe Harrison',
+      roleTitle: 'Product designer & Academy Coach',
+      sportType: 'Football',
+      skills: ['Figma', 'UX Design', 'Tactical Drills'],
+      rating: 4.5,
+      studentsText: '$15K+',
+      studentsLabel: 'Earned',
+      rateText: '$80/hr',
+      feeAmount: 80,
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
+      venue: 'Skyline Arena, Canary Wharf',
+      className: 'Chloe Harrison - Masterclass',
+    },
+    {
+      id: 'coach-vignesh',
+      coachName: 'Vignesh Raj',
+      roleTitle: 'Senior Cricket Batting Specialist',
+      sportType: 'Cricket',
+      skills: ['Power Hitting', 'Cover Drive', 'BCCI Level 2'],
+      rating: 4.9,
+      studentsText: '140+',
+      studentsLabel: 'Students',
+      rateText: '₹1,000/hr',
+      feeAmount: 1000,
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+      venue: 'Grand Turf, Trichy',
+      className: 'Vignesh Raj - Elite Batting Camp',
+    },
+    {
+      id: 'coach-antony',
+      coachName: 'Antony Rozario',
+      roleTitle: 'Pace & Seam Bowling Master',
+      sportType: 'Cricket',
+      skills: ['Inswing & Outswing', 'Death Overs', 'Fitness'],
+      rating: 4.8,
+      studentsText: '95+',
+      studentsLabel: 'Students',
+      rateText: '₹1,200/hr',
+      feeAmount: 1200,
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
+      venue: 'Lord’s Nets, Trichy',
+      className: 'Antony Rozario - Fast Bowling Clinic',
+    },
+    {
+      id: 'coach-sarah',
+      coachName: 'Sarah Jenkins',
+      roleTitle: 'Youth Badminton & Tennis Specialist',
+      sportType: 'Badminton',
+      skills: ['Smash Control', 'Footwork Agility', 'BWF Pro'],
+      rating: 4.75,
+      studentsText: '80+',
+      studentsLabel: 'Students',
+      rateText: '₹750/hr',
+      feeAmount: 750,
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
+      venue: 'The Grid Sports Complex',
+      className: 'Sarah Jenkins - Racket Academy',
+    },
+  ];
+
+  // Coaching list matching the search and sport filters
+  const displayedCoaches = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return classes.filter((c: any) => {
-      const sportOk =
-        selectedSport === 'All' ||
-        String(c.sportType || '').toLowerCase() === selectedSport.toLowerCase();
+    const userCoaches = (classes || []).map((cls: any, idx: number) => ({
+      id: cls.id || `class-coach-${idx}`,
+      coachName: cls.coachName || cls.instructorName || (cls.className ? cls.className.split(' - ')[0] : 'Coach Specialist'),
+      roleTitle: `${cls.classType || 'Academy Specialist'} • ${cls.sportType || 'Cricket'}`,
+      sportType: cls.sportType || 'Cricket',
+      skills: [cls.sportType, cls.classType, cls.ageGroup || 'All Ages'].filter(Boolean),
+      rating: cls.rating || 4.9,
+      studentsText: `${18 + idx * 6}+`,
+      studentsLabel: 'Students',
+      rateText: cls.feeAmount ? `₹${cls.feeAmount}/hr` : 'Free',
+      feeAmount: cls.feeAmount || 0,
+      avatar: cls.avatar || cls.image || (idx % 2 === 0 ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80' : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80'),
+      venue: cls.venue || 'Local Arena',
+      className: cls.className,
+      rawClass: cls,
+    }));
+
+    const all = [...userCoaches, ...DEFAULT_COACHES];
+    const seen = new Set<string>();
+    const deduped = all.filter(c => {
+      const key = (c.coachName || '').toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return deduped.filter(c => {
+      const sportOk = selectedSport === 'All' || c.sportType.toLowerCase() === selectedSport.toLowerCase();
       if (!sportOk) return false;
       if (!q) return true;
       return (
-        String(c.className || '').toLowerCase().includes(q) ||
-        String(c.venue || '').toLowerCase().includes(q) ||
-        String(c.sportType || '').toLowerCase().includes(q)
+        c.coachName.toLowerCase().includes(q) ||
+        c.roleTitle.toLowerCase().includes(q) ||
+        c.skills.some((s: string) => s.toLowerCase().includes(q))
       );
     });
   }, [classes, searchQuery, selectedSport]);
@@ -145,126 +252,192 @@ export default function ExploreScreen() {
     setFavorites(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Coaching side of Turf Book: real coach-published classes, bookable here.
+  // Coaching side of Turf Book: Frosted glassmorphism coach profile cards
   const renderCoachingList = () => (
-    <View style={[styles.section, { gap: 14, paddingBottom: 110 }]}>
-      {coachingClasses.length === 0 ? (
+    <View style={[styles.section, { gap: 18, paddingBottom: 120 }]}>
+      {displayedCoaches.length === 0 ? (
         <View style={{ alignItems: 'center', paddingVertical: 48, paddingHorizontal: Spacing.lg }}>
           <Ionicons name="school-outline" size={44} color={theme.textSecondary} />
           <ThemedText style={{ color: theme.text, fontSize: 14, fontFamily: 'Sora_700Bold', marginTop: 12 }}>
-            No classes available
+            No coaches available
           </ThemedText>
           <ThemedText
             style={{ color: theme.textSecondary, fontSize: 12, lineHeight: 18, textAlign: 'center', marginTop: 6 }}
           >
-            {classes.length === 0
-              ? 'No coach has published a class yet. Check back soon.'
-              : 'No class matches your current sport or search filter.'}
+            No coach matches your current sport or search filter. Try choosing 'All' sports.
           </ThemedText>
-          <Pressable onPress={() => router.push('/coach')} accessibilityRole="button" style={{ marginTop: 16 }}>
+          <Pressable
+            onPress={() => {
+              setSelectedSport('All');
+              setSearchQuery('');
+            }}
+            accessibilityRole="button"
+            style={{ marginTop: 16 }}
+          >
             <ThemedText style={{ color: theme.primary, fontSize: 12.5, fontFamily: 'Sora_700Bold' }}>
-              Browse all coaches →
+              Reset Filters →
             </ThemedText>
           </Pressable>
         </View>
       ) : (
-        <>
-          {coachingClasses.map((cls: any) => {
-            const taken = enrollmentCountForClass(cls.id);
-            const capacity = parseInt(String(cls.maxStudents || ''), 10);
-            const seatsLeft = isNaN(capacity) ? null : Math.max(0, capacity - taken);
-            const full = seatsLeft === 0;
+        displayedCoaches.map((coach: any, idx: number) => {
+          const isBookmarked = !!bookmarkedCoaches[coach.id];
 
-            return (
-              <Pressable
-                key={cls.id}
-                onPress={() =>
-                  router.push({
-                    pathname: '/enroll',
-                    params: {
-                      classId: cls.id,
-                      title: cls.className,
-                      price: String(cls.feeAmount || 0),
-                      dates: [cls.startDate, cls.endDate].filter(Boolean).join(' – '),
-                      location: cls.venue || 'TBD',
-                    },
-                  })
-                }
-                disabled={full}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  full
-                    ? `${cls.className} is full`
-                    : `Book ${cls.className}, ${cls.feeAmount ? `₹${cls.feeAmount}` : 'free'}`
-                }
-                style={[
-                  styles.classCard,
-                  {
-                    backgroundColor: theme.surfaceLowest,
-                    borderColor: theme.outlineVariant + '33',
-                    opacity: full ? 0.6 : 1,
-                  },
-                  Shadows.level2,
-                ]}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText
-                      style={{ color: theme.text, fontSize: 14, lineHeight: 19, fontFamily: 'Sora_700Bold' }}
-                      numberOfLines={2}
-                    >
-                      {cls.className}
-                    </ThemedText>
-                    <ThemedText
-                      style={{ color: theme.textSecondary, fontSize: 11.5, lineHeight: 16, marginTop: 4 }}
-                      numberOfLines={2}
-                    >
-                      {[cls.sportType, cls.classType, cls.ageGroup].filter(Boolean).join(' • ')}
+          return (
+            <Reanimated.View
+              key={coach.id || `coach-card-${idx}`}
+              entering={FadeInDown.delay(idx * 60).duration(380)}
+              style={[styles.frostedCoachCard, Shadows.level2]}
+            >
+              {/* Soft Frosted Glass Gradient Background */}
+              <LinearGradient
+                colors={['#f8fbfe', '#e8f4fc', '#d8eefc']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+
+              {/* Top Row: Avatar + Minimalist Share Button */}
+              <View style={styles.coachCardTopRow}>
+                <Image
+                  source={{ uri: coach.avatar }}
+                  style={styles.coachAvatar}
+                  contentFit="cover"
+                />
+                <Pressable
+                  onPress={() => handleShareCoach(coach)}
+                  style={styles.coachShareBtn}
+                  hitSlop={8}
+                  accessibilityLabel="Share profile"
+                >
+                  <Ionicons name="share-outline" size={18} color="#0f172a" />
+                </Pressable>
+              </View>
+
+              {/* Coach Name & Role Title */}
+              <ThemedText style={styles.coachNameText} numberOfLines={1}>
+                {coach.coachName}
+              </ThemedText>
+              <ThemedText style={styles.coachRoleText} numberOfLines={1}>
+                {coach.roleTitle}
+              </ThemedText>
+
+              {/* Skill / Focus Tags */}
+              <View style={styles.coachSkillRow}>
+                {coach.skills.slice(0, 3).map((skill: string, sIdx: number) => (
+                  <View key={sIdx} style={styles.coachSkillPill}>
+                    <ThemedText style={styles.coachSkillText}>
+                      {skill}
                     </ThemedText>
                   </View>
-                  <ThemedText style={{ color: theme.primary, fontSize: 14, fontFamily: 'Sora_700Bold' }}>
-                    {cls.feeAmount ? `₹${cls.feeAmount}` : 'Free'}
+                ))}
+              </View>
+
+              {/* 3-Column Metrics Ribbon */}
+              <View style={styles.coachMetricsRibbon}>
+                {/* Metric 1: Rating */}
+                <View style={styles.coachMetricCol}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                    <Ionicons name="star" size={13} color="#0f172a" />
+                    <ThemedText style={styles.coachMetricVal}>
+                      {coach.rating}
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={styles.coachMetricLabel}>
+                    Rating
                   </ThemedText>
                 </View>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
-                    <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
-                    <ThemedText
-                      style={{ color: theme.textSecondary, fontSize: 11, flexShrink: 1 }}
-                      numberOfLines={1}
-                    >
-                      {cls.venue || 'Venue TBD'}
-                    </ThemedText>
-                  </View>
-                  {seatsLeft !== null && (
-                    <ThemedText
-                      style={{
-                        color: full ? '#b91c1c' : '#0f9f58',
-                        fontSize: 11,
-                        fontFamily: 'Sora_600SemiBold',
-                      }}
-                    >
-                      {full ? 'Full' : `${seatsLeft} seats left`}
-                    </ThemedText>
-                  )}
+                {/* Metric 2: Earned / Students */}
+                <View style={styles.coachMetricCol}>
+                  <ThemedText style={styles.coachMetricVal}>
+                    {coach.studentsText}
+                  </ThemedText>
+                  <ThemedText style={styles.coachMetricLabel}>
+                    {coach.studentsLabel}
+                  </ThemedText>
                 </View>
-              </Pressable>
-            );
-          })}
 
-          <Pressable
-            onPress={() => router.push('/coach')}
-            accessibilityRole="button"
-            accessibilityLabel="Browse all coaches"
-            style={{ alignSelf: 'center', paddingVertical: 8 }}
-          >
-            <ThemedText style={{ color: theme.primary, fontSize: 12.5, fontFamily: 'Sora_700Bold' }}>
-              Browse all coaches →
-            </ThemedText>
-          </Pressable>
-        </>
+                {/* Metric 3: Rate */}
+                <View style={styles.coachMetricCol}>
+                  <ThemedText style={styles.coachMetricVal}>
+                    {coach.rateText}
+                  </ThemedText>
+                  <ThemedText style={styles.coachMetricLabel}>
+                    Rate
+                  </ThemedText>
+                </View>
+              </View>
+
+              {/* Bottom Action Buttons: Get In Touch + Bookmark */}
+              <View style={styles.coachActionsRow}>
+                <Pressable
+                  style={styles.coachGetInTouchBtn}
+                  onPress={() => {
+                    if (coach.rawClass) {
+                      router.push({
+                        pathname: '/enroll',
+                        params: {
+                          classId: coach.rawClass.id,
+                          title: coach.rawClass.className,
+                          price: String(coach.rawClass.feeAmount || 0),
+                          dates: [coach.rawClass.startDate, coach.rawClass.endDate].filter(Boolean).join(' – '),
+                          location: coach.rawClass.venue || 'TBD',
+                        },
+                      });
+                    } else {
+                      router.push({
+                        pathname: '/coach/[id]',
+                        params: {
+                          id: coach.id,
+                          name: coach.coachName,
+                          specialty: coach.roleTitle,
+                          rating: String(coach.rating),
+                          rate: coach.rateText,
+                          avatar: coach.avatar,
+                        },
+                      });
+                    }
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Get in touch with ${coach.coachName}`}
+                >
+                  <ThemedText style={styles.coachGetInTouchText}>
+                    Get in touch
+                  </ThemedText>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.coachBookmarkBtn,
+                    isBookmarked && { backgroundColor: theme.primary + '18', borderColor: theme.primary },
+                  ]}
+                  onPress={() => toggleBookmarkCoach(coach.id)}
+                  hitSlop={6}
+                  accessibilityLabel="Bookmark coach"
+                >
+                  <Ionicons
+                    name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+                    size={18}
+                    color={isBookmarked ? theme.primary : '#0f172a'}
+                  />
+                </Pressable>
+              </View>
+            </Reanimated.View>
+          );
+        })
       )}
+
+      <Pressable
+        onPress={() => router.push('/coach')}
+        accessibilityRole="button"
+        accessibilityLabel="Browse all coaches"
+        style={{ alignSelf: 'center', paddingVertical: 8 }}
+      >
+        <ThemedText style={{ color: theme.primary, fontSize: 12.5, fontFamily: 'Sora_700Bold' }}>
+          Browse all coaches →
+        </ThemedText>
+      </Pressable>
     </View>
   );
 
@@ -969,6 +1142,139 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 14,
     marginBottom: 12,
+  },
+  frostedCoachCard: {
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+    padding: 22,
+    paddingBottom: 20,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#e0f2fe',
+    shadowColor: '#0284c7',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 4,
+  },
+  coachCardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  coachAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2.5,
+    borderColor: '#ffffff',
+    backgroundColor: '#cbd5e1',
+  },
+  coachShareBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+  },
+  coachNameText: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 18,
+    color: '#0f172a',
+    marginTop: 14,
+    letterSpacing: -0.3,
+  },
+  coachRoleText: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 13,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  coachSkillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  coachSkillPill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4.5,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+  },
+  coachSkillText: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 11,
+    color: '#64748b',
+  },
+  coachMetricsRibbon: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+    paddingHorizontal: 6,
+  },
+  coachMetricCol: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  coachMetricVal: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 15.5,
+    color: '#0f172a',
+  },
+  coachMetricLabel: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  coachActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 20,
+  },
+  coachGetInTouchBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.98)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  coachGetInTouchText: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 13.5,
+    color: '#0f172a',
+  },
+  coachBookmarkBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   scrollContent: {
     paddingBottom: 40,

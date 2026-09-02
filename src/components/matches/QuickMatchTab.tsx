@@ -548,6 +548,13 @@ export function QuickMatchTab({
     const winner = tossResult === tossCall ? tossCaller : (tossCaller === 'A' ? 'B' : 'A');
     const tossWinnerName = winner === 'A' ? teamAName.trim() : teamBName.trim();
 
+    // Carry the selected Playing XI through to the console. Keyed by team NAME
+    // rather than A/B, because the console re-resolves squads on every innings
+    // swap and would otherwise hand the wrong list to the wrong side.
+    const lineup: Record<string, Player[]> = {};
+    if (teamALineup.length > 0) lineup[teamAName.trim().toLowerCase()] = teamALineup;
+    if (teamBLineup.length > 0) lineup[teamBName.trim().toLowerCase()] = teamBLineup;
+
     router.push({
       pathname: '/scoring',
       params: {
@@ -560,6 +567,7 @@ export function QuickMatchTab({
         autoWide: autoWideRule ? '1' : '0',
         autoNoBall: autoNoBallRule ? '1' : '0',
         allowByes: allowByesRule ? '1' : '0',
+        ...(Object.keys(lineup).length > 0 ? { lineup: JSON.stringify(lineup) } : {}),
       },
     });
   };
@@ -1152,32 +1160,6 @@ export function QuickMatchTab({
             </View>
           </View>
         </View>
-
-        {/* ── PLAYING XI (Pre-match player selection — optional, can be skipped) ── */}
-        {areTeamsValid && (
-          <Pressable
-            onPress={() => setIsPlayerSelectionOpen(true)}
-            style={[
-              styles_playingXi.card,
-              { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
-            ]}
-          >
-            <View style={[styles_playingXi.iconWrap, { backgroundColor: theme.primary + '18' }]}>
-              <Ionicons name={lineupConfigured ? 'people' : 'people-outline'} size={16} color={theme.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <ThemedText style={[styles_playingXi.title, { color: theme.text }]}>
-                {lineupConfigured ? 'Playing XI selected' : 'Select Playing XI'}
-              </ThemedText>
-              <ThemedText style={[styles_playingXi.subtitle, { color: theme.textSecondary }]}>
-                {lineupConfigured
-                  ? `${teamALineup.length} vs ${teamBLineup.length} players assigned — tap to edit`
-                  : 'Optional — drag players into each team, or skip and set this up later'}
-              </ThemedText>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-          </Pressable>
-        )}
 
         {/* ── MATCH TIMING, TYPE, & GROUND NAME CONTROLS ── */}
         <View style={{ marginBottom: 8, backgroundColor: theme.surfaceLow, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '44' }}>
@@ -1828,6 +1810,34 @@ export function QuickMatchTab({
           </View>
         )}
       </ScrollView>
+
+        {/* ── PLAYING XI — offered AFTER the toss, and always skippable:
+            Start Match never requires it. ── */}
+        {isTossDone && isRolePicked && (
+          <Pressable
+            onPress={() => setIsPlayerSelectionOpen(true)}
+            style={[
+              styles_playingXi.card,
+              { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+            ]}
+          >
+            <View style={[styles_playingXi.iconWrap, { backgroundColor: theme.primary + '18' }]}>
+              <Ionicons name={lineupConfigured ? 'people' : 'people-outline'} size={16} color={theme.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText style={[styles_playingXi.title, { color: theme.text }]}>
+                {lineupConfigured ? 'Playing XI selected' : 'Select Playing XI'}
+              </ThemedText>
+              <ThemedText style={[styles_playingXi.subtitle, { color: theme.textSecondary }]}>
+                {lineupConfigured
+                  ? `${teamALineup.length} vs ${teamBLineup.length} players assigned — tap to edit`
+                  : 'Optional — pick who plays, or continue without it'}
+              </ThemedText>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+          </Pressable>
+        )}
+
 
       {/* ── Toss or Start Action Button ─────────────────────────── */}
       <View style={[styles.actionsContainer, { backgroundColor: theme.surfaceLowest }]}>
