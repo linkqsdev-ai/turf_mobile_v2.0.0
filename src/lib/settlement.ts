@@ -173,20 +173,82 @@ export function isPayable(s: Settlement): boolean {
 /* ────────────────────────────────────────────────────────────────────────── */
 
 /**
- * pending    booking taken, inside the cancellation window — not yet owed
- * payable    window passed, the money is owed and can be batched
+ * ── Escrow ───────────────────────────────────────────────────────────────
+ *
+ * The player's payment lands with the platform, not the venue. It is held for
+ * 24 hours and then auto-credits to the owner's account. The hold exists so a
+ * cancellation or dispute inside the first day can be refunded from money we
+ * still control, rather than clawed back from an owner who has already been
+ * paid.
+ *
+ * The clock starts when the booking is taken, not when the slot is played.
+ */
+export const HOLD_PERIOD_HOURS = 24;
+
+const HOLD_PERIOD_MS = HOLD_PERIOD_HOURS * 60 * 60 * 1000;
+
+/** The moment a held payment becomes creditable. */
+export function releaseAt(bookedAtIso: string): Date {
+  return new Date(new Date(bookedAtIso).getTime() + HOLD_PERIOD_MS);
+}
+
+/** Whether the hold window has elapsed. */
+export function isReleased(bookedAtIso: string, now: Date = new Date()): boolean {
+  const at = releaseAt(bookedAtIso);
+  return Number.isFinite(at.getTime()) && now.getTime() >= at.getTime();
+}
+
+/** Milliseconds until auto-credit; 0 once released. */
+export function msUntilRelease(bookedAtIso: string, now: Date = new Date()): number {
+  const at = releaseAt(bookedAtIso).getTime();
+  if (!Number.isFinite(at)) return 0;
+  return Math.max(0, at - now.getTime());
+}
+
+/** "Crediting in 7h 20m" / "Credited" — the countdown an owner actually sees. */
+export function formatTimeUntilRelease(bookedAtIso: string, now: Date = new Date()): string {
+  const ms = msUntilRelease(bookedAtIso, now);
+  if (ms <= 0) return 'Released';
+  const totalMinutes = Math.ceil(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours <= 0) return `${minutes}m`;
+  return `${hours}h ${minutes}m`;
+}
+
+/**
+ * held       player has paid; the platform is holding the money (< 24h)
+ * payable    hold elapsed, the money is owed and queued for auto-credit
  * processing a transfer has been initiated to the payee's bank/UPI
- * paid       transfer confirmed
+ * paid       credited to the owner's account
  * failed     transfer rejected (bad account, etc.) — returns to `payable`
- * on_hold    withheld pending a dispute or KYC/GST issue
+ * on_hold    withheld beyond the normal window: dispute, refund, or KYC/GST gap
+ * refunded   returned to the player during the hold; never reaches the owner
  */
 export type PayoutStatus =
-  | 'pending'
+  | 'held'
   | 'payable'
   | 'processing'
   | 'paid'
   | 'failed'
-  | 'on_hold';
+  | 'on_hold'
+  | 'refunded';
+
+/**
+ * Where a single booking's money sits right now, given the clock and whether a
+ * transfer has already been attempted. `settled` short-circuits everything: a
+ * payment that has been paid, refunded or manually held does not revert just
+ * because time passed.
+ */
+export function escrowStatus(
+  bookedAtIso: string,
+  settled?: PayoutStatus | null,
+  now: Date = new Date()
+): PayoutStatus {
+  if (settled === 'paid' || settled === 'refunded' || settled === 'on_hold') return settled;
+  if (settled === 'processing' || settled === 'failed') return settled;
+  return isReleased(bookedAtIso, now) ? 'payable' : 'held';
+}
 
 export interface PayoutLine {
   bookingId: string;
@@ -215,13 +277,16 @@ export interface PayoutBatch {
 
 /** Which status transitions are legal. Anything else is a bug, not a retry. */
 const ALLOWED_TRANSITIONS: Record<PayoutStatus, PayoutStatus[]> = {
-  pending: ['payable', 'on_hold'],
+  // Inside the 24h window the money can still go back to the player.
+  held: ['payable', 'on_hold', 'refunded'],
   payable: ['processing', 'on_hold'],
   processing: ['paid', 'failed'],
   // A failed transfer is re-attemptable; it does not vanish.
   failed: ['payable', 'on_hold'],
-  on_hold: ['payable'],
+  on_hold: ['payable', 'refunded'],
+  // Terminal: money has left our account in one direction or the other.
   paid: [],
+  refunded: [],
 };
 
 export function canTransition(from: PayoutStatus, to: PayoutStatus): boolean {
@@ -257,6 +322,7 @@ export function createPayoutBatch(params: {
   return {
     ...params,
     ...totals,
-    status: 'pending',
+    // A fresh batch starts in escrow; the 24h clock decides when it is payable.
+    status: 'held',
   };
 }

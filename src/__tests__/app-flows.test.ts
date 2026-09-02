@@ -17,6 +17,10 @@ import {
   assertSettlementBalances,
   summarisePayout,
   canTransition,
+  escrowStatus,
+  isReleased,
+  msUntilRelease,
+  formatTimeUntilRelease,
   PLATFORM_FEE_PER_SLOT,
   type PayoutLine,
 } from '../lib/settlement';
@@ -299,12 +303,48 @@ export function runAllMobileTests() {
     assertEqual(totals.totalPlatformDeduction, 9, 'Deductions are 6 + 3');
   });
 
-  runTest('Payout status machine allows retries but never resurrects a paid batch', () => {
-    assert(canTransition('pending', 'payable'), 'pending -> payable is allowed');
+  runTest('Payout status machine allows retries but never resurrects a settled batch', () => {
+    assert(canTransition('held', 'payable'), 'held -> payable is allowed once the 24h clock elapses');
+    assert(canTransition('held', 'refunded'), 'Money in escrow can still go back to the player');
     assert(canTransition('processing', 'failed'), 'processing -> failed is allowed');
     assert(canTransition('failed', 'payable'), 'A failed transfer must be retryable');
     assert(!canTransition('paid', 'payable'), 'A paid batch is terminal');
-    assert(!canTransition('pending', 'paid'), 'Cannot skip straight to paid');
+    assert(!canTransition('refunded', 'payable'), 'A refunded booking is terminal');
+    assert(!canTransition('held', 'paid'), 'Cannot skip escrow and pay straight out');
+  });
+
+  runTest('Payment is held for 24h then auto-credits to the owner', () => {
+    const booked = '2026-09-01T10:00:00.000Z';
+
+    const justBooked = new Date('2026-09-01T10:00:01.000Z');
+    assertEqual(escrowStatus(booked, null, justBooked), 'held', 'Money is held immediately after booking');
+    assert(!isReleased(booked, justBooked), 'Not released one second in');
+
+    const nearlyThere = new Date('2026-09-02T09:59:00.000Z');
+    assertEqual(escrowStatus(booked, null, nearlyThere), 'held', 'Still held at 23h59m');
+
+    const exactly24h = new Date('2026-09-02T10:00:00.000Z');
+    assert(isReleased(booked, exactly24h), 'Released exactly on the 24h boundary');
+    assertEqual(escrowStatus(booked, null, exactly24h), 'payable', 'Auto-credits at T+24h');
+
+    assertEqual(msUntilRelease(booked, exactly24h), 0, 'No time remains once released');
+    assert(msUntilRelease(booked, justBooked) > 0, 'Time remains while held');
+  });
+
+  runTest('A settled payment does not revert just because time passed', () => {
+    const booked = '2026-09-01T10:00:00.000Z';
+    const later = new Date('2026-09-05T10:00:00.000Z');
+    assertEqual(escrowStatus(booked, 'paid', later), 'paid', 'A paid booking stays paid');
+    assertEqual(escrowStatus(booked, 'refunded', later), 'refunded', 'A refunded booking stays refunded');
+    assertEqual(escrowStatus(booked, 'on_hold', later), 'on_hold', 'A disputed booking stays on hold');
+    assertEqual(escrowStatus(booked, 'failed', later), 'failed', 'A failed transfer is not silently re-released');
+  });
+
+  runTest('Countdown to auto-credit reads in hours and minutes', () => {
+    const booked = '2026-09-01T10:00:00.000Z';
+    assertEqual(formatTimeUntilRelease(booked, new Date('2026-09-01T10:00:00.000Z')), '24h 0m', 'Full window at booking');
+    assertEqual(formatTimeUntilRelease(booked, new Date('2026-09-02T09:30:00.000Z')), '30m', 'Under an hour shows minutes only');
+    assertEqual(formatTimeUntilRelease(booked, new Date('2026-09-03T00:00:00.000Z')), 'Released', 'Past the window reads Released');
   });
 
   console.log('\n🏦 [7] PAYEE GST & PAYMENT DETAIL VALIDATION TESTS:');
