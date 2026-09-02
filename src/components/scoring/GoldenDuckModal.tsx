@@ -141,7 +141,7 @@ export function GoldenDuckModal({
 
             {bowlerName ? (
               <ThemedText style={styles.bowlerSubtext}>
-                Dismissed by <ThemedText style={{ fontFamily: 'Sora_800ExtraBold', color: '#d97706' }}>{bowlerName}</ThemedText>
+                Dismissed by <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: '#d97706' }}>{bowlerName}</ThemedText>
               </ThemedText>
             ) : null}
 
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   },
   batsmanName: {
     fontSize: 18,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     color: '#0f172a',
     textAlign: 'center',
   },
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   scoreText: {
     color: '#dc2626',
     fontSize: 11.5,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   bowlerSubtext: {
     fontSize: 11.5,
@@ -271,6 +271,6 @@ const styles = StyleSheet.create({
   dismissBtnText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
 });

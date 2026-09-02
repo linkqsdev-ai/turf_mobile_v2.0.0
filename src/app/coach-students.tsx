@@ -286,7 +286,7 @@ export default function CoachStudentsScreen() {
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </Pressable>
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
+            <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
               Academy Student Roster
             </ThemedText>
             <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 11 }}>
@@ -306,10 +306,10 @@ export default function CoachStudentsScreen() {
           {/* Financial & Attendance Metrics Overview Bar */}
           <View style={[styles.metricsBanner, { backgroundColor: theme.primaryContainer }, Shadows.level3]}>
             <View style={styles.metricItem}>
-              <ThemedText style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+              <ThemedText style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                 STUDENTS
               </ThemedText>
-              <ThemedText style={{ color: '#ffffff', fontSize: 18, fontFamily: 'Sora_800ExtraBold', marginTop: 2 }}>
+              <ThemedText style={{ color: '#ffffff', fontSize: 18, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                 {filteredStudents.length}
               </ThemedText>
             </View>
@@ -317,10 +317,10 @@ export default function CoachStudentsScreen() {
             <View style={[styles.metricDivider, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]} />
 
             <View style={styles.metricItem}>
-              <ThemedText style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+              <ThemedText style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                 FEES PAID
               </ThemedText>
-              <ThemedText style={{ color: '#4ade80', fontSize: 18, fontFamily: 'Sora_800ExtraBold', marginTop: 2 }}>
+              <ThemedText style={{ color: '#4ade80', fontSize: 18, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                 ₹{totalPaid.toLocaleString()}
               </ThemedText>
             </View>
@@ -328,10 +328,10 @@ export default function CoachStudentsScreen() {
             <View style={[styles.metricDivider, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]} />
 
             <View style={styles.metricItem}>
-              <ThemedText style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+              <ThemedText style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                 TOTAL DUE
               </ThemedText>
-              <ThemedText style={{ color: totalDue > 0 ? '#f87171' : '#ffffff', fontSize: 18, fontFamily: 'Sora_800ExtraBold', marginTop: 2 }}>
+              <ThemedText style={{ color: totalDue > 0 ? '#f87171' : '#ffffff', fontSize: 18, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                 ₹{totalDue.toLocaleString()}
               </ThemedText>
             </View>
@@ -339,10 +339,10 @@ export default function CoachStudentsScreen() {
             <View style={[styles.metricDivider, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]} />
 
             <View style={styles.metricItem}>
-              <ThemedText style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+              <ThemedText style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                 AVG ATT.
               </ThemedText>
-              <ThemedText style={{ color: '#ffffff', fontSize: 18, fontFamily: 'Sora_800ExtraBold', marginTop: 2 }}>
+              <ThemedText style={{ color: '#ffffff', fontSize: 18, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                 {avgAttendance}%
               </ThemedText>
             </View>
@@ -368,7 +368,7 @@ export default function CoachStudentsScreen() {
 
           {/* Class Variant Selector Chips */}
           <View style={styles.sectionMargin}>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 8, fontFamily: 'Sora_700Bold', letterSpacing: 0.5 }}>
+            <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 8, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5 }}>
               CLASS VARIANTS
             </ThemedText>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -464,14 +464,14 @@ export default function CoachStudentsScreen() {
                       </View>
 
                       <View style={{ flex: 1, marginLeft: 12 }}>
-                        <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 16 }}>
+                        <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 16 }}>
                           {student.name}
                         </ThemedText>
 
                         {/* Registered Class Tag */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
                           <Ionicons name="school-outline" size={13} color={theme.primary} style={{ marginRight: 4 }} />
-                          <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
                             {student.registeredClass}
                           </ThemedText>
                         </View>
@@ -485,10 +485,10 @@ export default function CoachStudentsScreen() {
                     {/* Financial Ledger Section: Paid & Due Breakdown */}
                     <View style={[styles.ledgerRow, { backgroundColor: theme.surfaceLow }]}>
                       <View style={styles.ledgerCol}>
-                        <ThemedText style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
                           PAID AMOUNT
                         </ThemedText>
-                        <ThemedText style={{ color: '#16a34a', fontSize: 13, fontFamily: 'Sora_700Bold', marginTop: 1 }}>
+                        <ThemedText style={{ color: '#16a34a', fontSize: 13, fontFamily: 'Sora_600SemiBold', marginTop: 1 }}>
                           ₹{student.paidAmount.toLocaleString()}
                         </ThemedText>
                       </View>
@@ -496,10 +496,10 @@ export default function CoachStudentsScreen() {
                       <View style={[styles.vDivider, { backgroundColor: theme.outlineVariant + '33' }]} />
 
                       <View style={styles.ledgerCol}>
-                        <ThemedText style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
                           DUE AMOUNT
                         </ThemedText>
-                        <ThemedText style={{ color: student.dueAmount > 0 ? '#dc2626' : theme.textSecondary, fontSize: 13, fontFamily: 'Sora_700Bold', marginTop: 1 }}>
+                        <ThemedText style={{ color: student.dueAmount > 0 ? '#dc2626' : theme.textSecondary, fontSize: 13, fontFamily: 'Sora_600SemiBold', marginTop: 1 }}>
                           ₹{student.dueAmount.toLocaleString()}
                         </ThemedText>
                       </View>
@@ -507,10 +507,10 @@ export default function CoachStudentsScreen() {
                       <View style={[styles.vDivider, { backgroundColor: theme.outlineVariant + '33' }]} />
 
                       <View style={styles.ledgerCol}>
-                        <ThemedText style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
                           ATTENDANCE
                         </ThemedText>
-                        <ThemedText style={{ color: attendanceColor, fontSize: 13, fontFamily: 'Sora_700Bold', marginTop: 1 }}>
+                        <ThemedText style={{ color: attendanceColor, fontSize: 13, fontFamily: 'Sora_600SemiBold', marginTop: 1 }}>
                           {student.attendancePercent}% ({student.attendedSessions}/{student.totalSessions})
                         </ThemedText>
                       </View>
@@ -520,10 +520,10 @@ export default function CoachStudentsScreen() {
                     <View style={{ marginTop: 10 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                         <ThemedText style={{ color: theme.textSecondary, fontSize: 10 }}>
-                          Sessions Occupied: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>{student.attendedSessions} of {student.totalSessions} Sessions</ThemedText>
+                          Sessions Occupied: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>{student.attendedSessions} of {student.totalSessions} Sessions</ThemedText>
                         </ThemedText>
                         <ThemedText style={{ color: theme.textSecondary, fontSize: 10 }}>
-                          Next: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_700Bold' }}>{student.nextSessionTime}</ThemedText>
+                          Next: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>{student.nextSessionTime}</ThemedText>
                         </ThemedText>
                       </View>
 
@@ -552,7 +552,7 @@ export default function CoachStudentsScreen() {
                         onPress={() => Linking.openURL(`tel:${student.phone}`)}
                       >
                         <Ionicons name="call-outline" size={15} color={theme.primary} />
-                        <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_700Bold', marginLeft: 4 }}>
+                        <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_600SemiBold', marginLeft: 4 }}>
                           Call
                         </ThemedText>
                       </Pressable>
@@ -562,7 +562,7 @@ export default function CoachStudentsScreen() {
                         onPress={() => toggleAttendanceMark(student.id, student.name)}
                       >
                         <Ionicons name={isMarked ? 'checkmark-circle' : 'close-circle'} size={15} color={isMarked ? '#16a34a' : '#dc2626'} />
-                        <ThemedText style={{ color: isMarked ? '#16a34a' : '#dc2626', fontSize: 11, fontFamily: 'Sora_700Bold', marginLeft: 4 }}>
+                        <ThemedText style={{ color: isMarked ? '#16a34a' : '#dc2626', fontSize: 11, fontFamily: 'Sora_600SemiBold', marginLeft: 4 }}>
                           {isMarked ? 'Marked Present' : 'Mark Present'}
                         </ThemedText>
                       </Pressable>
@@ -583,7 +583,7 @@ export default function CoachStudentsScreen() {
                           }
                         })}
                       >
-                        <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
                           View Details
                         </ThemedText>
                         <Ionicons name="chevron-forward" size={14} color="#ffffff" style={{ marginLeft: 2 }} />
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
   },
   classChipText: {
     fontSize: 11.5,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   feeFilterRow: {
     flexDirection: 'row',
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
   },
   feeTabText: {
     fontSize: 11,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   studentCard: {
     borderRadius: BorderRadius.xl,

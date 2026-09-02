@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     color: '#ffffff',
     letterSpacing: 0.2,
   },
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   },
   playerName: {
     fontSize: 14.5,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     color: '#0f172a',
     flex: 1,
   },
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   },
   phoneText: {
     fontSize: 10.5,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     color: '#3730a3',
   },
   chainRouteContainer: {
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   },
   chainHeaderTitle: {
     fontSize: 9.5,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     color: '#6366f1',
     letterSpacing: 0.6,
   },
@@ -377,12 +377,12 @@ const styles = StyleSheet.create({
   },
   nodeIndexText: {
     fontSize: 9,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     color: '#ffffff',
   },
   nodeNameText: {
     fontSize: 11,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     color: '#0f172a',
   },
   nodePhoneHint: {
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   doneBtnText: {
     color: '#ffffff',
     fontSize: 13.5,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 0.3,
   },
 });

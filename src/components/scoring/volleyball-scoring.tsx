@@ -224,7 +224,7 @@ export default function VolleyballScoring({ matchId, teamA = 'Team A', teamB = '
                     <ThemedText
                       key={idx}
                       type="headlineSm"
-                      style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'Sora_700Bold' : 'Sora_400Regular' }}
+                      style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'Sora_600SemiBold' : 'Sora_400Regular' }}
                     >
                       {isCurrent ? pointsA : val}
                     </ThemedText>
@@ -240,7 +240,7 @@ export default function VolleyballScoring({ matchId, teamA = 'Team A', teamB = '
                     <ThemedText
                       key={idx}
                       type="headlineSm"
-                      style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'Sora_700Bold' : 'Sora_400Regular' }}
+                      style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'Sora_600SemiBold' : 'Sora_400Regular' }}
                     >
                       {isCurrent ? pointsB : val}
                     </ThemedText>
@@ -266,7 +266,7 @@ export default function VolleyballScoring({ matchId, teamA = 'Team A', teamB = '
                     <MaterialCommunityIcons name="volleyball" size={14} color="#ffdd33" style={{ marginLeft: 4 }} />
                   )}
                 </View>
-                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'Sora_800ExtraBold', marginVertical: Spacing.sm }}>
+                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'Sora_600SemiBold', marginVertical: Spacing.sm }}>
                   {pointsA}
                 </ThemedText>
                 <Pressable
@@ -287,7 +287,7 @@ export default function VolleyballScoring({ matchId, teamA = 'Team A', teamB = '
                     <MaterialCommunityIcons name="volleyball" size={14} color="#ffdd33" style={{ marginLeft: 4 }} />
                   )}
                 </View>
-                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'Sora_800ExtraBold', marginVertical: Spacing.sm }}>
+                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'Sora_600SemiBold', marginVertical: Spacing.sm }}>
                   {pointsB}
                 </ThemedText>
                 <Pressable
@@ -315,7 +315,7 @@ export default function VolleyballScoring({ matchId, teamA = 'Team A', teamB = '
                 <Pressable onPress={() => setAcesA(prev => Math.max(0, prev - 1))} style={styles.adjustBtn}>
                   <Ionicons name="remove" size={14} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'Sora_700Bold', flex: 1 }}>
+                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'Sora_600SemiBold', flex: 1 }}>
                   {acesA} | {acesB}
                 </ThemedText>
                 <Pressable onPress={() => setAcesB(prev => prev + 1)} style={styles.adjustBtn}>
@@ -334,7 +334,7 @@ export default function VolleyballScoring({ matchId, teamA = 'Team A', teamB = '
                 <Pressable onPress={() => setBlocksA(prev => Math.max(0, prev - 1))} style={styles.adjustBtn}>
                   <Ionicons name="remove" size={14} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'Sora_700Bold', flex: 1 }}>
+                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'Sora_600SemiBold', flex: 1 }}>
                   {blocksA} | {blocksB}
                 </ThemedText>
                 <Pressable onPress={() => setBlocksB(prev => prev + 1)} style={styles.adjustBtn}>
@@ -353,7 +353,7 @@ export default function VolleyballScoring({ matchId, teamA = 'Team A', teamB = '
                 <Pressable onPress={() => setErrorsA(prev => Math.max(0, prev - 1))} style={styles.adjustBtn}>
                   <Ionicons name="remove" size={14} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'Sora_700Bold', flex: 1 }}>
+                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'Sora_600SemiBold', flex: 1 }}>
                   {errorsA} | {errorsB}
                 </ThemedText>
                 <Pressable onPress={() => setErrorsB(prev => prev + 1)} style={styles.adjustBtn}>

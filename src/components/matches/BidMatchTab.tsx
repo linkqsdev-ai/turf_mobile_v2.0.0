@@ -486,7 +486,7 @@ export function BidMatchTab({
                 <ThemedText
                   style={{
                     fontSize: 12,
-                    fontFamily: isActive ? 'Sora_700Bold' : 'Sora_500Medium',
+                    fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_500Medium',
                     color: isActive ? '#ffffff' : theme.onPrimaryContainer,
                   }}
                 >
@@ -559,7 +559,7 @@ export function BidMatchTab({
                     style={[
                       styles.sportChipText,
                       { color: isActive ? '#ffffff' : theme.text },
-                      isActive && { fontFamily: 'Sora_800ExtraBold' }
+                      isActive && { fontFamily: 'Sora_600SemiBold' }
                     ]}
                   >
                     {sport.name}
@@ -579,7 +579,7 @@ export function BidMatchTab({
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 0 }]}>Match Timing</ThemedText>
-              <ThemedText style={{ color: '#ef4444', fontSize: 13, fontFamily: 'Sora_800ExtraBold', marginLeft: 3 }}>*</ThemedText>
+              <ThemedText style={{ color: '#ef4444', fontSize: 13, fontFamily: 'Sora_600SemiBold', marginLeft: 3 }}>*</ThemedText>
             </View>
 
             <Pressable
@@ -598,7 +598,7 @@ export function BidMatchTab({
               ]}
             >
               <Ionicons name="time-outline" size={13} color={theme.primary} />
-              <ThemedText style={{ color: theme.primary, fontSize: 12, fontFamily: 'Sora_700Bold' }}>
+              <ThemedText style={{ color: theme.primary, fontSize: 12, fontFamily: 'Sora_600SemiBold' }}>
                 {selectedTiming}
               </ThemedText>
               <Ionicons name="chevron-forward" size={12} color={theme.primary} />
@@ -610,7 +610,7 @@ export function BidMatchTab({
         <View style={styles.inputGroup}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
             <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 0 }]}>Type</ThemedText>
-            <ThemedText style={{ color: '#ef4444', fontSize: 13, fontFamily: 'Sora_800ExtraBold', marginLeft: 3 }}>*</ThemedText>
+            <ThemedText style={{ color: '#ef4444', fontSize: 13, fontFamily: 'Sora_600SemiBold', marginLeft: 3 }}>*</ThemedText>
           </View>
 
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -638,7 +638,7 @@ export function BidMatchTab({
                     }
                   ]}
                 >
-                  <ThemedText style={{ color: isActive ? theme.primary : theme.text, fontSize: 11.5, fontFamily: isActive ? 'Sora_700Bold' : 'Sora_600SemiBold', textAlign: 'center', width: '100%' }}>
+                  <ThemedText style={{ color: isActive ? theme.primary : theme.text, fontSize: 11.5, fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_600SemiBold', textAlign: 'center', width: '100%' }}>
                     {tType.label}
                   </ThemedText>
                 </Pressable>
@@ -809,7 +809,7 @@ export function BidMatchTab({
                     {/* Team Main Info */}
                     <View style={{ flex: 1, marginLeft: 12 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_800ExtraBold', fontSize: 15, flex: 1, marginRight: 8 }} numberOfLines={1}>
+                        <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 15, flex: 1, marginRight: 8 }} numberOfLines={1}>
                           {team.name}
                         </ThemedText>
 
@@ -828,14 +828,14 @@ export function BidMatchTab({
                         </View>
                       </View>
 
-                      <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_700Bold', marginTop: 1 }}>
+                      <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_600SemiBold', marginTop: 1 }}>
                         {team.sport} • <ThemedText style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>{team.division}</ThemedText>
                       </ThemedText>
 
                       {/* Captain & Icon-Only Phone and Chain Controls */}
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                         <ThemedText style={{ color: theme.textSecondary, fontSize: 11 }}>
-                          Captain: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>{team.captain}</ThemedText>
+                          Captain: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>{team.captain}</ThemedText>
                         </ThemedText>
 
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -887,7 +887,7 @@ export function BidMatchTab({
                               { backgroundColor: res === 'W' ? '#22c55e' : '#ef4444' }
                             ]}
                           >
-                            <ThemedText style={{ color: '#ffffff', fontSize: 7.5, fontFamily: 'Sora_800ExtraBold' }}>
+                            <ThemedText style={{ color: '#ffffff', fontSize: 7.5, fontFamily: 'Sora_600SemiBold' }}>
                               {res}
                             </ThemedText>
                           </View>
@@ -901,10 +901,10 @@ export function BidMatchTab({
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Ionicons name="location-outline" size={11} color={theme.textSecondary} style={{ marginRight: 3 }} />
                       <ThemedText style={{ color: theme.textSecondary, fontSize: 10 }}>
-                        Home: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>{team.homeGround}</ThemedText>
+                        Home: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>{team.homeGround}</ThemedText>
                       </ThemedText>
                     </View>
-                    <ThemedText style={{ color: isSelected ? theme.primary : theme.textSecondary, fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                    <ThemedText style={{ color: isSelected ? theme.primary : theme.textSecondary, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                       {isSelected ? '✓ Ready to Bid' : 'Tap to Select'}
                     </ThemedText>
                   </View>
@@ -951,7 +951,7 @@ export function BidMatchTab({
                 <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center' }}>
                   <Ionicons name="calendar" size={18} color={theme.primary} />
                 </View>
-                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_800ExtraBold', color: theme.text }}>
+                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                   Select Start Date
                 </ThemedText>
               </View>
@@ -965,7 +965,7 @@ export function BidMatchTab({
               <Pressable style={{ padding: 6 }}>
                 <Ionicons name="chevron-back" size={20} color={theme.text} />
               </Pressable>
-              <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_800ExtraBold', color: theme.text }}>
+              <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                 August 2026
               </ThemedText>
               <Pressable style={{ padding: 6 }}>
@@ -1020,7 +1020,7 @@ export function BidMatchTab({
                         style={{
                           color: isSelected ? '#ffffff' : isPastDay ? theme.textSecondary : theme.text,
                           fontSize: 13,
-                          fontFamily: isSelected ? 'Sora_800ExtraBold' : 'Sora_500Medium',
+                          fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium',
                         }}
                       >
                         {dayNum}
@@ -1036,7 +1036,7 @@ export function BidMatchTab({
 
             {/* Time Selection Header & Slots */}
             <View>
-              <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, marginBottom: 8 }}>
+              <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, marginBottom: 8 }}>
                 SELECT MATCH TIME
               </ThemedText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
@@ -1064,7 +1064,7 @@ export function BidMatchTab({
                         style={{
                           color: isSelected ? theme.primary : isPassed ? theme.textSecondary : theme.text,
                           fontSize: 11.5,
-                          fontFamily: 'Sora_700Bold',
+                          fontFamily: 'Sora_600SemiBold',
                           textDecorationLine: isPassed ? 'line-through' : 'none',
                         }}
                       >
@@ -1084,7 +1084,7 @@ export function BidMatchTab({
               }}
               style={{ backgroundColor: theme.primary, paddingVertical: 13, borderRadius: 8, alignItems: 'center', marginTop: 4 }}
             >
-              <ThemedText style={{ color: '#ffffff', fontSize: 13.5, fontFamily: 'Sora_800ExtraBold' }}>
+              <ThemedText style={{ color: '#ffffff', fontSize: 13.5, fontFamily: 'Sora_600SemiBold' }}>
                 Confirm Timing ({selectedDay} Aug 2026, {tempTime})
               </ThemedText>
             </Pressable>
@@ -1111,7 +1111,7 @@ export function BidMatchTab({
                   <MaterialCommunityIcons name="clipboard-list-outline" size={20} color={theme.primary} />
                 </View>
                 <View>
-                  <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_800ExtraBold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                     Active Bids & Challenges
                   </ThemedText>
                   <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
@@ -1144,7 +1144,7 @@ export function BidMatchTab({
                   return (
                     <View style={styles.emptyBidsBox}>
                       <Ionicons name="hand-left-outline" size={44} color={theme.textSecondary + '60'} />
-                      <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_700Bold', color: theme.text, marginTop: 8 }}>
+                      <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: theme.text, marginTop: 8 }}>
                         No Active {selectedSport} Bids Found
                       </ThemedText>
                       <ThemedText style={{ fontSize: 11.5, color: theme.textSecondary, textAlign: 'center', marginTop: 4 }}>
@@ -1224,7 +1224,7 @@ export function BidMatchTab({
 
                           {/* Bid Stake Coins */}
                           <View style={[styles.bidStakePill, { backgroundColor: '#8b5cf618', borderColor: '#8b5cf640' }]}>
-                            <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_800ExtraBold', color: '#8b5cf6' }}>
+                            <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: '#8b5cf6' }}>
                               ₹{bid.bidCoins || 100} Coins
                             </ThemedText>
                           </View>
@@ -1235,10 +1235,10 @@ export function BidMatchTab({
                       <View style={styles.matchupRow}>
                         {/* Challenger */}
                         <View style={styles.teamCol}>
-                          <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_800ExtraBold', color: '#64748b', letterSpacing: 0.6, marginBottom: 1 }}>
+                          <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#64748b', letterSpacing: 0.6, marginBottom: 1 }}>
                             CHALLENGER
                           </ThemedText>
-                          <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_800ExtraBold', color: theme.text }} numberOfLines={1}>
+                          <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: theme.text }} numberOfLines={1}>
                             {bid.team1 || 'Rahul XI'}
                           </ThemedText>
                           <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginTop: 1 }}>
@@ -1248,20 +1248,20 @@ export function BidMatchTab({
 
                         {/* VS Badge */}
                         <View style={[styles.vsBadge, { backgroundColor: theme.primary + '18' }]}>
-                          <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_800ExtraBold', color: theme.primary }}>
+                          <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                             VS
                           </ThemedText>
                         </View>
 
                         {/* Opponent Team */}
                         <View style={[styles.teamCol, { alignItems: 'flex-end' }]}>
-                          <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_800ExtraBold', color: '#64748b', letterSpacing: 0.6, marginBottom: 1 }}>
+                          <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#64748b', letterSpacing: 0.6, marginBottom: 1 }}>
                             OPPONENT TEAM
                           </ThemedText>
-                          <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_800ExtraBold', color: theme.text, textAlign: 'right' }} numberOfLines={1}>
+                          <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: theme.text, textAlign: 'right' }} numberOfLines={1}>
                             {opponentName}
                           </ThemedText>
-                          <ThemedText style={{ fontSize: 9.5, color: opponentName !== 'Open Opponent' ? theme.primary : theme.textSecondary, marginTop: 1, fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText style={{ fontSize: 9.5, color: opponentName !== 'Open Opponent' ? theme.primary : theme.textSecondary, marginTop: 1, fontFamily: 'Sora_600SemiBold' }}>
                             {opponentName !== 'Open Opponent' ? 'Direct Challenge' : 'Awaiting Challenger'}
                           </ThemedText>
                         </View>
@@ -1288,7 +1288,7 @@ export function BidMatchTab({
                         <View style={styles.scoreNavBtn}>
                           <ThemedText style={{
                             fontSize: 11.5,
-                            fontFamily: 'Sora_800ExtraBold',
+                            fontFamily: 'Sora_600SemiBold',
                             color: isFinalized ? theme.primary : theme.textSecondary,
                             marginRight: 3
                           }}>
@@ -1375,10 +1375,10 @@ const styles = StyleSheet.create({
   bidIconBadgeText: {
     color: '#ffffff',
     fontSize: 9,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
   },
   stakeLabel: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 9,
     letterSpacing: 1.2,
     color: '#cbd5e1b0',
@@ -1390,7 +1390,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   stakeAmount: {
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 36,
     lineHeight: 40,
     color: '#ffffff',
@@ -1512,13 +1512,13 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 8,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     color: '#94a3b8',
     letterSpacing: 0.5,
   },
   statVal: {
     fontSize: 11,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     marginTop: 1,
   },
   statDivider: {
@@ -1561,12 +1561,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButtonText: {
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 13,
     color: '#ffffff',
   },
   secondaryButtonText: {
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 13,
   },
 

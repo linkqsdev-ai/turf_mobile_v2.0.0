@@ -256,7 +256,7 @@ export function NewMatchTab() {
       <View style={styles.proTipCard}>
         <Ionicons name="bulb-outline" size={16} color="#765b00" />
         <ThemedText style={styles.proTipText}>
-          <ThemedText style={{ fontFamily: 'Sora_700Bold' }}>PRO TIP:</ThemedText> Use the ODI format for matches longer than 40 overs to enable advanced projection stats.
+          <ThemedText style={{ fontFamily: 'Sora_600SemiBold' }}>PRO TIP:</ThemedText> Use the ODI format for matches longer than 40 overs to enable advanced projection stats.
         </ThemedText>
       </View>
 
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 22,
     color: '#191c1e',
   },
@@ -308,13 +308,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   teamSubLabel: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 9,
     color: '#74777f',
     marginBottom: 2,
   },
   teamInput: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 13,
     color: '#191c1e',
     paddingVertical: 4,
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   bentoLabel: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 10,
     letterSpacing: 0.8,
     color: '#74777f',
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   formatPillText: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 13,
   },
   inputGroup: {
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   finalizationTitle: {
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 18,
     color: '#ffffff',
     marginBottom: 4,
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   tossBtnText: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 12,
     color: '#594400',
   },
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   reqTitle: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 10,
     letterSpacing: 0.8,
     color: '#191c1e',

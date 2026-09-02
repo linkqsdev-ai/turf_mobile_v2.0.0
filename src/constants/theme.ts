@@ -97,66 +97,66 @@ export const Typography = {
     hankenRegular: 'Sora_400Regular',
     hankenMedium: 'Sora_500Medium',
     hankenSemiBold: 'Sora_600SemiBold',
-    hankenBold: 'Sora_700Bold',
-    hankenExtraBold: 'Sora_800ExtraBold',
+    hankenBold: 'Sora_600SemiBold',
+    hankenExtraBold: 'Sora_600SemiBold',
     jakartaMedium: 'Sora_500Medium',
-    jakartaBold: 'Sora_700Bold',
+    jakartaBold: 'Sora_600SemiBold',
   },
   // Scale styles mapped from Major Second type scale (Peek analysis)
   displayLg: {
-    fontFamily: 'Sora_800ExtraBold',
-    fontSize: 28,
-    lineHeight: 34,
-    letterSpacing: -0.56,
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 26,
+    lineHeight: 32,
+    letterSpacing: -0.4,
   },
   displayLgMobile: {
-    fontFamily: 'Sora_700Bold',
-    fontSize: 20, // Peek 20px subheading
-    lineHeight: 25,
-    letterSpacing: -0.3,
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 19,
+    lineHeight: 24,
+    letterSpacing: -0.2,
   },
   headlineLg: {
-    fontFamily: 'Sora_700Bold',
-    fontSize: 16, // Peek 16px heading
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 16,
     lineHeight: 22,
     letterSpacing: -0.2,
   },
   headlineMd: {
-    fontFamily: 'Sora_600SemiBold',
-    fontSize: 14, // Peek 14px H3
+    fontFamily: 'Sora_500Medium',
+    fontSize: 14,
     lineHeight: 20,
     letterSpacing: -0.1,
   },
   headlineSm: {
-    fontFamily: 'Sora_600SemiBold',
-    fontSize: 13, // Peek 13px Caption
+    fontFamily: 'Sora_500Medium',
+    fontSize: 13,
     lineHeight: 18,
   },
   bodyLg: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 16, // Peek 16px body
-    lineHeight: 23,
+    fontSize: 15,
+    lineHeight: 22,
   },
   bodyMd: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 14, // Peek 14px small body
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
   },
   bodySm: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 12, // Peek 12px caption
-    lineHeight: 17,
+    fontSize: 11.5,
+    lineHeight: 16,
   },
   labelMd: {
-    fontFamily: 'Sora_700Bold',
-    fontSize: 11, // Peek 11px small
-    lineHeight: 15,
-    letterSpacing: 0.3,
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0.2,
   },
   labelSm: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 9, // Peek 9px micro
-    lineHeight: 13,
+    fontSize: 10,
+    lineHeight: 14,
   },
 
   // Semantic Peek Type Styles
@@ -166,7 +166,7 @@ export const Typography = {
     lineHeight: 25,
   },
   heading: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 16,
     lineHeight: 22,
   },

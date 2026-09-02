@@ -453,7 +453,7 @@ export default function NetworkScreen() {
               />
             </Pressable>
             <View style={styles.headerTextGroup}>
-              <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', lineHeight: 18 }}>
+              <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', lineHeight: 18 }}>
                 {profile.name}
               </ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
@@ -539,7 +539,7 @@ export default function NetworkScreen() {
                       type="labelSm"
                       style={{
                         color: isSelected ? '#ffffff' : '#4b5563',
-                        fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_600SemiBold',
+                        fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_600SemiBold',
                         fontSize: 12,
                       }}
                     >
@@ -560,7 +560,7 @@ export default function NetworkScreen() {
               style={styles.challengeBanner}
             >
               <View style={{ flex: 1 }}>
-                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
                   Host Quick Challenge
                 </ThemedText>
                 <ThemedText type="bodySm" style={{ color: 'rgba(255, 255, 255, 0.85)', marginTop: 4, fontSize: 11 }}>
@@ -580,10 +580,10 @@ export default function NetworkScreen() {
           {/* Connected Player Cards List */}
           <View style={styles.playersListSection}>
             <View style={styles.sectionHeader}>
-              <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
+              <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
                 Nearby Connections ({filteredPlayers.length})
               </ThemedText>
-              <ThemedText type="labelSm" style={{ color: '#8b5cf6', fontFamily: 'Sora_700Bold' }}>
+              <ThemedText type="labelSm" style={{ color: '#8b5cf6', fontFamily: 'Sora_600SemiBold' }}>
                 LIVE RADAR
               </ThemedText>
             </View>
@@ -608,7 +608,7 @@ export default function NetworkScreen() {
 
                     <View style={styles.playerInfo}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
                           {player.name}
                         </ThemedText>
                         <View style={styles.skillBadge}>
@@ -752,13 +752,13 @@ const styles = StyleSheet.create({
   },
   communityBadgeText: {
     color: '#FFA751',
-    fontWeight: '800',
+    fontWeight: '600',
     fontSize: 10,
     marginLeft: 4,
     letterSpacing: 1.2,
   },
   mainHeadline: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 22,
     lineHeight: 28,
   },
@@ -811,7 +811,7 @@ const styles = StyleSheet.create({
   floatingPillText: {
     color: '#ffffff',
     fontSize: 10.5,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   searchSection: {
     marginVertical: 8,
@@ -868,7 +868,7 @@ const styles = StyleSheet.create({
   challengeButtonText: {
     color: '#7e22ce',
     fontSize: 11,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   playersListSection: {
     marginTop: 8,
@@ -936,7 +936,7 @@ const styles = StyleSheet.create({
   skillBadgeText: {
     color: '#7e22ce',
     fontSize: 10,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   playerStatsRow: {
     flexDirection: 'row',
@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
   },
   connectButtonText: {
     fontSize: 12,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   challengeActionBtn: {
     flex: 1,
@@ -1002,7 +1002,7 @@ const styles = StyleSheet.create({
   challengeActionText: {
     color: '#8b5cf6',
     fontSize: 12,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   comingSoonScreen: {
     flex: 1,

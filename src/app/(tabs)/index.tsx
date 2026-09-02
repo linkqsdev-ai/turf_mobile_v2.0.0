@@ -154,7 +154,7 @@ export default function HomeScreen() {
               />
             </Pressable>
             <View style={styles.headerTextGroup}>
-              <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', lineHeight: 18 }}>
+              <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', lineHeight: 18 }}>
                 {profile.name}
               </ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
@@ -260,15 +260,15 @@ export default function HomeScreen() {
                     {/* Header */}
                     <View style={styles.graphHeader}>
                       <View style={{ flex: 1 }}>
-                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', letterSpacing: 0.5, fontSize: 14 }}>
+                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5, fontSize: 14 }}>
                           Weekly Coached Hours (Activity Load)
                         </ThemedText>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3, gap: 8 }}>
-                          <ThemedText type="labelSm" style={{ color: '#10b981', fontFamily: 'Sora_800ExtraBold', fontSize: 12 }}>
+                          <ThemedText type="labelSm" style={{ color: '#10b981', fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
                             32.5 Hours Total
                           </ThemedText>
                           <View style={{ backgroundColor: '#10b9811F', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                            <ThemedText style={{ color: '#047857', fontSize: 9, fontFamily: 'Sora_700Bold' }}>
+                            <ThemedText style={{ color: '#047857', fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
                               🔥 Peak: Fri (7.0h)
                             </ThemedText>
                           </View>
@@ -300,13 +300,13 @@ export default function HomeScreen() {
                           return (
                             <View key={idx} style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
                               {/* Explicit Value Label on Top of Bar */}
-                              <ThemedText style={{ color: isActive ? '#047857' : theme.textSecondary, fontSize: 9, fontFamily: 'Sora_700Bold', marginBottom: 4 }}>
+                              <ThemedText style={{ color: isActive ? '#047857' : theme.textSecondary, fontSize: 9, fontFamily: 'Sora_600SemiBold', marginBottom: 4 }}>
                                 {bar.display}
                               </ThemedText>
                               
                               <View style={{ height: barPixelHeight, width: 18, borderRadius: 9, backgroundColor: isActive ? '#10b981' : '#10b98135' }} />
                               
-                              <ThemedText type="labelSm" style={{ marginTop: 6, fontSize: 10, color: isActive ? theme.text : theme.textSecondary, fontFamily: isActive ? 'Sora_700Bold' : 'Sora_500Medium' }}>
+                              <ThemedText type="labelSm" style={{ marginTop: 6, fontSize: 10, color: isActive ? theme.text : theme.textSecondary, fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_500Medium' }}>
                                 {bar.label}
                               </ThemedText>
                             </View>
@@ -318,9 +318,9 @@ export default function HomeScreen() {
                     {/* Summary Footer */}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '1A' }}>
                       <ThemedText style={{ color: theme.textSecondary, fontSize: 10 }}>
-                        Daily Avg: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>4.6 hrs/day</ThemedText>
+                        Daily Avg: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>4.6 hrs/day</ThemedText>
                       </ThemedText>
-                      <ThemedText style={{ color: '#047857', fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText style={{ color: '#047857', fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                         Target Met: 5/7 Days (71%)
                       </ThemedText>
                     </View>
@@ -331,15 +331,15 @@ export default function HomeScreen() {
                     {/* Header */}
                     <View style={styles.graphHeader}>
                       <View style={{ flex: 1 }}>
-                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', letterSpacing: 0.5, fontSize: 14 }}>
+                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5, fontSize: 14 }}>
                           Batch Occupancy Rate (High Demand)
                         </ThemedText>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3, gap: 8 }}>
-                          <ThemedText type="labelSm" style={{ color: '#ff8c00', fontFamily: 'Sora_800ExtraBold', fontSize: 12 }}>
+                          <ThemedText type="labelSm" style={{ color: '#ff8c00', fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
                             Avg. 82% Enrollment
                           </ThemedText>
                           <View style={{ backgroundColor: '#ff8c001F', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                            <ThemedText style={{ color: '#c2410c', fontSize: 9, fontFamily: 'Sora_700Bold' }}>
+                            <ThemedText style={{ color: '#c2410c', fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
                               🏆 Top: Weekend (95%)
                             </ThemedText>
                           </View>
@@ -369,13 +369,13 @@ export default function HomeScreen() {
                           return (
                             <View key={idx} style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
                               {/* Explicit Percentage Badge on Top */}
-                              <ThemedText style={{ color: isActive ? '#c2410c' : theme.textSecondary, fontSize: 9, fontFamily: 'Sora_800ExtraBold', marginBottom: 4 }}>
+                              <ThemedText style={{ color: isActive ? '#c2410c' : theme.textSecondary, fontSize: 9, fontFamily: 'Sora_600SemiBold', marginBottom: 4 }}>
                                 {bar.display}
                               </ThemedText>
                               
                               <View style={{ height: barPixelHeight, width: 22, borderRadius: 10, backgroundColor: isActive ? '#ff8c00' : '#ff8c0038' }} />
                               
-                              <ThemedText type="labelSm" style={{ marginTop: 6, fontSize: 9.5, color: isActive ? theme.text : theme.textSecondary, fontFamily: isActive ? 'Sora_700Bold' : 'Sora_500Medium' }} numberOfLines={1}>
+                              <ThemedText type="labelSm" style={{ marginTop: 6, fontSize: 9.5, color: isActive ? theme.text : theme.textSecondary, fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_500Medium' }} numberOfLines={1}>
                                 {bar.label}
                               </ThemedText>
                             </View>
@@ -390,7 +390,7 @@ export default function HomeScreen() {
                         <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#ff8c00' }} />
                         <ThemedText style={{ color: theme.textSecondary, fontSize: 10 }}>High Demand (≥85%)</ThemedText>
                       </View>
-                      <ThemedText style={{ color: '#c2410c', fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText style={{ color: '#c2410c', fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                         3 Batches Almost Full!
                       </ThemedText>
                     </View>
@@ -414,7 +414,7 @@ export default function HomeScreen() {
                         style={[styles.viewTasksButton, { backgroundColor: '#ffffff' }]}
                         onPress={() => router.push('/coach-students')}
                       >
-                        <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
                           View Students
                         </ThemedText>
                       </Pressable>
@@ -425,7 +425,7 @@ export default function HomeScreen() {
                       <View style={[styles.progressRingInner, { borderColor: '#4ade80', borderLeftColor: 'transparent', transform: [{ rotate: '45deg' }] }]} />
                       {/* Straight Aligned Text Container */}
                       <View style={{ position: 'absolute', justifyContent: 'center', alignItems: 'center' }}>
-                        <ThemedText type="headlineSm" style={{ color: '#4ade80', fontFamily: 'Sora_800ExtraBold', fontSize: 18 }}>
+                        <ThemedText type="headlineSm" style={{ color: '#4ade80', fontFamily: 'Sora_600SemiBold', fontSize: 18 }}>
                           67%
                         </ThemedText>
                       </View>
@@ -438,7 +438,7 @@ export default function HomeScreen() {
                   <View style={styles.sectionHeader}>
                     <ThemedText type="headlineSm">Academy Analytics</ThemedText>
                     <Pressable onPress={() => router.push('/coach-home')}>
-                      <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                         View Details
                       </ThemedText>
                     </Pressable>
@@ -547,7 +547,7 @@ export default function HomeScreen() {
                   <View style={styles.sectionHeader}>
                     <ThemedText type="headlineSm">{"Today's Academy Sessions"}</ThemedText>
                     <Pressable onPress={() => router.push('/(tabs)/coach')}>
-                      <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                         Full Calendar
                       </ThemedText>
                     </Pressable>
@@ -604,12 +604,12 @@ export default function HomeScreen() {
                                 style={{ width: 44, height: 44, borderRadius: BorderRadius.full }}
                               />
                               <View style={{ flex: 1, marginLeft: 10 }}>
-                                <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_800ExtraBold', fontSize: 10, letterSpacing: 0.5 }}>COACHING CLASS</ThemedText>
+                                <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 10, letterSpacing: 0.5 }}>COACHING CLASS</ThemedText>
                                 <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 1 }}>{cls.classType} · {cls.sportType.toUpperCase()}</ThemedText>
                               </View>
                             </View>
 
-                            <ThemedText type="title" style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 15, lineHeight: 20 }} numberOfLines={1}>
+                            <ThemedText type="title" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 15, lineHeight: 20 }} numberOfLines={1}>
                               {cls.className}
                             </ThemedText>
 
@@ -620,7 +620,7 @@ export default function HomeScreen() {
                             {/* Certificate Accreditation */}
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                               <Ionicons name="ribbon-outline" size={12} color="#10b981" style={{ marginRight: 4 }} />
-                              <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_700Bold' }} numberOfLines={1}>
+                              <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_600SemiBold' }} numberOfLines={1}>
                                 {cls.certificateName || (cls.certificates && cls.certificates.length > 0 ? cls.certificates[0] : 'BWF Level 2 Certified Coach')}
                               </ThemedText>
                             </View>
@@ -632,7 +632,7 @@ export default function HomeScreen() {
                               </View>
                               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Ionicons name="time-outline" size={13} color={theme.textSecondary} style={{ marginRight: 4 }} />
-                                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                                   {cls.sessionTime}
                                 </ThemedText>
                               </View>
@@ -682,14 +682,14 @@ export default function HomeScreen() {
                             <Ionicons name="add-circle" size={20} color="#a5b4fc" />
                           </View>
                           <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: BorderRadius.sm, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.2)' }}>
-                            <ThemedText style={{ color: '#ffffff', fontSize: 8.5, fontFamily: 'Sora_800ExtraBold', letterSpacing: 0.6 }}>
+                            <ThemedText style={{ color: '#ffffff', fontSize: 8.5, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.6 }}>
                               BATCH CREATOR
                             </ThemedText>
                           </View>
                         </View>
 
                         <View style={{ marginVertical: 8 }}>
-                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_800ExtraBold', fontSize: 16, marginBottom: 2 }}>
+                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 16, marginBottom: 2 }}>
                             Create Class
                           </ThemedText>
                           <ThemedText style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 10.5, lineHeight: 14 }}>
@@ -714,7 +714,7 @@ export default function HomeScreen() {
                             elevation: 3,
                           }}
                         >
-                          <ThemedText style={{ color: '#4338ca', fontSize: 11, fontFamily: 'Sora_800ExtraBold', marginRight: 4 }}>
+                          <ThemedText style={{ color: '#4338ca', fontSize: 11, fontFamily: 'Sora_600SemiBold', marginRight: 4 }}>
                             + Add Class
                           </ThemedText>
                           <Ionicons name="arrow-forward" size={12} color="#4338ca" />
@@ -754,14 +754,14 @@ export default function HomeScreen() {
                             <Ionicons name="time" size={20} color="#fcd34d" />
                           </View>
                           <View style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: BorderRadius.sm, borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.3)' }}>
-                            <ThemedText style={{ color: '#fbbf24', fontSize: 8.5, fontFamily: 'Sora_800ExtraBold', letterSpacing: 0.6 }}>
+                            <ThemedText style={{ color: '#fbbf24', fontSize: 8.5, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.6 }}>
                               COACH SLOTS
                             </ThemedText>
                           </View>
                         </View>
 
                         <View style={{ marginVertical: 8 }}>
-                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_800ExtraBold', fontSize: 16, marginBottom: 2 }}>
+                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 16, marginBottom: 2 }}>
                             My Availability
                           </ThemedText>
                           <ThemedText style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 10.5, lineHeight: 14 }}>
@@ -786,7 +786,7 @@ export default function HomeScreen() {
                             elevation: 3,
                           }}
                         >
-                          <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_800ExtraBold', marginRight: 4 }}>
+                          <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_600SemiBold', marginRight: 4 }}>
                             Set Slots
                           </ThemedText>
                           <Ionicons name="arrow-forward" size={12} color="#ffffff" />
@@ -856,10 +856,10 @@ export default function HomeScreen() {
                   <View style={[styles.graphCard, { backgroundColor: theme.surfaceLowest, padding: 16, borderRadius: 12 }, Shadows.level2]}>
                     <View style={styles.graphHeader}>
                       <View style={{ flex: 1 }}>
-                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', letterSpacing: 0.5, fontSize: 13.5 }}>
+                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5, fontSize: 13.5 }}>
                           Weekly Revenue Trend (₹)
                         </ThemedText>
-                        <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_700Bold', marginTop: 2 }}>
+                        <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                           Total: ₹1,35,000 · +18.4% vs Last Week
                         </ThemedText>
                       </View>
@@ -884,7 +884,7 @@ export default function HomeScreen() {
                             onPress={() => setSelectedBar(bar)}
                             style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}
                           >
-                            <ThemedText style={{ color: isSelected ? theme.primary : theme.textSecondary, fontSize: 8.5, fontFamily: 'Sora_800ExtraBold', marginBottom: 3 }}>
+                            <ThemedText style={{ color: isSelected ? theme.primary : theme.textSecondary, fontSize: 8.5, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>
                               {bar.label}
                             </ThemedText>
                             <View
@@ -897,7 +897,7 @@ export default function HomeScreen() {
                                 borderColor: theme.primary,
                               }}
                             />
-                            <ThemedText style={{ marginTop: 4, fontSize: 9.5, color: isSelected ? theme.primary : theme.textSecondary, fontFamily: isSelected ? 'Sora_800ExtraBold' : 'Sora_600SemiBold' }}>
+                            <ThemedText style={{ marginTop: 4, fontSize: 9.5, color: isSelected ? theme.primary : theme.textSecondary, fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_600SemiBold' }}>
                               {bar.day}
                             </ThemedText>
                           </Pressable>
@@ -909,10 +909,10 @@ export default function HomeScreen() {
                     {selectedBar && (
                       <View style={{ backgroundColor: theme.surfaceHigh + '90', padding: 10, borderRadius: 10, marginTop: 6, borderLeftWidth: 3, borderLeftColor: theme.primary }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text }}>
-                            {selectedBar.fullDay}: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_800ExtraBold' }}>{selectedBar.revenue}</ThemedText>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                            {selectedBar.fullDay}: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>{selectedBar.revenue}</ThemedText>
                           </ThemedText>
-                          <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>
                             🔥 Peak: {selectedBar.peak}
                           </ThemedText>
                         </View>
@@ -929,10 +929,10 @@ export default function HomeScreen() {
                   <View style={[styles.graphCard, { backgroundColor: theme.surfaceLowest, padding: 16, borderRadius: 12 }, Shadows.level2]}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                       <View style={{ flex: 1 }}>
-                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', letterSpacing: 0.5, fontSize: 13.5 }}>
+                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5, fontSize: 13.5 }}>
                           Monthly Booking Heatmap (Calendar View)
                         </ThemedText>
-                        <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_700Bold', marginTop: 2 }}>
+                        <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                           82% Average Daily Occupancy · 384 Total Bookings
                         </ThemedText>
                       </View>
@@ -943,11 +943,11 @@ export default function HomeScreen() {
                     {selectedHeatmapDay && (
                       <View style={{ backgroundColor: theme.surfaceHigh + '90', padding: 10, borderRadius: 10, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: selectedHeatmapDay.level === 'Peak' ? '#ef4444' : selectedHeatmapDay.level === 'Medium' ? '#f59e0b' : '#94a3b8' }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                             {selectedHeatmapDay.label}
                           </ThemedText>
                           <View style={{ backgroundColor: selectedHeatmapDay.level === 'Peak' ? '#ef444420' : selectedHeatmapDay.level === 'Medium' ? '#f59e0b20' : '#94a3b820', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                            <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_800ExtraBold', color: selectedHeatmapDay.level === 'Peak' ? '#ef4444' : selectedHeatmapDay.level === 'Medium' ? '#d97706' : '#64748b' }}>
+                            <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: selectedHeatmapDay.level === 'Peak' ? '#ef4444' : selectedHeatmapDay.level === 'Medium' ? '#d97706' : '#64748b' }}>
                               {selectedHeatmapDay.occupancy} {selectedHeatmapDay.level}
                             </ThemedText>
                           </View>
@@ -962,7 +962,7 @@ export default function HomeScreen() {
                     <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
                       {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
                         <View key={i} style={{ flex: 1, alignItems: 'center' }}>
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.textSecondary }}>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
                             {d}
                           </ThemedText>
                         </View>
@@ -1004,7 +1004,7 @@ export default function HomeScreen() {
                                   borderColor: isSelected ? theme.text : 'transparent',
                                 }}
                               >
-                                <ThemedText style={{ color: textColor, fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                                <ThemedText style={{ color: textColor, fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
                                   {dayNum}
                                 </ThemedText>
                               </Pressable>
@@ -1043,7 +1043,7 @@ export default function HomeScreen() {
                         8 of 12 slots booked
                       </ThemedText>
                       <Pressable style={[styles.viewTasksButton, { backgroundColor: '#ffffff' }]}>
-                        <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
                           View Queue
                         </ThemedText>
                       </Pressable>
@@ -1051,7 +1051,7 @@ export default function HomeScreen() {
 
                     <View style={[styles.progressRing, { borderColor: 'rgba(255, 255, 255, 0.15)' }]}>
                       <View style={[styles.progressRingInner, { borderColor: '#ffffff' }]}>
-                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
                           67%
                         </ThemedText>
                       </View>
@@ -1078,7 +1078,7 @@ export default function HomeScreen() {
                         <View style={[styles.bentoIconWrap, { backgroundColor: theme.surface }]}>
                           <Ionicons name="cash-outline" size={18} color={theme.primary} />
                         </View>
-                        <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_800ExtraBold' }}>
+                        <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                           +15% vs Wk
                         </ThemedText>
                       </View>
@@ -1087,7 +1087,7 @@ export default function HomeScreen() {
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 10 }}>
                           {"Today's Revenue"}
                         </ThemedText>
-                        <ThemedText type="headlineSm" style={{ marginTop: 2, fontSize: 16, fontFamily: 'Sora_800ExtraBold' }}>
+                        <ThemedText type="headlineSm" style={{ marginTop: 2, fontSize: 16, fontFamily: 'Sora_600SemiBold' }}>
                           ₹18,500
                         </ThemedText>
                       </View>
@@ -1096,7 +1096,7 @@ export default function HomeScreen() {
                         <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>
                           8 Slots Completed · Avg ₹2.3k/slot
                         </ThemedText>
-                        <ThemedText style={{ fontSize: 8.5, color: '#10b981', fontFamily: 'Sora_700Bold', marginTop: 2 }}>
+                        <ThemedText style={{ fontSize: 8.5, color: '#10b981', fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                           🔥 Peak Demand: 6 - 9 PM
                         </ThemedText>
                       </View>
@@ -1115,7 +1115,7 @@ export default function HomeScreen() {
                         <View style={[styles.bentoIconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.18)' }]}>
                           <Ionicons name="wallet-outline" size={18} color="#ffffff" />
                         </View>
-                        <ThemedText style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 9.5, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
                           3 Pending
                         </ThemedText>
                       </View>
@@ -1124,7 +1124,7 @@ export default function HomeScreen() {
                         <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.85)', letterSpacing: 0.5, fontSize: 10 }}>
                           Unpaid Dues
                         </ThemedText>
-                        <ThemedText type="headlineSm" style={{ color: '#ffffff', marginTop: 2, fontSize: 16, fontFamily: 'Sora_800ExtraBold' }}>
+                        <ThemedText type="headlineSm" style={{ color: '#ffffff', marginTop: 2, fontSize: 16, fontFamily: 'Sora_600SemiBold' }}>
                           ₹2,400
                         </ThemedText>
                       </View>
@@ -1133,7 +1133,7 @@ export default function HomeScreen() {
                         <ThemedText style={{ fontSize: 9, color: 'rgba(255, 255, 255, 0.85)', fontFamily: 'Sora_600SemiBold' }}>
                           Overdue: ₹1,400 (2 Reminders Sent)
                         </ThemedText>
-                        <ThemedText style={{ fontSize: 8.5, color: '#fbbf24', fontFamily: 'Sora_700Bold', marginTop: 2 }}>
+                        <ThemedText style={{ fontSize: 8.5, color: '#fbbf24', fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                           ⚡ Action Required
                         </ThemedText>
                       </View>
@@ -1146,7 +1146,7 @@ export default function HomeScreen() {
                   <View style={styles.sectionHeader}>
                     <ThemedText type="headlineSm">Facility status: Pitches</ThemedText>
                     <Pressable>
-                      <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                         Edit Pitches
                       </ThemedText>
                     </Pressable>
@@ -1193,7 +1193,7 @@ export default function HomeScreen() {
                         <Image source={typeof pitch.image === 'string' ? { uri: pitch.image } : pitch.image} style={styles.featuredTurfImage} contentFit="cover" />
                         <View style={styles.featuredTurfContent}>
                           <View style={styles.featuredTurfHeader}>
-                            <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '700', fontSize: 9 }} numberOfLines={1}>
+                            <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '600', fontSize: 9 }} numberOfLines={1}>
                               {pitch.desc.toUpperCase()}
                             </ThemedText>
                           </View>
@@ -1208,7 +1208,7 @@ export default function HomeScreen() {
                           </View>
                           <View style={styles.featuredTurfFooter}>
                             <View style={{ backgroundColor: pitch.statusColor + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                              <ThemedText type="labelSm" style={{ color: pitch.statusColor, fontSize: 9, fontFamily: 'Sora_800ExtraBold' }}>
+                              <ThemedText type="labelSm" style={{ color: pitch.statusColor, fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
                                 {pitch.status}
                               </ThemedText>
 
@@ -1217,7 +1217,7 @@ export default function HomeScreen() {
                   <View style={styles.sectionHeader}>
                     <ThemedText type="headlineSm" style={{ fontSize: 14 }}>{"Today's Turf Bookings"}</ThemedText>
                     <Pressable>
-                      <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold', fontSize: 10.5 }}>
+                      <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold', fontSize: 10.5 }}>
                         Full Schedule
                       </ThemedText>
                     </Pressable>
@@ -1232,10 +1232,10 @@ export default function HomeScreen() {
 
                       <View style={{ flex: 1, marginHorizontal: 8, gap: 4 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <ThemedText type="headlineSm" style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text, flex: 1, marginRight: 6 }} numberOfLines={1}>
+                          <ThemedText type="headlineSm" style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text, flex: 1, marginRight: 6 }} numberOfLines={1}>
                             Footy Club Match Booking
                           </ThemedText>
-                          <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_700Bold', color: theme.textSecondary }}>#B902</ThemedText>
+                          <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>#B902</ThemedText>
                         </View>
 
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1254,10 +1254,10 @@ export default function HomeScreen() {
 
                         {/* Payment Breakdown Row */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginTop: 3, paddingTop: 4, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '15' }}>
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_800ExtraBold', color: theme.text }}>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                             ₹2,500
                           </ThemedText>
-                          <ThemedText style={{ color: '#10b981', fontSize: 8.5, fontFamily: 'Sora_800ExtraBold' }}>
+                          <ThemedText style={{ color: '#10b981', fontSize: 8.5, fontFamily: 'Sora_600SemiBold' }}>
                             Fully Paid
                           </ThemedText>
                           <ThemedText style={{ color: theme.textSecondary, fontSize: 8.5, fontFamily: 'Sora_500Medium' }}>
@@ -1266,7 +1266,7 @@ export default function HomeScreen() {
                         </View>
                       </View>
 
-                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_800ExtraBold', color: '#ef4444', letterSpacing: 0.5, alignSelf: 'flex-start' }}>LIVE</ThemedText>
+                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_600SemiBold', color: '#ef4444', letterSpacing: 0.5, alignSelf: 'flex-start' }}>LIVE</ThemedText>
                     </View>
 
                     {/* Booking 2: Partially Paid (Advance) */}
@@ -1277,10 +1277,10 @@ export default function HomeScreen() {
 
                       <View style={{ flex: 1, marginHorizontal: 8, gap: 4 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <ThemedText type="headlineSm" style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text, flex: 1, marginRight: 6 }} numberOfLines={1}>
+                          <ThemedText type="headlineSm" style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text, flex: 1, marginRight: 6 }} numberOfLines={1}>
                             Corporate Cricket Match
                           </ThemedText>
-                          <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_700Bold', color: theme.textSecondary }}>#B211</ThemedText>
+                          <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>#B211</ThemedText>
                         </View>
 
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1299,19 +1299,19 @@ export default function HomeScreen() {
 
                         {/* Payment Breakdown Row */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginTop: 3, paddingTop: 4, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '15' }}>
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_800ExtraBold', color: theme.text }}>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                             ₹3,600
                           </ThemedText>
-                          <ThemedText style={{ color: '#d97706', fontSize: 8.5, fontFamily: 'Sora_800ExtraBold' }}>
+                          <ThemedText style={{ color: '#d97706', fontSize: 8.5, fontFamily: 'Sora_600SemiBold' }}>
                             Advance Paid (₹1,000)
                           </ThemedText>
-                          <ThemedText style={{ color: '#ef4444', fontSize: 8.5, fontFamily: 'Sora_800ExtraBold' }}>
+                          <ThemedText style={{ color: '#ef4444', fontSize: 8.5, fontFamily: 'Sora_600SemiBold' }}>
                             · ₹2,600 Due at Turf
                           </ThemedText>
                         </View>
                       </View>
 
-                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_800ExtraBold', color: '#f59e0b', letterSpacing: 0.5, alignSelf: 'flex-start' }}>UPCOMING</ThemedText>
+                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_600SemiBold', color: '#f59e0b', letterSpacing: 0.5, alignSelf: 'flex-start' }}>UPCOMING</ThemedText>
                     </View>
                   </View>
                 </View>
@@ -1345,13 +1345,13 @@ export default function HomeScreen() {
                           <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: 'rgba(255, 255, 255, 0.2)', justifyContent: 'center', alignItems: 'center' }}>
                             <Ionicons name="add" size={18} color="#ffffff" />
                           </View>
-                          <ThemedText style={{ color: 'rgba(255, 255, 255, 0.9)', fontFamily: 'Sora_800ExtraBold', fontSize: 8.5, letterSpacing: 0.5 }}>
+                          <ThemedText style={{ color: 'rgba(255, 255, 255, 0.9)', fontFamily: 'Sora_600SemiBold', fontSize: 8.5, letterSpacing: 0.5 }}>
                             SLOT CREATOR
                           </ThemedText>
                         </View>
 
                         <View style={{ marginVertical: 4, zIndex: 2 }}>
-                          <ThemedText style={{ color: '#ffffff', fontSize: 15, fontFamily: 'Sora_800ExtraBold', lineHeight: 19 }}>
+                          <ThemedText style={{ color: '#ffffff', fontSize: 15, fontFamily: 'Sora_600SemiBold', lineHeight: 19 }}>
                             Create Slot
                           </ThemedText>
                           <ThemedText style={{ color: 'rgba(255, 255, 255, 0.88)', fontSize: 9.5, fontFamily: 'Sora_500Medium', marginTop: 3, lineHeight: 13.5 }}>
@@ -1360,7 +1360,7 @@ export default function HomeScreen() {
                         </View>
 
                         <View style={{ alignSelf: 'flex-start', backgroundColor: '#ffffff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, zIndex: 2 }}>
-                          <ThemedText style={{ color: '#3c397b', fontFamily: 'Sora_800ExtraBold', fontSize: 9.5 }}>
+                          <ThemedText style={{ color: '#3c397b', fontFamily: 'Sora_600SemiBold', fontSize: 9.5 }}>
                             + Add Slot →
                           </ThemedText>
                         </View>
@@ -1393,13 +1393,13 @@ export default function HomeScreen() {
                           <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: 'rgba(245, 158, 11, 0.28)', justifyContent: 'center', alignItems: 'center' }}>
                             <Ionicons name="time" size={17} color="#f59e0b" />
                           </View>
-                          <ThemedText style={{ color: '#fbbf24', fontFamily: 'Sora_800ExtraBold', fontSize: 8.5, letterSpacing: 0.5 }}>
+                          <ThemedText style={{ color: '#fbbf24', fontFamily: 'Sora_600SemiBold', fontSize: 8.5, letterSpacing: 0.5 }}>
                             COACH SLOTS
                           </ThemedText>
                         </View>
 
                         <View style={{ marginVertical: 4, zIndex: 2 }}>
-                          <ThemedText style={{ color: '#ffffff', fontSize: 15, fontFamily: 'Sora_800ExtraBold', lineHeight: 19 }}>
+                          <ThemedText style={{ color: '#ffffff', fontSize: 15, fontFamily: 'Sora_600SemiBold', lineHeight: 19 }}>
                             Pricing / Rates
                           </ThemedText>
                           <ThemedText style={{ color: 'rgba(255, 255, 255, 0.88)', fontSize: 9.5, fontFamily: 'Sora_500Medium', marginTop: 3, lineHeight: 13.5 }}>
@@ -1408,7 +1408,7 @@ export default function HomeScreen() {
                         </View>
 
                         <View style={{ alignSelf: 'flex-start', backgroundColor: '#f59e0b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, zIndex: 2 }}>
-                          <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_800ExtraBold', fontSize: 9.5 }}>
+                          <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 9.5 }}>
                             Set Rates →
                           </ThemedText>
                         </View>
@@ -1483,7 +1483,7 @@ export default function HomeScreen() {
                           8 of 12 slots booked
                         </ThemedText>
                         <Pressable style={[styles.viewTasksButton, { backgroundColor: '#ffffff' }]}>
-                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
                             View Queue
                           </ThemedText>
                         </Pressable>
@@ -1491,7 +1491,7 @@ export default function HomeScreen() {
 
                       <View style={[styles.progressRing, { borderColor: 'rgba(255, 255, 255, 0.15)' }]}>
                         <View style={[styles.progressRingInner, { borderColor: '#ffffff' }]}>
-                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
                             67%
                           </ThemedText>
                         </View>
@@ -1507,7 +1507,7 @@ export default function HomeScreen() {
                           4 of 6 classes completed
                         </ThemedText>
                         <Pressable style={[styles.viewTasksButton, { backgroundColor: '#ffffff' }]}>
-                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
                             View Students
                           </ThemedText>
                         </Pressable>
@@ -1515,7 +1515,7 @@ export default function HomeScreen() {
 
                       <View style={[styles.progressRing, { borderColor: 'rgba(255, 255, 255, 0.15)' }]}>
                         <View style={[styles.progressRingInner, { borderColor: '#ffffff' }]}>
-                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
                             67%
                           </ThemedText>
                         </View>
@@ -1531,7 +1531,7 @@ export default function HomeScreen() {
                           3 of 4 leagues live
                         </ThemedText>
                         <Pressable style={[styles.viewTasksButton, { backgroundColor: '#ffffff' }]} onPress={() => router.push('/(tabs)/tournaments')}>
-                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
                             Manage Leagues
                           </ThemedText>
                         </Pressable>
@@ -1539,7 +1539,7 @@ export default function HomeScreen() {
 
                       <View style={[styles.progressRing, { borderColor: 'rgba(255, 255, 255, 0.15)' }]}>
                         <View style={[styles.progressRingInner, { borderColor: '#ffffff' }]}>
-                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
                             75%
                           </ThemedText>
                         </View>
@@ -1555,7 +1555,7 @@ export default function HomeScreen() {
                           4 of 5 targets reached
                         </ThemedText>
                         <Pressable style={[styles.viewTasksButton, { backgroundColor: '#ffffff' }]}>
-                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
                             View Tasks
                           </ThemedText>
                         </Pressable>
@@ -1563,7 +1563,7 @@ export default function HomeScreen() {
 
                       <View style={[styles.progressRing, { borderColor: 'rgba(255, 255, 255, 0.15)' }]}>
                         <View style={[styles.progressRingInner, { borderColor: '#ffffff' }]}>
-                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
                             80%
                           </ThemedText>
                         </View>
@@ -1630,7 +1630,7 @@ export default function HomeScreen() {
                     <View style={styles.sectionHeader}>
                       <ThemedText type="headlineSm">Facility status: Pitches</ThemedText>
                       <Pressable>
-                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                           Edit Pitches
                         </ThemedText>
                       </Pressable>
@@ -1677,7 +1677,7 @@ export default function HomeScreen() {
                           <Image source={typeof pitch.image === 'string' ? { uri: pitch.image } : pitch.image} style={styles.featuredTurfImage} contentFit="cover" />
                           <View style={styles.featuredTurfContent}>
                             <View style={styles.featuredTurfHeader}>
-                              <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '700', fontSize: 9 }} numberOfLines={1}>
+                              <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '600', fontSize: 9 }} numberOfLines={1}>
                                 {pitch.desc.toUpperCase()}
                               </ThemedText>
                             </View>
@@ -1700,7 +1700,7 @@ export default function HomeScreen() {
                     <View style={styles.sectionHeader}>
                       <ThemedText type="headlineSm">Registered Academy Students</ThemedText>
                       <Pressable onPress={() => router.push('/(tabs)/coach')}>
-                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                           View Roster (18)
                         </ThemedText>
                       </Pressable>
@@ -1808,11 +1808,11 @@ export default function HomeScreen() {
                           </View>
 
                           <View style={{ paddingHorizontal: 12, paddingTop: 10 }}>
-                            <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 15 }} numberOfLines={1}>
+                            <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 15 }} numberOfLines={1}>
                               {student.name}
                             </ThemedText>
 
-                            <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_700Bold', marginTop: 2 }} numberOfLines={1}>
+                            <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_600SemiBold', marginTop: 2 }} numberOfLines={1}>
                               Class: {student.registeredClass}
                             </ThemedText>
 
@@ -1823,7 +1823,7 @@ export default function HomeScreen() {
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '1F' }}>
                               <Ionicons name="calendar-outline" size={12} color={theme.textSecondary} style={{ marginRight: 3 }} />
                               <ThemedText style={{ color: theme.textSecondary, fontSize: 10 }}>
-                                Att: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 10 }}>{student.attendance}</ThemedText>
+                                Att: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 10 }}>{student.attendance}</ThemedText>
                               </ThemedText>
                             </View>
                           </View>
@@ -1836,7 +1836,7 @@ export default function HomeScreen() {
                     <View style={styles.sectionHeader}>
                       <ThemedText type="headlineSm">My Organized Leagues</ThemedText>
                       <Pressable onPress={() => router.push('/(tabs)/tournaments')}>
-                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                           View All
                         </ThemedText>
                       </Pressable>
@@ -1884,7 +1884,7 @@ export default function HomeScreen() {
                           <Image source={typeof tourn.image === 'string' ? { uri: tourn.image } : tourn.image} style={styles.featuredTurfImage} contentFit="cover" />
                           <View style={styles.featuredTurfContent}>
                             <View style={styles.featuredTurfHeader}>
-                              <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '700', fontSize: 9 }} numberOfLines={1}>
+                              <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '600', fontSize: 9 }} numberOfLines={1}>
                                 {tourn.sport}
                               </ThemedText>
                             </View>
@@ -1907,7 +1907,7 @@ export default function HomeScreen() {
                     <View style={styles.sectionHeader}>
                       <ThemedText type="headlineSm">Highlights: Book Turf</ThemedText>
                       <Pressable onPress={() => router.push('/(tabs)/explore')}>
-                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                           View All
                         </ThemedText>
                       </Pressable>
@@ -2017,12 +2017,12 @@ export default function HomeScreen() {
                           <Image source={typeof turf.image === 'string' ? { uri: turf.image } : turf.image} style={styles.featuredTurfImage} contentFit="cover" />
                           <View style={styles.featuredTurfContent}>
                             <View style={styles.featuredTurfHeader}>
-                              <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '700', fontSize: 9 }} numberOfLines={1}>
+                              <ThemedText type="labelSm" style={{ color: theme.secondary, fontWeight: '600', fontSize: 9 }} numberOfLines={1}>
                                 {turf.pitch.toUpperCase()}
                               </ThemedText>
                               <View style={styles.featuredTurfRating}>
                                 <Ionicons name="star" size={10} color="#5D68E8" />
-                                <ThemedText type="labelSm" style={{ marginLeft: 2, fontFamily: 'Sora_700Bold', fontSize: 10 }}>{turf.rating}</ThemedText>
+                                <ThemedText type="labelSm" style={{ marginLeft: 2, fontFamily: 'Sora_600SemiBold', fontSize: 10 }}>{turf.rating}</ThemedText>
                               </View>
                             </View>
                             <ThemedText type="headlineSm" style={[styles.featuredTurfTitle, { color: theme.text }]} numberOfLines={1}>
@@ -2036,14 +2036,14 @@ export default function HomeScreen() {
                             </View>
                             <View style={styles.featuredTurfFooter}>
                               <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                                <ThemedText type="headlineSm" style={{ color: theme.secondary, fontSize: 13, fontFamily: 'Sora_700Bold' }}>{turf.price}</ThemedText>
+                                <ThemedText type="headlineSm" style={{ color: theme.secondary, fontSize: 13, fontFamily: 'Sora_600SemiBold' }}>{turf.price}</ThemedText>
                                 <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, marginLeft: 1 }}>/hr</ThemedText>
                               </View>
                               <Pressable
                                 onPress={() => router.push({ pathname: '/details', params: { id: turf.id, name: turf.name } })}
                                 style={[styles.featuredTurfBookBtn, { backgroundColor: theme.secondaryContainer }]}
                               >
-                                <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontSize: 10, fontFamily: 'Sora_700Bold' }}>Book</ThemedText>
+                                <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>Book</ThemedText>
                               </Pressable>
                             </View>
                           </View>
@@ -2059,7 +2059,7 @@ export default function HomeScreen() {
                     <View style={styles.sectionHeader}>
                       <ThemedText type="headlineSm">{"Today's Turf Bookings"}</ThemedText>
                       <Pressable>
-                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                           View Schedule
                         </ThemedText>
                       </Pressable>
@@ -2083,7 +2083,7 @@ export default function HomeScreen() {
                           </View>
                           <View style={styles.scheduleDetailsRow}>
                             <ThemedText type="bodyMd" style={styles.scheduleDetailsText}>
-                              ₹1,200 • <ThemedText type="bodyMd" style={{ color: '#10b981', fontFamily: 'Sora_700Bold' }}>Paid</ThemedText>
+                              ₹1,200 • <ThemedText type="bodyMd" style={{ color: '#10b981', fontFamily: 'Sora_600SemiBold' }}>Paid</ThemedText>
                             </ThemedText>
                           </View>
                         </View>
@@ -2106,7 +2106,7 @@ export default function HomeScreen() {
                           </View>
                           <View style={styles.scheduleDetailsRow}>
                             <ThemedText type="bodyMd" style={styles.scheduleDetailsText}>
-                              ₹1,800 • <ThemedText type="bodyMd" style={{ color: '#ff1744', fontFamily: 'Sora_700Bold' }}>Unpaid</ThemedText>
+                              ₹1,800 • <ThemedText type="bodyMd" style={{ color: '#ff1744', fontFamily: 'Sora_600SemiBold' }}>Unpaid</ThemedText>
                             </ThemedText>
                           </View>
                         </View>
@@ -2118,7 +2118,7 @@ export default function HomeScreen() {
                     <View style={styles.sectionHeader}>
                       <ThemedText type="headlineSm">{"Today's Academy Sessions"}</ThemedText>
                       <Pressable>
-                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                           Full Calendar
                         </ThemedText>
                       </Pressable>
@@ -2175,12 +2175,12 @@ export default function HomeScreen() {
                                   style={{ width: 44, height: 44, borderRadius: BorderRadius.full }}
                                 />
                                 <View style={{ flex: 1, marginLeft: 10 }}>
-                                  <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_800ExtraBold', fontSize: 10, letterSpacing: 0.5 }}>COACHING CLASS</ThemedText>
+                                  <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 10, letterSpacing: 0.5 }}>COACHING CLASS</ThemedText>
                                   <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 1 }}>{cls.classType} · {cls.sportType.toUpperCase()}</ThemedText>
                                 </View>
                               </View>
 
-                              <ThemedText type="title" style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 15, lineHeight: 20 }} numberOfLines={1}>
+                              <ThemedText type="title" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 15, lineHeight: 20 }} numberOfLines={1}>
                                 {cls.className}
                               </ThemedText>
 
@@ -2188,7 +2188,7 @@ export default function HomeScreen() {
                                 {/* Certificate Accreditation */}
                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                                <Ionicons name="ribbon-outline" size={12} color="#10b981" style={{ marginRight: 4 }} />
-                               <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_700Bold' }} numberOfLines={1}>
+                               <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_600SemiBold' }} numberOfLines={1}>
                                  {cls.certificateName || (cls.certificates && cls.certificates.length > 0 ? cls.certificates[0] : 'BWF Level 2 Certified Coach')}
                                </ThemedText>
                              </View>
@@ -2201,7 +2201,7 @@ export default function HomeScreen() {
                                 </View>
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                   <Ionicons name="time-outline" size={13} color={theme.textSecondary} style={{ marginRight: 4 }} />
-                                  <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                                  <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                                     {cls.sessionTime}
                                   </ThemedText>
                                 </View>
@@ -2219,7 +2219,7 @@ export default function HomeScreen() {
                     <View style={styles.sectionHeader}>
                       <ThemedText type="headlineSm">{"Today's Organized Matches"}</ThemedText>
                       <Pressable>
-                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                           Full Bracket
                         </ThemedText>
                       </Pressable>
@@ -2279,7 +2279,7 @@ export default function HomeScreen() {
                     <View style={styles.sectionHeader}>
                       <ThemedText type="headlineSm">{"Today's Schedule"}</ThemedText>
                       <Pressable>
-                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                           View Calendar
                         </ThemedText>
                       </Pressable>
@@ -2353,7 +2353,7 @@ export default function HomeScreen() {
                         <Pressable
                           style={[styles.actionCardBtn, { backgroundColor: '#ffffff' }]}
                         >
-                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_700Bold', fontSize: 11 }}>
+                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>
                             Add Slot
                           </ThemedText>
                         </Pressable>
@@ -2379,7 +2379,7 @@ export default function HomeScreen() {
                         <Pressable
                           style={[styles.actionCardBtn, { backgroundColor: theme.secondary }]}
                         >
-                          <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 11 }}>
+                          <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>
                             Set Rates
                           </ThemedText>
                         </Pressable>
@@ -2401,7 +2401,7 @@ export default function HomeScreen() {
                         <MaterialCommunityIcons name="ticket-percent" size={20} color={theme.primary} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <ThemedText style={{ color: theme.text, fontSize: 13.5, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText style={{ color: theme.text, fontSize: 13.5, fontFamily: 'Sora_600SemiBold' }}>
                           Vouchers & Offers
                         </ThemedText>
                         <ThemedText
@@ -2438,7 +2438,7 @@ export default function HomeScreen() {
                         <Pressable
                           style={[styles.actionCardBtn, { backgroundColor: '#ffffff' }]}
                         >
-                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_700Bold', fontSize: 11 }}>
+                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>
                             Add Class
                           </ThemedText>
                         </Pressable>
@@ -2464,7 +2464,7 @@ export default function HomeScreen() {
                         <Pressable
                           style={[styles.actionCardBtn, { backgroundColor: theme.secondary }]}
                         >
-                          <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 11 }}>
+                          <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>
                             Set Slots
                           </ThemedText>
                         </Pressable>
@@ -2496,7 +2496,7 @@ export default function HomeScreen() {
                           onPress={() => router.push('/create-tournament')}
                           style={[styles.actionCardBtn, { backgroundColor: '#ffffff' }]}
                         >
-                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_700Bold', fontSize: 11 }}>
+                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>
                             Setup Now
                           </ThemedText>
                         </Pressable>
@@ -2522,7 +2522,7 @@ export default function HomeScreen() {
                         <Pressable
                           style={[styles.actionCardBtn, { backgroundColor: theme.secondary }]}
                         >
-                          <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 11 }}>
+                          <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>
                             Assign Refs
                           </ThemedText>
                         </Pressable>
@@ -2554,7 +2554,7 @@ export default function HomeScreen() {
                           onPress={() => router.push('/(tabs)/coach')}
                           style={[styles.actionCardBtn, { backgroundColor: '#ffffff' }]}
                         >
-                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_700Bold', fontSize: 11 }}>
+                          <ThemedText type="labelMd" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>
                             Book Coach
                           </ThemedText>
                         </Pressable>
@@ -2582,7 +2582,7 @@ export default function HomeScreen() {
                           onPress={() => router.push({ pathname: '/(tabs)/matches', params: { tab: 'Bid Match' } })}
                           style={[styles.actionCardBtn, { backgroundColor: theme.secondary }]}
                         >
-                          <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 11 }}>
+                          <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>
                             Enter Bids
                           </ThemedText>
                         </Pressable>
@@ -2749,10 +2749,10 @@ export default function HomeScreen() {
                       <View style={[styles.graphCard, { backgroundColor: theme.surfaceLowest, padding: 16, borderRadius: 12 }, Shadows.level2]}>
                         <View style={styles.graphHeader}>
                           <View style={{ flex: 1 }}>
-                            <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', letterSpacing: 0.5, fontSize: 13.5 }}>
+                            <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5, fontSize: 13.5 }}>
                               Weekly Revenue Trend (₹)
                             </ThemedText>
-                            <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_700Bold', marginTop: 2 }}>
+                            <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                               Total: ₹1,35,000 · +18.4% vs Last Week
                             </ThemedText>
                           </View>
@@ -2777,7 +2777,7 @@ export default function HomeScreen() {
                                 onPress={() => setSelectedBar(bar)}
                                 style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}
                               >
-                                <ThemedText style={{ color: isSelected ? theme.primary : theme.textSecondary, fontSize: 8.5, fontFamily: 'Sora_800ExtraBold', marginBottom: 3 }}>
+                                <ThemedText style={{ color: isSelected ? theme.primary : theme.textSecondary, fontSize: 8.5, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>
                                   {bar.label}
                                 </ThemedText>
                                 <View
@@ -2790,7 +2790,7 @@ export default function HomeScreen() {
                                     borderColor: theme.primary,
                                   }}
                                 />
-                                <ThemedText style={{ marginTop: 4, fontSize: 9.5, color: isSelected ? theme.primary : theme.textSecondary, fontFamily: isSelected ? 'Sora_800ExtraBold' : 'Sora_600SemiBold' }}>
+                                <ThemedText style={{ marginTop: 4, fontSize: 9.5, color: isSelected ? theme.primary : theme.textSecondary, fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_600SemiBold' }}>
                                   {bar.day}
                                 </ThemedText>
                               </Pressable>
@@ -2802,10 +2802,10 @@ export default function HomeScreen() {
                         {selectedBar && (
                           <View style={{ backgroundColor: theme.surfaceHigh + '90', padding: 10, borderRadius: 10, marginTop: 6, borderLeftWidth: 3, borderLeftColor: theme.primary }}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text }}>
-                                {selectedBar.fullDay}: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_800ExtraBold' }}>{selectedBar.revenue}</ThemedText>
+                              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                                {selectedBar.fullDay}: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>{selectedBar.revenue}</ThemedText>
                               </ThemedText>
-                              <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>
+                              <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>
                                 🔥 Peak: {selectedBar.peak}
                               </ThemedText>
                             </View>
@@ -2820,10 +2820,10 @@ export default function HomeScreen() {
                       <View style={[styles.graphCard, { backgroundColor: theme.surfaceLowest, padding: 16, borderRadius: 12 }, Shadows.level2]}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                           <View style={{ flex: 1 }}>
-                            <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', letterSpacing: 0.5, fontSize: 13.5 }}>
+                            <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5, fontSize: 13.5 }}>
                               Monthly Booking Heatmap (Calendar View)
                             </ThemedText>
-                            <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_700Bold', marginTop: 2 }}>
+                            <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                               82% Average Daily Occupancy · 384 Total Bookings
                             </ThemedText>
                           </View>
@@ -2834,11 +2834,11 @@ export default function HomeScreen() {
                         {selectedHeatmapDay && (
                           <View style={{ backgroundColor: theme.surfaceHigh + '90', padding: 10, borderRadius: 10, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: selectedHeatmapDay.level === 'Peak' ? '#ef4444' : selectedHeatmapDay.level === 'Medium' ? '#f59e0b' : '#94a3b8' }}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                                 {selectedHeatmapDay.label}
                               </ThemedText>
                               <View style={{ backgroundColor: selectedHeatmapDay.level === 'Peak' ? '#ef444420' : selectedHeatmapDay.level === 'Medium' ? '#f59e0b20' : '#94a3b820', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                                <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_800ExtraBold', color: selectedHeatmapDay.level === 'Peak' ? '#ef4444' : selectedHeatmapDay.level === 'Medium' ? '#d97706' : '#64748b' }}>
+                                <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: selectedHeatmapDay.level === 'Peak' ? '#ef4444' : selectedHeatmapDay.level === 'Medium' ? '#d97706' : '#64748b' }}>
                                   {selectedHeatmapDay.occupancy} {selectedHeatmapDay.level}
                                 </ThemedText>
                               </View>
@@ -2853,7 +2853,7 @@ export default function HomeScreen() {
                         <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
                           {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
                             <View key={i} style={{ flex: 1, alignItems: 'center' }}>
-                              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.textSecondary }}>
+                              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
                                 {d}
                               </ThemedText>
                             </View>
@@ -2895,7 +2895,7 @@ export default function HomeScreen() {
                                       borderColor: isSelected ? theme.text : 'transparent',
                                     }}
                                   >
-                                    <ThemedText style={{ color: textColor, fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                                    <ThemedText style={{ color: textColor, fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
                                       {dayNum}
                                     </ThemedText>
                                   </Pressable>
@@ -2925,7 +2925,7 @@ export default function HomeScreen() {
                   ) : role === 'Coach' ? (
                     <View style={[styles.graphCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}>
                       <View style={styles.graphHeader}>
-                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', letterSpacing: 0.5 }}>
+                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5 }}>
                           Weekly Trainee Attendance
                         </ThemedText>
                         <Ionicons name="ellipsis-horizontal" size={20} color={theme.textSecondary} />
@@ -2953,7 +2953,7 @@ export default function HomeScreen() {
                         </View>
                         <View style={styles.graphBarCol}>
                           <View style={[styles.graphBar, { height: 80, backgroundColor: theme.secondaryContainer }]} />
-                          <ThemedText type="labelSm" style={[styles.graphBarLabel, { color: theme.secondary, fontFamily: 'Sora_700Bold' }]}>S</ThemedText>
+                          <ThemedText type="labelSm" style={[styles.graphBarLabel, { color: theme.secondary, fontFamily: 'Sora_600SemiBold' }]}>S</ThemedText>
                         </View>
                         <View style={styles.graphBarCol}>
                           <View style={[styles.graphBar, { height: 55, backgroundColor: theme.primary + '1a' }]} />
@@ -2964,7 +2964,7 @@ export default function HomeScreen() {
                   ) : role === 'Organizer' ? (
                     <View style={[styles.graphCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}>
                       <View style={styles.graphHeader}>
-                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', letterSpacing: 0.5 }}>
+                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5 }}>
                           Weekly Tournament Attendance
                         </ThemedText>
                         <Ionicons name="ellipsis-horizontal" size={20} color={theme.textSecondary} />
@@ -2984,7 +2984,7 @@ export default function HomeScreen() {
                         </View>
                         <View style={styles.graphBarCol}>
                           <View style={[styles.graphBar, { height: 95, backgroundColor: theme.secondaryContainer }]} />
-                          <ThemedText type="labelSm" style={[styles.graphBarLabel, { color: theme.secondary, fontFamily: 'Sora_700Bold' }]}>T</ThemedText>
+                          <ThemedText type="labelSm" style={[styles.graphBarLabel, { color: theme.secondary, fontFamily: 'Sora_600SemiBold' }]}>T</ThemedText>
                         </View>
                         <View style={styles.graphBarCol}>
                           <View style={[styles.graphBar, { height: 85, backgroundColor: theme.primary }]} />
@@ -3003,7 +3003,7 @@ export default function HomeScreen() {
                   ) : (
                     <View style={[styles.graphCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}>
                       <View style={styles.graphHeader}>
-                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', letterSpacing: 0.5 }}>
+                        <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5 }}>
                           Weekly Performance
                         </ThemedText>
                         <Ionicons name="ellipsis-horizontal" size={20} color={theme.textSecondary} />
@@ -3019,7 +3019,7 @@ export default function HomeScreen() {
                         </View>
                         <View style={styles.graphBarCol}>
                           <View style={[styles.graphBar, { height: 75, backgroundColor: theme.secondaryContainer }]} />
-                          <ThemedText type="labelSm" style={[styles.graphBarLabel, { color: theme.secondary, fontFamily: 'Sora_700Bold' }]}>W</ThemedText>
+                          <ThemedText type="labelSm" style={[styles.graphBarLabel, { color: theme.secondary, fontFamily: 'Sora_600SemiBold' }]}>W</ThemedText>
                         </View>
                         <View style={styles.graphBarCol}>
                           <View style={[styles.graphBar, { height: 90, backgroundColor: theme.primary }]} />
@@ -3117,7 +3117,7 @@ const styles = StyleSheet.create({
   },
   welcomeHeadline: {
     marginTop: Spacing.xs,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     lineHeight: 32,
   },
   welcomeIllustration: {
@@ -3201,7 +3201,7 @@ const styles = StyleSheet.create({
   },
   scheduleTitle: {
     fontSize: 13.8,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   scheduleTimeRow: {
     flexDirection: 'row',
@@ -3315,7 +3315,7 @@ const styles = StyleSheet.create({
   },
   featuredTurfTitle: {
     fontSize: 12.5,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     marginBottom: 2,
   },
   featuredTurfLocation: {
@@ -3363,7 +3363,7 @@ const styles = StyleSheet.create({
   actionCardTitle: {
     color: '#ffffff',
     fontSize: 14,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     marginBottom: 2,
   },
   actionCardDesc: {
@@ -3444,12 +3444,12 @@ const styles = StyleSheet.create({
   analyticsLabel: {
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 10,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   analyticsValue: {
     color: '#ffffff',
     fontSize: 16,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
   },
   analyticsUnit: {
     color: 'rgba(255, 255, 255, 0.7)',
@@ -3465,6 +3465,6 @@ const styles = StyleSheet.create({
   trendText: {
     color: '#4ade80',
     fontSize: 9,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
 });

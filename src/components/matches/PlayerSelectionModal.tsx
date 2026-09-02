@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.xs,
     paddingBottom: Spacing.sm,
   },
-  title: { fontFamily: 'Sora_700Bold', fontSize: 14.5, letterSpacing: -0.2 },
+  title: { fontFamily: 'Sora_600SemiBold', fontSize: 14.5, letterSpacing: -0.2 },
   subtitle: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 2 },
   closeBtn: {
     width: 28,
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  legendCodeText: { fontFamily: 'Sora_700Bold', fontSize: 8.5, color: '#ffffff' },
+  legendCodeText: { fontFamily: 'Sora_600SemiBold', fontSize: 8.5, color: '#ffffff' },
   legendName: { fontFamily: 'Sora_600SemiBold', fontSize: 10, flexShrink: 1 },
 
   scrollContent: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.lg },
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
   },
   zoneHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm, gap: 5 },
   zoneDot: { width: 7, height: 7, borderRadius: 4 },
-  zoneTitle: { fontFamily: 'Sora_700Bold', fontSize: 11.5, flexShrink: 1 },
+  zoneTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 11.5, flexShrink: 1 },
   zoneMeta: { fontFamily: 'Sora_500Medium', fontSize: 9.5, marginLeft: 'auto' },
 
   // ── Bubbles ────────────────────────────────────────────────────────────
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionText: { fontFamily: 'Sora_700Bold', fontSize: 8, color: '#ffffff' },
+  actionText: { fontFamily: 'Sora_600SemiBold', fontSize: 8, color: '#ffffff' },
   emptyLabel: {
     fontFamily: 'Sora_400Regular',
     fontSize: 10.5,
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
     ...Shadows.primary,
   },
-  confirmText: { fontFamily: 'Sora_700Bold', fontSize: 12, color: '#ffffff' },
+  confirmText: { fontFamily: 'Sora_600SemiBold', fontSize: 12, color: '#ffffff' },
 
   ghost: {
     position: 'absolute',

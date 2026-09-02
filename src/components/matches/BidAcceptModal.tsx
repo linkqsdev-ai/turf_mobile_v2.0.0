@@ -93,7 +93,7 @@ export function BidAcceptModal({ visible, match, onClose, onConfirm }: BidAccept
           </ThemedText>
 
           <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 4, paddingHorizontal: 10 }}>
-            You are about to accept the match challenge proposed by <ThemedText type="bodySm" style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>{challenger}</ThemedText>.
+            You are about to accept the match challenge proposed by <ThemedText type="bodySm" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>{challenger}</ThemedText>.
           </ThemedText>
 
           {/* 🌐 3-Chain Friend of Friend Trust & Phone Verification Card */}
@@ -108,12 +108,12 @@ export function BidAcceptModal({ visible, match, onClose, onConfirm }: BidAccept
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Ionicons name="git-network" size={15} color={fofConn.badgeColor} />
-                <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: fofConn.badgeColor }}>
+                <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: fofConn.badgeColor }}>
                   {fofConn.degreeLabel}
                 </ThemedText>
               </View>
 
-              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#10B981' }}>
+              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: '#10B981' }}>
                 ✓ {fofConn.trustScore}% Trust
               </ThemedText>
             </View>
@@ -121,7 +121,7 @@ export function BidAcceptModal({ visible, match, onClose, onConfirm }: BidAccept
             {/* Challenger Phone + Chain Path */}
             <View style={{ marginTop: 4 }}>
               <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
-                Challenger Phone: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_700Bold' }}>{fofConn.targetPhone}</ThemedText>
+                Challenger Phone: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>{fofConn.targetPhone}</ThemedText>
               </ThemedText>
               <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginTop: 2 }} numberOfLines={1}>
                 {fofConn.chainSummary}
@@ -133,14 +133,14 @@ export function BidAcceptModal({ visible, match, onClose, onConfirm }: BidAccept
           <View style={[styles.detailsBox, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
             <View style={styles.detailRow}>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>MATCH</ThemedText>
-              <ThemedText type="bodySm" style={{ fontFamily: 'Sora_700Bold' }}>
+              <ThemedText type="bodySm" style={{ fontFamily: 'Sora_600SemiBold' }}>
                 {match.tournament || 'Bid Challenge Match'}
               </ThemedText>
             </View>
 
             <View style={styles.detailRow}>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>CHALLENGER</ThemedText>
-              <ThemedText type="bodySm" style={{ fontFamily: 'Sora_700Bold', color: theme.primary }}>
+              <ThemedText type="bodySm" style={{ fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                 {match.team1} (by {challenger})
               </ThemedText>
             </View>
@@ -163,7 +163,7 @@ export function BidAcceptModal({ visible, match, onClose, onConfirm }: BidAccept
               <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>BID STAKE</ThemedText>
               <View style={styles.coinBadge}>
                 <Ionicons name="sparkles" size={12} color="#F59E0B" />
-                <ThemedText type="labelMd" style={{ color: '#D97706', fontFamily: 'Sora_800ExtraBold', marginLeft: 4 }}>
+                <ThemedText type="labelMd" style={{ color: '#D97706', fontFamily: 'Sora_600SemiBold', marginLeft: 4 }}>
                   ₹{stakeCoins} ({stakeCoins} Coins)
                 </ThemedText>
               </View>
@@ -179,7 +179,7 @@ export function BidAcceptModal({ visible, match, onClose, onConfirm }: BidAccept
                 { backgroundColor: theme.surfaceLow, opacity: pressed ? 0.8 : 1 }
               ]}
             >
-              <ThemedText type="labelMd" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>
+              <ThemedText type="labelMd" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>
                 Cancel
               </ThemedText>
             </Pressable>
@@ -192,7 +192,7 @@ export function BidAcceptModal({ visible, match, onClose, onConfirm }: BidAccept
               ]}
             >
               <Ionicons name="checkmark" size={16} color="#ffffff" style={{ marginRight: 4 }} />
-              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
                 Accept Bid
               </ThemedText>
             </Pressable>
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   titleText: {
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 18,
     textAlign: 'center',
   },

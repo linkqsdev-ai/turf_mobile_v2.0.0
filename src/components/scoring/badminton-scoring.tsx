@@ -218,7 +218,7 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
                     <ThemedText
                       key={idx}
                       type="headlineSm"
-                      style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'Sora_700Bold' : 'Sora_400Regular' }}
+                      style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'Sora_600SemiBold' : 'Sora_400Regular' }}
                     >
                       {isCurrent ? pointsA : val}
                     </ThemedText>
@@ -234,7 +234,7 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
                     <ThemedText
                       key={idx}
                       type="headlineSm"
-                      style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'Sora_700Bold' : 'Sora_400Regular' }}
+                      style={{ flex: 1, textAlign: 'center', color: isCurrent ? '#ffffff' : '#ffffffaa', fontFamily: isCurrent ? 'Sora_600SemiBold' : 'Sora_400Regular' }}
                     >
                       {isCurrent ? pointsB : val}
                     </ThemedText>
@@ -260,7 +260,7 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
                     <MaterialCommunityIcons name="badminton" size={14} color="#ffdd33" style={{ marginLeft: 4 }} />
                   )}
                 </View>
-                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'Sora_800ExtraBold', marginVertical: Spacing.sm }}>
+                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'Sora_600SemiBold', marginVertical: Spacing.sm }}>
                   {pointsA}
                 </ThemedText>
                 <Pressable
@@ -281,7 +281,7 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
                     <MaterialCommunityIcons name="badminton" size={14} color="#ffdd33" style={{ marginLeft: 4 }} />
                   )}
                 </View>
-                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'Sora_800ExtraBold', marginVertical: Spacing.sm }}>
+                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'Sora_600SemiBold', marginVertical: Spacing.sm }}>
                   {pointsB}
                 </ThemedText>
                 <Pressable
@@ -309,7 +309,7 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
                 <Pressable onPress={() => setSmashWinnersA(prev => Math.max(0, prev - 1))} style={styles.adjustBtn}>
                   <Ionicons name="remove" size={14} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'Sora_700Bold', flex: 1 }}>
+                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'Sora_600SemiBold', flex: 1 }}>
                   {smashWinnersA} | {smashWinnersB}
                 </ThemedText>
                 <Pressable onPress={() => setSmashWinnersB(prev => prev + 1)} style={styles.adjustBtn}>
@@ -328,7 +328,7 @@ export default function BadmintonScoring({ matchId, teamA = 'Player A', teamB = 
                 <Pressable onPress={() => setServiceErrorsA(prev => Math.max(0, prev - 1))} style={styles.adjustBtn}>
                   <Ionicons name="remove" size={14} color={theme.text} />
                 </Pressable>
-                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'Sora_700Bold', flex: 1 }}>
+                <ThemedText style={{ fontSize: 13, textAlign: 'center', fontFamily: 'Sora_600SemiBold', flex: 1 }}>
                   {serviceErrorsA} | {serviceErrorsB}
                 </ThemedText>
                 <Pressable onPress={() => setServiceErrorsB(prev => prev + 1)} style={styles.adjustBtn}>

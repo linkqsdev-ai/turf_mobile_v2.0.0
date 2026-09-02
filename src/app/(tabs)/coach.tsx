@@ -243,7 +243,7 @@ export default function CoachTab() {
                 />
               </Pressable>
               <View style={styles.headerTextGroup}>
-                <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', lineHeight: 18 }}>
+                <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', lineHeight: 18 }}>
                   {profile.name}
                 </ThemedText>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
@@ -346,11 +346,11 @@ export default function CoachTab() {
                       >
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                           <View style={{ backgroundColor: theme.primary + '18', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                            <ThemedText style={{ color: theme.primary, fontSize: 9.5, fontFamily: 'Sora_700Bold' }}>
+                            <ThemedText style={{ color: theme.primary, fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
                               ✏️ Tap to Edit
                             </ThemedText>
                           </View>
-                          <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
                             {cls.feeAmount ? `₹${cls.feeAmount}` : 'Free'}
                           </ThemedText>
                         </View>
@@ -536,7 +536,7 @@ export default function CoachTab() {
                           {/* Info Block */}
                           <View style={{ flex: 1, justifyContent: 'space-between' }}>
                             <View>
-                              <ThemedText type="headlineSm" style={{ fontSize: 15, fontFamily: 'Sora_700Bold' }} numberOfLines={1}>
+                              <ThemedText type="headlineSm" style={{ fontSize: 15, fontFamily: 'Sora_600SemiBold' }} numberOfLines={1}>
                                 {turf.name}
                               </ThemedText>
 
@@ -556,7 +556,7 @@ export default function CoachTab() {
 
                             {/* Rate */}
                             <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}>
-                              <ThemedText type="headlineSm" style={{ fontSize: 15, color: theme.primary, fontFamily: 'Sora_700Bold' }}>
+                              <ThemedText type="headlineSm" style={{ fontSize: 15, color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
                                 {turf.rate}
                               </ThemedText>
                               <ThemedText style={{ fontSize: 10, color: theme.textSecondary, marginLeft: 2 }}>
@@ -569,10 +569,10 @@ export default function CoachTab() {
                         {/* Slot Occupancy Bar & Status */}
                         <View style={{ backgroundColor: theme.surfaceLow, borderRadius: BorderRadius.md, padding: 8, marginTop: 4 }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                            <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                            <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                               Today's Slot Occupancy
                             </ThemedText>
-                            <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.secondary }}>
+                            <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.secondary }}>
                               {turf.slotsText}
                             </ThemedText>
                           </View>
@@ -597,7 +597,7 @@ export default function CoachTab() {
                             onPress={() => router.push({ pathname: '/details', params: { id: turf.id, name: turf.name } })}
                           >
                             <Ionicons name="eye-outline" size={13} color={theme.text} />
-                            <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 11 }}>View Arena</ThemedText>
+                            <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>View Arena</ThemedText>
                           </Pressable>
 
                           <Pressable
@@ -605,7 +605,7 @@ export default function CoachTab() {
                             onPress={() => router.push({ pathname: '/create-turf', params: { editId: turf.id } })}
                           >
                             <Ionicons name="settings-outline" size={13} color="#ffffff" />
-                            <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 11 }}>Manage Pitch</ThemedText>
+                            <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>Manage Pitch</ThemedText>
                           </Pressable>
                         </View>
                       </View>
@@ -654,7 +654,7 @@ export default function CoachTab() {
               />
             </Pressable>
             <View style={styles.headerTextGroup}>
-              <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold', lineHeight: 18 }}>
+              <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', lineHeight: 18 }}>
                 {profile.name}
               </ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
@@ -712,15 +712,15 @@ export default function CoachTab() {
                     <View style={styles.statsRow}>
                       <View>
                         <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Win Rate</ThemedText>
-                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>78.4%</ThemedText>
+                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>78.4%</ThemedText>
                       </View>
                       <View>
                         <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Avg Score</ThemedText>
-                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>24.5</ThemedText>
+                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>24.5</ThemedText>
                       </View>
                       <View>
                         <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Matches</ThemedText>
-                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>112</ThemedText>
+                        <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>112</ThemedText>
                       </View>
                     </View>
                   </View>
@@ -765,7 +765,7 @@ export default function CoachTab() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 13 }}>
+                        <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>
                           Registered Students List
                         </ThemedText>
                       </View>
@@ -775,7 +775,7 @@ export default function CoachTab() {
                     </View>
                   </View>
                   <View style={[styles.studentCardBtn, { backgroundColor: theme.primary }]}>
-                    <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                    <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                       View Students →
                     </ThemedText>
                   </View>
@@ -835,7 +835,7 @@ export default function CoachTab() {
                       style={{ marginTop: 14, backgroundColor: theme.primaryContainer + '20', borderWidth: 1, borderColor: theme.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: BorderRadius.full }}
                       onPress={() => router.push('/coach-students')}
                     >
-                      <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_700Bold', fontSize: 12 }}>
+                      <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
                         🎓 View Registered Academy Students →
                       </ThemedText>
                     </Pressable>
@@ -917,7 +917,7 @@ export default function CoachTab() {
                                 <View style={[styles.summerAdBadgeRow, { justifyContent: 'flex-end' }]}>
                                   <ThemedText type="labelSm" style={{ color: '#ffffff99', fontSize: 10 }}>Limited Seats</ThemedText>
                                 </View>
-                                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_800ExtraBold', marginTop: 6, fontSize: 18 }}>
+                                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', marginTop: 6, fontSize: 18 }}>
                                   {'⚽ Football Summer Camp 2024'}
                                 </ThemedText>
                                 <ThemedText type="bodySm" style={{ color: '#ffffffcc', marginTop: 4, lineHeight: 18 }}>
@@ -936,10 +936,10 @@ export default function CoachTab() {
                                 <View style={styles.summerAdFooter}>
                                   <View>
                                     <ThemedText type="labelSm" style={{ color: '#ffffffaa', fontSize: 10 }}>Early Bird Price</ThemedText>
-                                    <ThemedText type="headlineSm" style={{ color: '#fbbf24', fontFamily: 'Sora_800ExtraBold' }}>₹4,999</ThemedText>
+                                    <ThemedText type="headlineSm" style={{ color: '#fbbf24', fontFamily: 'Sora_600SemiBold' }}>₹4,999</ThemedText>
                                   </View>
                                   <View style={styles.summerAdBtn}>
-                                    <ThemedText type="labelMd" style={{ color: '#1a1a2e', fontFamily: 'Sora_700Bold', fontSize: 12 }}>Enroll Now</ThemedText>
+                                    <ThemedText type="labelMd" style={{ color: '#1a1a2e', fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>Enroll Now</ThemedText>
                                     <Ionicons name="arrow-forward" size={14} color="#1a1a2e" style={{ marginLeft: 4 }} />
                                   </View>
                                 </View>
@@ -978,7 +978,7 @@ export default function CoachTab() {
                                 <View style={[styles.summerAdBadgeRow, { justifyContent: 'flex-end' }]}>
                                   <ThemedText type="labelSm" style={{ color: '#ffffff99', fontSize: 10 }}>8 Spots Left</ThemedText>
                                 </View>
-                                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_800ExtraBold', marginTop: 6, fontSize: 18 }}>
+                                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', marginTop: 6, fontSize: 18 }}>
                                   {'🎾 Tennis Masterclass Series'}
                                 </ThemedText>
                                 <ThemedText type="bodySm" style={{ color: '#ffffffcc', marginTop: 4, lineHeight: 18 }}>
@@ -997,10 +997,10 @@ export default function CoachTab() {
                                 <View style={styles.summerAdFooter}>
                                   <View>
                                     <ThemedText type="labelSm" style={{ color: '#ffffffaa', fontSize: 10 }}>Per Session</ThemedText>
-                                    <ThemedText type="headlineSm" style={{ color: '#a78bfa', fontFamily: 'Sora_800ExtraBold' }}>₹2,499</ThemedText>
+                                    <ThemedText type="headlineSm" style={{ color: '#a78bfa', fontFamily: 'Sora_600SemiBold' }}>₹2,499</ThemedText>
                                   </View>
                                   <View style={[styles.summerAdBtn, { backgroundColor: '#7c3aed' }]}>
-                                    <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 12 }}>Register</ThemedText>
+                                    <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>Register</ThemedText>
                                     <Ionicons name="arrow-forward" size={14} color="#ffffff" style={{ marginLeft: 4 }} />
                                   </View>
                                 </View>
@@ -1057,7 +1057,7 @@ export default function CoachTab() {
                               {/* Rating Row */}
                               <View style={styles.ratingRow}>
                                 <Ionicons name="star" size={13} color="#f59e0b" />
-                                <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.text, fontFamily: 'Sora_700Bold', marginLeft: 3, fontSize: 11 }}>
+                                <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.text, fontFamily: 'Sora_600SemiBold', marginLeft: 3, fontSize: 11 }}>
                                   {coach.rating}
                                 </ThemedText>
                                 <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + '88' : theme.textSecondary, marginLeft: 3, fontSize: 10.5, fontFamily: 'Sora_400Regular' }}>
@@ -1149,7 +1149,7 @@ export default function CoachTab() {
                     style={[styles.playerCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
                   >
                     <Image source={player.image} style={styles.playerAvatar} contentFit="cover" />
-                    <ThemedText type="labelMd" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                    <ThemedText type="labelMd" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                       {player.name}
                     </ThemedText>
                     <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10 }}>
@@ -1163,7 +1163,7 @@ export default function CoachTab() {
                         inviteStates[player.id] && { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
                       ]}
                     >
-                      <ThemedText type="labelSm" style={{ color: inviteStates[player.id] ? theme.onSecondaryContainer : theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText type="labelSm" style={{ color: inviteStates[player.id] ? theme.onSecondaryContainer : theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                         {inviteStates[player.id] ? 'Invited!' : 'Invite'}
                       </ThemedText>
                     </Pressable>
@@ -1220,7 +1220,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filterTabText: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 11,
   },
   safeArea: {
@@ -1493,7 +1493,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   createPillText: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 11,
     color: '#ffffff',
     letterSpacing: 0.2,

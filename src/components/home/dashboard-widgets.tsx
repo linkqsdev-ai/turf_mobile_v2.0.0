@@ -378,6 +378,7 @@ const styles = StyleSheet.create({
   // stat tile
   statTile: {
     flex: 1,
+    minWidth: 0,
     alignItems: 'center',
     gap: 5,
     paddingVertical: 11,
@@ -431,7 +432,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   ticketStub: { width: 78, alignItems: 'center', justifyContent: 'center' },
-  ticketValue: { color: '#ffffff', fontFamily: 'Sora_800ExtraBold', fontSize: 19 },
+  ticketValue: { color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 19 },
   ticketSuffix: {
     color: 'rgba(255,255,255,0.85)',
     fontFamily: 'Sora_600SemiBold',

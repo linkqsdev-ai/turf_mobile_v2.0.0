@@ -143,7 +143,7 @@ export default function ExploreScreen() {
               />
             </Pressable>
             <View style={styles.headerTextGroup}>
-              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'Sora_700Bold', lineHeight: 18 }}>
+              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', lineHeight: 18 }}>
                 {profile.name}
               </ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
@@ -159,8 +159,8 @@ export default function ExploreScreen() {
               style={[styles.iconButton, { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, backgroundColor: theme.primary + '10', borderRadius: 8, height: 32 }]}
               onPress={() => router.push('/wallet')}
             >
-              <Image source={require('@/assets/images/illustrations/wallet_blue.png')} style={{ width: 16, height: 16 }} contentFit="contain" />
-              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+              <Ionicons name="wallet-outline" size={16} color={theme.primary} />
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                 ₹{walletBalance.toFixed(0)}
               </ThemedText>
             </Pressable>
@@ -213,7 +213,7 @@ export default function ExploreScreen() {
                       type="labelSm"
                       style={{
                         color: isActive ? '#ffffff' : theme.textSecondary,
-                        fontFamily: 'Sora_700Bold',
+                        fontFamily: 'Sora_600SemiBold',
                         fontSize: 9,
                         letterSpacing: 0.3,
                       }}
@@ -224,7 +224,7 @@ export default function ExploreScreen() {
                       type="headlineSm"
                       style={{
                         color: isActive ? '#ffffff' : theme.text,
-                        fontFamily: 'Sora_700Bold',
+                        fontFamily: 'Sora_600SemiBold',
                         marginTop: 2,
                         fontSize: 14,
                       }}
@@ -278,7 +278,7 @@ export default function ExploreScreen() {
                       type="labelMd"
                       style={{
                         color: isActive ? '#ffffff' : theme.text,
-                        fontFamily: isActive ? 'Sora_700Bold' : 'Sora_600SemiBold',
+                        fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_600SemiBold',
                         fontSize: 10.5,
                         letterSpacing: 0.2,
                       }}
@@ -573,7 +573,7 @@ export default function ExploreScreen() {
                           </View>
                           <View style={styles.ratingBadge}>
                             <Ionicons name="star" size={11} color="#f59e0b" />
-                            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10.5, fontFamily: 'Sora_700Bold' }}>
+                            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>
                               {turf.rating}
                             </ThemedText>
                           </View>
@@ -595,13 +595,13 @@ export default function ExploreScreen() {
                         {/* Clean Small Offer Text (no badge, no decorative icons) */}
                         {!!activeOffer && (
                           <ThemedText style={{ fontSize: 9, color: '#059669', fontFamily: 'Sora_600SemiBold', marginTop: 1, marginBottom: 1 }} numberOfLines={1}>
-                            {formatDiscount(activeOffer)} · Use code <ThemedText style={{ fontFamily: 'Sora_700Bold', color: '#047857' }}>{activeOffer.code}</ThemedText>
+                            {formatDiscount(activeOffer)} · Use code <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: '#047857' }}>{activeOffer.code}</ThemedText>
                           </ThemedText>
                         )}
 
                         <View style={styles.cardActions}>
                           <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                            <ThemedText type="headlineSm" style={{ color: theme.primary, fontSize: 15.5, fontFamily: 'Sora_700Bold' }}>
+                            <ThemedText type="headlineSm" style={{ color: theme.primary, fontSize: 15.5, fontFamily: 'Sora_600SemiBold' }}>
                               ₹{turf.price}
                             </ThemedText>
                             <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>
@@ -613,7 +613,7 @@ export default function ExploreScreen() {
                               onPress={() => handleTurfSelect(turf.id, turf.name, activeOffer?.code)}
                               style={[styles.actionButton, { backgroundColor: theme.primary }]}
                             >
-                              <ThemedText type="labelMd" style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                              <ThemedText type="labelMd" style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
                                 Book Now
                               </ThemedText>
                             </Pressable>
@@ -641,7 +641,7 @@ export default function ExploreScreen() {
                   return (
                     <View style={{ padding: Spacing.xl, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.xl, marginVertical: Spacing.md, borderColor: theme.outlineVariant + '33', borderWidth: 1 }}>
                       <Ionicons name="search-outline" size={44} color={theme.textSecondary} style={{ opacity: 0.5, marginBottom: 10 }} />
-                      <ThemedText type="headlineSm" style={{ color: theme.text, textAlign: 'center', fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText type="headlineSm" style={{ color: theme.text, textAlign: 'center', fontFamily: 'Sora_600SemiBold' }}>
                         No {selectedSport} Turfs Found
                       </ThemedText>
                       <ThemedText style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 6, fontSize: 12, lineHeight: 18 }}>
@@ -651,7 +651,7 @@ export default function ExploreScreen() {
                         onPress={() => setSelectedSport('All')}
                         style={{ backgroundColor: theme.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: BorderRadius.lg, marginTop: 14 }}
                       >
-                        <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>Show All Sports</ThemedText>
+                        <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>Show All Sports</ThemedText>
                       </Pressable>
                     </View>
                   );
@@ -869,7 +869,7 @@ const styles = StyleSheet.create({
   bannerTitle: {
     color: '#ffffff',
     fontSize: 18,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     marginBottom: Spacing.base,
     lineHeight: 22,
   },
@@ -921,7 +921,7 @@ const styles = StyleSheet.create({
   cardBadgeText: {
     color: '#ffffff',
     fontSize: 8.5,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 0.3,
   },
   cardOfferBadge: {
@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
   cardOfferBadgeText: {
     color: '#ffffff',
     fontSize: 8.5,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 0.2,
   },
   cardOfferStrip: {
@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   createPillText: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 11,
     color: '#ffffff',
     letterSpacing: 0.2,

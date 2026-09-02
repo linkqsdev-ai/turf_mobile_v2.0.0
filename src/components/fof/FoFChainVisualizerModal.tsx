@@ -51,7 +51,7 @@ export function FoFChainVisualizerModal({
                 <Ionicons name="git-network" size={20} color={conn.badgeColor} />
               </View>
               <View>
-                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                   3-Chain FoF Network
                 </ThemedText>
                 <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>
@@ -70,7 +70,7 @@ export function FoFChainVisualizerModal({
               <Image source={{ uri: conn.targetAvatar }} style={styles.targetAvatar} />
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <ThemedText style={{ fontSize: 15, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 15, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                     {conn.targetName}
                   </ThemedText>
                 </View>
@@ -80,7 +80,7 @@ export function FoFChainVisualizerModal({
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}
                 >
                   <Ionicons name="call-outline" size={13} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                     {conn.targetPhone}
                   </ThemedText>
                   <Ionicons name="copy-outline" size={11} color={theme.textSecondary} style={{ marginLeft: 2 }} />
@@ -97,11 +97,11 @@ export function FoFChainVisualizerModal({
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="shield-checkmark" size={18} color="#10B981" />
-                  <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_700Bold', color: '#10B981' }}>
+                  <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: '#10B981' }}>
                     {conn.trustScore}% Network Trust Verified
                   </ThemedText>
                 </View>
-                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#10B981' }}>
+                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: '#10B981' }}>
                   {conn.degree === 1 ? 'Direct Contact' : conn.degree === 2 ? '2-Hop Connection' : '3-Chain FoF'}
                 </ThemedText>
               </View>
@@ -111,7 +111,7 @@ export function FoFChainVisualizerModal({
             </View>
 
             {/* 3-Chain Visual Flow Diagram */}
-            <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5, marginTop: 6 }}>
+            <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5, marginTop: 6 }}>
               3-CHAIN PHONE CONNECTION PATH
             </ThemedText>
 
@@ -141,7 +141,7 @@ export function FoFChainVisualizerModal({
                       {/* Info */}
                       <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                          <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                             {node.name} {isFirst ? '(You)' : ''}
                           </ThemedText>
                         </View>
@@ -178,7 +178,7 @@ export function FoFChainVisualizerModal({
               onPress={onClose}
               style={[{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: theme.surfaceLow, borderWidth: 1, borderColor: theme.outlineVariant + '44', alignItems: 'center' }]}
             >
-              <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>
+              <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                 Close
               </ThemedText>
             </Pressable>
@@ -191,7 +191,7 @@ export function FoFChainVisualizerModal({
                 }}
                 style={[{ flex: 2, paddingVertical: 12, borderRadius: 10, backgroundColor: theme.primary, alignItems: 'center' }]}
               >
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
                   {actionButtonText}
                 </ThemedText>
               </Pressable>

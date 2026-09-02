@@ -470,7 +470,7 @@ export default function OwnerOffersScreen() {
                   <ThemedText
                     style={{
                       fontSize: 12,
-                      fontFamily: active ? 'Sora_700Bold' : 'Sora_600SemiBold',
+                      fontFamily: active ? 'Sora_600SemiBold' : 'Sora_600SemiBold',
                       color: active ? '#ffffff' : theme.textSecondary,
                     }}
                   >
@@ -566,7 +566,7 @@ export default function OwnerOffersScreen() {
                           <ThemedText
                             style={{
                               fontSize: 12,
-                              fontFamily: 'Sora_700Bold',
+                              fontFamily: 'Sora_600SemiBold',
                               color: active ? '#ffffff' : theme.textSecondary,
                             }}
                           >
@@ -640,7 +640,7 @@ export default function OwnerOffersScreen() {
                   style={[styles.footerBtn, { backgroundColor: theme.surfaceLow }]}
                   accessibilityRole="button"
                 >
-                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 13 }}>
+                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>
                     Cancel
                   </ThemedText>
                 </Pressable>
@@ -649,7 +649,7 @@ export default function OwnerOffersScreen() {
                   style={[styles.footerBtn, { backgroundColor: theme.primary, flex: 1.4 }]}
                   accessibilityRole="button"
                 >
-                  <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 13 }}>
+                  <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>
                     {editingId ? 'Save changes' : 'Publish offer'}
                   </ThemedText>
                 </Pressable>
@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
   summaryValue: {
     color: '#ffffff',
     fontSize: 20,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
   },
   summaryLabel: {
     color: 'rgba(255,255,255,0.82)',
@@ -716,7 +716,7 @@ const styles = StyleSheet.create({
   createBtnText: {
     color: '#ffffff',
     fontSize: 13.5,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
 
   filterRow: {
@@ -750,11 +750,11 @@ const styles = StyleSheet.create({
   },
   discountValue: {
     fontSize: 17,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
   },
   discountOff: {
     fontSize: 9,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 0.6,
     marginTop: 1,
   },
@@ -762,7 +762,7 @@ const styles = StyleSheet.create({
   offerTitle: {
     fontSize: 14,
     lineHeight: 19,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   offerDesc: {
     fontSize: 11.5,
@@ -779,7 +779,7 @@ const styles = StyleSheet.create({
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: {
     fontSize: 10.5,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
 
   codeStrip: {
@@ -795,7 +795,7 @@ const styles = StyleSheet.create({
   },
   codeText: {
     fontSize: 13,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 1,
   },
   codeMeta: {
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
   },
   metaValue: {
     fontSize: 12,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
 
   usageTrack: {
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 12,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   deleteBtn: {
     width: 38,
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 15,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     marginTop: 14,
   },
   emptyBody: {

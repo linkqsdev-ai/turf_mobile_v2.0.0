@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
   },
   titleNormal: {
     fontSize: 22,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     color: TEXT_DARK,
     lineHeight: 28,
     letterSpacing: -0.5,
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   titleHighlightWrap: { position: 'relative' },
   titleHighlight: {
     fontSize: 22,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     color: TEXT_DARK,
     lineHeight: 28,
     letterSpacing: -0.5,
@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
 
   otpTriggerText: {
     fontSize: 12,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     color: ACCENT,
     letterSpacing: 0.2,
   },
@@ -809,7 +809,7 @@ const styles = StyleSheet.create({
   otpVerifyText: {
     color: '#fff',
     fontSize: 12,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   otpErrorText: {
     fontSize: 11,
@@ -885,7 +885,7 @@ const styles = StyleSheet.create({
   ctaText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 1.0,
   },
 
@@ -940,7 +940,7 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 13,
     color: TEXT_DARK,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
 
   // ── Role dropdown sheet ──
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
   },
   roleSheetTitle: {
     fontSize: 15,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     color: TEXT_DARK,
     marginBottom: 12,
   },
@@ -994,7 +994,7 @@ const styles = StyleSheet.create({
   roleOptionTextWrap: { flex: 1 },
   roleOptionLabel: {
     fontSize: 14,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     color: TEXT_DARK,
   },
   roleOptionDesc: {

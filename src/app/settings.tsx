@@ -221,7 +221,7 @@ export default function SettingsScreen() {
                     ]}
                   >
                     <Ionicons name={opt.icon} size={16} color={active ? theme.onPrimary : theme.text} />
-                    <ThemedText style={{ color: active ? theme.onPrimary : theme.text, fontSize: 11, fontFamily: 'Sora_700Bold' }}>{opt.label}</ThemedText>
+                    <ThemedText style={{ color: active ? theme.onPrimary : theme.text, fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>{opt.label}</ThemedText>
                   </Pressable>
                 );
               })}
@@ -357,10 +357,10 @@ export default function SettingsScreen() {
                   onPress={() => { set({ language: lang.name }); setLanguagePickerOpen(false); }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <ThemedText style={{ color: theme.text, fontSize: 14, fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium' }}>{lang.name}</ThemedText>
+                    <ThemedText style={{ color: theme.text, fontSize: 14, fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium' }}>{lang.name}</ThemedText>
                     {lang.comingSoon && (
                       <View style={[styles.comingSoonBadge, { backgroundColor: theme.surfaceLow }]}>
-                        <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, letterSpacing: 0.3 }}>COMING SOON</ThemedText>
+                        <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, letterSpacing: 0.3 }}>COMING SOON</ThemedText>
                       </View>
                     )}
                   </View>
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 11,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 0.6,
   },
   sectionCard: {
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   },
   accountName: {
     fontSize: 15,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   accountMeta: {
     fontSize: 11,

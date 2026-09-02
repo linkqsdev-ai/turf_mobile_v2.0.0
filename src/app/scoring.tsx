@@ -141,7 +141,7 @@ function EmptyState({ label }: { label: string }) {
       <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: PL, justifyContent: 'center', alignItems: 'center' }}>
         <ThemedText style={{ fontSize: 28 }}>🏏</ThemedText>
       </View>
-      <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_700Bold', color: PD, textAlign: 'center' }}>
+      <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: PD, textAlign: 'center' }}>
         No {label} Yet
       </ThemedText>
       <ThemedText style={{ fontSize: 12, color: P + '80', fontFamily: 'Sora_500Medium', textAlign: 'center', paddingHorizontal: 20 }}>
@@ -216,7 +216,7 @@ export default function LiveScoringScreen() {
             <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/matches')} style={{ padding: 6 }}>
               <Ionicons name="arrow-back" size={22} color={theme.text} />
             </Pressable>
-            <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_700Bold', marginLeft: 6, color: theme.text }}>
+            <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_600SemiBold', marginLeft: 6, color: theme.text }}>
               Match Console
             </ThemedText>
           </View>
@@ -225,7 +225,7 @@ export default function LiveScoringScreen() {
             style={({ pressed }) => [styles.ownBoardBtn, pressed && { opacity: 0.8 }]}
           >
             <MaterialCommunityIcons name="clipboard-list-outline" size={15} color={W} />
-            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: W }}>
+            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: W }}>
               Own Board
             </ThemedText>
           </Pressable>
@@ -284,7 +284,7 @@ export default function LiveScoringScreen() {
                     <MaterialCommunityIcons name="clipboard-list-outline" size={24} color={W} />
                   </View>
                   <View>
-                    <ThemedText style={{ fontSize: 18, fontFamily: 'Sora_800ExtraBold', color: W }}>Own Board</ThemedText>
+                    <ThemedText style={{ fontSize: 18, fontFamily: 'Sora_600SemiBold', color: W }}>Own Board</ThemedText>
                     <ThemedText style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontFamily: 'Sora_500Medium' }}>
                       Overall career stats · All matches
                     </ThemedText>
@@ -314,7 +314,7 @@ export default function LiveScoringScreen() {
                   >
                     <ThemedText style={{ fontSize: 13 }}>{t.emoji}</ThemedText>
                     <ThemedText style={[
-                      { fontSize: 12, fontFamily: 'Sora_700Bold', color: P + '70' },
+                      { fontSize: 12, fontFamily: 'Sora_600SemiBold', color: P + '70' },
                       tab === t.key && { color: W },
                     ]}>
                       {t.label}
@@ -342,7 +342,7 @@ export default function LiveScoringScreen() {
                   {/* Section label */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                     <View style={{ width: 3, height: 14, borderRadius: 2, backgroundColor: P }} />
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_800ExtraBold', color: PD, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: PD, letterSpacing: 0.8, textTransform: 'uppercase' }}>
                       {tab === 'batsmen' ? 'Career Batting Stats' : tab === 'bowlers' ? 'Career Bowling Stats' : `Match History (${history.length})`}
                     </ThemedText>
                   </View>
@@ -380,7 +380,7 @@ export default function LiveScoringScreen() {
                           </View>
                           <View style={{ alignItems: 'center', gap: 3 }}>
                             <View style={{ backgroundColor: idx === 0 ? P : PL, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 14 }}>
-                              <ThemedText style={{ fontSize: 20, fontFamily: 'Sora_800ExtraBold', color: idx === 0 ? W : P }}>
+                              <ThemedText style={{ fontSize: 20, fontFamily: 'Sora_600SemiBold', color: idx === 0 ? W : P }}>
                                 {item.totalRuns}
                               </ThemedText>
                             </View>
@@ -422,7 +422,7 @@ export default function LiveScoringScreen() {
                           </View>
                           <View style={{ alignItems: 'center', gap: 3 }}>
                             <View style={{ backgroundColor: idx === 0 ? P : PL, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 14 }}>
-                              <ThemedText style={{ fontSize: 20, fontFamily: 'Sora_800ExtraBold', color: idx === 0 ? W : P }}>
+                              <ThemedText style={{ fontSize: 20, fontFamily: 'Sora_600SemiBold', color: idx === 0 ? W : P }}>
                                 {item.totalWickets}W
                               </ThemedText>
                             </View>
@@ -440,7 +440,7 @@ export default function LiveScoringScreen() {
                         <View key={idx} style={styles.matchCard}>
                           {/* Title row */}
                           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                            <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_800ExtraBold', color: PD, flex: 1 }} numberOfLines={1}>
+                            <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: PD, flex: 1 }} numberOfLines={1}>
                               🏏 {match.teamA} vs {match.teamB}
                             </ThemedText>
                           </View>
@@ -458,7 +458,7 @@ export default function LiveScoringScreen() {
                             ].map((row, ri) => (
                               <View key={ri} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: ri === 0 ? 6 : 0, borderBottomWidth: ri === 0 ? 1 : 0, borderBottomColor: P + '18' }}>
                                 <ThemedText style={{ fontSize: 11.5, color: P + 'BB', fontFamily: 'Sora_600SemiBold' }}>{row.label}</ThemedText>
-                                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_800ExtraBold', color: PD }}>
+                                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: PD }}>
                                   {row.score} ({row.overs} ov)
                                 </ThemedText>
                               </View>
@@ -469,7 +469,7 @@ export default function LiveScoringScreen() {
                           <View style={{ marginTop: 10, borderRadius: 14, backgroundColor: P, padding: 12 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                               <Ionicons name="trophy" size={14} color={W} />
-                              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: W, flex: 1 }} numberOfLines={1}>
+                              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: W, flex: 1 }} numberOfLines={1}>
                                 {match.winner} · {match.winMargin}
                               </ThemedText>
                             </View>
@@ -477,10 +477,10 @@ export default function LiveScoringScreen() {
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                               <PlayerPic name={match.motmName} rank={1} size={38} />
                               <View>
-                                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: 'rgba(255,255,255,0.75)' }}>
+                                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: 'rgba(255,255,255,0.75)' }}>
                                   ⭐ Player of the Match
                                 </ThemedText>
-                                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_800ExtraBold', color: W, marginTop: 1 }}>
+                                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: W, marginTop: 1 }}>
                                   {match.motmName}
                                 </ThemedText>
                               </View>
@@ -549,7 +549,7 @@ export default function LiveScoringScreen() {
                             }}
                           >
                             <Ionicons name="document-text-outline" size={16} color="#059669" />
-                            <ThemedText style={{ color: '#059669', fontFamily: 'Sora_700Bold', fontSize: 12 }}>
+                            <ThemedText style={{ color: '#059669', fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
                               📄 Download Score Sheet PDF
                             </ThemedText>
                           </Pressable>
@@ -571,7 +571,7 @@ export default function LiveScoringScreen() {
                     style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14 }}
                   >
                     <MaterialCommunityIcons name="clipboard-check-outline" size={18} color={W} />
-                    <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_700Bold', color: W }}>
+                    <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: W }}>
                       Close Own Board
                     </ThemedText>
                   </LinearGradient>
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: P, opacity: 0.7,
   },
   playerName: {
-    fontSize: 15, fontFamily: 'Sora_800ExtraBold', color: PD,
+    fontSize: 15, fontFamily: 'Sora_600SemiBold', color: PD,
   },
   statText: {
     fontSize: 11, color: PD + '80', fontFamily: 'Sora_600SemiBold',

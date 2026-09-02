@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   titleText: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 13.5,
   },
 });

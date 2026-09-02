@@ -53,6 +53,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   backBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontFamily: 'Sora_700Bold', fontSize: 14, letterSpacing: -0.2 },
+  headerTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 14, letterSpacing: -0.2 },
   body: { flex: 1 },
 });

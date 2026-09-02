@@ -281,7 +281,7 @@ export default function TeamRegistrationScreen() {
           <Pressable style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/tournaments')}>
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </Pressable>
-          <ThemedText numberOfLines={1} style={{ color: theme.text, flex: 1, marginLeft: 12, fontSize: 13, fontFamily: 'Sora_700Bold' }}>
+          <ThemedText numberOfLines={1} style={{ color: theme.text, flex: 1, marginLeft: 12, fontSize: 13, fontFamily: 'Sora_600SemiBold' }}>
             Register for {tournamentName}
           </ThemedText>
         </View>
@@ -294,7 +294,7 @@ export default function TeamRegistrationScreen() {
               onPress={() => setViewMode('user')}
             >
               <Ionicons name="create-outline" size={16} color={viewMode === 'user' ? theme.primary : '#ffffff'} style={{ marginRight: 6 }} />
-              <ThemedText type="labelSm" style={{ color: viewMode === 'user' ? theme.primary : '#ffffff', fontWeight: 'bold' }}>Register Team</ThemedText>
+              <ThemedText type="labelSm" style={{ color: viewMode === 'user' ? theme.primary : '#ffffff', fontWeight: '600' }}>Register Team</ThemedText>
             </Pressable>
 
             <Pressable 
@@ -302,7 +302,7 @@ export default function TeamRegistrationScreen() {
               onPress={() => setViewMode('admin')}
             >
               <Ionicons name="shield-checkmark-outline" size={16} color={viewMode === 'admin' ? theme.primary : '#ffffff'} style={{ marginRight: 6 }} />
-              <ThemedText type="labelSm" style={{ color: viewMode === 'admin' ? theme.primary : '#ffffff', fontWeight: 'bold' }}>Admin Console</ThemedText>
+              <ThemedText type="labelSm" style={{ color: viewMode === 'admin' ? theme.primary : '#ffffff', fontWeight: '600' }}>Admin Console</ThemedText>
             </Pressable>
           </View>
         )}
@@ -336,30 +336,30 @@ export default function TeamRegistrationScreen() {
                   </View>
                 </View>
 
-                <ThemedText type="headlineLg" style={{ color: theme.text, marginTop: 24, textAlign: 'center', fontWeight: 'bold' }}>
+                <ThemedText type="headlineLg" style={{ color: theme.text, marginTop: 24, textAlign: 'center', fontWeight: '600' }}>
                   Registration Confirmed!
                 </ThemedText>
                 <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 8, paddingHorizontal: 20 }}>
-                  Your team, <ThemedText type="bodySm" style={{ fontWeight: 'bold', color: theme.text }}>{teamName}</ThemedText>, is registered for {tournamentName}. You can now view fixtures and manage your team squad.
+                  Your team, <ThemedText type="bodySm" style={{ fontWeight: '600', color: theme.text }}>{teamName}</ThemedText>, is registered for {tournamentName}. You can now view fixtures and manage your team squad.
                 </ThemedText>
 
                 <View style={[styles.invoiceMock, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant }]}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontWeight: 'bold' }}>REGISTRATION RECEIPT</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontWeight: '600' }}>REGISTRATION RECEIPT</ThemedText>
                   <View style={[styles.invoiceRow, { borderBottomColor: theme.outlineVariant + '22', marginTop: 12 }]}>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Tournament</ThemedText>
-                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>{tournamentName}</ThemedText>
+                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: '600' }}>{tournamentName}</ThemedText>
                   </View>
                   <View style={[styles.invoiceRow, { borderBottomColor: theme.outlineVariant + '22' }]}>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Entry Fee</ThemedText>
-                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹150.00</ThemedText>
+                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: '600' }}>₹150.00</ThemedText>
                   </View>
                   <View style={[styles.invoiceRow, { borderBottomColor: theme.outlineVariant + '22' }]}>
                     <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Admin Processing</ThemedText>
-                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹25.00</ThemedText>
+                    <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: '600' }}>₹25.00</ThemedText>
                   </View>
                   <View style={[styles.invoiceRow, { borderBottomWidth: 0 }]}>
-                    <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontWeight: 'bold' }}>Total Charged</ThemedText>
-                    <ThemedText type="bodySm" style={{ color: theme.secondaryContainer, fontWeight: 'bold' }}>₹175.00</ThemedText>
+                    <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontWeight: '600' }}>Total Charged</ThemedText>
+                    <ThemedText type="bodySm" style={{ color: theme.secondaryContainer, fontWeight: '600' }}>₹175.00</ThemedText>
                   </View>
                 </View>
 
@@ -402,7 +402,7 @@ export default function TeamRegistrationScreen() {
                 <View style={styles.inputGroup}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <ThemedText type="labelSm" style={styles.inputLabel}>
-                      Team name <ThemedText style={{ color: theme.error, fontWeight: 'bold' }}>*</ThemedText>
+                      Team name <ThemedText style={{ color: theme.error, fontWeight: '600' }}>*</ThemedText>
                     </ThemedText>
                     {errors.teamName && (
                       <ThemedText type="labelSm" style={{ color: theme.error, fontSize: 10 }}>Required</ThemedText>
@@ -425,7 +425,7 @@ export default function TeamRegistrationScreen() {
                 <View style={styles.inputGroup}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <ThemedText type="labelSm" style={styles.inputLabel}>
-                      Captain / Manager full name <ThemedText style={{ color: theme.error, fontWeight: 'bold' }}>*</ThemedText>
+                      Captain / Manager full name <ThemedText style={{ color: theme.error, fontWeight: '600' }}>*</ThemedText>
                     </ThemedText>
                     {errors.managerName && (
                       <ThemedText type="labelSm" style={{ color: theme.error, fontSize: 10 }}>Required</ThemedText>
@@ -448,7 +448,7 @@ export default function TeamRegistrationScreen() {
                   <View style={[styles.inputGroup, { width: '48%' }]}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                       <ThemedText type="labelSm" style={styles.inputLabel}>
-                        Phone <ThemedText style={{ color: theme.error, fontWeight: 'bold' }}>*</ThemedText>
+                        Phone <ThemedText style={{ color: theme.error, fontWeight: '600' }}>*</ThemedText>
                       </ThemedText>
                       {errors.managerPhone && (
                         <ThemedText type="labelSm" style={{ color: theme.error, fontSize: 10 }}>Required</ThemedText>
@@ -504,7 +504,7 @@ export default function TeamRegistrationScreen() {
                       <Ionicons name="wallet-outline" size={18} color={theme.primary} />
                     </View>
                     <View style={{ flex: 1, paddingRight: 8 }}>
-                      <ThemedText style={{ fontSize: 13, fontWeight: 'bold', color: theme.text }}>
+                      <ThemedText style={{ fontSize: 13, fontWeight: '600', color: theme.text }}>
                         Pay with Wallet Balance
                       </ThemedText>
                       <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 1 }}>
@@ -515,7 +515,7 @@ export default function TeamRegistrationScreen() {
                       onPress={() => setUseWallet(!useWallet)}
                       style={[styles.applyWalletBtn, { backgroundColor: useWallet ? theme.primary : theme.surfaceLowest }]}
                     >
-                      <ThemedText style={{ fontSize: 11, fontWeight: 'bold', color: useWallet ? '#ffffff' : theme.text }}>
+                      <ThemedText style={{ fontSize: 11, fontWeight: '600', color: useWallet ? '#ffffff' : theme.text }}>
                         {useWallet ? 'Applied (-₹50)' : 'Apply'}
                       </ThemedText>
                       <Ionicons name={useWallet ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={useWallet ? '#ffffff' : theme.textSecondary} />
@@ -607,21 +607,21 @@ export default function TeamRegistrationScreen() {
                   <View style={[styles.feeBreakdown, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}>
                     <View style={styles.rowBetween}>
                       <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Tournament Entry Fee</ThemedText>
-                      <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹{entryFee.toFixed(2)}</ThemedText>
+                      <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: '600' }}>₹{entryFee.toFixed(2)}</ThemedText>
                     </View>
                     <View style={[styles.rowBetween, { marginTop: 8 }]}>
                       <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Admin & Processing Fee</ThemedText>
-                      <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>₹{processingFee.toFixed(2)}</ThemedText>
+                      <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: '600' }}>₹{processingFee.toFixed(2)}</ThemedText>
                     </View>
                     {useWallet && (
                       <View style={[styles.rowBetween, { marginTop: 8 }]}>
-                        <ThemedText type="bodySm" style={{ color: '#10B981', fontWeight: 'bold' }}>Wallet Balance Applied</ThemedText>
-                        <ThemedText type="bodySm" style={{ color: '#10B981', fontWeight: 'bold' }}>-₹{discount.toFixed(2)}</ThemedText>
+                        <ThemedText type="bodySm" style={{ color: '#10B981', fontWeight: '600' }}>Wallet Balance Applied</ThemedText>
+                        <ThemedText type="bodySm" style={{ color: '#10B981', fontWeight: '600' }}>-₹{discount.toFixed(2)}</ThemedText>
                       </View>
                     )}
                     <View style={[styles.rowBetween, { borderTopWidth: 1, borderTopColor: theme.outlineVariant + '33', marginTop: 12, paddingTop: 10 }]}>
-                      <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: 'bold' }}>Total Payable Amount</ThemedText>
-                      <ThemedText type="bodyLg" style={{ color: theme.secondaryContainer, fontWeight: 'bold', fontSize: 16 }}>₹{finalPayable.toFixed(2)}</ThemedText>
+                      <ThemedText type="bodySm" style={{ color: theme.text, fontWeight: '600' }}>Total Payable Amount</ThemedText>
+                      <ThemedText type="bodyLg" style={{ color: theme.secondaryContainer, fontWeight: '600', fontSize: 16 }}>₹{finalPayable.toFixed(2)}</ThemedText>
                     </View>
                   </View>
 
@@ -642,7 +642,7 @@ export default function TeamRegistrationScreen() {
             <View style={[styles.fixedSubmitFooter, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
               <View style={{ flex: 1, marginRight: 12 }}>
                 <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10 }}>Total Payable</ThemedText>
-                <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer, fontWeight: 'bold' }}>₹{finalPayable.toFixed(2)}</ThemedText>
+                <ThemedText type="headlineSm" style={{ color: theme.secondaryContainer, fontWeight: '600' }}>₹{finalPayable.toFixed(2)}</ThemedText>
               </View>
 
               {isPaying ? (
@@ -657,7 +657,7 @@ export default function TeamRegistrationScreen() {
                     end={{ x: 1, y: 0 }}
                     style={styles.paySubmitBtnGradient}
                   >
-                    <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 12, letterSpacing: 0.5 }}>PAY & SUBMIT REGISTRATION</ThemedText>
+                    <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: '600', fontSize: 12, letterSpacing: 0.5 }}>PAY & SUBMIT REGISTRATION</ThemedText>
                   </LinearGradient>
                 </Pressable>
               )}
@@ -784,7 +784,7 @@ export default function TeamRegistrationScreen() {
                         onPress={() => handleAdminAction(t.id, 'Reject')}
                       >
                         <Ionicons name="close-circle-outline" size={14} color="#ba1a1a" style={{ marginRight: 4 }} />
-                        <ThemedText type="labelSm" style={{ color: '#ba1a1a', fontWeight: 'bold' }}>Reject</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: '#ba1a1a', fontWeight: '600' }}>Reject</ThemedText>
                       </Pressable>
 
                       <Pressable 
@@ -792,7 +792,7 @@ export default function TeamRegistrationScreen() {
                         onPress={() => handleAdminAction(t.id, 'Request Changes')}
                       >
                         <Ionicons name="chatbubble-ellipses-outline" size={14} color="#2980b9" style={{ marginRight: 4 }} />
-                        <ThemedText type="labelSm" style={{ color: '#2980b9', fontWeight: 'bold' }}>Request Info</ThemedText>
+                        <ThemedText type="labelSm" style={{ color: '#2980b9', fontWeight: '600' }}>Request Info</ThemedText>
                       </Pressable>
                     </View>
 
@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create({
   },
   mockTitleText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     marginLeft: 10,
     flex: 1,
   },
@@ -1056,7 +1056,7 @@ const styles = StyleSheet.create({
   },
   mockSubheaderLeft: {
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#81919c',
     letterSpacing: 0.5,
   },
@@ -1070,7 +1070,7 @@ const styles = StyleSheet.create({
   },
   mockSubheaderRight: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#5D68E8',
   },
   mockSeparator: {
@@ -1141,7 +1141,7 @@ const styles = StyleSheet.create({
   },
   mockTotalVal: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   mockBtnRow: {
     flexDirection: 'row',
@@ -1170,7 +1170,7 @@ const styles = StyleSheet.create({
   },
   mockFullWidthBtnText: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#ffffff',
   },
   mockFullWidthBtnContainer: {
@@ -1192,7 +1192,7 @@ const styles = StyleSheet.create({
   },
   mockFullWidthBtnTextGradient: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#ffffff',
   },
   toastContainer: {
@@ -1227,9 +1227,9 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 19,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#ffffff',
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     marginBottom: 6,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
@@ -1316,7 +1316,7 @@ const styles = StyleSheet.create({
   },
   cashbackTitle: {
     fontSize: 12.5,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     color: '#10B981',
   },
   cashbackSubtitle: {

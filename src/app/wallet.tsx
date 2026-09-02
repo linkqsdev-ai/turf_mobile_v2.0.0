@@ -302,7 +302,7 @@ export default function WalletScreen() {
                       isActive && { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', ...Shadows.level1 }
                     ]}
                   >
-                    <ThemedText style={[styles.tabItemText, { color: isActive ? theme.primary : theme.textSecondary, fontFamily: isActive ? 'Sora_700Bold' : 'Sora_600SemiBold' }]}>
+                    <ThemedText style={[styles.tabItemText, { color: isActive ? theme.primary : theme.textSecondary, fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_600SemiBold' }]}>
                       {t.label}
                     </ThemedText>
                   </Pressable>
@@ -529,7 +529,7 @@ export default function WalletScreen() {
             <Pressable style={styles.modalBackdrop} onPress={() => setTopUpModalVisible(false)} />
             <View style={[styles.modalSheet, { backgroundColor: theme.surfaceLowest }]}>
               <View style={styles.modalHeader}>
-                <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_800ExtraBold' }}>
+                <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
                   + Add Wallet Funds
                 </ThemedText>
                 <Pressable onPress={() => setTopUpModalVisible(false)}>
@@ -560,7 +560,7 @@ export default function WalletScreen() {
                       { backgroundColor: customAmount === String(amt) ? theme.primary + '18' : theme.surfaceLow, borderColor: customAmount === String(amt) ? theme.primary : theme.outlineVariant + '33' }
                     ]}
                   >
-                    <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: customAmount === String(amt) ? theme.primary : theme.text }}>
+                    <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: customAmount === String(amt) ? theme.primary : theme.text }}>
                       +₹{amt}
                     </ThemedText>
                   </Pressable>
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
   },
   toastText: {
     fontSize: 10,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   header: {
     flexDirection: 'row',
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 16,
   },
   vipBadge: {
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
   },
   vipBadgeText: {
     fontSize: 10,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 0.4,
   },
   scrollPad: {
@@ -699,13 +699,13 @@ const styles = StyleSheet.create({
   heroCardLabel: {
     color: 'rgba(255, 255, 255, 0.75)',
     fontSize: 9,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 0.6,
   },
   heroCardBalance: {
     color: '#ffffff',
     fontSize: 20,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     marginTop: 2,
   },
   heroActionRow: {
@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
   },
   heroAddBtnText: {
     color: '#3b3691',
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 11.5,
   },
   heroVoucherBtn: {
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
   },
   heroVoucherBtnText: {
     color: '#ffffff',
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 11.5,
   },
   promoBarCard: {
@@ -766,7 +766,7 @@ const styles = StyleSheet.create({
   },
   applyBtnText: {
     color: '#ffffff',
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 11.5,
   },
   tabBarContainer: {
@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
   },
   couponSectionTitle: {
     fontSize: 15,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   viewAllBtn: {
     flexDirection: 'row',
@@ -842,7 +842,7 @@ const styles = StyleSheet.create({
   couponBadgeText: {
     color: '#ffffff',
     fontSize: 11,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   couponLogoBox: {
     height: 66,
@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
   voucherDiscountText: {
     color: '#ffffff',
     fontSize: 12,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     textAlign: 'center',
   },
   dashedDivider: {
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   voucherTitle: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 12.5,
   },
   voucherSub: {
@@ -919,7 +919,7 @@ const styles = StyleSheet.create({
   },
   copyCodeText: {
     fontSize: 10.5,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
   },
   offerCard: {
     borderRadius: BorderRadius.lg,
@@ -929,7 +929,7 @@ const styles = StyleSheet.create({
   offerTitle: {
     color: '#ffffff',
     fontSize: 14,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     marginTop: 8,
   },
   offerSub: {
@@ -1022,13 +1022,13 @@ const styles = StyleSheet.create({
   },
   currencyPrefix: {
     fontSize: 18,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     marginRight: 6,
   },
   modalInput: {
     flex: 1,
     fontSize: 18,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   quickAmtChip: {
     flex: 1,

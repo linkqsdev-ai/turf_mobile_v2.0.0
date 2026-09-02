@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 9,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 1.4,
   },
 
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   },
   titleNormal: {
     fontSize: 28,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     color: TEXT_DARK,
     lineHeight: 36,
     letterSpacing: -0.5,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   },
   titleHighlight: {
     fontSize: 28,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     color: TEXT_DARK,
     lineHeight: 36,
     letterSpacing: -0.5,
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#ffffff',
     fontSize: 13,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 1.0,
   },
   secondaryRow: {

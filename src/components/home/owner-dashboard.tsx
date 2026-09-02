@@ -228,7 +228,7 @@ export function OwnerDashboard({
               <View style={styles.headerTextGroup}>
                 <ThemedText
                   type="bodyMd"
-                  style={{ color: theme.text, fontFamily: 'Sora_700Bold', lineHeight: 18 }}
+                  style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', lineHeight: 18 }}
                 >
                   {profile.name}
                 </ThemedText>
@@ -352,7 +352,7 @@ export function OwnerDashboard({
                   <View style={[styles.bentoIconWrap, { backgroundColor: theme.surface }]}>
                     <Ionicons name="cash-outline" size={17} color={theme.primary} />
                   </View>
-                  <ThemedText style={{ color: success, fontSize: 9.5, fontFamily: 'Sora_700Bold' }}>
+                  <ThemedText style={{ color: success, fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
                     +15% vs Wk
                   </ThemedText>
                 </View>
@@ -385,7 +385,7 @@ export function OwnerDashboard({
                   <View style={[styles.bentoIconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.18)' }]}>
                     <Ionicons name="wallet-outline" size={17} color="#ffffff" />
                   </View>
-                  <ThemedText style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 9.5, fontFamily: 'Sora_700Bold' }}>
+                  <ThemedText style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
                     3 Pending
                   </ThemedText>
                 </View>
@@ -443,7 +443,7 @@ export function OwnerDashboard({
                       onPress={() => setSelectedBar(bar)}
                       style={styles.barColumn}
                     >
-                      <ThemedText style={{ color: isSelected ? theme.primary : theme.textSecondary, fontSize: 8.5, fontFamily: 'Sora_700Bold', marginBottom: 3 }}>
+                      <ThemedText style={{ color: isSelected ? theme.primary : theme.textSecondary, fontSize: 8.5, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>
                         {bar.label}
                       </ThemedText>
                       <View
@@ -457,7 +457,7 @@ export function OwnerDashboard({
                           }
                         ]}
                       />
-                      <ThemedText style={{ marginTop: 4, fontSize: 9.5, color: isSelected ? theme.primary : theme.textSecondary, fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium' }}>
+                      <ThemedText style={{ marginTop: 4, fontSize: 9.5, color: isSelected ? theme.primary : theme.textSecondary, fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium' }}>
                         {bar.day}
                       </ThemedText>
                     </Pressable>
@@ -470,7 +470,7 @@ export function OwnerDashboard({
                 <View style={[styles.tooltipBox, { backgroundColor: theme.surfaceLow, borderLeftColor: theme.primary }]}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
-                      {selectedBar.fullDay}: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_700Bold' }}>{selectedBar.revenue}</ThemedText>
+                      {selectedBar.fullDay}: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>{selectedBar.revenue}</ThemedText>
                     </ThemedText>
                     <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>
                       🔥 Peak: {selectedBar.peak}
@@ -508,7 +508,7 @@ export function OwnerDashboard({
                       {selectedHeatmapDay.label}
                     </ThemedText>
                     <View style={{ backgroundColor: selectedHeatmapDay.level === 'Peak' ? '#ef444420' : selectedHeatmapDay.level === 'Medium' ? '#f59e0b20' : '#94a3b820', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                      <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_700Bold', color: selectedHeatmapDay.level === 'Peak' ? '#ef4444' : selectedHeatmapDay.level === 'Medium' ? '#d97706' : '#64748b' }}>
+                      <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: selectedHeatmapDay.level === 'Peak' ? '#ef4444' : selectedHeatmapDay.level === 'Medium' ? '#d97706' : '#64748b' }}>
                         {selectedHeatmapDay.occupancy} {selectedHeatmapDay.level}
                       </ThemedText>
                     </View>
@@ -626,7 +626,7 @@ export function OwnerDashboard({
                   </View>
                   <View style={styles.paymentRow}>
                     <ThemedText style={[styles.priceTag, { color: theme.text }]}>₹2,500</ThemedText>
-                    <ThemedText style={{ color: success, fontSize: 9, fontFamily: 'Sora_700Bold' }}>
+                    <ThemedText style={{ color: success, fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
                       Fully Paid
                     </ThemedText>
                     <ThemedText style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_400Regular' }}>
@@ -636,7 +636,7 @@ export function OwnerDashboard({
                 </View>
                 <View style={[styles.statusTag, { backgroundColor: '#ef444415' }]}>
                   <PulseDot color="#ef4444" size={6} />
-                  <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_700Bold', color: '#ef4444' }}>LIVE</ThemedText>
+                  <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#ef4444' }}>LIVE</ThemedText>
                 </View>
               </View>
 
@@ -666,7 +666,7 @@ export function OwnerDashboard({
                   </View>
                   <View style={styles.paymentRow}>
                     <ThemedText style={[styles.priceTag, { color: theme.text }]}>₹3,600</ThemedText>
-                    <ThemedText style={{ color: '#d97706', fontSize: 9, fontFamily: 'Sora_700Bold' }}>
+                    <ThemedText style={{ color: '#d97706', fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
                       Advance Paid (₹1,000)
                     </ThemedText>
                     <ThemedText style={{ color: '#ef4444', fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
@@ -675,7 +675,7 @@ export function OwnerDashboard({
                   </View>
                 </View>
                 <View style={[styles.statusTag, { backgroundColor: accent + '15' }]}>
-                  <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_700Bold', color: '#d97706' }}>UPCOMING</ThemedText>
+                  <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#d97706' }}>UPCOMING</ThemedText>
                 </View>
               </View>
             </View>
@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     marginBottom: 7,
   },
-  heroBadgeText: { fontFamily: 'Sora_700Bold', fontSize: 8.5, letterSpacing: 0.8 },
+  heroBadgeText: { fontFamily: 'Sora_600SemiBold', fontSize: 8.5, letterSpacing: 0.8 },
   heroTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 17, letterSpacing: -0.2 },
   heroSub: { fontFamily: 'Sora_400Regular', fontSize: 11.5, marginTop: 3, lineHeight: 16 },
 
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
 
   // tiles
   tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  gridTile: { width: '47.8%' },
+  gridTile: { flexBasis: '47.5%', flexGrow: 1, minWidth: 140 },
 
   // bento
   bentoRow: { flexDirection: 'row', gap: 10 },

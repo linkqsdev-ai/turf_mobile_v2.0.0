@@ -16,7 +16,6 @@ import {
   Sora_500Medium,
   Sora_600SemiBold,
   Sora_700Bold,
-  Sora_800ExtraBold,
 } from '@expo-google-fonts/sora';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useEffect, useState } from 'react';
@@ -280,7 +279,6 @@ export default function RootLayout() {
     Sora_500Medium,
     Sora_600SemiBold,
     Sora_700Bold,
-    Sora_800ExtraBold,
   });
 
   if (!fontsLoaded) {

@@ -74,7 +74,7 @@ export default function TournamentDetailsScreen() {
       <View style={[styles.infoCard, { backgroundColor: theme.surfaceLow }]}>
         <Ionicons name="map-outline" size={20} color={theme.primary} />
         <View style={{ marginLeft: 12, flex: 1 }}>
-          <ThemedText type="bodySm" style={{ fontWeight: 'bold', color: theme.text }}>Elms Field Ground A</ThemedText>
+          <ThemedText type="bodySm" style={{ fontWeight: '600', color: theme.text }}>Elms Field Ground A</ThemedText>
           <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Elms Road, London SE1 (Next to Central Station)</ThemedText>
           <Pressable style={styles.directionLink} onPress={() => triggerToast('Opening Map Navigation...')}>
             <ThemedText type="labelSm" style={{ color: theme.secondaryContainer }}>GET DIRECTIONS</ThemedText>
@@ -104,7 +104,7 @@ export default function TournamentDetailsScreen() {
       <View style={[styles.infoCard, { backgroundColor: theme.surfaceLow }]}>
         <Ionicons name="call-outline" size={20} color={theme.primary} />
         <View style={{ marginLeft: 12, flex: 1 }}>
-          <ThemedText type="bodySm" style={{ fontWeight: 'bold', color: theme.text }}>Apex Sports Club</ThemedText>
+          <ThemedText type="bodySm" style={{ fontWeight: '600', color: theme.text }}>Apex Sports Club</ThemedText>
           <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Phone: +44 20 7946 0958</ThemedText>
           <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Email: admin@apexsports.com</ThemedText>
         </View>
@@ -134,7 +134,7 @@ export default function TournamentDetailsScreen() {
         ].map((team, idx) => (
           <View key={idx} style={[styles.teamCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
             <ThemedText style={styles.teamLogo}>{team.logo}</ThemedText>
-            <ThemedText type="bodySm" style={{ fontWeight: 'bold', marginTop: 8, color: theme.text }} numberOfLines={1}>
+            <ThemedText type="bodySm" style={{ fontWeight: '600', marginTop: 8, color: theme.text }} numberOfLines={1}>
               {team.name}
             </ThemedText>
             <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginTop: 2 }}>
@@ -165,7 +165,7 @@ export default function TournamentDetailsScreen() {
         ].map((fix, idx) => (
           <View key={idx} style={[styles.fixtureCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
             <View style={styles.rowBetween}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontWeight: 'bold' }}>{fix.match} • {fix.date}</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontWeight: '600' }}>{fix.match} • {fix.date}</ThemedText>
               <ThemedText type="labelSm" style={{ color: theme.secondaryContainer }}>{fix.time}</ThemedText>
             </View>
             <View style={styles.matchTeamsRow}>
@@ -189,12 +189,12 @@ export default function TournamentDetailsScreen() {
       <View style={[styles.tableContainer, { borderColor: theme.outlineVariant + '33' }]}>
         {/* Table Header */}
         <View style={[styles.tableRow, styles.tableHeaderRow, { backgroundColor: theme.surfaceLow }]}>
-          <ThemedText type="labelSm" style={[styles.colName, { fontWeight: 'bold', color: theme.text }]}>TEAM</ThemedText>
-          <ThemedText type="labelSm" style={[styles.colVal, { fontWeight: 'bold', color: theme.text }]}>P</ThemedText>
-          <ThemedText type="labelSm" style={[styles.colVal, { fontWeight: 'bold', color: theme.text }]}>W</ThemedText>
-          <ThemedText type="labelSm" style={[styles.colVal, { fontWeight: 'bold', color: theme.text }]}>L</ThemedText>
-          <ThemedText type="labelSm" style={[styles.colVal, { fontWeight: 'bold', color: theme.text }]}>PTS</ThemedText>
-          <ThemedText type="labelSm" style={[styles.colVal, { fontWeight: 'bold', color: theme.text, width: 50 }]}>NRR</ThemedText>
+          <ThemedText type="labelSm" style={[styles.colName, { fontWeight: '600', color: theme.text }]}>TEAM</ThemedText>
+          <ThemedText type="labelSm" style={[styles.colVal, { fontWeight: '600', color: theme.text }]}>P</ThemedText>
+          <ThemedText type="labelSm" style={[styles.colVal, { fontWeight: '600', color: theme.text }]}>W</ThemedText>
+          <ThemedText type="labelSm" style={[styles.colVal, { fontWeight: '600', color: theme.text }]}>L</ThemedText>
+          <ThemedText type="labelSm" style={[styles.colVal, { fontWeight: '600', color: theme.text }]}>PTS</ThemedText>
+          <ThemedText type="labelSm" style={[styles.colVal, { fontWeight: '600', color: theme.text, width: 50 }]}>NRR</ThemedText>
         </View>
         {/* Table Rows */}
         {[
@@ -208,7 +208,7 @@ export default function TournamentDetailsScreen() {
             <ThemedText type="bodySm" style={[styles.colVal, { color: theme.text }]}>{row.p}</ThemedText>
             <ThemedText type="bodySm" style={[styles.colVal, { color: theme.text }]}>{row.w}</ThemedText>
             <ThemedText type="bodySm" style={[styles.colVal, { color: theme.text }]}>{row.l}</ThemedText>
-            <ThemedText type="bodySm" style={[styles.colVal, { color: theme.text, fontWeight: 'bold' }]}>{row.pts}</ThemedText>
+            <ThemedText type="bodySm" style={[styles.colVal, { color: theme.text, fontWeight: '600' }]}>{row.pts}</ThemedText>
             <ThemedText type="bodySm" style={[styles.colVal, { color: row.nrr.startsWith('+') ? '#0f9f58' : '#ba1a1a', width: 50 }]}>{row.nrr}</ThemedText>
           </View>
         ))}
@@ -230,13 +230,13 @@ export default function TournamentDetailsScreen() {
 
           <View style={styles.cricketScores}>
             <View style={{ flex: 1 }}>
-              <ThemedText type="bodyLg" style={{ color: '#ffffff', fontWeight: 'bold' }}>Apex Warriors</ThemedText>
+              <ThemedText type="bodyLg" style={{ color: '#ffffff', fontWeight: '600' }}>Apex Warriors</ThemedText>
               <ThemedText type="displayLgMobile" style={{ color: '#ffffff', marginVertical: 4 }}>164/4</ThemedText>
               <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>Overs: 17.4</ThemedText>
             </View>
             <View style={styles.versusDivider} />
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              <ThemedText type="bodyLg" style={{ color: '#ffffff', fontWeight: 'bold' }}>Titans CC</ThemedText>
+              <ThemedText type="bodyLg" style={{ color: '#ffffff', fontWeight: '600' }}>Titans CC</ThemedText>
               <ThemedText type="bodySm" style={{ color: theme.onPrimaryContainer, marginTop: 8 }}>Yet to Bat</ThemedText>
             </View>
           </View>
@@ -299,11 +299,11 @@ export default function TournamentDetailsScreen() {
         ].map((p, idx) => (
           <View key={idx} style={[styles.statRowCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
             <View style={{ flex: 1 }}>
-              <ThemedText type="bodySm" numberOfLines={1} style={{ fontWeight: 'bold', color: theme.text }}>{p.name}</ThemedText>
+              <ThemedText type="bodySm" numberOfLines={1} style={{ fontWeight: '600', color: theme.text }}>{p.name}</ThemedText>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10 }}>{p.team}</ThemedText>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <ThemedText type="bodySm" style={{ fontWeight: 'bold', color: theme.secondaryContainer }}>{p.value}</ThemedText>
+              <ThemedText type="bodySm" style={{ fontWeight: '600', color: theme.secondaryContainer }}>{p.value}</ThemedText>
               <ThemedText type="labelSm" style={{ color: '#0f9f58', fontSize: 10 }}>Rating: {p.rating}</ThemedText>
             </View>
           </View>
@@ -324,7 +324,7 @@ export default function TournamentDetailsScreen() {
         ].map((sp, idx) => (
           <View key={idx} style={[styles.sponsorCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
             <Image source={typeof sp.logo === 'string' ? { uri: sp.logo } : sp.logo} style={styles.sponsorLogo} contentFit="contain" />
-            <ThemedText type="bodySm" style={{ fontWeight: 'bold', marginTop: 8, color: theme.text, textAlign: 'center' }}>
+            <ThemedText type="bodySm" style={{ fontWeight: '600', marginTop: 8, color: theme.text, textAlign: 'center' }}>
               {sp.name}
             </ThemedText>
             <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, textAlign: 'center' }}>
@@ -399,7 +399,7 @@ export default function TournamentDetailsScreen() {
             <View style={styles.gradientOverlay} />
             <View style={styles.countdownBadge}>
               <Ionicons name="hourglass-outline" size={14} color="#ffffff" style={{ marginRight: 6 }} />
-              <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: 'bold' }}>
+              <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '600' }}>
                 Reg Ends In: 02d : 14h : 45m
               </ThemedText>
             </View>
@@ -464,7 +464,7 @@ export default function TournamentDetailsScreen() {
             })}
           >
             <Ionicons name="medal" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-            <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: 'bold' }}>Register Team Now</ThemedText>
+            <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: '600' }}>Register Team Now</ThemedText>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sectionHeader: {
-    fontWeight: 'bold',
+    fontWeight: '600',
     marginBottom: Spacing.sm,
   },
   infoCard: {
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
   },
   fixtureTeamName: {
     flex: 1,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   fixtureCardFooter: {
     flexDirection: 'row',

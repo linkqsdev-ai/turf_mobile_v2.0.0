@@ -226,7 +226,7 @@ export function PlayerDashboard({
               <View style={styles.headerTextGroup}>
                 <ThemedText
                   type="bodyMd"
-                  style={{ color: theme.text, fontFamily: 'Sora_700Bold', lineHeight: 18 }}
+                  style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', lineHeight: 18 }}
                 >
                   {profile.name}
                 </ThemedText>
@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     marginBottom: 7,
   },
-  heroBadgeText: { fontFamily: 'Sora_700Bold', fontSize: 8.5, letterSpacing: 0.8 },
+  heroBadgeText: { fontFamily: 'Sora_600SemiBold', fontSize: 8.5, letterSpacing: 0.8 },
   heroTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 17 },
   heroSub: { fontFamily: 'Sora_400Regular', fontSize: 11.5, marginTop: 3, lineHeight: 16 },
 
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
 
   // tiles
   tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  gridTile: { width: '47.8%' },
+  gridTile: { flexBasis: '47.5%', flexGrow: 1, minWidth: 140 },
   voucherStrip: { gap: 10, paddingHorizontal: GUTTER, paddingTop: 12, paddingBottom: 2 },
 
   // form guide

@@ -195,7 +195,7 @@ export default function EditProfileScreen() {
                   Pick a preset avatar or upload your own photo.
                 </ThemedText>
                 <Pressable style={[styles.changePhotoBtn, { backgroundColor: theme.primary + '15' }]} onPress={() => setAvatarPickerVisible(true)}>
-                  <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_700Bold' }}>Change Photo</ThemedText>
+                  <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>Change Photo</ThemedText>
                 </Pressable>
               </View>
             </View>
@@ -272,7 +272,7 @@ export default function EditProfileScreen() {
                             type="labelMd"
                             style={{
                               color: isSelected ? theme.secondary : theme.textSecondary,
-                              fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium',
+                              fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium',
                             }}
                           >
                             {r}
@@ -352,7 +352,7 @@ export default function EditProfileScreen() {
                             type="labelMd"
                             style={{
                               color: isSelected ? theme.secondary : theme.textSecondary,
-                              fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium',
+                              fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium',
                             }}
                           >
                             {foot}
@@ -385,7 +385,7 @@ export default function EditProfileScreen() {
                           type="labelSm"
                           style={{
                             color: isSelected ? theme.secondary : theme.textSecondary,
-                            fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium',
+                            fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium',
                             fontSize: 10,
                           }}
                         >
@@ -453,7 +453,7 @@ export default function EditProfileScreen() {
         {/* Actions buttons Fixed at Bottom */}
         <View style={[styles.actionSection, { paddingBottom: Spacing.md }]}>
           <Pressable onPress={handleSave} style={[styles.primaryActionBtn, { backgroundColor: theme.primary }]}>
-            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
               SAVE CHANGES
             </ThemedText>
           </Pressable>
@@ -468,7 +468,7 @@ export default function EditProfileScreen() {
             }}
             style={[styles.secondaryActionBtn, { borderColor: theme.outline }]}
           >
-            <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
+            <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
               CANCEL
             </ThemedText>
           </Pressable>
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   headerTitle: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 16,
   },
   scrollContent: {
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   sectionTitleText: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     letterSpacing: 1,
     fontSize: 10,
   },
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   inputLabel: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 9,
     letterSpacing: 0.5,
     color: '#73787b',

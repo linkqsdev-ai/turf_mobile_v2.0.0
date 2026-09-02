@@ -1,5 +1,5 @@
 // Updated cricket scoring console - auto scroll and pre-verification options
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -27,6 +27,13 @@ import { ScoreboardBoundaryWatermark } from '@/components/scoring/ScoreboardBoun
 import { saveMatchToOwnBoard } from '@/store/own-board-store';
 import { exportScoreSheetPDF } from '@/services/score-sheet-pdf';
 import { CoinTossModal } from '@/components/coin-toss-modal';
+import {
+  ChangePlayerModal,
+  EditPlayerModal,
+  SwapPlayersModal,
+  normalizePlayer,
+  type SquadPlayer,
+} from '@/components/scoring/squad-modals';
 
 interface Batsman {
   name: string;
@@ -196,7 +203,7 @@ function NewPlayerModal({
             {/* Header */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <View>
-                <ThemedText type="headlineSm" style={{ fontSize: 16, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                <ThemedText type="headlineSm" style={{ fontSize: 16, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                   Add New Player
                 </ThemedText>
                 <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 1 }}>
@@ -215,7 +222,7 @@ function NewPlayerModal({
                   <Image source={{ uri: avatar }} style={{ width: 76, height: 76, borderRadius: 38, borderWidth: 2.5, borderColor: theme.primary }} contentFit="cover" />
                 ) : isMonogram ? (
                   <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2.5, borderColor: theme.primary + '44' }}>
-                    <ThemedText style={{ fontSize: 26, fontFamily: 'Sora_800ExtraBold', color: '#ffffff', letterSpacing: 1 }}>
+                    <ThemedText style={{ fontSize: 26, fontFamily: 'Sora_600SemiBold', color: '#ffffff', letterSpacing: 1 }}>
                       {twoLetterMonogram}
                     </ThemedText>
                   </View>
@@ -259,7 +266,7 @@ function NewPlayerModal({
                   }}
                 >
                   <Ionicons name="image-outline" size={13} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                     Upload Photo
                   </ThemedText>
                 </Pressable>
@@ -278,7 +285,7 @@ function NewPlayerModal({
                     borderColor: isMonogram ? theme.primary : theme.outlineVariant + '44',
                   }}
                 >
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: isMonogram ? theme.primary : theme.textSecondary }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: isMonogram ? theme.primary : theme.textSecondary }}>
                     2-Letter Logo
                   </ThemedText>
                 </Pressable>
@@ -316,8 +323,8 @@ function NewPlayerModal({
 
             {/* Input: Player Name with Red Mandatory Asterisk */}
             <View style={{ marginTop: 8 }}>
-              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text, marginBottom: 5 }}>
-                Player Full Name <ThemedText style={{ color: '#ef4444', fontFamily: 'Sora_700Bold' }}>*</ThemedText>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text, marginBottom: 5 }}>
+                Player Full Name <ThemedText style={{ color: '#ef4444', fontFamily: 'Sora_600SemiBold' }}>*</ThemedText>
               </ThemedText>
               <TextInput
                 value={name}
@@ -341,12 +348,12 @@ function NewPlayerModal({
 
             {/* Input: Phone Number */}
             <View style={{ marginTop: 10 }}>
-              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text, marginBottom: 5 }}>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text, marginBottom: 5 }}>
                 Phone Number (Match Stats Sync)
               </ThemedText>
               <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                 <View style={{ backgroundColor: theme.surfaceLow, paddingHorizontal: 10, height: 38, borderRadius: 10, justifyContent: 'center', borderWidth: 1.5, borderColor: theme.outlineVariant + '44' }}>
-                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                     🇮🇳 +91
                   </ThemedText>
                 </View>
@@ -385,7 +392,7 @@ function NewPlayerModal({
                   Sync Phone for 5 Free Turf Coins
                 </ThemedText>
                 <View style={{ backgroundColor: '#f1f5f9', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4, borderWidth: 1, borderColor: '#e2e8f0' }}>
-                  <ThemedText style={{ color: '#0f172a', fontSize: 9, fontFamily: 'Sora_700Bold' }}>
+                  <ThemedText style={{ color: '#0f172a', fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>
                     +5 COINS
                   </ThemedText>
                 </View>
@@ -423,7 +430,7 @@ function NewPlayerModal({
                         height: 30,
                         paddingHorizontal: 8,
                         fontSize: 12,
-                        fontFamily: 'Sora_700Bold',
+                        fontFamily: 'Sora_600SemiBold',
                         textAlign: 'center',
                         letterSpacing: 4,
                       }}
@@ -467,7 +474,7 @@ function NewPlayerModal({
 
             {/* Playing Role Selection */}
             <View style={{ marginTop: 10 }}>
-              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text, marginBottom: 5 }}>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text, marginBottom: 5 }}>
                 Playing Role
               </ThemedText>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -489,7 +496,7 @@ function NewPlayerModal({
                       <ThemedText
                         style={{
                           fontSize: 10.5,
-                          fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_600SemiBold',
+                          fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_600SemiBold',
                           color: isSelected ? '#ffffff' : '#475569',
                         }}
                       >
@@ -503,7 +510,7 @@ function NewPlayerModal({
 
             {/* Batting Style / Details */}
             <View style={{ marginTop: 8 }}>
-              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text, marginBottom: 5 }}>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text, marginBottom: 5 }}>
                 Batting Style
               </ThemedText>
               <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -526,7 +533,7 @@ function NewPlayerModal({
                       <ThemedText
                         style={{
                           fontSize: 10.5,
-                          fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_600SemiBold',
+                          fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_600SemiBold',
                           color: isSelected ? theme.primary : '#475569',
                         }}
                       >
@@ -568,7 +575,7 @@ function NewPlayerModal({
                   alignItems: 'center',
                 }}
               >
-                <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: isSaveDisabled ? '#94a3b8' : '#ffffff' }}>
+                <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: isSaveDisabled ? '#94a3b8' : '#ffffff' }}>
                   Save & Add Player
                 </ThemedText>
               </Pressable>
@@ -695,7 +702,7 @@ function PlayerDropdownSelector({
         <ThemedText
           style={{
             fontSize: 13,
-            fontFamily: 'Sora_700Bold',
+            fontFamily: 'Sora_600SemiBold',
             color: value ? '#0f172a' : '#94a3b8',
           }}
           numberOfLines={1}
@@ -779,7 +786,7 @@ function PlayerDropdownSelector({
               }]}
             >
               <Ionicons name="add-circle" size={16} color={theme.primary} style={{ marginRight: 8 }} />
-              <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: theme.primary }} numberOfLines={1}>
+              <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.primary }} numberOfLines={1}>
                 {searchQuery.trim() ? `+ Add "${searchQuery.trim()}" as New Player` : '+ Add New Player'}
               </ThemedText>
             </Pressable>
@@ -853,7 +860,7 @@ function PlayerDropdownSelector({
                       <Image source={{ uri: p.avatar }} style={{ width: 30, height: 30, borderRadius: 15, marginRight: 10, borderWidth: 1, borderColor: '#e2e8f0' }} contentFit="cover" />
                     ) : isMonog ? (
                       <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: '#e2e8f0' }}>
-                        <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#334155' }}>
+                        <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: '#334155' }}>
                           {initials}
                         </ThemedText>
                       </View>
@@ -861,7 +868,7 @@ function PlayerDropdownSelector({
                       <Image source={getAvatarSource(p.avatar)} style={{ width: 30, height: 30, borderRadius: 15, marginRight: 10, borderWidth: 1, borderColor: '#e2e8f0' }} contentFit="cover" />
                     ) : (
                       <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: '#e2e8f0' }}>
-                        <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#334155' }}>
+                        <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: '#334155' }}>
                           {initials}
                         </ThemedText>
                       </View>
@@ -874,7 +881,7 @@ function PlayerDropdownSelector({
                         </ThemedText>
                         {isCaptain && (
                           <View style={{ backgroundColor: theme.primary + '18', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
-                            <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                            <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                               (C)
                             </ThemedText>
                           </View>
@@ -889,29 +896,29 @@ function PlayerDropdownSelector({
                   </View>
                   {isSelectedInOtherSlot && (
                     <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                      <ThemedText style={{ fontSize: 8.5, color: '#92400e', fontFamily: 'Sora_700Bold' }}>Selected</ThemedText>
+                      <ThemedText style={{ fontSize: 8.5, color: '#92400e', fontFamily: 'Sora_600SemiBold' }}>Selected</ThemedText>
                     </View>
                   )}
                   {isResumingBatsman && !isSelectedInOtherSlot && (
                     <View style={{ backgroundColor: '#e0f2fe', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                      <ThemedText style={{ fontSize: 8.5, color: '#0369a1', fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText style={{ fontSize: 8.5, color: '#0369a1', fontFamily: 'Sora_600SemiBold' }}>
                         Resume ({p.runs || 0}r, {p.balls || 0}b)
                       </ThemedText>
                     </View>
                   )}
                   {isDismissedOut && (
                     <View style={{ backgroundColor: '#fee2e2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                      <ThemedText style={{ fontSize: 8.5, color: '#b91c1c', fontFamily: 'Sora_700Bold' }}>Already Out</ThemedText>
+                      <ThemedText style={{ fontSize: 8.5, color: '#b91c1c', fontFamily: 'Sora_600SemiBold' }}>Already Out</ThemedText>
                     </View>
                   )}
                   {isBowlerQuotaFull && (
                     <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                      <ThemedText style={{ fontSize: 8.5, color: '#b45309', fontFamily: 'Sora_700Bold' }}>Quota Full ({p.overs || 0}/{maxBowlerOvers} Ov)</ThemedText>
+                      <ThemedText style={{ fontSize: 8.5, color: '#b45309', fontFamily: 'Sora_600SemiBold' }}>Quota Full ({p.overs || 0}/{maxBowlerOvers} Ov)</ThemedText>
                     </View>
                   )}
                   {isInOpposingTeam && (
                     <View style={{ backgroundColor: '#f1f5f9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                      <ThemedText style={{ fontSize: 8.5, color: '#64748b', fontFamily: 'Sora_700Bold' }}>In Opp. Team</ThemedText>
+                      <ThemedText style={{ fontSize: 8.5, color: '#64748b', fontFamily: 'Sora_600SemiBold' }}>In Opp. Team</ThemedText>
                     </View>
                   )}
                 </Pressable>
@@ -937,7 +944,7 @@ function PlayerDropdownSelector({
                     marginTop: 8,
                   }}
                 >
-                  <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                  <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
                     + Add New Player Now
                   </ThemedText>
                 </Pressable>
@@ -1193,6 +1200,11 @@ export default function CricketScoring({
   const [overs, setOvers] = useState(0);
   const [ballsInCurrentOver, setBallsInCurrentOver] = useState(0); // 0.0 overs initially
   const [overLog, setOverLog] = useState<string[]>([]);
+  // `handleOverCompletion` runs from a setTimeout inside incrementBallCount, so its
+  // closure still holds the pre-6th-ball overLog. Mirroring it into a ref (updated
+  // after commit, well before the 100ms timer) gives that path the real final over.
+  const overLogRef = useRef<string[]>([]);
+  useEffect(() => { overLogRef.current = overLog; }, [overLog]);
   const [history, setHistory] = useState<any[]>([]); // for undo support (capped at 20)
   // Fix #9: Guard flag to block recording after innings ends
   const [isInningsOver, setIsInningsOver] = useState(false);
@@ -1562,11 +1574,24 @@ export default function CricketScoring({
   const [actionTarget, setActionTarget] = useState<{ type: 'retire' | 'replace' | 'bowler'; batsmanIndex?: number } | null>(null);
   const [customNewName, setCustomNewName] = useState('');
 
+  // ── Squad management popups (swap / change / edit) ──────────────────────
+  // One shared modal family; see components/scoring/squad-modals.tsx.
+  const [swapModalOpen, setSwapModalOpen] = useState(false);
+  const [changeSlot, setChangeSlot] = useState<number | null>(null);
+  const [editSlot, setEditSlot] = useState<number | null>(null);
+
   const handleSwapStrike = () => {
     if (batsmen.length < 2 || !batsmen[0]?.name?.trim() || !batsmen[1]?.name?.trim()) {
       Alert.alert('Batsmen Required', 'Please assign 2 active opening batsmen before swapping strike ends.');
       return;
     }
+    setSwapModalOpen(true);
+  };
+
+  /** Actually rotate the strike, once the swap popup is confirmed. */
+  const confirmSwapStrike = () => {
+    setSwapModalOpen(false);
+    if (batsmen.length < 2) return;
 
     // Save history for undo support
     const oldState = {
@@ -1578,7 +1603,7 @@ export default function CricketScoring({
       batsmen: batsmen.map(b => ({ ...b })),
       bowler: { ...bowler },
     };
-    setHistory(prev => [...prev, oldState]);
+    setHistory(prev => [...prev.slice(-19), oldState]);
 
     setBatsmen(prev =>
       prev.map(b => ({
@@ -1745,7 +1770,7 @@ export default function CricketScoring({
       batsmen: batsmen.map(b => ({ ...b })),
       bowler: { ...bowler },
     };
-    setHistory(prev => [...prev, oldState]);
+    setHistory(prev => [...prev.slice(-19), oldState]);
 
     // If outgoing batsman 1 was replaced, archive their stats
     if (batsmen[0] && batsmen[0].name && batsmen[0].name.trim().toLowerCase() !== b1Name.trim().toLowerCase()) {
@@ -1861,7 +1886,7 @@ export default function CricketScoring({
       bowler: { ...bowler },
       dismissedBatsmen: dismissedBatsmen.map(db => ({ ...db })),
     };
-    setHistory(prev => [...prev, oldState]);
+    setHistory(prev => [...prev.slice(-19), oldState]);
 
     const retiringPlayer = batsmen[idx];
 
@@ -1982,7 +2007,7 @@ export default function CricketScoring({
       dismissedBatsmen: dismissedBatsmen.map(db => ({ ...db })),
       inningsBatsmenArchive: { ...inningsBatsmenArchive },
     };
-    setHistory(prev => [...prev, oldState]);
+    setHistory(prev => [...prev.slice(-19), oldState]);
 
     setBatsmen(prev => {
       const next = [...prev];
@@ -2183,7 +2208,7 @@ export default function CricketScoring({
       bowler: { ...bowler },
       otherBowlers: otherBowlers.map(ob => ({ ...ob })),
     };
-    setHistory(prev => [...prev, oldState]);
+    setHistory(prev => [...prev.slice(-19), oldState]);
 
     const oldBowler = bowler;
 
@@ -2383,18 +2408,19 @@ export default function CricketScoring({
       const newTotalRuns = runs + runVal;
       setRuns(newTotalRuns);
 
-      // Fix #6: On NB free-hit delivery, do NOT count this ball against batsman
-      const isFreeHit = lastWasNoBall;
+      // Clear the free-hit flag the no-ball raised. A free hit is still a legal
+      // delivery, so it DOES count as a ball faced — only the dismissal rules
+      // differ. (The ball is not counted on the no-ball itself, in
+      // recordExtraWithRuns, which is where the delivery was illegal.)
       setLastWasNoBall(false);
 
-      // Update batsman runs; skip ball-count increment if free-hit from NB
       setBatsmen(prev =>
         prev.map(b => {
           if (b.active) {
             return {
               ...b,
               runs: b.runs + runVal,
-              balls: isFreeHit ? b.balls : b.balls + 1,
+              balls: b.balls + 1,
               fours: b.fours + (runVal === 4 ? 1 : 0),
               sixes: b.sixes + (runVal === 6 ? 1 : 0),
             };
@@ -2667,16 +2693,18 @@ export default function CricketScoring({
       ballsInOver: isLegal ? prev.ballsInOver + 1 : prev.ballsInOver,
     }));
 
-    // Update batsman balls faced for No Ball, Bye, Leg Bye (WD does NOT count as ball faced).
-    // On a No Ball the striker is also credited with whatever came off the bat —
-    // the 1-run penalty stays in extras and is never added to a personal score.
+    // Balls faced counts legal deliveries only. Byes and leg byes are legal, so
+    // they count; wides and no-balls are not, so they don't — but on a no-ball
+    // the striker still keeps whatever came off the bat (the 1-run penalty stays
+    // in extras and never reaches a personal score).
     if (extraType === 'NB' || extraType === 'BYE' || extraType === 'LB') {
+      const countsAsBallFaced = extraType === 'BYE' || extraType === 'LB';
       setBatsmen(prev =>
         prev.map(b =>
           b.active
             ? {
                 ...b,
-                balls: b.balls + 1,
+                balls: countsAsBallFaced ? b.balls + 1 : b.balls,
                 runs: b.runs + (extraType === 'NB' ? runsOffBat : 0),
                 fours: b.fours + (extraType === 'NB' && runsOffBat === 4 ? 1 : 0),
                 sixes: b.sixes + (extraType === 'NB' && runsOffBat === 6 ? 1 : 0),
@@ -2950,20 +2978,36 @@ export default function CricketScoring({
     openEditPlayersModal();
   };
 
+  /**
+   * A maiden is an over with no runs *charged to the bowler*. Byes and leg byes
+   * are not charged, so they do not spoil one — but wides and no-balls are, so
+   * they do. Reads the ref because the 6th ball is not yet in the state closure.
+   */
+  const detectMaidenOver = (log: string[]): boolean => {
+    const bowlerWasCharged = log.some(b => b.includes('WD') || b.includes('NB'));
+    if (bowlerWasCharged) return false;
+    const offBat = log.filter(b => !/WD|NB|BYE|LB/.test(b));
+    return offBat.length > 0 && offBat.every(b => b === '0' || b === 'W');
+  };
+
   const handleOverCompletion = () => {
     const nextOvers = overs + 1;
     const maxOvers = parseInt(currentTotalOvers) || 20;
+    const finalOverLog = overLogRef.current;
 
-    // Check if 1st Innings total overs reached
-    if (currentInnings === 1 && nextOvers >= maxOvers) {
+    // The over that ends an innings is still a completed over: credit it to the
+    // bowler (and its maiden) before the innings-end early return, otherwise the
+    // last over of every innings silently vanishes from the bowling figures.
+    if (nextOvers >= maxOvers) {
+      const isFinalMaiden = detectMaidenOver(finalOverLog);
+      setBowler(prev => ({
+        ...prev,
+        overs: (prev.overs || 0) + 1,
+        ballsInOver: 0,
+        maidens: isFinalMaiden ? (prev.maidens || 0) + 1 : (prev.maidens || 0),
+      }));
       setIsInningsOver(true);
-      handleInningsEnd(1, nextOvers);
-      return;
-    }
-    // Check if 2nd Innings total overs reached
-    if (currentInnings === 2 && nextOvers >= maxOvers) {
-      setIsInningsOver(true);
-      handleInningsEnd(2, nextOvers);
+      handleInningsEnd(currentInnings, nextOvers);
       return;
     }
 
@@ -2973,7 +3017,7 @@ export default function CricketScoring({
       wickets,
       overs,
       ballsInCurrentOver: 6,
-      overLog: [...overLog],
+      overLog: [...finalOverLog],
       batsmen: batsmen.map(b => ({ ...b })),
       bowler: { ...bowler },
       otherBowlers: otherBowlers.map(ob => (typeof ob === 'string' ? ob : { ...ob })),
@@ -2982,10 +3026,8 @@ export default function CricketScoring({
     };
     setHistory(prev => [...prev.slice(-19), oldState]);
 
-    // 2. Fix #1: Auto-detect maiden over — if all scoring events in overLog produced 0 batting runs
-    // A maiden has no wides or leg byes, just dots and wickets. Filter to balls-only entries:
-    const scoringEntries = overLog.filter(b => !b.includes('WD') && !b.includes('NB') && !b.includes('BYE') && !b.includes('LB'));
-    const isMaiden = scoringEntries.length > 0 && scoringEntries.every(b => b === '0' || b === 'W');
+    // 2. Auto-detect maiden over from the true final over log.
+    const isMaiden = detectMaidenOver(finalOverLog);
 
     // 3. Automatically swap batsman ends (striker/non-striker end rotation) & put active striker at top (index 0)
     setBatsmen(prev => {
@@ -3214,6 +3256,11 @@ export default function CricketScoring({
     if (previous.otherBowlers !== undefined) setOtherBowlers(previous.otherBowlers);
     // Clear free-hit flag on undo
     setLastWasNoBall(false);
+    // An innings that ended on the ball being undone must reopen, otherwise the
+    // scoreboard stays permanently locked (recordBall early-returns on
+    // isInningsOver) with no way back — the 2nd innings keeps its history, so
+    // this is reachable after an accidental match-ending ball.
+    setIsInningsOver(false);
     setHistory(prev => prev.slice(0, -1));
   };
 
@@ -3238,7 +3285,7 @@ export default function CricketScoring({
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: '700' }}>
+                <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: '600' }}>
                   {currentInnings === 1 ? '1st Innings' : '2nd Innings'}
                 </ThemedText>
 
@@ -3267,7 +3314,7 @@ export default function CricketScoring({
                     pressed && { opacity: 0.8 }
                   ]}
                 >
-                  <ThemedText style={{ fontSize: 10, color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+                  <ThemedText style={{ fontSize: 10, color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
                     {isMatchUnderway ? '🔒 Toss' : '🪙 Toss'}
                   </ThemedText>
                 </Pressable>
@@ -3287,7 +3334,7 @@ export default function CricketScoring({
                     pressed && { opacity: 0.8 }
                   ]}
                 >
-                  <ThemedText style={{ fontSize: 10, color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+                  <ThemedText style={{ fontSize: 10, color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
                     {isMatchUnderway ? '🔒 Rules' : '⚙️ Rules'}
                   </ThemedText>
                 </Pressable>
@@ -3320,7 +3367,7 @@ export default function CricketScoring({
             <View style={styles.bannerStatsRow}>
               <View style={styles.bannerStatItem}>
                 <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>RUN RATE</ThemedText>
-                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
                   {runRate.toFixed(2)}
                 </ThemedText>
               </View>
@@ -3328,13 +3375,13 @@ export default function CricketScoring({
                 <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>
                   {currentInnings === 2 ? 'REQ RR' : 'PROJECTED'}
                 </ThemedText>
-                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
                   {currentInnings === 2 ? reqRunRate : (totalBalls > 0 ? Math.round(projectedScore) : 0)}
                 </ThemedText>
               </View>
               <View style={styles.bannerStatItem}>
                 <ThemedText type="labelSm" style={{ color: theme.onPrimaryContainer }}>EXTRAS</ThemedText>
-                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold' }}>
+                <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>
                   {totalExtrasCount}
                 </ThemedText>
               </View>
@@ -3343,18 +3390,18 @@ export default function CricketScoring({
             {/* 2nd Innings Target Equation Bar */}
             {currentInnings === 2 && (
               <View style={{ marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.25)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                <ThemedText style={{ color: '#ffffff', fontSize: 12, fontFamily: 'Sora_700Bold' }}>
-                  🎯 Target: <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_800ExtraBold', color: '#FDE047' }}>{targetRuns}</ThemedText>
+                <ThemedText style={{ color: '#ffffff', fontSize: 12, fontFamily: 'Sora_600SemiBold' }}>
+                  🎯 Target: <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: '#FDE047' }}>{targetRuns}</ThemedText>
                 </ThemedText>
                 {runs >= targetRuns ? (
                   <View style={{ backgroundColor: 'rgba(253, 224, 71, 0.25)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                    <ThemedText style={{ color: '#FDE047', fontSize: 11, fontFamily: 'Sora_800ExtraBold' }}>
+                    <ThemedText style={{ color: '#FDE047', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
                       🎉 Target Achieved! {battingTeamName} Won!
                     </ThemedText>
                   </View>
                 ) : (
                   <ThemedText style={{ color: 'rgba(255, 255, 255, 0.95)', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
-                    Need <ThemedText style={{ fontWeight: '700', color: '#ffffff' }}>{runsNeeded}</ThemedText> runs off <ThemedText style={{ fontWeight: '700', color: '#ffffff' }}>{ballsRemaining}</ThemedText> balls
+                    Need <ThemedText style={{ fontWeight: '600', color: '#ffffff' }}>{runsNeeded}</ThemedText> runs off <ThemedText style={{ fontWeight: '600', color: '#ffffff' }}>{ballsRemaining}</ThemedText> balls
                   </ThemedText>
                 )}
               </View>
@@ -3369,7 +3416,7 @@ export default function CricketScoring({
             style={[styles.subTabItem, activeSubTab === 'live' && { borderBottomColor: theme.primary }]}
           >
             <Ionicons name="flash-outline" size={14} color={activeSubTab === 'live' ? theme.primary : theme.textSecondary} />
-            <ThemedText style={[styles.subTabText, { color: activeSubTab === 'live' ? theme.primary : theme.textSecondary }, activeSubTab === 'live' && { fontFamily: 'Sora_700Bold' }]}>
+            <ThemedText style={[styles.subTabText, { color: activeSubTab === 'live' ? theme.primary : theme.textSecondary }, activeSubTab === 'live' && { fontFamily: 'Sora_600SemiBold' }]}>
               Live Scoring
             </ThemedText>
           </Pressable>
@@ -3378,7 +3425,7 @@ export default function CricketScoring({
             style={[styles.subTabItem, activeSubTab === 'scorecard' && { borderBottomColor: theme.primary }]}
           >
             <Ionicons name="list-outline" size={14} color={activeSubTab === 'scorecard' ? theme.primary : theme.textSecondary} />
-            <ThemedText style={[styles.subTabText, { color: activeSubTab === 'scorecard' ? theme.primary : theme.textSecondary }, activeSubTab === 'scorecard' && { fontFamily: 'Sora_700Bold' }]}>
+            <ThemedText style={[styles.subTabText, { color: activeSubTab === 'scorecard' ? theme.primary : theme.textSecondary }, activeSubTab === 'scorecard' && { fontFamily: 'Sora_600SemiBold' }]}>
               Scorecard
             </ThemedText>
           </Pressable>
@@ -3387,7 +3434,7 @@ export default function CricketScoring({
             style={[styles.subTabItem, activeSubTab === 'stats' && { borderBottomColor: theme.primary }]}
           >
             <Ionicons name="bar-chart-outline" size={14} color={activeSubTab === 'stats' ? theme.primary : theme.textSecondary} />
-            <ThemedText style={[styles.subTabText, { color: activeSubTab === 'stats' ? theme.primary : theme.textSecondary }, activeSubTab === 'stats' && { fontFamily: 'Sora_700Bold' }]}>
+            <ThemedText style={[styles.subTabText, { color: activeSubTab === 'stats' ? theme.primary : theme.textSecondary }, activeSubTab === 'stats' && { fontFamily: 'Sora_600SemiBold' }]}>
               Statistics
             </ThemedText>
           </Pressable>
@@ -3396,7 +3443,7 @@ export default function CricketScoring({
             style={[styles.subTabItem, activeSubTab === 'details' && { borderBottomColor: theme.primary }]}
           >
             <Ionicons name="information-circle-outline" size={14} color={activeSubTab === 'details' ? theme.primary : theme.textSecondary} />
-            <ThemedText style={[styles.subTabText, { color: activeSubTab === 'details' ? theme.primary : theme.textSecondary }, activeSubTab === 'details' && { fontFamily: 'Sora_700Bold' }]}>
+            <ThemedText style={[styles.subTabText, { color: activeSubTab === 'details' ? theme.primary : theme.textSecondary }, activeSubTab === 'details' && { fontFamily: 'Sora_600SemiBold' }]}>
               Details
             </ThemedText>
           </Pressable>
@@ -3410,7 +3457,7 @@ export default function CricketScoring({
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <Ionicons name="baseball-outline" size={16} color={theme.primary} />
-                    <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                    <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                       Current Over Log
                     </ThemedText>
                   </View>
@@ -3427,7 +3474,7 @@ export default function CricketScoring({
                     }}
                   >
                     <Ionicons name={showScoringPad ? "chevron-up" : "add"} size={14} color={showScoringPad ? '#ffffff' : theme.primary} />
-                    <ThemedText style={{ color: showScoringPad ? '#ffffff' : theme.primary, fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                    <ThemedText style={{ color: showScoringPad ? '#ffffff' : theme.primary, fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
                       {showScoringPad ? 'Hide Keypad' : 'Ball by Ball'}
                     </ThemedText>
                   </Pressable>
@@ -3483,17 +3530,17 @@ export default function CricketScoring({
                       const type = match[2];
                       if (num === undefined) {
                         renderContent = (
-                          <ThemedText style={{ color: textColor, fontFamily: 'Sora_700Bold', fontSize: 12 }}>
+                          <ThemedText style={{ color: textColor, fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
                             {type}
                           </ThemedText>
                         );
                       } else {
                         renderContent = (
                           <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
-                            <ThemedText style={{ color: textColor, fontFamily: 'Sora_800ExtraBold', fontSize: 14 }}>
+                            <ThemedText style={{ color: textColor, fontFamily: 'Sora_600SemiBold', fontSize: 14 }}>
                               {num}
                             </ThemedText>
-                            <ThemedText style={{ color: textColor, fontFamily: 'Sora_700Bold', fontSize: 8, marginLeft: 1 }}>
+                            <ThemedText style={{ color: textColor, fontFamily: 'Sora_600SemiBold', fontSize: 8, marginLeft: 1 }}>
                               {type}
                             </ThemedText>
                           </View>
@@ -3501,7 +3548,7 @@ export default function CricketScoring({
                       }
                     } else {
                       renderContent = (
-                        <ThemedText type="bodyMd" style={{ color: textColor, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText type="bodyMd" style={{ color: textColor, fontFamily: 'Sora_600SemiBold' }}>
                           {ball}
                         </ThemedText>
                       );
@@ -3523,7 +3570,7 @@ export default function CricketScoring({
                 {/* Bowler balls indicator row */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '22', marginTop: 4 }}>
                   <ThemedText style={{ color: theme.textSecondary, fontSize: 12, fontFamily: 'Sora_600SemiBold' }}>
-                    Bowler: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>{bowler.name || 'Not Selected'}</ThemedText> ({bowler.overs * 6 + bowler.ballsInOver} balls)
+                    Bowler: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>{bowler.name || 'Not Selected'}</ThemedText> ({bowler.overs * 6 + bowler.ballsInOver} balls)
                   </ThemedText>
                   <View style={{ flexDirection: 'row', gap: 5 }}>
                     {[1, 2, 3, 4, 5, 6].map((b) => (
@@ -3544,11 +3591,11 @@ export default function CricketScoring({
                 {showScoringPad && (
                   <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '25', gap: 12 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: theme.textSecondary, letterSpacing: 0.6, textTransform: 'uppercase' }}>
+                      <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, letterSpacing: 0.6, textTransform: 'uppercase' }}>
                         Ball-by-Ball Control Panel
                       </ThemedText>
                       <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
-                        Score: <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>{runs}/{wickets}</ThemedText> ({overs}.{ballsInCurrentOver} ov)
+                        Score: <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>{runs}/{wickets}</ThemedText> ({overs}.{ballsInCurrentOver} ov)
                       </ThemedText>
                     </View>
 
@@ -3570,7 +3617,7 @@ export default function CricketScoring({
                       >
                         <Ionicons name="warning" size={20} color="#D97706" />
                         <View style={{ flex: 1 }}>
-                          <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: '#92400E' }}>
+                          <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: '#92400E' }}>
                             Verify Players Before Bowling
                           </ThemedText>
                           <ThemedText style={{ fontSize: 10, color: '#B45309', marginTop: 2 }}>
@@ -3582,7 +3629,7 @@ export default function CricketScoring({
                           </ThemedText>
                         </View>
                         <View style={{ backgroundColor: '#F59E0B', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 }}>
-                          <ThemedText style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>
                             Setup
                           </ThemedText>
                         </View>
@@ -3620,7 +3667,7 @@ export default function CricketScoring({
                                   : theme.primary + '30',
                             }, pressed && { opacity: 0.75 }]}
                           >
-                            <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_800ExtraBold', color: isFourOrSix ? (num === 4 ? '#10B981' : '#8B5CF6') : isFive ? '#F59E0B' : theme.text }}>
+                            <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_600SemiBold', color: isFourOrSix ? (num === 4 ? '#10B981' : '#8B5CF6') : isFive ? '#F59E0B' : theme.text }}>
                               {num}
                             </ThemedText>
                             <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
@@ -3652,7 +3699,7 @@ export default function CricketScoring({
                             justifyContent: 'center',
                           }, pressed && { backgroundColor: theme.primary + '15' }]}
                         >
-                          <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                          <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                             {extra === 'WD' ? 'Wide' : extra === 'NB' ? 'No Ball' : extra}
                           </ThemedText>
                         </Pressable>
@@ -3675,7 +3722,7 @@ export default function CricketScoring({
                         }, pressed && { opacity: 0.85 }]}
                       >
                         <Ionicons name="skull-outline" size={15} color="#ffffff" />
-                        <ThemedText style={{ color: '#ffffff', fontSize: 12, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText style={{ color: '#ffffff', fontSize: 12, fontFamily: 'Sora_600SemiBold' }}>
                           Wicket
                         </ThemedText>
                       </Pressable>
@@ -3698,7 +3745,7 @@ export default function CricketScoring({
                         }, pressed && { backgroundColor: theme.primary + '15' }]}
                       >
                         <Ionicons name="arrow-undo" size={14} color={theme.text} />
-                        <ThemedText style={{ color: theme.text, fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText style={{ color: theme.text, fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
                           Undo
                         </ThemedText>
                       </Pressable>
@@ -3726,15 +3773,16 @@ export default function CricketScoring({
                       }}
                     >
                       <Ionicons name="swap-horizontal" size={12} color={theme.primary} />
-                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'Sora_600SemiBold' }}>
                         Swap
                       </ThemedText>
                     </Pressable>
 
+                    {/* CHANGE — swap this slot's holder for a bench player. */}
                     <Pressable
                       onPress={() => {
-                        openEditPlayersModal();
-                        setActionTarget({ type: 'replace', batsmanIndex: 0 });
+                        const idx = batsmen.findIndex(b => b.active);
+                        setChangeSlot(idx >= 0 ? idx : 0);
                       }}
                       style={{
                         flexDirection: 'row',
@@ -3745,12 +3793,34 @@ export default function CricketScoring({
                         borderRadius: 4,
                       }}
                     >
-                      <Ionicons name="person-add" size={12} color={theme.primary} />
-                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'Sora_700Bold' }}>
-                        + Add New
+                      <Ionicons name="repeat" size={12} color={theme.primary} />
+                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'Sora_600SemiBold' }}>
+                        Change
                       </ThemedText>
                     </Pressable>
 
+                    {/* EDIT — the striker's own details; nobody changes slots. */}
+                    <Pressable
+                      onPress={() => {
+                        const idx = batsmen.findIndex(b => b.active);
+                        setEditSlot(idx >= 0 ? idx : 0);
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: theme.primary + '10',
+                        paddingHorizontal: 6,
+                        paddingVertical: 4,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Ionicons name="create" size={12} color={theme.primary} />
+                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'Sora_600SemiBold' }}>
+                        Edit
+                      </ThemedText>
+                    </Pressable>
+
+                    {/* Full squad editor (batsmen + bowler) stays available. */}
                     <Pressable
                       onPress={openEditPlayersModal}
                       style={{
@@ -3762,9 +3832,9 @@ export default function CricketScoring({
                         borderRadius: 4,
                       }}
                     >
-                      <Ionicons name="create" size={12} color={theme.primary} />
-                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'Sora_700Bold' }}>
-                        Edit
+                      <Ionicons name="people" size={12} color={theme.primary} />
+                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'Sora_600SemiBold' }}>
+                        Squad
                       </ThemedText>
                     </Pressable>
                   </View>
@@ -3773,14 +3843,14 @@ export default function CricketScoring({
                 {/* Sub-Header Row */}
                 <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '50', borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '33' }]}>
                   <View style={styles.batsmanNameCell}>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>Batsman</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>Batsman</ThemedText>
                   </View>
                   <View style={styles.batStatsCells}>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>R</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>B</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>4s</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>6s</ThemedText></View>
-                    <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold', textAlign: 'center' }}>SR</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>R</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>B</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>4s</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>6s</ThemedText></View>
+                    <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', textAlign: 'center' }}>SR</ThemedText></View>
                   </View>
                 </View>
 
@@ -3794,7 +3864,7 @@ export default function CricketScoring({
                       onPress={openEditPlayersModal}
                       style={{ backgroundColor: theme.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BorderRadius.full }}
                     >
-                      <ThemedText style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>
                         + Select Opening Batsmen
                       </ThemedText>
                     </Pressable>
@@ -3819,11 +3889,11 @@ export default function CricketScoring({
                           style={styles.batsmanNameCell}
                         >
                           <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
-                            <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                            <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                               {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
                             </ThemedText>
                           </View>
-                          <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text, flexShrink: 1 }}>
+                          <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text, flexShrink: 1 }}>
                             {b.name}
                           </ThemedText>
                           {b.active && (
@@ -3832,7 +3902,7 @@ export default function CricketScoring({
                         </Pressable>
                         <View style={styles.batStatsCells}>
                           <View style={styles.statCell}>
-                            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{b.runs}</ThemedText>
+                            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{b.runs}</ThemedText>
                           </View>
                           <View style={styles.statCell}>
                             <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.balls}</ThemedText>
@@ -3844,7 +3914,7 @@ export default function CricketScoring({
                             <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.sixes}</ThemedText>
                           </View>
                           <View style={[styles.statCell, { width: 50 }]}>
-                            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{sr}</ThemedText>
+                            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{sr}</ThemedText>
                           </View>
                         </View>
                       </Pressable>
@@ -3869,7 +3939,7 @@ export default function CricketScoring({
                       }}
                     >
                       <Ionicons name="create" size={12} color={theme.primary} />
-                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText style={{ fontSize: 10, color: theme.primary, marginLeft: 2, fontFamily: 'Sora_600SemiBold' }}>
                         Edit
                       </ThemedText>
                     </Pressable>
@@ -3879,14 +3949,14 @@ export default function CricketScoring({
                 {/* Bowler Sub-Header Row */}
                 <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '50', borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '33' }]}>
                   <View style={styles.batsmanNameCell}>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>Bowler</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>Bowler</ThemedText>
                   </View>
                   <View style={styles.batStatsCells}>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>O</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>M</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>R</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>W</ThemedText></View>
-                    <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold', textAlign: 'center' }}>ECON</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>O</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>M</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>R</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>W</ThemedText></View>
+                    <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', textAlign: 'center' }}>ECON</ThemedText></View>
                   </View>
                 </View>
 
@@ -3899,7 +3969,7 @@ export default function CricketScoring({
                       onPress={() => { openEditPlayersModal(); setActionTarget({ type: 'bowler' }); }}
                       style={{ backgroundColor: theme.primary + '18', paddingHorizontal: 12, paddingVertical: 5, borderRadius: BorderRadius.full }}
                     >
-                      <ThemedText style={{ color: theme.primary, fontSize: 10.5, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText style={{ color: theme.primary, fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>
                         + Assign Bowler
                       </ThemedText>
                     </Pressable>
@@ -3914,17 +3984,17 @@ export default function CricketScoring({
                       style={styles.batsmanNameCell}
                     >
                       <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
-                        <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                           {bowler.name ? bowler.name.trim().charAt(0).toUpperCase() : 'P'}
                         </ThemedText>
                       </View>
-                      <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                      <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                         {bowler.name}
                       </ThemedText>
                     </Pressable>
                     <View style={styles.batStatsCells}>
                       <View style={styles.statCell}>
-                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                           {bowler.overs || 0}.{bowler.ballsInOver || 0}
                         </ThemedText>
                       </View>
@@ -3935,10 +4005,10 @@ export default function CricketScoring({
                         <ThemedText style={{ fontSize: 12, color: theme.text }}>{bowler.runs || 0}</ThemedText>
                       </View>
                       <View style={styles.statCell}>
-                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{bowler.wickets || 0}</ThemedText>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{bowler.wickets || 0}</ThemedText>
                       </View>
                       <View style={[styles.statCell, { width: 50 }]}>
-                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                           {(((bowler.overs || 0) * 6 + (bowler.ballsInOver || 0)) > 0 ? ((bowler.runs || 0) / (((bowler.overs || 0) * 6 + (bowler.ballsInOver || 0)) / 6)) : 0).toFixed(2)}
                         </ThemedText>
                       </View>
@@ -3956,7 +4026,7 @@ export default function CricketScoring({
                   <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: theme.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
                     <Ionicons name="people-outline" size={14} color={theme.primary} />
                   </View>
-                  <ThemedText style={{ fontSize: 13.5, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 13.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                     Next Batsman Suggestion
                   </ThemedText>
                 </View>
@@ -3971,7 +4041,7 @@ export default function CricketScoring({
                         onPress={() => setShowFullSquadModal(true)}
                         style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 12, paddingVertical: 5, borderRadius: BorderRadius.full }}
                       >
-                        <ThemedText style={{ color: theme.primary, fontSize: 10.5, fontFamily: 'Sora_700Bold' }}>
+                        <ThemedText style={{ color: theme.primary, fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>
                           + Add Squad Players for Suggestions
                         </ThemedText>
                       </Pressable>
@@ -3986,11 +4056,11 @@ export default function CricketScoring({
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                           <View style={{ flex: 1, paddingRight: 8 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                              <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text, flexShrink: 1 }}>
+                              <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text, flexShrink: 1 }}>
                                 {b.name}
                               </ThemedText>
                               <View style={{ backgroundColor: idx === 0 ? '#10B98118' : '#8B5CF618', paddingVertical: 1.5, paddingHorizontal: 6, borderRadius: BorderRadius.full }}>
-                                <ThemedText style={{ fontSize: 7.5, color: idx === 0 ? '#10B981' : '#8B5CF6', fontFamily: 'Sora_800ExtraBold', letterSpacing: 0.5 }}>
+                                <ThemedText style={{ fontSize: 7.5, color: idx === 0 ? '#10B981' : '#8B5CF6', fontFamily: 'Sora_600SemiBold', letterSpacing: 0.5 }}>
                                   {idx === 0 ? 'RECOMMENDED' : 'NEXT UP'}
                                 </ThemedText>
                               </View>
@@ -4005,7 +4075,7 @@ export default function CricketScoring({
                               onPress={() => sendInBatsman(b.name)}
                               style={{ backgroundColor: theme.primary, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 8 }}
                             >
-                              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
                                 Send In
                               </ThemedText>
                             </Pressable>
@@ -4039,7 +4109,7 @@ export default function CricketScoring({
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 6 }}>
                 <Ionicons name="people" size={16} color={theme.primary} />
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }} numberOfLines={1}>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }} numberOfLines={1}>
                   Squad ({teamA})
                 </ThemedText>
               </View>
@@ -4055,7 +4125,7 @@ export default function CricketScoring({
                 }}
               >
                 <Ionicons name="person-add" size={12} color="#ffffff" />
-                <ThemedText style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_700Bold' }}>
+                <ThemedText style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>
                   Manage Squad
                 </ThemedText>
               </View>
@@ -4067,7 +4137,7 @@ export default function CricketScoring({
                 onPress={() => setScorecardTab('batsmen')}
                 style={[{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 }, scorecardTab === 'batsmen' && { backgroundColor: theme.surfaceLowest, ...Shadows.level1 }]}
               >
-                <ThemedText style={{ fontSize: 13, fontFamily: scorecardTab === 'batsmen' ? 'Sora_700Bold' : 'Sora_600SemiBold', color: scorecardTab === 'batsmen' ? theme.primary : theme.textSecondary }}>
+                <ThemedText style={{ fontSize: 13, fontFamily: scorecardTab === 'batsmen' ? 'Sora_600SemiBold' : 'Sora_600SemiBold', color: scorecardTab === 'batsmen' ? theme.primary : theme.textSecondary }}>
                   Batsmen
                 </ThemedText>
               </Pressable>
@@ -4075,7 +4145,7 @@ export default function CricketScoring({
                 onPress={() => setScorecardTab('bowlers')}
                 style={[{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 }, scorecardTab === 'bowlers' && { backgroundColor: theme.surfaceLowest, ...Shadows.level1 }]}
               >
-                <ThemedText style={{ fontSize: 13, fontFamily: scorecardTab === 'bowlers' ? 'Sora_700Bold' : 'Sora_600SemiBold', color: scorecardTab === 'bowlers' ? theme.primary : theme.textSecondary }}>
+                <ThemedText style={{ fontSize: 13, fontFamily: scorecardTab === 'bowlers' ? 'Sora_600SemiBold' : 'Sora_600SemiBold', color: scorecardTab === 'bowlers' ? theme.primary : theme.textSecondary }}>
                   Bowlers
                 </ThemedText>
               </Pressable>
@@ -4086,7 +4156,7 @@ export default function CricketScoring({
               <View style={{ gap: 8 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 }}>
                   <Ionicons name="stats-chart-outline" size={16} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                     Batsmen Scorecard
                   </ThemedText>
                 </View>
@@ -4094,14 +4164,14 @@ export default function CricketScoring({
                 {/* Sub-Header Row */}
                 <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '70', borderRadius: 8, borderBottomWidth: 0, borderLeftWidth: 4, borderLeftColor: 'transparent' }]}>
                   <View style={styles.batsmanNameCell}>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>Batsman</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>Batsman</ThemedText>
                   </View>
                   <View style={styles.batStatsCells}>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>R</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>B</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>4s</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>6s</ThemedText></View>
-                    <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold', textAlign: 'center' }}>SR</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>R</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>B</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>4s</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>6s</ThemedText></View>
+                    <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', textAlign: 'center' }}>SR</ThemedText></View>
                   </View>
                 </View>
 
@@ -4114,7 +4184,7 @@ export default function CricketScoring({
                       onPress={() => setShowFullSquadModal(true)}
                       style={{ backgroundColor: theme.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BorderRadius.full }}
                     >
-                      <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>
                         + Assign Squad Batsmen
                       </ThemedText>
                     </Pressable>
@@ -4135,13 +4205,13 @@ export default function CricketScoring({
                       >
                         <View style={[styles.batsmanNameCell, { gap: 8 }]}>
                           <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
-                            <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                            <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                               {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
                             </ThemedText>
                           </View>
                           <View style={{ flex: 1 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                              <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text, flexShrink: 1 }}>
+                              <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text, flexShrink: 1 }}>
                                 {b.name}
                               </ThemedText>
                               {b.active && (
@@ -4155,7 +4225,7 @@ export default function CricketScoring({
                         </View>
                         <View style={styles.batStatsCells}>
                           <View style={styles.statCell}>
-                            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{b.runs !== undefined ? b.runs : '-'}</ThemedText>
+                            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{b.runs !== undefined ? b.runs : '-'}</ThemedText>
                           </View>
                           <View style={styles.statCell}>
                             <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.balls !== undefined ? b.balls : '-'}</ThemedText>
@@ -4167,7 +4237,7 @@ export default function CricketScoring({
                             <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.sixes !== undefined ? b.sixes : '-'}</ThemedText>
                           </View>
                           <View style={[styles.statCell, { width: 50 }]}>
-                            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{sr}</ThemedText>
+                            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{sr}</ThemedText>
                           </View>
                         </View>
                       </View>
@@ -4182,7 +4252,7 @@ export default function CricketScoring({
               <View style={{ gap: 8 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 }}>
                   <Ionicons name="analytics-outline" size={16} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                     Bowlers Scorecard
                   </ThemedText>
                 </View>
@@ -4190,14 +4260,14 @@ export default function CricketScoring({
                 {/* Sub-Header Row */}
                 <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '70', borderRadius: 8, borderBottomWidth: 0, borderLeftWidth: 4, borderLeftColor: 'transparent' }]}>
                   <View style={styles.batsmanNameCell}>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>Bowler</ThemedText>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>Bowler</ThemedText>
                   </View>
                   <View style={styles.batStatsCells}>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>O</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>M</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>R</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>W</ThemedText></View>
-                    <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold', textAlign: 'center' }}>ECON</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>O</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>M</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>R</ThemedText></View>
+                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>W</ThemedText></View>
+                    <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', textAlign: 'center' }}>ECON</ThemedText></View>
                   </View>
                 </View>
 
@@ -4221,13 +4291,13 @@ export default function CricketScoring({
                     >
                       <View style={[styles.batsmanNameCell, { gap: 8 }]}>
                         <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
-                          <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                          <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                             {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
                           </ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text, flexShrink: 1 }}>
+                            <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text, flexShrink: 1 }}>
                               {b.name}
                             </ThemedText>
                             {b.active && (
@@ -4243,7 +4313,7 @@ export default function CricketScoring({
                       </View>
                       <View style={styles.batStatsCells}>
                         <View style={styles.statCell}>
-                          <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{oversDisplay}</ThemedText>
+                          <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{oversDisplay}</ThemedText>
                         </View>
                         <View style={styles.statCell}>
                           <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.maidens}</ThemedText>
@@ -4252,10 +4322,10 @@ export default function CricketScoring({
                           <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.runs}</ThemedText>
                         </View>
                         <View style={styles.statCell}>
-                          <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{b.wickets}</ThemedText>
+                          <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{b.wickets}</ThemedText>
                         </View>
                         <View style={[styles.statCell, { width: 50 }]}>
-                          <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{econ}</ThemedText>
+                          <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{econ}</ThemedText>
                         </View>
                       </View>
                     </View>
@@ -4279,7 +4349,7 @@ export default function CricketScoring({
               }}
             >
               <Ionicons name="download-outline" size={18} color="#ffffff" />
-              <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 13 }}>
+              <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>
                 Download Score Sheet PDF
               </ThemedText>
             </Pressable>
@@ -4315,8 +4385,8 @@ export default function CricketScoring({
                       <View style={{ backgroundColor: '#10B98115', padding: 5, borderRadius: 20, marginBottom: 4 }}>
                         <Ionicons name="ellipse-outline" size={14} color="#10B981" />
                       </View>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_700Bold' }}>DOT BALLS</ThemedText>
-                      <ThemedText type="headlineLg" style={{ color: theme.text, fontFamily: 'Sora_800ExtraBold', marginTop: 2 }}>
+                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>DOT BALLS</ThemedText>
+                      <ThemedText type="headlineLg" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                         {dotPercentage}%
                       </ThemedText>
                       <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginTop: 2 }}>{totalDotBalls} of {totalMatchBalls} balls</ThemedText>
@@ -4326,8 +4396,8 @@ export default function CricketScoring({
                       <View style={{ backgroundColor: '#F59E0B15', padding: 5, borderRadius: 20, marginBottom: 4 }}>
                         <Ionicons name="flash-outline" size={14} color="#F59E0B" />
                       </View>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_700Bold' }}>BOUNDARIES</ThemedText>
-                      <ThemedText type="headlineLg" style={{ color: theme.text, fontFamily: 'Sora_800ExtraBold', marginTop: 2 }}>
+                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>BOUNDARIES</ThemedText>
+                      <ThemedText type="headlineLg" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                         {totalBoundariesCount}
                       </ThemedText>
                       <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginTop: 2 }}>{totalFours} Fours • {totalSixes} Sixes</ThemedText>
@@ -4337,8 +4407,8 @@ export default function CricketScoring({
                       <View style={{ backgroundColor: '#8B5CF615', padding: 5, borderRadius: 20, marginBottom: 4 }}>
                         <Ionicons name="gift-outline" size={14} color="#8B5CF6" />
                       </View>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_700Bold' }}>EXTRAS</ThemedText>
-                      <ThemedText type="headlineLg" style={{ color: theme.text, fontFamily: 'Sora_800ExtraBold', marginTop: 2 }}>
+                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_600SemiBold' }}>EXTRAS</ThemedText>
+                      <ThemedText type="headlineLg" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>
                         {totalExtrasCount}
                       </ThemedText>
                       <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginTop: 2 }}>{totalWides}WD • {totalNoBalls}NB • {totalByes}B</ThemedText>
@@ -4349,7 +4419,7 @@ export default function CricketScoring({
                   <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderRadius: BorderRadius.xl, borderWidth: 1, padding: 14, ...Shadows.level1 }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                       <Ionicons name="people-outline" size={16} color={theme.primary} />
-                      <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
                         Active Partnership
                       </ThemedText>
                     </View>
@@ -4365,28 +4435,28 @@ export default function CricketScoring({
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: theme.surfaceLow + '30', padding: 12, borderRadius: BorderRadius.lg }}>
                           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                             <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15', width: 28, height: 28, borderRadius: 14 }]}>
-                              <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                              <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                                 {activeBat1.name.trim().charAt(0).toUpperCase()}
                               </ThemedText>
                             </View>
                             <View style={{ flex: 1 }}>
-                              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }} numberOfLines={1}>{activeBat1.name}</ThemedText>
+                              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }} numberOfLines={1}>{activeBat1.name}</ThemedText>
                               <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>{activeBat1.runs} ({activeBat1.balls})</ThemedText>
                             </View>
                           </View>
 
                           <View style={{ alignItems: 'center', paddingHorizontal: 12, backgroundColor: theme.primary + '10', paddingVertical: 4, borderRadius: BorderRadius.sm }}>
-                            <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_800ExtraBold', color: theme.primary }}>{partnershipRuns}</ThemedText>
+                            <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>{partnershipRuns}</ThemedText>
                             <ThemedText style={{ fontSize: 8, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>runs ({partnershipBalls}b)</ThemedText>
                           </View>
 
                           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
                             <View style={{ alignItems: 'flex-end', flex: 1 }}>
-                              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }} numberOfLines={1}>{activeBat2.name}</ThemedText>
+                              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }} numberOfLines={1}>{activeBat2.name}</ThemedText>
                               <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>{activeBat2.runs} ({activeBat2.balls})</ThemedText>
                             </View>
                             <View style={[styles.playerAvatar, { backgroundColor: theme.secondary + '15', width: 28, height: 28, borderRadius: 14 }]}>
-                              <ThemedText style={{ color: theme.secondary, fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                              <ThemedText style={{ color: theme.secondary, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                                 {activeBat2.name.trim().charAt(0).toUpperCase()}
                               </ThemedText>
                             </View>
@@ -4406,7 +4476,7 @@ export default function CricketScoring({
                   <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderRadius: BorderRadius.xl, borderWidth: 1, padding: 14, ...Shadows.level1 }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
                       <Ionicons name="bar-chart-outline" size={16} color={theme.primary} />
-                      <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
                         Over-by-Over Run Rate
                       </ThemedText>
                     </View>
@@ -4421,12 +4491,12 @@ export default function CricketScoring({
                     ) : (
                       <View style={{ height: 130, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '15' }}>
                         <View style={{ alignItems: 'center', flex: 1 }}>
-                          <ThemedText style={{ fontSize: 9, color: theme.primary, fontFamily: 'Sora_700Bold', marginBottom: 4 }}>
+                          <ThemedText style={{ fontSize: 9, color: theme.primary, fontFamily: 'Sora_600SemiBold', marginBottom: 4 }}>
                             {runs}
                           </ThemedText>
                           <View style={{ width: 20, height: `${Math.min(100, Math.max(10, (runs / 20) * 100))}%`, backgroundColor: theme.primary, borderTopLeftRadius: 6, borderTopRightRadius: 6, opacity: 0.85 }} />
                           <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: theme.surfaceLow, justifyContent: 'center', alignItems: 'center', marginTop: 8 }}>
-                            <ThemedText style={{ fontSize: 7, color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>
+                            <ThemedText style={{ fontSize: 7, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>
                               {overs + 1}
                             </ThemedText>
                           </View>
@@ -4439,7 +4509,7 @@ export default function CricketScoring({
                   <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', alignItems: 'center', borderRadius: BorderRadius.xl, borderWidth: 1, padding: 14, ...Shadows.level1 }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, alignSelf: 'flex-start' }}>
                       <Ionicons name="color-palette-outline" size={16} color={theme.primary} />
-                      <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
                         Wagon Wheel
                       </ThemedText>
                     </View>
@@ -4478,7 +4548,7 @@ export default function CricketScoring({
             <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderRadius: BorderRadius.xl, borderWidth: 1, padding: 14, ...Shadows.level1 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 }}>
                 <Ionicons name="information-circle-outline" size={16} color={theme.primary} />
-                <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
+                <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
                   Match Information
                 </ThemedText>
               </View>
@@ -4492,7 +4562,7 @@ export default function CricketScoring({
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>VENUE</ThemedText>
-                    <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>Turf Pitch 1</ThemedText>
+                    <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>Turf Pitch 1</ThemedText>
                   </View>
                 </View>
 
@@ -4503,7 +4573,7 @@ export default function CricketScoring({
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={{ fontSize: 8, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>DATE & TIME</ThemedText>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text }}>Live Match</ThemedText>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>Live Match</ThemedText>
                   </View>
                 </View>
 
@@ -4514,7 +4584,7 @@ export default function CricketScoring({
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={{ fontSize: 8, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>FORMAT</ThemedText>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text }}>{totalOvers} Overs Match</ThemedText>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{totalOvers} Overs Match</ThemedText>
                   </View>
                 </View>
 
@@ -4525,7 +4595,7 @@ export default function CricketScoring({
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={{ fontSize: 8, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>MATCH TYPE</ThemedText>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text }}>Quick Match</ThemedText>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>Quick Match</ThemedText>
                   </View>
                 </View>
 
@@ -4536,7 +4606,7 @@ export default function CricketScoring({
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={{ fontSize: 8, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>UMPIRES</ThemedText>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text }}>Self-Scored</ThemedText>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>Self-Scored</ThemedText>
                   </View>
                 </View>
               </View>
@@ -4546,7 +4616,7 @@ export default function CricketScoring({
             <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', borderRadius: BorderRadius.xl, borderWidth: 1, padding: 14, ...Shadows.level1 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 }}>
                 <Ionicons name="shield-outline" size={16} color={theme.primary} />
-                <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_700Bold' }}>
+                <ThemedText type="labelMd" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold' }}>
                   Playing Squads
                 </ThemedText>
               </View>
@@ -4555,7 +4625,7 @@ export default function CricketScoring({
                 {/* Team A List (Batsmen + Yet to Bat Squad) */}
                 <View style={{ flex: 1 }}>
                   <View style={{ backgroundColor: theme.primary, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6, marginBottom: 10 }}>
-                    <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: '#ffffff', textAlign: 'center' }}>
+                    <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: '#ffffff', textAlign: 'center' }}>
                       {teamA}
                     </ThemedText>
                   </View>
@@ -4571,12 +4641,12 @@ export default function CricketScoring({
                     return teamASquad.map((p, idx) => (
                       <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, borderBottomWidth: idx === teamASquad.length - 1 ? 0 : 1, borderBottomColor: theme.outlineVariant + '15' }}>
                         <View style={[styles.playerAvatar, { width: 22, height: 22, borderRadius: 11, backgroundColor: theme.primary + '10' }]}>
-                          <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                          <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                             {p.name ? p.name.trim().charAt(0).toUpperCase() : 'P'}
                           </ThemedText>
                         </View>
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <ThemedText numberOfLines={1} style={{ fontSize: 11, color: theme.text, fontFamily: 'Sora_700Bold' }}>{p.name}</ThemedText>
+                          <ThemedText numberOfLines={1} style={{ fontSize: 11, color: theme.text, fontFamily: 'Sora_600SemiBold' }}>{p.name}</ThemedText>
                           <ThemedText numberOfLines={1} style={{ fontSize: 8, color: theme.textSecondary }}>{p.role || p.status || 'Batsman'}</ThemedText>
                         </View>
                       </View>
@@ -4590,7 +4660,7 @@ export default function CricketScoring({
                 {/* Team B List (Bowler + Other Bowlers Squad) */}
                 <View style={{ flex: 1 }}>
                   <View style={{ backgroundColor: theme.secondary, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6, marginBottom: 10 }}>
-                    <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: '#ffffff', textAlign: 'center' }}>
+                    <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: '#ffffff', textAlign: 'center' }}>
                       {teamB}
                     </ThemedText>
                   </View>
@@ -4606,12 +4676,12 @@ export default function CricketScoring({
                     return teamBSquad.map((p, idx) => (
                       <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, borderBottomWidth: idx === teamBSquad.length - 1 ? 0 : 1, borderBottomColor: theme.outlineVariant + '15' }}>
                         <View style={[styles.playerAvatar, { width: 22, height: 22, borderRadius: 11, backgroundColor: theme.secondary + '10' }]}>
-                          <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_700Bold', color: theme.secondary }}>
+                          <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_600SemiBold', color: theme.secondary }}>
                             {p.name ? p.name.trim().charAt(0).toUpperCase() : 'P'}
                           </ThemedText>
                         </View>
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <ThemedText numberOfLines={1} style={{ fontSize: 11, color: theme.text, fontFamily: 'Sora_700Bold' }}>{p.name}</ThemedText>
+                          <ThemedText numberOfLines={1} style={{ fontSize: 11, color: theme.text, fontFamily: 'Sora_600SemiBold' }}>{p.name}</ThemedText>
                           <ThemedText numberOfLines={1} style={{ fontSize: 8, color: theme.textSecondary }}>{p.role || 'Bowler'}</ThemedText>
                         </View>
                       </View>
@@ -4644,7 +4714,7 @@ export default function CricketScoring({
             ]}
           >
             <Ionicons name="trash-outline" size={17} color="#ef4444" style={{ marginRight: 6 }} />
-            <ThemedText type="labelMd" style={{ color: '#ef4444', fontFamily: 'Sora_700Bold', fontSize: 13 }}>
+            <ThemedText type="labelMd" style={{ color: '#ef4444', fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>
               Drop Match
             </ThemedText>
           </Pressable>
@@ -4668,7 +4738,7 @@ export default function CricketScoring({
             ) : (
               <>
                 <Ionicons name="checkmark-done" size={18} color="#ffffff" style={{ marginRight: 6 }} />
-                <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 13 }}>
+                <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>
                   End Match
                 </ThemedText>
               </>
@@ -4758,7 +4828,7 @@ export default function CricketScoring({
                           <ThemedText
                             style={{
                               color: textColor,
-                              fontFamily: 'Sora_700Bold',
+                              fontFamily: 'Sora_600SemiBold',
                               fontSize: 12,
                             }}
                           >
@@ -4771,7 +4841,7 @@ export default function CricketScoring({
                             <ThemedText
                               style={{
                                 color: textColor,
-                                fontFamily: 'Sora_800ExtraBold',
+                                fontFamily: 'Sora_600SemiBold',
                                 fontSize: 14,
                               }}
                             >
@@ -4780,7 +4850,7 @@ export default function CricketScoring({
                             <ThemedText
                               style={{
                                 color: textColor,
-                                fontFamily: 'Sora_700Bold',
+                                fontFamily: 'Sora_600SemiBold',
                                 fontSize: 8,
                                 marginLeft: 1,
                               }}
@@ -4796,7 +4866,7 @@ export default function CricketScoring({
                           type="bodyMd"
                           style={{
                             color: textColor,
-                            fontFamily: 'Sora_700Bold',
+                            fontFamily: 'Sora_600SemiBold',
                           }}
                         >
                           {ball}
@@ -4898,7 +4968,7 @@ export default function CricketScoring({
                     }}
                     style={[styles.extraButton, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant }]}
                   >
-                    <ThemedText type="labelMd" style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>
+                    <ThemedText type="labelMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                       {extra === 'WD' ? 'Wide' : extra === 'NB' ? 'No Ball' : extra}
                     </ThemedText>
                   </Pressable>
@@ -4980,14 +5050,14 @@ export default function CricketScoring({
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScrollContent}>
               <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '50', borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '33' }]}>
                 <View style={[styles.batsmanNameCell, { width: '45%' }]}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>Batsman</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>Batsman</ThemedText>
                 </View>
                 <View style={[styles.batStatsCells, { flex: 1 }]}>
-                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>R</ThemedText></View>
-                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>B</ThemedText></View>
-                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>4s</ThemedText></View>
-                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>6s</ThemedText></View>
-                  <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold', textAlign: 'center' }}>SR</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>R</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>B</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>4s</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>6s</ThemedText></View>
+                  <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', textAlign: 'center' }}>SR</ThemedText></View>
                 </View>
               </View>
 
@@ -5004,7 +5074,7 @@ export default function CricketScoring({
                   >
                     <View style={[styles.batsmanNameCell, { width: '45%' }]}>
                       <View style={{ flex: 1 }}>
-                        <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text, flexShrink: 1 }}>
+                        <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text, flexShrink: 1 }}>
                           {b.name}
                         </ThemedText>
                         <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>
@@ -5014,7 +5084,7 @@ export default function CricketScoring({
                     </View>
                     <View style={styles.batStatsCells}>
                       <View style={styles.statCell}>
-                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{b.runs}</ThemedText>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{b.runs}</ThemedText>
                       </View>
                       <View style={styles.statCell}>
                         <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.balls}</ThemedText>
@@ -5026,7 +5096,7 @@ export default function CricketScoring({
                         <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.sixes}</ThemedText>
                       </View>
                       <View style={[styles.statCell, { width: 50 }]}>
-                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{sr}</ThemedText>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{sr}</ThemedText>
                       </View>
                     </View>
                   </View>
@@ -5057,14 +5127,14 @@ export default function CricketScoring({
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScrollContent}>
               <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '50', borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '33' }]}>
                 <View style={[styles.batsmanNameCell, { width: '45%' }]}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>Bowler</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>Bowler</ThemedText>
                 </View>
                 <View style={[styles.batStatsCells, { flex: 1 }]}>
-                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>O</ThemedText></View>
-                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>M</ThemedText></View>
-                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>R</ThemedText></View>
-                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>W</ThemedText></View>
-                  <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold', textAlign: 'center' }}>ECON</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>O</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>M</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>R</ThemedText></View>
+                  <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>W</ThemedText></View>
+                  <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', textAlign: 'center' }}>ECON</ThemedText></View>
                 </View>
               </View>
 
@@ -5083,13 +5153,13 @@ export default function CricketScoring({
                     ]}
                   >
                     <View style={[styles.batsmanNameCell, { width: '45%' }]}>
-                      <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text, flexShrink: 1 }}>
+                      <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text, flexShrink: 1 }}>
                         {b.name}
                       </ThemedText>
                     </View>
                     <View style={styles.batStatsCells}>
                       <View style={styles.statCell}>
-                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{oversDisplay}</ThemedText>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{oversDisplay}</ThemedText>
                       </View>
                       <View style={styles.statCell}>
                         <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.maidens}</ThemedText>
@@ -5098,10 +5168,10 @@ export default function CricketScoring({
                         <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.runs}</ThemedText>
                       </View>
                       <View style={styles.statCell}>
-                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{b.wickets}</ThemedText>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{b.wickets}</ThemedText>
                       </View>
                       <View style={[styles.statCell, { width: 50 }]}>
-                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }}>{econ}</ThemedText>
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{econ}</ThemedText>
                       </View>
                     </View>
                   </View>
@@ -5138,7 +5208,7 @@ export default function CricketScoring({
                 onPress={() => setSquadTab('A')}
                 style={[{ flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: 'center' }, squadTab === 'A' && { backgroundColor: theme.primary }]}
               >
-                <ThemedText style={[{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.textSecondary }, squadTab === 'A' && { color: '#ffffff' }]}>
+                <ThemedText style={[{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }, squadTab === 'A' && { color: '#ffffff' }]}>
                   {teamA} Squad
                 </ThemedText>
               </Pressable>
@@ -5146,7 +5216,7 @@ export default function CricketScoring({
                 onPress={() => setSquadTab('B')}
                 style={[{ flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: 'center' }, squadTab === 'B' && { backgroundColor: theme.primary }]}
               >
-                <ThemedText style={[{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.textSecondary }, squadTab === 'B' && { color: '#ffffff' }]}>
+                <ThemedText style={[{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }, squadTab === 'B' && { color: '#ffffff' }]}>
                   {teamB} Squad
                 </ThemedText>
               </Pressable>
@@ -5154,7 +5224,7 @@ export default function CricketScoring({
 
             {/* Add New Player Form (Image Upload + Name + Mobile Number) */}
             <View style={{ backgroundColor: theme.surfaceLow, borderRadius: 12, padding: 12, marginBottom: 14 }}>
-              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, marginBottom: 10, textTransform: 'uppercase' }}>
+              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, marginBottom: 10, textTransform: 'uppercase' }}>
                 + Add Player to {squadTab === 'A' ? teamA : teamB}
               </ThemedText>
 
@@ -5179,7 +5249,7 @@ export default function CricketScoring({
                   ) : (
                     <View style={{ alignItems: 'center' }}>
                       <Ionicons name="camera" size={20} color={theme.primary} />
-                      <ThemedText style={{ fontSize: 8.5, color: theme.primary, fontFamily: 'Sora_700Bold', marginTop: 2 }}>Photo</ThemedText>
+                      <ThemedText style={{ fontSize: 8.5, color: theme.primary, fontFamily: 'Sora_600SemiBold', marginTop: 2 }}>Photo</ThemedText>
                     </View>
                   )}
                 </Pressable>
@@ -5265,7 +5335,7 @@ export default function CricketScoring({
                         alignItems: 'center',
                       }}
                     >
-                      <ThemedText style={{ color: '#ffffff', fontSize: 11.5, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText style={{ color: '#ffffff', fontSize: 11.5, fontFamily: 'Sora_600SemiBold' }}>
                         + Add
                       </ThemedText>
                     </Pressable>
@@ -5278,7 +5348,7 @@ export default function CricketScoring({
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
               {squadTab === 'A' ? (
                 <View style={{ gap: 8 }}>
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.primary, textTransform: 'uppercase', marginBottom: 2 }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.primary, textTransform: 'uppercase', marginBottom: 2 }}>
                     Active Playing XI ({batsmen.length + yetToBatBatsmen.length} Players)
                   </ThemedText>
 
@@ -5287,15 +5357,15 @@ export default function CricketScoring({
                     <View key={`bat-${idx}`} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.surfaceLow, padding: 10, borderRadius: 10 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 }}>
                         <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>{b.name ? b.name.charAt(0).toUpperCase() : 'P'}</ThemedText>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>{b.name ? b.name.charAt(0).toUpperCase() : 'P'}</ThemedText>
                         </View>
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <ThemedText numberOfLines={1} style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>{b.name} {b.active ? '★ (Striker)' : ''}</ThemedText>
+                          <ThemedText numberOfLines={1} style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{b.name} {b.active ? '★ (Striker)' : ''}</ThemedText>
                           <ThemedText numberOfLines={1} style={{ fontSize: 10, color: theme.textSecondary }}>{b.runs} runs ({b.balls} balls) · {b.fours}x4 {b.sixes}x6</ThemedText>
                         </View>
                       </View>
                       <View style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}>
-                        <ThemedText style={{ fontSize: 9, color: theme.primary, fontFamily: 'Sora_700Bold' }}>{b.outInfo ? b.outInfo : 'ON PITCH'}</ThemedText>
+                        <ThemedText style={{ fontSize: 9, color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>{b.outInfo ? b.outInfo : 'ON PITCH'}</ThemedText>
                       </View>
                     </View>
                   ))}
@@ -5308,11 +5378,11 @@ export default function CricketScoring({
                           <Image source={{ uri: b.avatar }} style={{ width: 30, height: 30, borderRadius: 15 }} contentFit="cover" />
                         ) : (
                           <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#64748b20', justifyContent: 'center', alignItems: 'center' }}>
-                            <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#64748b' }}>{b.name ? b.name.charAt(0).toUpperCase() : 'P'}</ThemedText>
+                            <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#64748b' }}>{b.name ? b.name.charAt(0).toUpperCase() : 'P'}</ThemedText>
                           </View>
                         )}
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <ThemedText numberOfLines={1} style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>{b.name}</ThemedText>
+                          <ThemedText numberOfLines={1} style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{b.name}</ThemedText>
                           <ThemedText numberOfLines={1} style={{ fontSize: 10, color: theme.textSecondary }}>
                             {b.mobile ? `📱 ${b.mobile} · ` : ''}In Squad · Yet to bat
                           </ThemedText>
@@ -5326,7 +5396,7 @@ export default function CricketScoring({
                           }}
                           style={{ backgroundColor: theme.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}
                         >
-                          <ThemedText style={{ fontSize: 9.5, color: '#ffffff', fontFamily: 'Sora_700Bold' }}>Striker</ThemedText>
+                          <ThemedText style={{ fontSize: 9.5, color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>Striker</ThemedText>
                         </Pressable>
                         <Pressable
                           onPress={() => {
@@ -5335,7 +5405,7 @@ export default function CricketScoring({
                           }}
                           style={{ backgroundColor: theme.secondary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}
                         >
-                          <ThemedText style={{ fontSize: 9.5, color: '#ffffff', fontFamily: 'Sora_700Bold' }}>Non-Striker</ThemedText>
+                          <ThemedText style={{ fontSize: 9.5, color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>Non-Striker</ThemedText>
                         </Pressable>
                       </View>
                     </View>
@@ -5346,7 +5416,7 @@ export default function CricketScoring({
                 </View>
               ) : (
                 <View style={{ gap: 8 }}>
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.secondary, textTransform: 'uppercase', marginBottom: 2 }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.secondary, textTransform: 'uppercase', marginBottom: 2 }}>
                     Bowling Squad ({bowler.name ? 1 + otherBowlers.filter(b => b.name.toLowerCase() !== bowler.name.toLowerCase()).length : otherBowlers.length} Players)
                   </ThemedText>
 
@@ -5355,15 +5425,15 @@ export default function CricketScoring({
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.secondaryContainer + '1a', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: theme.secondaryContainer }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.secondary, justifyContent: 'center', alignItems: 'center' }}>
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>{bowler.name.charAt(0)}</ThemedText>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>{bowler.name.charAt(0)}</ThemedText>
                         </View>
                         <View>
-                          <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>{bowler.name} (Current Bowler)</ThemedText>
+                          <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{bowler.name} (Current Bowler)</ThemedText>
                           <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>{bowler.overs}.{bowler.ballsInOver} overs · {bowler.wickets} wickets · {bowler.runs} runs</ThemedText>
                         </View>
                       </View>
                       <View style={{ backgroundColor: theme.secondary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}>
-                        <ThemedText style={{ fontSize: 9, color: '#ffffff', fontFamily: 'Sora_700Bold' }}>BOWLING</ThemedText>
+                        <ThemedText style={{ fontSize: 9, color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>BOWLING</ThemedText>
                       </View>
                     </View>
                   ) : null}
@@ -5373,10 +5443,10 @@ export default function CricketScoring({
                     <View key={`bowler-${idx}`} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.surfaceLow, padding: 10, borderRadius: 10 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 }}>
                         <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#64748b20', justifyContent: 'center', alignItems: 'center' }}>
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#64748b' }}>{b.name ? b.name.charAt(0).toUpperCase() : 'P'}</ThemedText>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#64748b' }}>{b.name ? b.name.charAt(0).toUpperCase() : 'P'}</ThemedText>
                         </View>
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <ThemedText numberOfLines={1} style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>{b.name}</ThemedText>
+                          <ThemedText numberOfLines={1} style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>{b.name}</ThemedText>
                           <ThemedText numberOfLines={1} style={{ fontSize: 10, color: theme.textSecondary }}>In Squad · Bowler</ThemedText>
                         </View>
                       </View>
@@ -5387,7 +5457,7 @@ export default function CricketScoring({
                         }}
                         style={{ backgroundColor: theme.secondary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}
                       >
-                        <ThemedText style={{ fontSize: 9.5, color: '#ffffff', fontFamily: 'Sora_700Bold' }}>Assign Bowler</ThemedText>
+                        <ThemedText style={{ fontSize: 9.5, color: '#ffffff', fontFamily: 'Sora_600SemiBold' }}>Assign Bowler</ThemedText>
                       </Pressable>
                     </View>
                   ))}
@@ -5418,7 +5488,7 @@ export default function CricketScoring({
                   <Ionicons name="people" size={18} color={theme.primary} />
                 </View>
                 <View>
-                  <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 15.5 }}>
+                  <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 15.5 }}>
                     Manage Match Players
                   </ThemedText>
                   <ThemedText style={{ fontSize: 10, color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
@@ -5442,7 +5512,7 @@ export default function CricketScoring({
               {actionTarget !== null && (
                 <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outline, borderWidth: 1.5, marginBottom: 16, padding: 12 }]}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold' }}>
+                    <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_600SemiBold' }}>
                       {actionTarget.type === 'retire' ? 'RETIRE & REPLACE BATSMAN' : actionTarget.type === 'replace' ? 'SUBSTITUTE BATSMAN' : 'CHANGE BOWLER'}
                     </ThemedText>
                     <Pressable onPress={() => setActionTarget(null)}>
@@ -5468,7 +5538,7 @@ export default function CricketScoring({
                   )}
 
                   {/* Selection lists (Cards) */}
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 8, fontFamily: 'Sora_700Bold' }}>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 8, fontFamily: 'Sora_600SemiBold' }}>
                     Select player from squad bench ({actionTarget.type === 'bowler' ? availableBenchBowlers.length : availableBenchBatsmen.length} available):
                   </ThemedText>
 
@@ -5498,16 +5568,16 @@ export default function CricketScoring({
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                               <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
-                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                                   {bName.charAt(0).toUpperCase()}
                                 </ThemedText>
                               </View>
-                              <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                              <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                                 {bName}
                               </ThemedText>
                             </View>
                             <View style={{ backgroundColor: theme.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-                              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
                                 Select Bowler
                               </ThemedText>
                             </View>
@@ -5542,12 +5612,12 @@ export default function CricketScoring({
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                               <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
-                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                                   {bName.charAt(0).toUpperCase()}
                                 </ThemedText>
                               </View>
                               <View>
-                                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                                   {bName}
                                 </ThemedText>
                                 {b && b.mobile ? (
@@ -5558,7 +5628,7 @@ export default function CricketScoring({
                               </View>
                             </View>
                             <View style={{ backgroundColor: theme.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-                              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
                                 Send In
                               </ThemedText>
                             </View>
@@ -6432,7 +6502,7 @@ export default function CricketScoring({
                 ]}
               >
                 <Ionicons name="close-circle-outline" size={16} color={theme.textSecondary} />
-                <ThemedText type="labelMd" style={{ color: theme.textSecondary, fontFamily: 'Sora_700Bold' }}>Cancel</ThemedText>
+                <ThemedText type="labelMd" style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>Cancel</ThemedText>
               </Pressable>
 
               {(() => {
@@ -6463,7 +6533,7 @@ export default function CricketScoring({
                     ]}
                   >
                     <Ionicons name={isPitchLineupReady ? "checkmark-circle" : "alert-circle-outline"} size={18} color="#ffffff" />
-                    <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 13.5 }}>
+                    <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 13.5 }}>
                       {isPitchLineupReady ? 'On Pitch' : 'Select Batsmen (On Pitch)'}
                     </ThemedText>
                   </Pressable>
@@ -6490,7 +6560,7 @@ export default function CricketScoring({
                   <Ionicons name="checkmark-circle" size={22} color="#10B981" />
                 </View>
                 <View>
-                  <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                     Over Completed!
                   </ThemedText>
                   <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 1 }}>
@@ -6505,7 +6575,7 @@ export default function CricketScoring({
 
             <View style={{ padding: Spacing.md, gap: Spacing.md }}>
               <View>
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 8, fontFamily: 'Sora_700Bold' }}>
+                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 8, fontFamily: 'Sora_600SemiBold' }}>
                   SELECT NEXT BOWLER
                 </ThemedText>
 
@@ -6551,7 +6621,7 @@ export default function CricketScoring({
                         </ThemedText>
                         {isQuotaFull && (
                           <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                            <ThemedText style={{ fontSize: 8, color: '#b45309', fontFamily: 'Sora_700Bold' }}>Quota Full</ThemedText>
+                            <ThemedText style={{ fontSize: 8, color: '#b45309', fontFamily: 'Sora_600SemiBold' }}>Quota Full</ThemedText>
                           </View>
                         )}
                       </Pressable>
@@ -6566,7 +6636,7 @@ export default function CricketScoring({
               </View>
 
               <View>
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 6, fontFamily: 'Sora_700Bold' }}>
+                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 6, fontFamily: 'Sora_600SemiBold' }}>
                   OR ADD NEW CUSTOM BOWLER
                 </ThemedText>
 
@@ -6624,7 +6694,7 @@ export default function CricketScoring({
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
               {/* 1. DISMISSAL TYPE SELECTION */}
-              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 }}>
+              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 }}>
                 SELECT DISMISSAL TYPE:
               </ThemedText>
 
@@ -6668,7 +6738,7 @@ export default function CricketScoring({
                         <Ionicons name={item.icon} size={15} color={isSelected ? '#ffffff' : item.color} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <ThemedText numberOfLines={1} style={{ fontFamily: 'Sora_700Bold', fontSize: 12, color: isSelected ? item.color : theme.text }}>
+                        <ThemedText numberOfLines={1} style={{ fontFamily: 'Sora_600SemiBold', fontSize: 12, color: isSelected ? item.color : theme.text }}>
                           {item.label}
                         </ThemedText>
                         <ThemedText numberOfLines={1} style={{ fontSize: 9.5, color: theme.textSecondary }}>
@@ -6685,7 +6755,7 @@ export default function CricketScoring({
               {/* A. CAUGHT FIELDER PICKER */}
               {wicketDismissalType === 'caught' && (
                 <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '33', marginBottom: 14 }}>
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 8 }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 8 }}>
                     WHO TOOK THE CATCH?
                   </ThemedText>
 
@@ -6774,7 +6844,7 @@ export default function CricketScoring({
               {/* B. STUMPED KEEPER / FIELDER PICKER */}
               {wicketDismissalType === 'stumped' && (
                 <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '33', marginBottom: 14 }}>
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 8 }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 8 }}>
                     STUMPED BY (WICKET-KEEPER)
                   </ThemedText>
 
@@ -6842,7 +6912,7 @@ export default function CricketScoring({
               {/* C. RUN OUT DETAILS */}
               {wicketDismissalType === 'run_out' && (
                 <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '33', marginBottom: 14 }}>
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
                     RUNS COMPLETED BEFORE RUN OUT:
                   </ThemedText>
                   <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
@@ -6862,13 +6932,13 @@ export default function CricketScoring({
                             backgroundColor: active ? '#3B82F6' : theme.surfaceLowest,
                           }}
                         >
-                          <ThemedText style={{ fontFamily: 'Sora_700Bold', color: active ? '#ffffff' : theme.text }}>{r}</ThemedText>
+                          <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: active ? '#ffffff' : theme.text }}>{r}</ThemedText>
                         </Pressable>
                       );
                     })}
                   </View>
 
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
                     WHO WAS RUN OUT?
                   </ThemedText>
                   <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
@@ -6890,7 +6960,7 @@ export default function CricketScoring({
                             backgroundColor: active ? '#3B82F618' : theme.surfaceLowest,
                           }}
                         >
-                          <ThemedText numberOfLines={1} style={{ fontFamily: 'Sora_700Bold', fontSize: 11.5, color: active ? '#2563EB' : theme.text }}>
+                          <ThemedText numberOfLines={1} style={{ fontFamily: 'Sora_600SemiBold', fontSize: 11.5, color: active ? '#2563EB' : theme.text }}>
                             {who === 'striker' ? 'Striker' : 'Non-striker'}
                           </ThemedText>
                           <ThemedText numberOfLines={1} style={{ fontSize: 10, color: theme.textSecondary }}>
@@ -6901,7 +6971,7 @@ export default function CricketScoring({
                     })}
                   </View>
 
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
                     RUN OUT AFFECTED BY:
                   </ThemedText>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
@@ -6972,7 +7042,7 @@ export default function CricketScoring({
               {/* D. RETIRED BATSMAN PICKER */}
               {wicketDismissalType === 'retired' && (
                 <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '33', marginBottom: 14 }}>
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
                     WHO IS RETIRING?
                   </ThemedText>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -6994,7 +7064,7 @@ export default function CricketScoring({
                             backgroundColor: active ? '#6B728020' : theme.surfaceLowest,
                           }}
                         >
-                          <ThemedText numberOfLines={1} style={{ fontFamily: 'Sora_700Bold', fontSize: 11.5, color: active ? '#374151' : theme.text }}>
+                          <ThemedText numberOfLines={1} style={{ fontFamily: 'Sora_600SemiBold', fontSize: 11.5, color: active ? '#374151' : theme.text }}>
                             {who === 'striker' ? 'Striker' : 'Non-striker'}
                           </ThemedText>
                           <ThemedText numberOfLines={1} style={{ fontSize: 10, color: theme.textSecondary }}>
@@ -7009,10 +7079,10 @@ export default function CricketScoring({
 
               {/* 3. SCORECARD PREVIEW SUMMARY CARD */}
               <View style={{ backgroundColor: theme.primary + '12', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.primary + '33', marginBottom: 16 }}>
-                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
                   SCORECARD ENTRY PREVIEW
                 </ThemedText>
-                <ThemedText style={{ fontFamily: 'Sora_700Bold', fontSize: 14, color: theme.text }}>
+                <ThemedText style={{ fontFamily: 'Sora_600SemiBold', fontSize: 14, color: theme.text }}>
                   {(() => {
                     const dismissed = batsmen.find(b => (wicketDismissalType === 'run_out' || wicketDismissalType === 'retired' ? (wicketWhoIsOut === 'striker' ? b.active : !b.active) : b.active));
                     return dismissed?.name || 'Striker';
@@ -7051,7 +7121,7 @@ export default function CricketScoring({
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="checkmark-circle-outline" size={18} color="#ffffff" />
-                  <ThemedText style={{ fontFamily: 'Sora_700Bold', color: '#ffffff', fontSize: 14 }}>
+                  <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: '#ffffff', fontSize: 14 }}>
                     Confirm & Record Wicket
                   </ThemedText>
                 </View>
@@ -7134,7 +7204,7 @@ export default function CricketScoring({
                           setShowExtraModal(false);
                         }}
                       >
-                        <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>{label}</ThemedText>
+                        <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>{label}</ThemedText>
                         <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>{sub}</ThemedText>
                       </Pressable>
                     );
@@ -7147,7 +7217,7 @@ export default function CricketScoring({
                       setShowExtraModal(false);
                     }}
                   >
-                    <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.primary }}>Correction: count as legal ball, 0 runs</ThemedText>
+                    <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: theme.primary }}>Correction: count as legal ball, 0 runs</ThemedText>
                     <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>Use if this was called in error — consumes a ball, adds nothing</ThemedText>
                   </Pressable>
                 </View>
@@ -7163,7 +7233,7 @@ export default function CricketScoring({
                       setShowExtraModal(false);
                     }}
                   >
-                    <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>1 Run</ThemedText>
+                    <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>1 Run</ThemedText>
                     <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>1 bye/leg-bye run, counts as a legal ball</ThemedText>
                   </Pressable>
 
@@ -7174,7 +7244,7 @@ export default function CricketScoring({
                       setShowExtraModal(false);
                     }}
                   >
-                    <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>2 Runs</ThemedText>
+                    <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>2 Runs</ThemedText>
                     <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>2 bye/leg-bye runs, counts as a legal ball</ThemedText>
                   </Pressable>
 
@@ -7185,7 +7255,7 @@ export default function CricketScoring({
                       setShowExtraModal(false);
                     }}
                   >
-                    <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>3 Runs</ThemedText>
+                    <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>3 Runs</ThemedText>
                     <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>3 bye/leg-bye runs, counts as a legal ball</ThemedText>
                   </Pressable>
 
@@ -7196,7 +7266,7 @@ export default function CricketScoring({
                       setShowExtraModal(false);
                     }}
                   >
-                    <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>4 Runs</ThemedText>
+                    <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>4 Runs</ThemedText>
                     <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>4 bye/leg-bye runs (boundary), counts as a legal ball</ThemedText>
                   </Pressable>
 
@@ -7207,7 +7277,7 @@ export default function CricketScoring({
                       setShowExtraModal(false);
                     }}
                   >
-                    <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>0 Runs (Dot Ball)</ThemedText>
+                    <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>0 Runs (Dot Ball)</ThemedText>
                     <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>Counts as a legal ball, 0 runs added</ThemedText>
                   </Pressable>
                 </View>
@@ -7259,21 +7329,21 @@ export default function CricketScoring({
               <ThemedText style={{ fontSize: 28 }}>🌸</ThemedText>
             </View>
 
-            <ThemedText style={{ fontSize: 22, fontFamily: 'Sora_800ExtraBold', color: theme.text, textAlign: 'center', letterSpacing: 0.2 }}>
+            <ThemedText style={{ fontSize: 22, fontFamily: 'Sora_600SemiBold', color: theme.text, textAlign: 'center', letterSpacing: 0.2 }}>
               🎉 {matchVictoryData?.winnerName} Won!
             </ThemedText>
 
             {/* 🐒 🌸 Festive Celebration Banner */}
             <View style={{ backgroundColor: '#F59E0B15', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: '#F59E0B33', marginVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <ThemedText style={{ fontSize: 13 }}>🌸</ThemedText>
-              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: '#F59E0B' }}>
+              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: '#F59E0B' }}>
                 🐒 Victory Flower & Monkey Celebration! 🌸
               </ThemedText>
               <ThemedText style={{ fontSize: 13 }}>🐒</ThemedText>
             </View>
 
             <View style={{ backgroundColor: '#10B98118', paddingHorizontal: 14, paddingVertical: 5, borderRadius: 12, borderWidth: 1, borderColor: '#10B98133', marginVertical: 8 }}>
-              <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: '#10B981' }}>
+              <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: '#10B981' }}>
                 🏆 {matchVictoryData?.winMargin}
               </ThemedText>
             </View>
@@ -7286,7 +7356,7 @@ export default function CricketScoring({
             <View style={{ width: '100%', backgroundColor: theme.surfaceLow, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: theme.outlineVariant + '33', marginBottom: 16 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                 <Ionicons name="star" size={15} color="#F59E0B" />
-                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#F59E0B', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#F59E0B', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                   Man of the Match
                 </ThemedText>
               </View>
@@ -7294,12 +7364,12 @@ export default function CricketScoring({
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
-                    <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                    <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                       {matchVictoryData?.motmName?.charAt(0).toUpperCase()}
                     </ThemedText>
                   </View>
                   <View>
-                    <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                    <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                       {matchVictoryData?.motmName}
                     </ThemedText>
                     <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 1 }}>
@@ -7316,7 +7386,7 @@ export default function CricketScoring({
                 <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                   1st Innings ({matchVictoryData?.firstInningsTeam}):
                 </ThemedText>
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                   {matchVictoryData?.firstInningsScore} ({matchVictoryData?.firstInningsOvers} ov)
                 </ThemedText>
               </View>
@@ -7324,7 +7394,7 @@ export default function CricketScoring({
                 <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                   2nd Innings ({matchVictoryData?.secondInningsTeam}):
                 </ThemedText>
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                   {matchVictoryData?.secondInningsScore} ({matchVictoryData?.secondInningsOvers} ov)
                 </ThemedText>
               </View>
@@ -7336,7 +7406,7 @@ export default function CricketScoring({
                 onPress={handleRematchSameTeams}
                 style={({ pressed }) => [{ width: '100%', paddingVertical: 12, borderRadius: 10, backgroundColor: '#F59E0B', alignItems: 'center' }, pressed && { opacity: 0.85 }]}
               >
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
                   🔄 Rematch (Start New Match with Same Teams)
                 </ThemedText>
               </Pressable>
@@ -7349,7 +7419,7 @@ export default function CricketScoring({
                   }}
                   style={({ pressed }) => [{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: theme.surfaceLow, borderWidth: 1, borderColor: theme.outlineVariant + '44', alignItems: 'center' }, pressed && { opacity: 0.8 }]}
                 >
-                  <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                     View Scorecard
                   </ThemedText>
                 </Pressable>
@@ -7361,7 +7431,7 @@ export default function CricketScoring({
                   }}
                   style={({ pressed }) => [{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: theme.primary, alignItems: 'center' }, pressed && { opacity: 0.85 }]}
                 >
-                  <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                  <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
                     Done / Matches
                   </ThemedText>
                 </Pressable>
@@ -7384,7 +7454,7 @@ export default function CricketScoring({
             {/* Header */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 4 }}>
               <ThemedText style={{ fontSize: 18 }}>✨</ThemedText>
-              <ThemedText style={{ fontSize: 18, fontFamily: 'Sora_800ExtraBold', color: theme.text }}>
+              <ThemedText style={{ fontSize: 18, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                 Rematch Coin Toss
               </ThemedText>
             </View>
@@ -7415,7 +7485,7 @@ export default function CricketScoring({
               <ThemedText style={{ fontSize: 30 }}>
                 {coinSide === 'HEADS' ? '🪙' : coinSide === 'TAILS' ? '🪙' : '🪙'}
               </ThemedText>
-              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_800ExtraBold', color: '#ffffff', marginTop: 1 }}>
+              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: '#ffffff', marginTop: 1 }}>
                 {coinSide ? coinSide : 'FLIP!'}
               </ThemedText>
             </Animated.View>
@@ -7434,14 +7504,14 @@ export default function CricketScoring({
                 marginVertical: 8,
               }, pressed && { opacity: 0.8 }]}
             >
-              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: '#F59E0B' }}>
+              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: '#F59E0B' }}>
                 {isFlippingCoin ? '🌀 Flipping Coin...' : '🪙 Flip Coin Randomizer'}
               </ThemedText>
             </Pressable>
 
             {/* Select Toss Winner Team */}
             <View style={{ width: '100%', marginTop: 10, marginBottom: 8 }}>
-              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
                 Toss Winner:
               </ThemedText>
               <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -7451,7 +7521,7 @@ export default function CricketScoring({
                     onPress={() => setRematchTossWinner(tName)}
                     style={[{ flex: 1, paddingVertical: 9, borderRadius: 10, borderWidth: 1.5, borderColor: theme.outlineVariant + '44', alignItems: 'center', backgroundColor: theme.surfaceLow }, rematchTossWinner === tName && { backgroundColor: theme.primary + '18', borderColor: theme.primary }]}
                   >
-                    <ThemedText style={[{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }, rematchTossWinner === tName && { color: theme.primary }]}>
+                    <ThemedText style={[{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }, rematchTossWinner === tName && { color: theme.primary }]}>
                       {tName} {rematchTossWinner === tName ? '👑' : ''}
                     </ThemedText>
                   </Pressable>
@@ -7461,7 +7531,7 @@ export default function CricketScoring({
 
             {/* Select Decision (Bat / Bowl) */}
             <View style={{ width: '100%', marginBottom: 16 }}>
-              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
                 {rematchTossWinner} Decision:
               </ThemedText>
               <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -7469,7 +7539,7 @@ export default function CricketScoring({
                   onPress={() => setRematchTossDecision('Bat')}
                   style={[{ flex: 1, paddingVertical: 9, borderRadius: 10, borderWidth: 1.5, borderColor: theme.outlineVariant + '44', alignItems: 'center', backgroundColor: theme.surfaceLow }, rematchTossDecision === 'Bat' && { backgroundColor: '#10B98118', borderColor: '#10B981' }]}
                 >
-                  <ThemedText style={[{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }, rematchTossDecision === 'Bat' && { color: '#10B981' }]}>
+                  <ThemedText style={[{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }, rematchTossDecision === 'Bat' && { color: '#10B981' }]}>
                     🏏 Bat First
                   </ThemedText>
                 </Pressable>
@@ -7478,7 +7548,7 @@ export default function CricketScoring({
                   onPress={() => setRematchTossDecision('Bowl')}
                   style={[{ flex: 1, paddingVertical: 9, borderRadius: 10, borderWidth: 1.5, borderColor: theme.outlineVariant + '44', alignItems: 'center', backgroundColor: theme.surfaceLow }, rematchTossDecision === 'Bowl' && { backgroundColor: '#3B82F618', borderColor: '#3B82F6' }]}
                 >
-                  <ThemedText style={[{ fontSize: 12, fontFamily: 'Sora_700Bold', color: theme.text }, rematchTossDecision === 'Bowl' && { color: '#3B82F6' }]}>
+                  <ThemedText style={[{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }, rematchTossDecision === 'Bowl' && { color: '#3B82F6' }]}>
                     ⚾ Bowl First
                   </ThemedText>
                 </Pressable>
@@ -7491,7 +7561,7 @@ export default function CricketScoring({
                 onPress={() => setShowRematchTossModal(false)}
                 style={({ pressed }) => [{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: theme.surfaceLow, borderWidth: 1, borderColor: theme.outlineVariant + '44', alignItems: 'center' }, pressed && { opacity: 0.8 }]}
               >
-                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary }}>
+                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
                   Cancel
                 </ThemedText>
               </Pressable>
@@ -7500,7 +7570,7 @@ export default function CricketScoring({
                 onPress={confirmRematchToss}
                 style={({ pressed }) => [{ flex: 2, paddingVertical: 12, borderRadius: 10, backgroundColor: theme.primary, alignItems: 'center' }, pressed && { opacity: 0.85 }]}
               >
-                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
                   🚀 Start Rematch
                 </ThemedText>
               </Pressable>
@@ -7522,7 +7592,7 @@ export default function CricketScoring({
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Ionicons name={isMatchUnderway ? "lock-closed" : "options"} size={20} color={isMatchUnderway ? "#EF4444" : theme.primary} />
-                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                   {isMatchUnderway ? 'Match Rules (Locked 🔒)' : 'Pre-Match Rules Verification'}
                 </ThemedText>
               </View>
@@ -7536,7 +7606,7 @@ export default function CricketScoring({
               <View style={{ backgroundColor: '#EF444415', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: '#EF444433', marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="lock-closed" size={18} color="#EF4444" />
                 <View style={{ flex: 1 }}>
-                  <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>
+                  <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>
                     Match In Progress • Rules Locked 🔒
                   </ThemedText>
                   <ThemedText style={{ fontSize: 10, color: theme.textSecondary, marginTop: 1 }}>
@@ -7547,7 +7617,7 @@ export default function CricketScoring({
             )}
 
             {/* Total Overs Option Selector + Custom Overs TextInput */}
-            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
               TOTAL MATCH OVERS: {isMatchUnderway ? `(LOCKED AT ${currentTotalOvers} OVERS)` : ''}
             </ThemedText>
             <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
@@ -7558,7 +7628,7 @@ export default function CricketScoring({
                   onPress={() => setEditTotalOversInput(ov)}
                   style={[{ paddingHorizontal: 11, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: theme.outlineVariant + '44', backgroundColor: theme.surfaceLow }, editTotalOversInput === ov && { backgroundColor: theme.primary, borderColor: theme.primary }, isMatchUnderway && { opacity: 0.6 }]}
                 >
-                  <ThemedText style={[{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: theme.text }, editTotalOversInput === ov && { color: '#ffffff' }]}>
+                  <ThemedText style={[{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }, editTotalOversInput === ov && { color: '#ffffff' }]}>
                     {ov} Ov
                   </ThemedText>
                 </Pressable>
@@ -7599,7 +7669,7 @@ export default function CricketScoring({
                   maxLength={2}
                   style={[{
                     fontSize: 11.5,
-                    fontFamily: 'Sora_700Bold',
+                    fontFamily: 'Sora_600SemiBold',
                     color: theme.text,
                     padding: 0,
                     minWidth: 32,
@@ -7615,7 +7685,7 @@ export default function CricketScoring({
             </View>
 
             {/* Max Overs Per Bowler Rule Selector */}
-            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
               MAX OVERS PER BOWLER: {isMatchUnderway ? `(LOCKED AT ${ruleMaxOversPerBowler === 'unlimited' ? 'NO LIMIT' : `${ruleMaxOversPerBowler} OV/BOWLER`})` : ''}
             </ThemedText>
             <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
@@ -7630,7 +7700,7 @@ export default function CricketScoring({
                     isMatchUnderway && { opacity: 0.6 }
                   ]}
                 >
-                  <ThemedText style={[{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: theme.text }, editMaxOversPerBowlerInput === ov && { color: '#ffffff' }]}>
+                  <ThemedText style={[{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }, editMaxOversPerBowlerInput === ov && { color: '#ffffff' }]}>
                     {ov === 'unlimited' ? 'No Limit' : `${ov} Ov`}
                   </ThemedText>
                 </Pressable>
@@ -7638,7 +7708,7 @@ export default function CricketScoring({
             </View>
 
             {/* Quick Scoring Rules Checkboxes */}
-            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
+            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
               QUICK SCORING RULES (AUTO-RECORD EXTRAS & RUNS):
             </ThemedText>
             <View style={{ gap: 8, marginBottom: 12 }}>
@@ -7650,7 +7720,7 @@ export default function CricketScoring({
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <View style={{ backgroundColor: '#F59E0B20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#F59E0B' }}>WD</ThemedText>
+                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#F59E0B' }}>WD</ThemedText>
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
@@ -7672,7 +7742,7 @@ export default function CricketScoring({
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <View style={{ backgroundColor: '#EF444420', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>NB</ThemedText>
+                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>NB</ThemedText>
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
@@ -7694,7 +7764,7 @@ export default function CricketScoring({
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <View style={{ backgroundColor: '#3B82F620', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#3B82F6' }}>LB</ThemedText>
+                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#3B82F6' }}>LB</ThemedText>
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
@@ -7716,7 +7786,7 @@ export default function CricketScoring({
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <View style={{ backgroundColor: '#8B5CF620', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#8B5CF6' }}>WK</ThemedText>
+                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#8B5CF6' }}>WK</ThemedText>
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
@@ -7735,14 +7805,14 @@ export default function CricketScoring({
             <View style={{ backgroundColor: theme.primary + '10', borderColor: theme.primary + '33', borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 14 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                 <Ionicons name="flash" size={13} color={theme.primary} />
-                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                   Scoring Scenarios Handled During Match:
                 </ThemedText>
               </View>
               <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, lineHeight: 14 }}>
-                • <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>Wide + 1 or 2 runs:</ThemedText> Long-press 'Wide' button on keypad to pick 1 penalty + runs.{'\n'}
-                • <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>Wicket + 1 or 2 runs:</ThemedText> Tap 'Wicket' → select 'Wicket + 1 Run' or 'Wicket + 2 Runs' (Run Out).{'\n'}
-                • <ThemedText style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>No Ball + Runs:</ThemedText> Long-press 'No Ball' to add runs off bat with Free Hit.
+                • <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>Wide + 1 or 2 runs:</ThemedText> Long-press 'Wide' button on keypad to pick 1 penalty + runs.{'\n'}
+                • <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>Wicket + 1 or 2 runs:</ThemedText> Tap 'Wicket' → select 'Wicket + 1 Run' or 'Wicket + 2 Runs' (Run Out).{'\n'}
+                • <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>No Ball + Runs:</ThemedText> Long-press 'No Ball' to add runs off bat with Free Hit.
               </ThemedText>
             </View>
 
@@ -7752,7 +7822,7 @@ export default function CricketScoring({
                 onPress={() => setShowPreRulesModal(false)}
                 style={({ pressed }) => [{ width: '100%', paddingVertical: 12, borderRadius: 10, backgroundColor: theme.surfaceLow, borderWidth: 1, borderColor: theme.outlineVariant + '44', alignItems: 'center' }, pressed && { opacity: 0.85 }]}
               >
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                   Close (Rules Locked)
                 </ThemedText>
               </Pressable>
@@ -7768,7 +7838,7 @@ export default function CricketScoring({
                 }}
                 style={({ pressed }) => [{ width: '100%', paddingVertical: 12, borderRadius: 10, backgroundColor: theme.primary, alignItems: 'center' }, pressed && { opacity: 0.85 }]}
               >
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
                   ✓ Save & Apply Rules
                 </ThemedText>
               </Pressable>
@@ -7858,7 +7928,7 @@ export default function CricketScoring({
               style={{
                 flex: 1,
                 fontSize: 12.5,
-                fontFamily: 'Sora_700Bold',
+                fontFamily: 'Sora_600SemiBold',
                 color: theme.text,
               }}
               numberOfLines={2}
@@ -7909,13 +7979,13 @@ export default function CricketScoring({
             </View>
 
             {/* Title */}
-            <ThemedText style={{ fontSize: 19, fontFamily: 'Sora_800ExtraBold', color: theme.text, textAlign: 'center' }}>
+            <ThemedText style={{ fontSize: 19, fontFamily: 'Sora_600SemiBold', color: theme.text, textAlign: 'center' }}>
               Match Concluded!
             </ThemedText>
 
             {/* Score Summary Box */}
             <View style={{ backgroundColor: theme.surfaceLow, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, marginVertical: 12, alignItems: 'center', width: '100%' }}>
-              <ThemedText style={{ fontSize: 13.5, fontFamily: 'Sora_700Bold', color: theme.text }}>
+              <ThemedText style={{ fontSize: 13.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                 {battingTeamName}: {runs}/{wickets} ({overs}.{ballsInCurrentOver} Ov)
               </ThemedText>
               <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
@@ -7948,7 +8018,7 @@ export default function CricketScoring({
               }]}
             >
               <ThemedText style={{ fontSize: 16 }}>🪙</ThemedText>
-              <ThemedText style={{ color: '#ffffff', fontSize: 13.5, fontFamily: 'Sora_800ExtraBold' }}>
+              <ThemedText style={{ color: '#ffffff', fontSize: 13.5, fontFamily: 'Sora_600SemiBold' }}>
                 New Match (Flip Coin Toss)
               </ThemedText>
             </Pressable>
@@ -7972,7 +8042,7 @@ export default function CricketScoring({
                 opacity: pressed ? 0.85 : 1,
               }]}
             >
-              <ThemedText style={{ color: theme.text, fontSize: 13, fontFamily: 'Sora_700Bold' }}>
+              <ThemedText style={{ color: theme.text, fontSize: 13, fontFamily: 'Sora_600SemiBold' }}>
                 No (Back to Turf Book Page)
               </ThemedText>
             </Pressable>
@@ -7988,7 +8058,7 @@ export default function CricketScoring({
               }}
             >
               <Ionicons name="download-outline" size={15} color="#059669" />
-              <ThemedText style={{ color: '#059669', fontSize: 12, fontFamily: 'Sora_700Bold' }}>
+              <ThemedText style={{ color: '#059669', fontSize: 12, fontFamily: 'Sora_600SemiBold' }}>
                 Download Score Sheet PDF
               </ThemedText>
             </Pressable>
@@ -8000,6 +8070,65 @@ export default function CricketScoring({
       <CoinTossModal
         visible={coinTossVisible}
         onClose={() => setCoinTossVisible(false)}
+      />
+
+      {/* ── Squad management: swap / change / edit ───────────────────────── */}
+
+      {/* SWAP — the two batsmen at the crease exchange ends. */}
+      <SwapPlayersModal
+        visible={swapModalOpen}
+        onClose={() => setSwapModalOpen(false)}
+        title="Swap Strike"
+        leftLabel="On strike"
+        rightLabel="Non-striker"
+        left={(() => {
+          const s = batsmen.find(b => b.active) || batsmen[0];
+          return s?.name ? { name: s.name, role: 'Striker' } : null;
+        })()}
+        right={(() => {
+          const ns = batsmen.find(b => !b.active) || batsmen[1];
+          return ns?.name ? { name: ns.name, role: 'Non-striker' } : null;
+        })()}
+        onConfirm={confirmSwapStrike}
+      />
+
+      {/* CHANGE — replace the batsman in one slot with someone off the bench. */}
+      <ChangePlayerModal
+        visible={changeSlot !== null}
+        onClose={() => setChangeSlot(null)}
+        title="Substitute Batsman"
+        slotLabel="Currently at the crease"
+        reason="Pick who comes in to replace them"
+        current={(() => {
+          const b = changeSlot !== null ? batsmen[changeSlot] : null;
+          return b?.name ? { name: b.name, role: b.active ? 'Striker' : 'Non-striker' } : null;
+        })()}
+        bench={availableBenchBatsmen
+          .map(normalizePlayer)
+          .filter((p): p is SquadPlayer => p !== null)}
+        onConfirm={(incoming) => {
+          const slot = changeSlot;
+          setChangeSlot(null);
+          if (slot !== null) sendInBatsman(incoming.name, slot);
+        }}
+      />
+
+      {/* EDIT — change a player's own details; nobody moves slots. */}
+      <EditPlayerModal
+        visible={editSlot !== null}
+        onClose={() => setEditSlot(null)}
+        player={(() => {
+          const b = editSlot !== null ? batsmen[editSlot] : null;
+          return b?.name ? { name: b.name } : null;
+        })()}
+        onSave={(updated) => {
+          const slot = editSlot;
+          setEditSlot(null);
+          if (slot === null) return;
+          setBatsmen(prev => prev.map((b, i) => (i === slot ? { ...b, name: updated.name } : b)));
+          if (slot === 0) setB1Name(updated.name);
+          else if (slot === 1) setB2Name(updated.name);
+        }}
       />
     </View>
   );
@@ -8041,7 +8170,7 @@ const styles = StyleSheet.create({
   },
   teamTitle: {
     color: '#ffffff',
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 22,
     lineHeight: 28,
   },
@@ -8050,7 +8179,7 @@ const styles = StyleSheet.create({
   },
   scoreText: {
     color: '#5D68E8',
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 32,
     lineHeight: 36,
   },
@@ -8397,7 +8526,7 @@ const styles = StyleSheet.create({
   },
   rulesGroupLabel: {
     marginBottom: Spacing.sm,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   rulesOptionsRow: {
     flexDirection: 'row',

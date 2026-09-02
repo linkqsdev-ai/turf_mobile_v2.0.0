@@ -57,7 +57,7 @@ export function FoFPlayerSearchModal({
                 <Ionicons name="people" size={20} color={theme.primary} />
               </View>
               <View>
-                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                   Find Players by Phone & FoF
                 </ThemedText>
                 <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>
@@ -110,7 +110,7 @@ export function FoFPlayerSearchModal({
                     style={[
                       styles.filterText,
                       { color: theme.textSecondary },
-                      active && { color: '#ffffff', fontFamily: 'Sora_700Bold' },
+                      active && { color: '#ffffff', fontFamily: 'Sora_600SemiBold' },
                     ]}
                   >
                     {f.label}
@@ -140,7 +140,7 @@ export function FoFPlayerSearchModal({
 
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                        <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                           {player.name}
                         </ThemedText>
                       </View>
@@ -152,7 +152,7 @@ export function FoFPlayerSearchModal({
                           style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                         >
                           <Ionicons name="call" size={11} color={theme.primary} />
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                             {player.phone}
                           </ThemedText>
                         </Pressable>
@@ -168,7 +168,7 @@ export function FoFPlayerSearchModal({
                           onPress={() => setSelectedChainPlayer(player.phone)}
                           style={[{ flex: 1, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: theme.outlineVariant + '44', alignItems: 'center', backgroundColor: theme.surfaceLowest }]}
                         >
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                             Inspect Chain 🔍
                           </ThemedText>
                         </Pressable>
@@ -181,7 +181,7 @@ export function FoFPlayerSearchModal({
                             }}
                             style={[{ flex: 1, paddingVertical: 6, borderRadius: 6, backgroundColor: theme.primary, alignItems: 'center' }]}
                           >
-                            <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                            <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
                               Select Player
                             </ThemedText>
                           </Pressable>

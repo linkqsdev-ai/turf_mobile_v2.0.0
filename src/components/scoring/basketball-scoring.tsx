@@ -144,7 +144,7 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
           </View>
           <View style={styles.timerRow}>
             <View style={styles.timerBlock}>
-              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 38, fontFamily: 'Sora_800ExtraBold', marginTop: 4 }}>
+              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 38, fontFamily: 'Sora_600SemiBold', marginTop: 4 }}>
                 {formatTimer()}
               </ThemedText>
             </View>
@@ -164,7 +164,7 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
                 onPress={() => setQuarter(prev => (prev === 4 ? 1 : prev + 1))}
                 style={[styles.timerBtn, { backgroundColor: theme.surfaceLow + '30' }]}
               >
-                <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: 'bold' }}>Q{quarter}</ThemedText>
+                <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '600' }}>Q{quarter}</ThemedText>
               </Pressable>
             </View>
           </View>
@@ -177,7 +177,7 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
           <View style={styles.scoreboardRow}>
             <View style={styles.teamScoreSection}>
               <ThemedText type="headlineSm">{teamA}</ThemedText>
-              <ThemedText type="displayLg" style={{ fontSize: 50, fontFamily: 'Sora_800ExtraBold', marginVertical: Spacing.sm }}>
+              <ThemedText type="displayLg" style={{ fontSize: 50, fontFamily: 'Sora_600SemiBold', marginVertical: Spacing.sm }}>
                 {scoreA}
               </ThemedText>
               <View style={styles.scoreButtonsRow}>
@@ -197,7 +197,7 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
 
             <View style={styles.teamScoreSection}>
               <ThemedText type="headlineSm">{teamB}</ThemedText>
-              <ThemedText type="displayLg" style={{ fontSize: 50, fontFamily: 'Sora_800ExtraBold', marginVertical: Spacing.sm }}>
+              <ThemedText type="displayLg" style={{ fontSize: 50, fontFamily: 'Sora_600SemiBold', marginVertical: Spacing.sm }}>
                 {scoreB}
               </ThemedText>
               <View style={styles.scoreButtonsRow}>
@@ -284,7 +284,7 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>Q{event.quarter} - {event.time}</ThemedText>
                 </View>
                 <View style={styles.logDescCol}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold' }}>
+                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold' }}>
                     {event.points > 0 ? `+${event.points} PTS` : 'FOUL'} - {event.playerName}
                   </ThemedText>
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>

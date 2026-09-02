@@ -728,7 +728,7 @@ export default function CreateClassScreen() {
           <View style={styles.kakaoStubFooter}>
             <View style={{ flex: 1, paddingRight: 8 }}>
               <ThemedText style={styles.kakaoStubCode}>
-                Code: <ThemedText style={{ fontFamily: 'Sora_800ExtraBold', color: '#FF1E70' }}>{code}</ThemedText>
+                Code: <ThemedText style={{ fontFamily: 'Sora_600SemiBold', color: '#FF1E70' }}>{code}</ThemedText>
                 {minBook > 0 ? ` · Min ₹${minBook}` : ''}
               </ThemedText>
               <ThemedText style={styles.kakaoStubDesc} numberOfLines={1}>
@@ -765,7 +765,7 @@ export default function CreateClassScreen() {
         <View style={styles.fieldGroup}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <ThemedText style={styles.fieldLabel}>Class Name <ThemedText style={{ color: '#ef4444' }}>*</ThemedText></ThemedText>
-            <ThemedText style={{ fontSize: 10, color: className.length >= 40 ? '#ef4444' : theme.textSecondary, fontFamily: 'Sora_700Bold' }}>
+            <ThemedText style={{ fontSize: 10, color: className.length >= 40 ? '#ef4444' : theme.textSecondary, fontFamily: 'Sora_600SemiBold' }}>
               {className.length}/40
             </ThemedText>
           </View>
@@ -820,7 +820,7 @@ export default function CreateClassScreen() {
                   <ThemedText
                     style={[
                       styles.sportChipText,
-                      { color: isActive ? '#ffffff' : theme.textSecondary, fontFamily: isActive ? 'Sora_700Bold' : 'Sora_600SemiBold' }
+                      { color: isActive ? '#ffffff' : theme.textSecondary, fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_600SemiBold' }
                     ]}
                     numberOfLines={1}
                   >
@@ -859,7 +859,7 @@ export default function CreateClassScreen() {
                   <ThemedText
                     style={[
                       styles.sportChipText,
-                      { color: isActive ? '#ffffff' : theme.textSecondary, fontFamily: isActive ? 'Sora_700Bold' : 'Sora_600SemiBold' }
+                      { color: isActive ? '#ffffff' : theme.textSecondary, fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_600SemiBold' }
                     ]}
                     numberOfLines={1}
                   >
@@ -978,7 +978,7 @@ export default function CreateClassScreen() {
                 height: 38,
               }}
             >
-              <ThemedText style={{ color: '#fff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>+ Add</ThemedText>
+              <ThemedText style={{ color: '#fff', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>+ Add</ThemedText>
             </Pressable>
           </View>
 
@@ -987,7 +987,7 @@ export default function CreateClassScreen() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
               {certificates.map((cert, idx) => (
                 <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.primary + '18', borderColor: theme.primary + '44', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full }}>
-                  <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_700Bold', marginRight: 4 }}>
+                  <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_600SemiBold', marginRight: 4 }}>
                     🏅 {cert}
                   </ThemedText>
                   <Pressable onPress={() => setCertificates(prev => prev.filter((_, i) => i !== idx))}>
@@ -999,7 +999,7 @@ export default function CreateClassScreen() {
           )}
 
           {/* Quick Presets */}
-          <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginBottom: 4, fontFamily: 'Sora_700Bold' }}>
+          <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginBottom: 4, fontFamily: 'Sora_600SemiBold' }}>
             QUICK ADD PRESETS:
           </ThemedText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 5 }}>
@@ -1065,7 +1065,7 @@ export default function CreateClassScreen() {
                   }}
                 >
                   <Ionicons name={a.icon as any} size={11.5} color={isSelected ? theme.primary : theme.textSecondary} style={{ marginRight: 3.5 }} />
-                  <ThemedText style={{ fontSize: 9.5, color: isSelected ? theme.primary : theme.textSecondary, fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium' }}>
+                  <ThemedText style={{ fontSize: 9.5, color: isSelected ? theme.primary : theme.textSecondary, fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium' }}>
                     {a.label}
                   </ThemedText>
                   {isSelected && <Ionicons name="checkmark" size={10} color={theme.primary} style={{ marginLeft: 3 }} />}
@@ -1152,7 +1152,7 @@ export default function CreateClassScreen() {
           </View>
           {sessionTime ? (
             <View style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.md, marginBottom: 8, alignSelf: 'flex-start' }}>
-              <ThemedText style={{ fontSize: 10.5, color: theme.primary, fontFamily: 'Sora_700Bold' }}>
+              <ThemedText style={{ fontSize: 10.5, color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
                 Selected: {getFormattedSessionTime(sessionTime)}
               </ThemedText>
             </View>
@@ -1177,7 +1177,7 @@ export default function CreateClassScreen() {
                     >
                       <ThemedText style={[
                         styles.sessionChipText,
-                        { color: isSelected ? '#ffffff' : theme.textSecondary, fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_500Medium' }
+                        { color: isSelected ? '#ffffff' : theme.textSecondary, fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium' }
                       ]}>
                         {t}
                       </ThemedText>
@@ -1227,7 +1227,7 @@ export default function CreateClassScreen() {
               }}
             >
               <Ionicons name="navigate" size={11} color={theme.primary} />
-              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                 {isFetchingLocation ? 'Detecting...' : '📍 Fetch Location'}
               </ThemedText>
             </Pressable>
@@ -1262,7 +1262,7 @@ export default function CreateClassScreen() {
                   {certificates.map((cert, i) => (
                     <View key={i} style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Ionicons name="ribbon-outline" size={11} color="#ffffff" style={{ marginRight: 3 }} />
-                      <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_700Bold' }}>
+                      <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
                         {cert}
                       </ThemedText>
                     </View>
@@ -1329,7 +1329,7 @@ export default function CreateClassScreen() {
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.primary + '15', paddingHorizontal: 9, paddingVertical: 4, borderRadius: BorderRadius.full }}
             >
               <Ionicons name="add-circle" size={13} color={theme.primary} />
-              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                 Add Voucher
               </ThemedText>
             </Pressable>
@@ -1355,7 +1355,7 @@ export default function CreateClassScreen() {
                 ]}
               >
                 <View style={styles.offerRowHeader}>
-                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 12 }}>
+                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
                     Voucher {idx + 1}
                     {draft.offerId ? '' : ' · New'}
                   </ThemedText>
@@ -1559,13 +1559,13 @@ export default function CreateClassScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Ionicons name="color-palette-outline" size={13} color={theme.primary} />
-                      <ThemedText style={{ fontFamily: 'Sora_700Bold', fontSize: 10.5, color: theme.primary, letterSpacing: 0.3 }}>
+                      <ThemedText style={{ fontFamily: 'Sora_600SemiBold', fontSize: 10.5, color: theme.primary, letterSpacing: 0.3 }}>
                         VOUCHER DESIGN OUTPUT
                       </ThemedText>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: theme.primary + '18', paddingHorizontal: 6, paddingVertical: 2, borderRadius: BorderRadius.full }}>
                       <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: theme.primary }} />
-                      <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                      <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                         Live Bound
                       </ThemedText>
                     </View>
@@ -1682,7 +1682,7 @@ export default function CreateClassScreen() {
                       styles.stepLabel,
                       {
                         color: isActive ? theme.primary : isDone ? theme.text : theme.textSecondary,
-                        fontFamily: isActive ? 'Sora_700Bold' : 'Sora_500Medium'
+                        fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_500Medium'
                       }
                     ]}>
                       {step.title}
@@ -1724,7 +1724,7 @@ export default function CreateClassScreen() {
                 }
               ]}
             >
-              <ThemedText style={{ color: '#fff', fontFamily: 'Sora_700Bold', fontSize: 13, marginRight: 4 }}>
+              <ThemedText style={{ color: '#fff', fontFamily: 'Sora_600SemiBold', fontSize: 13, marginRight: 4 }}>
                 {currentStep === 1 ? 'Preview & Publish' : 'Next'}
               </ThemedText>
               <Ionicons name="chevron-forward" size={16} color="#fff" />
@@ -1775,7 +1775,7 @@ export default function CreateClassScreen() {
                     </Pressable>
                   );
                 })()}
-                <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 14 }}>
+                <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 14 }}>
                   {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][pickerDate.getMonth()]} {pickerDate.getFullYear()}
                 </ThemedText>
                 <Pressable onPress={() => setPickerDate(new Date(pickerDate.getFullYear(), pickerDate.getMonth() + 1, 1))} style={{ padding: 6 }}>
@@ -1786,7 +1786,7 @@ export default function CreateClassScreen() {
               {/* Days of week labels */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
                 {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d) => (
-                  <ThemedText key={d} style={{ color: theme.textSecondary, width: 40, textAlign: 'center', fontSize: 10, fontWeight: 'bold' }}>
+                  <ThemedText key={d} style={{ color: theme.textSecondary, width: 40, textAlign: 'center', fontSize: 10, fontWeight: '600' }}>
                     {d}
                   </ThemedText>
                 ))}
@@ -1869,7 +1869,7 @@ export default function CreateClassScreen() {
                             <ThemedText style={{
                               color: isDisabled ? theme.textSecondary : isSelected ? '#ffffff' : theme.text,
                               fontSize: 13,
-                              fontFamily: isSelected ? 'Sora_700Bold' : 'Sora_400Regular',
+                              fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_400Regular',
                               textDecorationLine: isDisabled ? 'line-through' : 'none'
                             }}>
                               {cell.day}
@@ -1902,11 +1902,11 @@ export default function CreateClassScreen() {
                 <View style={{ backgroundColor: theme.primary + '15', padding: 12, borderRadius: BorderRadius.full, marginBottom: 12 }}>
                   <Ionicons name="document-text" size={36} color={theme.primary} />
                 </View>
-                <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_700Bold', color: theme.text, textAlign: 'center' }}>
+                <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text, textAlign: 'center' }}>
                   Resume Draft? 📝
                 </ThemedText>
                 <ThemedText type="bodyMd" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>
-                  We found a saved draft for <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_700Bold', color: theme.text }}>&quot;{pendingResumeDraft?.className || 'Untitled Class'}&quot;</ThemedText>. Would you like to resume editing?
+                  We found a saved draft for <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_600SemiBold', color: theme.text }}>&quot;{pendingResumeDraft?.className || 'Untitled Class'}&quot;</ThemedText>. Would you like to resume editing?
                 </ThemedText>
               </View>
 
@@ -1918,7 +1918,7 @@ export default function CreateClassScreen() {
                     setPendingResumeDraft(null);
                   }}
                 >
-                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 13 }}>
+                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>
                     Discard
                   </ThemedText>
                 </Pressable>
@@ -1932,7 +1932,7 @@ export default function CreateClassScreen() {
                     setPendingResumeDraft(null);
                   }}
                 >
-                  <ThemedText style={{ color: '#fff', fontFamily: 'Sora_700Bold', fontSize: 13 }}>
+                  <ThemedText style={{ color: '#fff', fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>
                     Resume
                   </ThemedText>
                 </Pressable>
@@ -1982,7 +1982,7 @@ export default function CreateClassScreen() {
                       }}
                     >
                       <View style={{ flex: 1 }}>
-                        <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 13 }}>
+                        <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>
                           {draft.className}
                         </ThemedText>
                         <ThemedText style={{ color: theme.textSecondary, fontSize: 10, marginTop: 2 }}>
@@ -1993,7 +1993,7 @@ export default function CreateClassScreen() {
                         onPress={() => loadDraft(draft)}
                         style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: theme.primary, borderRadius: BorderRadius.sm, marginRight: 6 }}
                       >
-                        <ThemedText style={{ color: '#fff', fontSize: 11, fontFamily: 'Sora_700Bold' }}>Load</ThemedText>
+                        <ThemedText style={{ color: '#fff', fontSize: 11, fontFamily: 'Sora_600SemiBold' }}>Load</ThemedText>
                       </Pressable>
                       <Pressable
                         onPress={() => deleteDraft(draft.id)}
@@ -2014,7 +2014,7 @@ export default function CreateClassScreen() {
                 }}
               >
                 <Ionicons name="save-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
-                <ThemedText style={{ color: '#fff', fontFamily: 'Sora_700Bold', fontSize: 13 }}>Save Current Form as Draft</ThemedText>
+                <ThemedText style={{ color: '#fff', fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>Save Current Form as Draft</ThemedText>
               </Pressable>
             </View>
           </View>
@@ -2109,7 +2109,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   fieldLabel: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 9.5,
     letterSpacing: 0.5,
     marginBottom: 4,
@@ -2194,7 +2194,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   dayChipText: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 11,
   },
   sportsRow: {
@@ -2254,13 +2254,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   previewLabel: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 9,
     letterSpacing: 0.6,
     marginBottom: 4,
   },
   previewName: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 20,
     color: '#ffffff',
     lineHeight: 26,
@@ -2308,7 +2308,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   publishBtnText: {
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 13,
     color: '#ffffff',
   },
@@ -2427,7 +2427,7 @@ const styles = StyleSheet.create({
   },
   kakaoBrandTitle: {
     color: '#ffffff',
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 13,
     letterSpacing: 0.5,
     maxWidth: 200,
@@ -2441,7 +2441,7 @@ const styles = StyleSheet.create({
   },
   kakaoBrandCoupon: {
     color: '#FEE500',
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 9.5,
     letterSpacing: 0.8,
     marginTop: 1,
@@ -2468,7 +2468,7 @@ const styles = StyleSheet.create({
   },
   kakaoYellowBadgeText: {
     color: '#000000',
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 7.5,
     lineHeight: 9,
     letterSpacing: 0.3,
@@ -2481,7 +2481,7 @@ const styles = StyleSheet.create({
   },
   kakaoBigDiscount: {
     color: '#ffffff',
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 28,
     letterSpacing: -0.5,
     textShadowColor: 'rgba(0,0,0,0.5)',
@@ -2490,7 +2490,7 @@ const styles = StyleSheet.create({
   },
   kakaoBigOff: {
     color: '#FEE500',
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 16,
     letterSpacing: 0.5,
     textShadowColor: 'rgba(0,0,0,0.5)',
@@ -2507,13 +2507,13 @@ const styles = StyleSheet.create({
   },
   kakaoStubLabel: {
     color: '#A1A1AA',
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 8.5,
     letterSpacing: 0.8,
   },
   kakaoStubDays: {
     color: '#27272A',
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 12,
     marginTop: 2,
   },
@@ -2570,7 +2570,7 @@ const styles = StyleSheet.create({
   },
   bannerUploadBtnText: {
     color: '#ffffff',
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 10.5,
   },
   bannerRemoveBtn: {
@@ -2639,6 +2639,6 @@ const styles = StyleSheet.create({
   },
   addOfferButtonText: {
     fontSize: 12,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
 });

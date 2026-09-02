@@ -82,7 +82,7 @@ export function NotificationModal() {
                 <Ionicons name="notifications" size={20} color={theme.primary} />
               </View>
               <View style={{ marginLeft: 10 }}>
-                <ThemedText type="headlineLg" style={{ fontFamily: 'Sora_700Bold' }}>
+                <ThemedText type="headlineLg" style={{ fontFamily: 'Sora_600SemiBold' }}>
                   Notifications
                 </ThemedText>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
@@ -112,7 +112,7 @@ export function NotificationModal() {
                   type="labelMd"
                   style={{
                     color: activeFilter === 'All' ? '#ffffff' : theme.textSecondary,
-                    fontFamily: 'Sora_700Bold',
+                    fontFamily: 'Sora_600SemiBold',
                   }}
                 >
                   All ({notifications.length})
@@ -130,7 +130,7 @@ export function NotificationModal() {
                   type="labelMd"
                   style={{
                     color: activeFilter === 'Unread' ? '#ffffff' : theme.textSecondary,
-                    fontFamily: 'Sora_700Bold',
+                    fontFamily: 'Sora_600SemiBold',
                   }}
                 >
                   Unread ({unreadCount})
@@ -141,14 +141,14 @@ export function NotificationModal() {
             <View style={{ flexDirection: 'row', gap: 10 }}>
               {unreadCount > 0 && (
                 <Pressable onPress={markAllAsRead}>
-                  <ThemedText type="labelSm" style={{ color: theme.primary, fontFamily: 'Sora_700Bold' }}>
+                  <ThemedText type="labelSm" style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold' }}>
                     Mark all read
                   </ThemedText>
                 </Pressable>
               )}
               {notifications.length > 0 && (
                 <Pressable onPress={clearAll}>
-                  <ThemedText type="labelSm" style={{ color: '#EF4444', fontFamily: 'Sora_700Bold' }}>
+                  <ThemedText type="labelSm" style={{ color: '#EF4444', fontFamily: 'Sora_600SemiBold' }}>
                     Clear all
                   </ThemedText>
                 </Pressable>
@@ -192,7 +192,7 @@ export function NotificationModal() {
                         <ThemedText
                           type="bodyMd"
                           style={{
-                            fontFamily: item.isRead ? 'Sora_600SemiBold' : 'Sora_700Bold',
+                            fontFamily: item.isRead ? 'Sora_600SemiBold' : 'Sora_600SemiBold',
                             flex: 1,
                             marginRight: 6,
                           }}
