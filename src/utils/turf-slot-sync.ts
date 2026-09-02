@@ -145,15 +145,10 @@ export function computeTurfSlotMetrics(
     };
   });
 
-  // Filter slots to only operational slots for this turf
-  const operationalSlots = hasExplicitSlots
-    ? slots.filter(s => configuredMap[normalizeSlotTime(s.time)] !== 'blocked' && configuredMap[normalizeSlotTime(s.time)] !== 'maintenance' && configuredMap[normalizeSlotTime(s.time)] !== undefined)
-    : slots;
-
-  const totalConfigured = operationalSlots.length > 0 ? operationalSlots.length : 12;
-  const totalBooked = operationalSlots.filter(s => s.isBooked).length;
-  const totalPassed = operationalSlots.filter(s => s.isPassed && !s.isBooked).length;
-  const totalAvailable = operationalSlots.filter(s => s.isAvailable).length;
+  const totalConfigured = slots.filter(s => !s.isConfigBlocked).length || 18;
+  const totalBooked = slots.filter(s => s.isBooked).length;
+  const totalPassed = slots.filter(s => s.isPassed && !s.isBooked).length;
+  const totalAvailable = slots.filter(s => s.isAvailable).length;
   
   const occupancyPct = totalConfigured > 0 ? Math.round(((totalConfigured - totalAvailable) / totalConfigured) * 100) : 0;
 
