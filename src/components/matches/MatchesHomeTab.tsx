@@ -1798,13 +1798,14 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   tourneyAdTitle: {
-    fontSize: 14,
-    fontFamily: 'Sora_700Bold',
+    fontSize: 15,
+    fontFamily: 'Sora_500Medium',
+    letterSpacing: -0.1,
   },
   tourneyAdMeta: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: '#43474b',
-    fontFamily: 'Sora_500Medium',
+    fontFamily: 'Sora_400Regular',
     marginTop: 2,
   },
   tourneyAdBtn: {
@@ -1814,8 +1815,8 @@ const styles = StyleSheet.create({
   },
   tourneyAdBtnText: {
     color: '#ffffff',
-    fontSize: 11,
-    fontFamily: 'Sora_700Bold',
+    fontSize: 12,
+    fontFamily: 'Sora_600SemiBold',
   },
 
   challengeShadowWrapper: {
@@ -1849,8 +1850,9 @@ const styles = StyleSheet.create({
   },
   challengeBadgeText: {
     color: '#feae2c',
-    fontSize: 8,
-    fontFamily: 'Sora_800ExtraBold',
+    fontSize: 8.5,
+    fontFamily: 'Sora_700Bold',
+    letterSpacing: 0.5,
     marginLeft: 3,
   },
   challengeBidBadge: {
@@ -1865,8 +1867,9 @@ const styles = StyleSheet.create({
   },
   challengeBidText: {
     color: '#5D68E8',
-    fontSize: 8,
-    fontFamily: 'Sora_800ExtraBold',
+    fontSize: 8.5,
+    fontFamily: 'Sora_700Bold',
+    letterSpacing: 0.5,
     marginLeft: 4,
   },
   challengeTeamInfo: {
@@ -1883,18 +1886,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   challengeTeamName: {
-    fontSize: 13,
-    fontFamily: 'Sora_700Bold',
+    fontSize: 14,
+    fontFamily: 'Sora_500Medium',
   },
   challengeTeamRank: {
     fontSize: 10,
     color: '#43474b',
-    fontFamily: 'Sora_500Medium',
+    fontFamily: 'Sora_400Regular',
   },
   challengeDescription: {
     fontSize: 11,
     color: '#43474b',
-    fontFamily: 'Sora_500Medium',
+    fontFamily: 'Sora_400Regular',
     lineHeight: 15,
   },
   challengeBtn: {
@@ -1907,7 +1910,7 @@ const styles = StyleSheet.create({
   challengeBtnText: {
     color: '#ffffff',
     fontSize: 12,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   advertisementCard: {
     borderRadius: BorderRadius.xl,

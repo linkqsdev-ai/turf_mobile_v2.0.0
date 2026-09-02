@@ -1037,7 +1037,10 @@ export default function CoachTab() {
                               <View style={styles.coachNameRow}>
                                 <ThemedText
                                   type="headlineSm"
-                                  style={isFeatured ? { color: theme.onSecondaryContainer } : {}}
+                                  style={[
+                                    { fontSize: 15, fontFamily: 'Sora_500Medium', letterSpacing: -0.1 },
+                                    isFeatured ? { color: theme.onSecondaryContainer } : { color: theme.text }
+                                  ]}
                                 >
                                   {coach.name}
                                 </ThemedText>
@@ -1046,7 +1049,7 @@ export default function CoachTab() {
                               {/* Specialty */}
                               <ThemedText
                                 type="bodySm"
-                                style={{ color: isFeatured ? theme.onSecondaryContainer + 'cc' : theme.secondary, marginTop: 2, fontFamily: 'Sora_600SemiBold' }}
+                                style={{ color: isFeatured ? theme.onSecondaryContainer + 'cc' : theme.secondary, marginTop: 2, fontSize: 11.5, fontFamily: 'Sora_600SemiBold' }}
                               >
                                 {coach.specialty}
                               </ThemedText>
@@ -1054,10 +1057,10 @@ export default function CoachTab() {
                               {/* Rating Row */}
                               <View style={styles.ratingRow}>
                                 <Ionicons name="star" size={13} color="#f59e0b" />
-                                <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.text, fontFamily: 'Sora_700Bold', marginLeft: 3 }}>
+                                <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.text, fontFamily: 'Sora_700Bold', marginLeft: 3, fontSize: 11 }}>
                                   {coach.rating}
                                 </ThemedText>
-                                <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + '88' : theme.textSecondary, marginLeft: 3 }}>
+                                <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + '88' : theme.textSecondary, marginLeft: 3, fontSize: 10.5, fontFamily: 'Sora_400Regular' }}>
                                   ({coach.reviews} reviews)
                                 </ThemedText>
                               </View>
@@ -1066,13 +1069,13 @@ export default function CoachTab() {
                               <View style={styles.detailsRow}>
                                 <View style={styles.detailItem}>
                                   <Ionicons name="person-outline" size={12} color={isFeatured ? theme.onSecondaryContainer + 'aa' : theme.textSecondary} />
-                                  <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + 'bb' : theme.textSecondary, marginLeft: 3, fontSize: 11 }}>
+                                  <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + 'bb' : theme.textSecondary, marginLeft: 3, fontSize: 10.5, fontFamily: 'Sora_400Regular' }}>
                                     {coach.experience}
                                   </ThemedText>
                                 </View>
                                 <View style={styles.detailItem}>
                                   <Ionicons name="location-outline" size={12} color={isFeatured ? theme.onSecondaryContainer + 'aa' : theme.textSecondary} />
-                                  <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + 'bb' : theme.textSecondary, marginLeft: 3, fontSize: 11 }}>
+                                  <ThemedText type="labelSm" style={{ color: isFeatured ? theme.onSecondaryContainer + 'bb' : theme.textSecondary, marginLeft: 3, fontSize: 10.5, fontFamily: 'Sora_400Regular' }}>
                                     {coach.location}
                                   </ThemedText>
                                 </View>
@@ -1081,7 +1084,7 @@ export default function CoachTab() {
                               {/* Certifications */}
                               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
                                 <Ionicons name="ribbon-outline" size={12} color={isFeatured ? '#ffffff' : '#10b981'} style={{ marginRight: 4 }} />
-                                <ThemedText style={{ color: isFeatured ? '#ffffff' : '#10b981', fontSize: 10, fontFamily: 'Sora_700Bold' }} numberOfLines={1}>
+                                <ThemedText style={{ color: isFeatured ? '#ffffff' : '#10b981', fontSize: 10, fontFamily: 'Sora_600SemiBold' }} numberOfLines={1}>
                                   {coach.certification || 'BWF Level 2 · UEFA Licensed'}
                                 </ThemedText>
                               </View>
@@ -1089,7 +1092,7 @@ export default function CoachTab() {
                               {/* Rate */}
                               <View style={styles.rateRow}>
                                 <Ionicons name="cash-outline" size={13} color={isFeatured ? theme.onSecondaryContainer + 'aa' : theme.primary} />
-                                <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.primary, fontFamily: 'Sora_700Bold', marginLeft: 4 }}>
+                                <ThemedText type="labelMd" style={{ color: isFeatured ? theme.onSecondaryContainer : theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 14, marginLeft: 4 }}>
                                   {coach.rate}
                                 </ThemedText>
                               </View>

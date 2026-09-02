@@ -531,21 +531,21 @@ export default function TournamentsScreen() {
                             <ThemedText
                               type="bodyLg"
                               numberOfLines={2}
-                              style={{ color: theme.text, fontFamily: 'Sora_700Bold', marginTop: 4 }}
+                              style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 14, letterSpacing: -0.1, marginTop: 4 }}
                             >
                               {t.name}
                             </ThemedText>
 
                             <View style={[styles.ticketMetaRow, { alignItems: 'flex-start' }]}>
                               <Ionicons name="location-outline" size={11} color={theme.textSecondary} style={{ marginTop: 1 }} />
-                              <ThemedText type="labelSm" numberOfLines={2} style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2, flex: 1 }}>
+                              <ThemedText type="labelSm" numberOfLines={2} style={{ color: theme.textSecondary, fontSize: 10.5, fontFamily: 'Sora_400Regular', marginLeft: 2, flex: 1 }}>
                                 {t.location}
                               </ThemedText>
                             </View>
 
                             <View style={styles.ticketMetaRow}>
                               <Ionicons name="calendar-outline" size={11} color={theme.textSecondary} />
-                              <ThemedText type="labelSm" numberOfLines={1} style={{ color: theme.textSecondary, fontSize: 10, marginLeft: 2 }}>
+                              <ThemedText type="labelSm" numberOfLines={1} style={{ color: theme.textSecondary, fontSize: 10.5, fontFamily: 'Sora_400Regular', marginLeft: 2 }}>
                                 {formatDateRange(t.startDate, t.endDate)}
                               </ThemedText>
                             </View>
@@ -553,10 +553,10 @@ export default function TournamentsScreen() {
                             {/* Team Progress Bar */}
                             <View style={styles.progressSection}>
                               <View style={styles.progressTextRow}>
-                                <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9 }}>
+                                <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9.5, fontFamily: 'Sora_400Regular' }}>
                                   Registration Progress
                                 </ThemedText>
-                                <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '700', fontSize: 10 }}>
+                                <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 10 }}>
                                   {t.teamsCount}/{t.maxTeams} Teams
                                 </ThemedText>
                               </View>
@@ -576,7 +576,7 @@ export default function TournamentsScreen() {
                               <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 6.5, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>Prize Pool</ThemedText>
                               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 1 }}>
                                 <Image source={require('@/assets/images/illustrations/wallet_blue.png')} style={{ width: 13, height: 13 }} contentFit="contain" />
-                                <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'Sora_800ExtraBold', textAlign: 'center', fontSize: 12 }}>
+                                <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'Sora_700Bold', textAlign: 'center', fontSize: 12 }}>
                                   {t.prizePool}
                                 </ThemedText>
                               </View>
@@ -595,7 +595,7 @@ export default function TournamentsScreen() {
                                 params: { id: t.id, name: t.name }
                               })}
                             >
-                              <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '700', fontSize: 9.5 }}>Register</ThemedText>
+                              <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 10 }}>Register</ThemedText>
                             </Pressable>
                           </View>
                         </Pressable>

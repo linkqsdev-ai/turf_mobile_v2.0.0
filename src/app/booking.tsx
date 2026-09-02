@@ -1926,11 +1926,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: 'Sora_600SemiBold',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   ticketGridValue: {
     fontSize: 12.5,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_500Medium',
     marginTop: 2,
   },
   ticketBottomSection: {
@@ -1950,12 +1950,12 @@ const styles = StyleSheet.create({
   },
   ticketPriceLabel: {
     color: 'rgba(128, 128, 128, 0.7)',
-    fontSize: 12,
-    fontFamily: 'Sora_600SemiBold',
+    fontSize: 11.5,
+    fontFamily: 'Sora_400Regular',
   },
   ticketPriceValue: {
     fontSize: 12,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   ticketPriceTotalRow: {
     flexDirection: 'row',
@@ -1968,11 +1968,11 @@ const styles = StyleSheet.create({
   },
   ticketPriceTotalLabel: {
     fontSize: 14,
-    fontFamily: 'Sora_700Bold',
+    fontFamily: 'Sora_600SemiBold',
   },
   ticketPriceTotalVal: {
     fontSize: 16,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_700Bold',
   },
   barcodeWrapper: {
     alignItems: 'center',
@@ -2014,13 +2014,13 @@ const styles = StyleSheet.create({
   },
   ticketConfirmBtnTitle: {
     color: '#ffffff',
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 13,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   ticketConfirmBtnSub: {
     color: 'rgba(255, 255, 255, 0.7)',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_400Regular',
     fontSize: 10,
     marginTop: 1,
   },

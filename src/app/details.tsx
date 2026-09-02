@@ -1234,12 +1234,13 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   voucherTitle: {
-    fontSize: 13,
-    fontFamily: 'Sora_700Bold',
-    letterSpacing: 0.2,
+    fontSize: 13.5,
+    fontFamily: 'Sora_500Medium',
+    letterSpacing: -0.1,
   },
   voucherDesc: {
     fontSize: 10.5,
+    fontFamily: 'Sora_400Regular',
     lineHeight: 15,
     marginTop: 2,
   },
@@ -1261,7 +1262,7 @@ const styles = StyleSheet.create({
   },
   voucherCodeText: {
     fontSize: 11,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_700Bold',
     letterSpacing: 0.5,
   },
   voucherMetaWrap: {
@@ -1285,8 +1286,8 @@ const styles = StyleSheet.create({
   },
   voucherApplyBtnText: {
     color: '#ffffff',
-    fontSize: 10.5,
-    fontFamily: 'Sora_700Bold',
+    fontSize: 11,
+    fontFamily: 'Sora_600SemiBold',
   },
   // KakaoStyle Trendy Ticket Voucher
   kakaoCouponCard: {
@@ -1451,7 +1452,7 @@ const styles = StyleSheet.create({
   },
   kakaoApplyBtnText: {
     color: '#ffffff',
-    fontSize: 11,
-    fontFamily: 'Sora_700Bold',
+    fontSize: 11.5,
+    fontFamily: 'Sora_600SemiBold',
   },
 });

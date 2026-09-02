@@ -949,8 +949,8 @@ const styles = StyleSheet.create({
   },
   claimBtnText: {
     color: '#111827',
-    fontFamily: 'Sora_700Bold',
-    fontSize: 11,
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 11.5,
   },
   historyFilterChip: {
     paddingHorizontal: 14,
@@ -975,17 +975,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   txTitle: {
-    fontFamily: 'Sora_700Bold',
-    fontSize: 12,
+    fontFamily: 'Sora_500Medium',
+    fontSize: 13,
   },
   txDate: {
-    fontSize: 10,
-    fontFamily: 'Sora_500Medium',
+    fontSize: 10.5,
+    fontFamily: 'Sora_400Regular',
     marginTop: 2,
   },
   txAmount: {
-    fontFamily: 'Sora_800ExtraBold',
-    fontSize: 13,
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 13.5,
   },
   modalOverlay: {
     flex: 1,
@@ -1022,13 +1022,13 @@ const styles = StyleSheet.create({
   },
   currencyPrefix: {
     fontSize: 18,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_700Bold',
     marginRight: 6,
   },
   modalInput: {
     flex: 1,
     fontSize: 18,
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_700Bold',
   },
   quickAmtChip: {
     flex: 1,
@@ -1057,7 +1057,7 @@ const styles = StyleSheet.create({
   },
   modalSubmitText: {
     color: '#ffffff',
-    fontFamily: 'Sora_800ExtraBold',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 13,
   },
 });

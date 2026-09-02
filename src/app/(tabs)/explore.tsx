@@ -976,9 +976,10 @@ const styles = StyleSheet.create({
   },
   turfTitle: {
     color: '#111c2c',
-    fontSize: 13.5,
-    fontFamily: 'Sora_700Bold',
-    lineHeight: 17,
+    fontSize: 15,
+    fontFamily: 'Sora_500Medium',
+    letterSpacing: -0.1,
+    lineHeight: 19,
   },
   locationRow: {
     flexDirection: 'row',
@@ -988,6 +989,7 @@ const styles = StyleSheet.create({
   locationText: {
     color: '#43474b',
     fontSize: 10.5,
+    fontFamily: 'Sora_400Regular',
     flex: 1,
   },
   ratingBadge: {
@@ -1012,8 +1014,9 @@ const styles = StyleSheet.create({
   },
   slotsPillText: {
     color: '#059669',
-    fontSize: 9.5,
-    fontFamily: 'Sora_700Bold',
+    fontSize: 9,
+    fontFamily: 'Sora_600SemiBold',
+    letterSpacing: 0.4,
   },
   cardActions: {
     flexDirection: 'row',
