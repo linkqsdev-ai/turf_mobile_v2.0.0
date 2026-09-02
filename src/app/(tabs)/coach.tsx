@@ -489,6 +489,7 @@ export default function CoachTab() {
                         rate: `₹${t.pricePerSlot || 1000}/hr`,
                         image: t.thumbnailImage || t.images?.[0] || 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
                         createdAt: t.createdAt || new Date().toISOString(),
+                        rawTurf: t,
                       };
                     });
 
@@ -508,6 +509,7 @@ export default function CoachTab() {
                         rate: `₹${t.pricePerSlot || 1000}/hr`,
                         image: t.thumbnailImage || t.images?.[0] || 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
                         createdAt: (t as any).createdAt || new Date().toISOString(),
+                        rawTurf: t,
                       };
                     });
 
@@ -522,6 +524,7 @@ export default function CoachTab() {
                         rate: '₹25/hr',
                         image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
                         createdAt: '2025-01-01T00:00:00.000Z',
+                        rawTurf: { id: 'skyline', name: 'Skyline Arena Elite' },
                       },
                       {
                         id: 'the-grid',
@@ -533,6 +536,7 @@ export default function CoachTab() {
                         rate: '₹18/hr',
                         image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=600&q=80',
                         createdAt: '2025-01-02T00:00:00.000Z',
+                        rawTurf: { id: 'the-grid', name: 'The Grid Multisport' },
                       }
                     ];
 
@@ -611,28 +615,104 @@ export default function CoachTab() {
                           </View>
                         </View>
 
-                        {/* Slot Occupancy Bar & Status */}
-                        <View style={{ backgroundColor: theme.surfaceLow, borderRadius: 8, padding: 6, marginTop: 4 }}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                            <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                              Today's Slot Occupancy
-                            </ThemedText>
-                            <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: theme.secondary }}>
-                              {turf.slotsText}
-                            </ThemedText>
+                        {/* Upcoming 7 Days Slots & Availability Strip */}
+                        <View style={{ backgroundColor: theme.surfaceLow, borderRadius: 10, padding: 7, marginTop: 4, gap: 5 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <Ionicons name="calendar-outline" size={11.5} color={theme.primary} />
+                              <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                                Upcoming 7 Days Slots
+                              </ThemedText>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                                <View style={{ width: 5.5, height: 5.5, borderRadius: 3, backgroundColor: '#10b981' }} />
+                                <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_400Regular', color: theme.textSecondary }}>
+                                  Available
+                                </ThemedText>
+                              </View>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                                <View style={{ width: 5.5, height: 5.5, borderRadius: 3, backgroundColor: '#8b5cf6' }} />
+                                <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_400Regular', color: theme.textSecondary }}>
+                                  Booked
+                                </ThemedText>
+                              </View>
+                            </View>
                           </View>
 
-                          {/* Visual occupancy bar */}
-                          <View style={{ height: 4, borderRadius: 2, backgroundColor: theme.outlineVariant + '30', overflow: 'hidden' }}>
-                            <View
-                              style={{
-                                height: '100%',
-                                width: `${Math.max(8, turf.occupancyPct)}%`,
-                                backgroundColor: turf.occupancyPct > 50 ? '#10b981' : theme.primary,
-                                borderRadius: 2
-                              }}
-                            />
-                          </View>
+                          {/* 7 Day Cards Row */}
+                          <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={{ gap: 5, paddingVertical: 1 }}
+                          >
+                            {Array.from({ length: 7 }, (_, i) => {
+                              const d = new Date();
+                              d.setDate(d.getDate() + i);
+                              const metrics = computeTurfSlotMetrics((turf as any).rawTurf || turf, d, bookings || []);
+                              const isToday = i === 0;
+                              const dayName = isToday ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' });
+                              const dateNum = d.getDate();
+
+                              return (
+                                <View
+                                  key={i}
+                                  style={{
+                                    width: 70,
+                                    backgroundColor: theme.surfaceLowest,
+                                    borderRadius: 7,
+                                    paddingVertical: 5,
+                                    paddingHorizontal: 4,
+                                    borderWidth: 1,
+                                    borderColor: isToday ? theme.primary + '60' : theme.outlineVariant + '25',
+                                    alignItems: 'center',
+                                    gap: 2,
+                                  }}
+                                >
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2.5 }}>
+                                    <ThemedText style={{ fontSize: 8.5, fontFamily: isToday ? 'Sora_600SemiBold' : 'Sora_500Medium', color: isToday ? theme.primary : theme.textSecondary }}>
+                                      {dayName}
+                                    </ThemedText>
+                                    <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                                      {dateNum}
+                                    </ThemedText>
+                                  </View>
+
+                                  {/* Mini 2-part colored progress bar */}
+                                  <View style={{ width: '100%', height: 3, borderRadius: 1.5, backgroundColor: theme.outlineVariant + '28', overflow: 'hidden', flexDirection: 'row', marginVertical: 1 }}>
+                                    {metrics.totalBooked > 0 && (
+                                      <View
+                                        style={{
+                                          height: '100%',
+                                          width: `${Math.min(100, Math.round((metrics.totalBooked / metrics.totalConfigured) * 100))}%`,
+                                          backgroundColor: '#8b5cf6',
+                                        }}
+                                      />
+                                    )}
+                                    {metrics.totalAvailable > 0 && (
+                                      <View
+                                        style={{
+                                          height: '100%',
+                                          flex: 1,
+                                          backgroundColor: '#10b981',
+                                        }}
+                                      />
+                                    )}
+                                  </View>
+
+                                  {/* Slot counts */}
+                                  <View style={{ width: '100%', alignItems: 'center', gap: 1 }}>
+                                    <ThemedText style={{ fontSize: 8, color: '#059669', fontFamily: 'Sora_500Medium' }}>
+                                      {metrics.totalAvailable} Avail
+                                    </ThemedText>
+                                    <ThemedText style={{ fontSize: 7.5, color: metrics.totalBooked > 0 ? '#7c3aed' : theme.textSecondary + 'aa', fontFamily: 'Sora_400Regular' }}>
+                                      {metrics.totalBooked} Booked
+                                    </ThemedText>
+                                  </View>
+                                </View>
+                              );
+                            })}
+                          </ScrollView>
                         </View>
 
                         {/* Action Buttons Row */}

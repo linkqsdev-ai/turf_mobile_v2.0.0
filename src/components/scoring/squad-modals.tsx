@@ -21,7 +21,7 @@
  *            Nobody moves; only the person's record changes.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
   Platform,
@@ -610,6 +610,8 @@ export function AddPlayerModal({
   const [phone, setPhone] = useState('');
   const [avatarKey, setAvatarKey] = useState<string>(AVATAR_KEYS[0]);
   const [error, setError] = useState<string | null>(null);
+  const nameRef = useRef<TextInput>(null);
+  const phoneRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (visible) {
@@ -639,6 +641,30 @@ export function AddPlayerModal({
   const trimmedName = name.trim();
   const phoneOk = isUsablePhone(phone);
   const canAdd = trimmedName.length > 0;
+
+  /** A query of mostly digits is a phone lookup, otherwise it's a name. */
+  const queryLooksLikePhone = query.replace(/\D/g, '').length >= 6;
+
+  /**
+   * Nothing matched the search, so turn the query into the start of a new
+   * player: a number goes to the mobile field (and lights the credit banner), a
+   * name goes to the name field. The search box clears so the create form is
+   * unambiguously what the user is now filling in.
+   */
+  const adoptQuery = () => {
+    const q = query.trim();
+    if (!q) return;
+    if (queryLooksLikePhone) {
+      setPhone(q);
+      setQuery('');
+      // The number is captured; the name is what's still missing.
+      requestAnimationFrame(() => nameRef.current?.focus());
+    } else {
+      setName(q);
+      setQuery('');
+      requestAnimationFrame(() => phoneRef.current?.focus());
+    }
+  };
 
   const submit = () => {
     if (!canAdd) return;
@@ -698,8 +724,33 @@ export function AddPlayerModal({
           ))}
         </View>
       )}
+      {/* No directory match — offer to create them, carrying the search term
+          straight into the right field so nothing has to be typed twice. */}
       {query.trim().length >= 3 && results.length === 0 && (
-        <EmptySlot label="Nobody found — add them as a new player below" />
+        <Pressable
+          onPress={adoptQuery}
+          style={({ pressed }) => [
+            styles.notFound,
+            { borderColor: theme.primary + '55', backgroundColor: theme.primary + '0D', opacity: pressed ? 0.75 : 1 },
+          ]}
+        >
+          <View style={[styles.notFoundIcon, { backgroundColor: theme.primary + '1F' }]}>
+            <Ionicons name="person-add" size={15} color={theme.primary} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <ThemedText style={[type.bodyStrong, { color: theme.primary }]} numberOfLines={1}>
+              {queryLooksLikePhone
+                ? `Add a player with ${query.trim()}`
+                : `Add “${query.trim()}” as a new player`}
+            </ThemedText>
+            <ThemedText style={[type.micro, { color: theme.textSecondary, marginTop: 1 }]} numberOfLines={1}>
+              {queryLooksLikePhone
+                ? 'Not in the directory — we’ll keep this number'
+                : 'Not in the directory — we’ll keep this name'}
+            </ThemedText>
+          </View>
+          <Ionicons name="arrow-forward" size={15} color={theme.primary} />
+        </Pressable>
       )}
 
       {/* ── Or create someone new ── */}
@@ -715,6 +766,7 @@ export function AddPlayerModal({
         <View style={{ flex: 1, minWidth: 0 }}>
           <SectionLabel>NAME</SectionLabel>
           <TextInput
+            ref={nameRef}
             value={name}
             onChangeText={(t) => { setName(t); if (error) setError(null); }}
             placeholder="Player name"
@@ -761,6 +813,7 @@ export function AddPlayerModal({
       >
         <Ionicons name="call-outline" size={14} color={phoneOk ? theme.primary : theme.textSecondary} />
         <TextInput
+          ref={phoneRef}
           value={phone}
           onChangeText={(t) => setPhone(t.replace(/[^0-9+ ]/g, '').slice(0, 16))}
           placeholder="e.g. 98765 43210"
@@ -941,6 +994,18 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   errorRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 },
+  // "Not in the directory" — turns a dead-end search into the create flow.
+  notFound: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  notFoundIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
 
   createRow: {
     flexDirection: 'row',
