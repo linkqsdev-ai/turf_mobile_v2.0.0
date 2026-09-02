@@ -321,11 +321,11 @@ export function PlayerDashboard({
           <Reanimated.View entering={FadeInDown.delay(220).duration(460)} style={styles.section}>
             <SectionHeading
               title="Next session"
-              action={{ label: 'All bookings', onPress: () => go('/(tabs)/explore') }}
+              action={{ label: 'All bookings', onPress: () => go('/booking-history') }}
             />
             {nextSession ? (
               <PressCard
-                onPress={() => go('/(tabs)/explore')}
+                onPress={() => go('/booking-history')}
                 accessibilityLabel={`Next session at ${nextSession.venueName}`}
                 style={[
                   styles.sessionCard,

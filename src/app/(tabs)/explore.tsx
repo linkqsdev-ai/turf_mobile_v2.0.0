@@ -53,9 +53,10 @@ const generateRolling14Days = () => {
 };
 
 import { SPORTS_LIST } from '@/constants/sports';
-import { useWalletStore, useTurfStore, useOfferStore } from '@/store/app-store';
+import { useWalletStore, useTurfStore, useOfferStore, useBookings, useClassStore } from '@/store/app-store';
 import { getOffersForTurf, formatDiscount } from '@/store/offer-store';
 import { cleanLocation } from '@/utils/location';
+import { computeTurfSlotMetrics } from '@/utils/turf-slot-sync';
 
 export default function ExploreScreen() {
   const theme = useTheme();
@@ -64,6 +65,7 @@ export default function ExploreScreen() {
   const { walletBalance } = useWalletStore();
   const { ownedTurfs } = useTurfStore();
   const { offers } = useOfferStore();
+  const { bookings } = useBookings();
 
   const [backendTurfs, setBackendTurfs] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -97,6 +99,26 @@ export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<Record<string, boolean>>({ 'skyline': false, 'the-grid': false, 'lords': false, 'wembley': false });
   const [coinTossVisible, setCoinTossVisible] = useState(false);
+  // Turf Book now hosts both things a player books here: pitches and coaching.
+  const [bookingMode, setBookingMode] = useState<'turf' | 'coaching'>('turf');
+  const { classes, enrollmentCountForClass } = useClassStore();
+
+  // Classes matching the screen's existing search + sport filters.
+  const coachingClasses = React.useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return classes.filter((c: any) => {
+      const sportOk =
+        selectedSport === 'All' ||
+        String(c.sportType || '').toLowerCase() === selectedSport.toLowerCase();
+      if (!sportOk) return false;
+      if (!q) return true;
+      return (
+        String(c.className || '').toLowerCase().includes(q) ||
+        String(c.venue || '').toLowerCase().includes(q) ||
+        String(c.sportType || '').toLowerCase().includes(q)
+      );
+    });
+  }, [classes, searchQuery, selectedSport]);
 
   // Action feedback toasts
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -122,6 +144,129 @@ export default function ExploreScreen() {
   const toggleFavorite = (id: string) => {
     setFavorites(prev => ({ ...prev, [id]: !prev[id] }));
   };
+
+  // Coaching side of Turf Book: real coach-published classes, bookable here.
+  const renderCoachingList = () => (
+    <View style={[styles.section, { gap: 14, paddingBottom: 110 }]}>
+      {coachingClasses.length === 0 ? (
+        <View style={{ alignItems: 'center', paddingVertical: 48, paddingHorizontal: Spacing.lg }}>
+          <Ionicons name="school-outline" size={44} color={theme.textSecondary} />
+          <ThemedText style={{ color: theme.text, fontSize: 14, fontFamily: 'Sora_700Bold', marginTop: 12 }}>
+            No classes available
+          </ThemedText>
+          <ThemedText
+            style={{ color: theme.textSecondary, fontSize: 12, lineHeight: 18, textAlign: 'center', marginTop: 6 }}
+          >
+            {classes.length === 0
+              ? 'No coach has published a class yet. Check back soon.'
+              : 'No class matches your current sport or search filter.'}
+          </ThemedText>
+          <Pressable onPress={() => router.push('/coach')} accessibilityRole="button" style={{ marginTop: 16 }}>
+            <ThemedText style={{ color: theme.primary, fontSize: 12.5, fontFamily: 'Sora_700Bold' }}>
+              Browse all coaches →
+            </ThemedText>
+          </Pressable>
+        </View>
+      ) : (
+        <>
+          {coachingClasses.map((cls: any) => {
+            const taken = enrollmentCountForClass(cls.id);
+            const capacity = parseInt(String(cls.maxStudents || ''), 10);
+            const seatsLeft = isNaN(capacity) ? null : Math.max(0, capacity - taken);
+            const full = seatsLeft === 0;
+
+            return (
+              <Pressable
+                key={cls.id}
+                onPress={() =>
+                  router.push({
+                    pathname: '/enroll',
+                    params: {
+                      classId: cls.id,
+                      title: cls.className,
+                      price: String(cls.feeAmount || 0),
+                      dates: [cls.startDate, cls.endDate].filter(Boolean).join(' – '),
+                      location: cls.venue || 'TBD',
+                    },
+                  })
+                }
+                disabled={full}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  full
+                    ? `${cls.className} is full`
+                    : `Book ${cls.className}, ${cls.feeAmount ? `₹${cls.feeAmount}` : 'free'}`
+                }
+                style={[
+                  styles.classCard,
+                  {
+                    backgroundColor: theme.surfaceLowest,
+                    borderColor: theme.outlineVariant + '33',
+                    opacity: full ? 0.6 : 1,
+                  },
+                  Shadows.level2,
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText
+                      style={{ color: theme.text, fontSize: 14, lineHeight: 19, fontFamily: 'Sora_700Bold' }}
+                      numberOfLines={2}
+                    >
+                      {cls.className}
+                    </ThemedText>
+                    <ThemedText
+                      style={{ color: theme.textSecondary, fontSize: 11.5, lineHeight: 16, marginTop: 4 }}
+                      numberOfLines={2}
+                    >
+                      {[cls.sportType, cls.classType, cls.ageGroup].filter(Boolean).join(' • ')}
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={{ color: theme.primary, fontSize: 14, fontFamily: 'Sora_700Bold' }}>
+                    {cls.feeAmount ? `₹${cls.feeAmount}` : 'Free'}
+                  </ThemedText>
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
+                    <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
+                    <ThemedText
+                      style={{ color: theme.textSecondary, fontSize: 11, flexShrink: 1 }}
+                      numberOfLines={1}
+                    >
+                      {cls.venue || 'Venue TBD'}
+                    </ThemedText>
+                  </View>
+                  {seatsLeft !== null && (
+                    <ThemedText
+                      style={{
+                        color: full ? '#b91c1c' : '#0f9f58',
+                        fontSize: 11,
+                        fontFamily: 'Sora_600SemiBold',
+                      }}
+                    >
+                      {full ? 'Full' : `${seatsLeft} seats left`}
+                    </ThemedText>
+                  )}
+                </View>
+              </Pressable>
+            );
+          })}
+
+          <Pressable
+            onPress={() => router.push('/coach')}
+            accessibilityRole="button"
+            accessibilityLabel="Browse all coaches"
+            style={{ alignSelf: 'center', paddingVertical: 8 }}
+          >
+            <ThemedText style={{ color: theme.primary, fontSize: 12.5, fontFamily: 'Sora_700Bold' }}>
+              Browse all coaches →
+            </ThemedText>
+          </Pressable>
+        </>
+      )}
+    </View>
+  );
 
   const handleTurfSelect = (id: string, name: string, offerCode?: string) => {
     router.push({
@@ -155,19 +300,6 @@ export default function ExploreScreen() {
             </View>
           </View>
           <View style={styles.headerRightActions}>
-            <Pressable
-              style={[styles.iconButton, { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, backgroundColor: theme.primary + '10', borderRadius: 8, height: 32 }]}
-              onPress={() => router.push('/wallet')}
-            >
-              <Ionicons name="wallet-outline" size={16} color={theme.primary} />
-              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.primary }}>
-                ₹{walletBalance.toFixed(0)}
-              </ThemedText>
-            </Pressable>
-            {/* Temporarily Hidden Network Activity Icon */}
-            {/* <Pressable style={styles.iconButton} onPress={() => router.push('/network')}>
-              <Ionicons name="pulse" size={20} color={theme.secondary} />
-            </Pressable> */}
             <Pressable style={styles.iconButton} onPress={() => triggerToast('No new notifications')}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
             </Pressable>
@@ -303,16 +435,61 @@ export default function ExploreScreen() {
             {/* Booking Hero Banner */}
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, marginBottom: Spacing.xs }}>
               <View style={{ flex: 1 }}>
-                <ThemedText type="headlineLg" style={{ color: theme.text }}>Book a Turf</ThemedText>
+                <ThemedText type="headlineLg" style={{ color: theme.text }}>
+                  {bookingMode === 'turf' ? 'Book a Turf' : 'Book a Coach'}
+                </ThemedText>
                 <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
-                  Find and book the perfect sports turf near you.
+                  {bookingMode === 'turf'
+                    ? 'Find and book the perfect sports turf near you.'
+                    : 'Join a coaching class run by a verified coach.'}
                 </ThemedText>
               </View>
               <Image
-                source={require('@/assets/images/illustrations/booking_hero.png')}
+                source={
+                  bookingMode === 'turf'
+                    ? require('@/assets/images/illustrations/booking_hero.png')
+                    : require('@/assets/images/illustrations/coaching_class_premium.png')
+                }
                 style={{ width: 100, height: 100 }}
                 contentFit="contain"
               />
+            </View>
+
+            {/* Turf vs Coaching switch — both are "things you book here" */}
+            <View style={styles.modeSwitch}>
+              {(['turf', 'coaching'] as const).map(mode => {
+                const active = bookingMode === mode;
+                return (
+                  <Pressable
+                    key={mode}
+                    onPress={() => setBookingMode(mode)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    style={[
+                      styles.modeBtn,
+                      {
+                        backgroundColor: active ? theme.primary : theme.surfaceLowest,
+                        borderColor: active ? theme.primary : theme.outlineVariant + '44',
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={mode === 'turf' ? 'football-outline' : 'school-outline'}
+                      size={15}
+                      color={active ? '#ffffff' : theme.textSecondary}
+                    />
+                    <ThemedText
+                      style={{
+                        fontSize: 12.5,
+                        fontFamily: active ? 'Sora_700Bold' : 'Sora_600SemiBold',
+                        color: active ? '#ffffff' : theme.textSecondary,
+                      }}
+                    >
+                      {mode === 'turf' ? 'Turfs' : 'Coaching'}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
             </View>
 
             {/* Offers & Gift Vouchers */}
@@ -334,10 +511,10 @@ export default function ExploreScreen() {
             </View>
 
             {/* Turf List */}
+            {bookingMode === 'turf' && (
             <View style={[styles.section, { gap: 14, paddingBottom: 110 }]}>
               {(() => {
-                const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                const currentToday = daysOfWeek[new Date().getDay()];
+                const selectedDateObj = rolling14Days.find(d => d.id === selectedDate)?.rawDate || new Date();
 
                 const resolveAmenityIcons = (amenitiesObj?: Record<string, boolean>) => {
                   if (!amenitiesObj) return ['flashlight-outline', 'car-outline', 'wifi-outline'];
@@ -381,9 +558,8 @@ export default function ExploreScreen() {
                 const BADGE_POOL = ['🆕 JUST ADDED', '💸 BEST VALUE', '🔥 POPULAR', '🏆 PREMIUM', '⭐ 5.0 RATED', '⚡ INSTANT BOOK'];
 
                 const backendFormattedTurfs = (backendTurfs || []).map((t: any, idx: number) => {
-                  const todayAvailableCount = t.slots && t.slots.length > 0
-                    ? t.slots.filter((s: any) => s.day === currentToday && s.status === 'available').length
-                    : 10;
+                  const metrics = computeTurfSlotMetrics(t, selectedDateObj, bookings || []);
+                  const todayAvailableCount = metrics.totalAvailable;
 
                   const sType = (t.sportType || 'Cricket').toLowerCase();
                   const pool = SPORT_TURF_IMAGES[sType] || SPORT_TURF_IMAGES.cricket;
@@ -408,16 +584,15 @@ export default function ExploreScreen() {
                     sport: t.sportType || 'Cricket',
                     surfaceType: t.surfaceType || (sType.includes('cricket') ? 'Astro Turf Pitch' : sType.includes('badminton') ? 'Indoor Woodcourt' : '5G Rubber Infill'),
                     price: t.pricePerSlot || 1000,
-                    availableSlots: todayAvailableCount > 0 ? todayAvailableCount : 10,
+                    availableSlots: todayAvailableCount,
                     amenitiesIcons: resolveAmenityIcons(t.amenities),
                     createdAt: t.createdAt || new Date().toISOString(),
                   };
                 });
 
                 const userFormattedTurfs = (ownedTurfs || []).map((t, idx) => {
-                  const todayAvailableCount = t.slots && t.slots.length > 0
-                    ? t.slots.filter(s => s.day === currentToday && s.status === 'available').length
-                    : 10;
+                  const metrics = computeTurfSlotMetrics(t, selectedDateObj, bookings || []);
+                  const todayAvailableCount = metrics.totalAvailable;
 
                   const sType = (t.sportType || 'Cricket').toLowerCase();
                   const pool = SPORT_TURF_IMAGES[sType] || SPORT_TURF_IMAGES.cricket;
@@ -442,7 +617,7 @@ export default function ExploreScreen() {
                     sport: t.sportType || 'Cricket',
                     surfaceType: t.surfaceType || (sType.includes('cricket') ? 'Astro Turf Pitch' : sType.includes('badminton') ? 'Indoor Woodcourt' : '5G Rubber Infill'),
                     price: t.pricePerSlot || 1000,
-                    availableSlots: todayAvailableCount > 0 ? todayAvailableCount : 10,
+                    availableSlots: todayAvailableCount,
                     amenitiesIcons: resolveAmenityIcons(t.amenities),
                     createdAt: (t as any).createdAt || new Date().toISOString(),
                   };
@@ -460,7 +635,7 @@ export default function ExploreScreen() {
                     sport: 'Football',
                     surfaceType: '5G Rubber Infill',
                     price: 2500,
-                    availableSlots: 8,
+                    availableSlots: computeTurfSlotMetrics({ id: 'skyline', name: 'Skyline Arena Elite' }, selectedDateObj, bookings || []).totalAvailable,
                     amenitiesIcons: ['flashlight-outline', 'car-outline', 'wifi-outline'],
                     createdAt: '2025-01-01T00:00:00.000Z',
                   },
@@ -475,7 +650,7 @@ export default function ExploreScreen() {
                     sport: 'Cricket',
                     surfaceType: 'Astro Turf Pitch',
                     price: 2000,
-                    availableSlots: 4,
+                    availableSlots: computeTurfSlotMetrics({ id: 'the-grid', name: 'The Grid Sports Complex' }, selectedDateObj, bookings || []).totalAvailable,
                     amenitiesIcons: ['flashlight-outline', 'shirt-outline', 'water-outline'],
                     createdAt: '2025-01-02T00:00:00.000Z',
                   },
@@ -490,7 +665,7 @@ export default function ExploreScreen() {
                     sport: 'Cricket',
                     surfaceType: 'Indoor Woodcourt',
                     price: 3500,
-                    availableSlots: 2,
+                    availableSlots: computeTurfSlotMetrics({ id: 'lords', name: 'Lord’s Indoor Nets' }, selectedDateObj, bookings || []).totalAvailable,
                     amenitiesIcons: ['flashlight-outline', 'lock-closed-outline', 'car-outline'],
                     createdAt: '2025-01-03T00:00:00.000Z',
                   },
@@ -505,7 +680,7 @@ export default function ExploreScreen() {
                     sport: 'Football',
                     surfaceType: 'Synthetic Grass',
                     price: 3000,
-                    availableSlots: 6,
+                    availableSlots: computeTurfSlotMetrics({ id: 'wembley', name: 'Wembley Powerleague' }, selectedDateObj, bookings || []).totalAvailable,
                     amenitiesIcons: ['flashlight-outline', 'car-outline', 'wifi-outline'],
                     createdAt: '2025-01-04T00:00:00.000Z',
                   },
@@ -708,6 +883,9 @@ export default function ExploreScreen() {
                 );
               })()}
             </View>
+            )}
+
+            {bookingMode === 'coaching' && renderCoachingList()}
           </ScrollView>
         </Reanimated.View>
       </SafeAreaView>
@@ -765,6 +943,29 @@ const styles = StyleSheet.create({
   },
   profileIconButton: {
     padding: 2,
+  },
+  modeSwitch: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: Spacing.containerMargin,
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  modeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 40,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+  },
+  classCard: {
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 12,
   },
   scrollContent: {
     paddingBottom: 40,

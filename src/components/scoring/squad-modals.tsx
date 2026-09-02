@@ -40,6 +40,8 @@ import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
 import { AVATAR_KEYS, getAvatarSource } from '@/constants/avatars';
 import { useTheme } from '@/hooks/use-theme';
 import { useTypeRamp } from '@/lib/typography';
+import { searchFoFDirectory } from '@/services/fof-network';
+import { isUsablePhone, normalizePhone, playerIdentity } from '@/store/match-store';
 
 export interface SquadPlayer {
   id?: string;
@@ -573,6 +575,244 @@ export function EditPlayerModal({ visible, onClose, player, onSave }: EditPlayer
   );
 }
 
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  4. ADD — bring a new person into the match                                */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+export interface AddPlayerDraft {
+  name: string;
+  phone?: string;
+  avatarUrl?: string;
+}
+
+export interface AddPlayerModalProps {
+  visible: boolean;
+  onClose: () => void;
+  /** Everyone already in the match, so a duplicate is never offered or accepted. */
+  existing: { name: string; phone?: string }[];
+  /** Wallet credits paid for supplying a mobile number. */
+  creditReward?: number;
+  onAdd: (player: AddPlayerDraft) => void;
+}
+
+export function AddPlayerModal({
+  visible,
+  onClose,
+  existing,
+  creditReward = 5,
+  onAdd,
+}: AddPlayerModalProps) {
+  const theme = useTheme();
+  const type = useTypeRamp();
+
+  const [query, setQuery] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [avatarKey, setAvatarKey] = useState<string>(AVATAR_KEYS[0]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setQuery(''); setName(''); setPhone('');
+      setAvatarKey(AVATAR_KEYS[0]); setError(null);
+    }
+  }, [visible]);
+
+  const isTaken = useMemo(() => {
+    const taken = new Set(existing.map(playerIdentity));
+    return (candidate: { name: string; phone?: string }) => taken.has(playerIdentity(candidate));
+  }, [existing]);
+
+  /**
+   * Directory lookup. `searchFoFDirectory` matches on phone digits (3+) as well
+   * as name, so a number is a first-class way to find someone — anyone already
+   * in the match is filtered out so they can't be added twice.
+   */
+  const results = useMemo(() => {
+    const q = query.trim();
+    if (q.length < 3) return [];
+    return searchFoFDirectory(q)
+      .filter(p => !isTaken({ name: p.name, phone: p.phone }))
+      .slice(0, 5);
+  }, [query, isTaken]);
+
+  const trimmedName = name.trim();
+  const phoneOk = isUsablePhone(phone);
+  const canAdd = trimmedName.length > 0;
+
+  const submit = () => {
+    if (!canAdd) return;
+    if (isTaken({ name: trimmedName, phone })) {
+      setError(`${trimmedName} is already in this match`);
+      return;
+    }
+    onAdd({
+      name: trimmedName,
+      phone: phoneOk ? normalizePhone(phone) : undefined,
+      avatarUrl: avatarKey,
+    });
+  };
+
+  return (
+    <SquadModalShell
+      visible={visible}
+      onClose={onClose}
+      icon="person-add"
+      title="Add Player"
+      subtitle="Search by number or name, or enter someone new"
+      primaryLabel="Add Player"
+      primaryEnabled={canAdd}
+      onPrimary={submit}
+    >
+      {/* ── Find an existing player ── */}
+      <SectionLabel>FIND A PLAYER</SectionLabel>
+      <View style={[styles.search, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}>
+        <Ionicons
+          name={query.replace(/\D/g, '').length >= 3 ? 'call-outline' : 'search'}
+          size={14}
+          color={theme.textSecondary}
+        />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Mobile number or name"
+          placeholderTextColor={theme.placeholder}
+          style={[
+            styles.searchInput,
+            type.body,
+            { color: theme.text },
+            Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
+          ]}
+        />
+      </View>
+
+      {results.length > 0 && (
+        <View style={{ gap: 6 }}>
+          {results.map(p => (
+            <PlayerRow
+              key={p.id}
+              player={{ id: p.id, name: p.name, role: p.team, jerseyNumber: undefined }}
+              onPress={() => onAdd({ name: p.name, phone: p.phone })}
+              trailing={<Ionicons name="add-circle" size={18} color={theme.primary} />}
+            />
+          ))}
+        </View>
+      )}
+      {query.trim().length >= 3 && results.length === 0 && (
+        <EmptySlot label="Nobody found — add them as a new player below" />
+      )}
+
+      {/* ── Or create someone new ── */}
+      <View style={styles.orRow}>
+        <View style={[styles.orLine, { backgroundColor: theme.outlineVariant + '55' }]} />
+        <ThemedText style={[type.micro, { color: theme.textSecondary }]}>OR ADD SOMEONE NEW</ThemedText>
+        <View style={[styles.orLine, { backgroundColor: theme.outlineVariant + '55' }]} />
+      </View>
+
+      {/* Avatar + name side by side, so the identity reads as one unit. */}
+      <View style={styles.identityRow}>
+        <Image source={getAvatarSource(avatarKey)} style={styles.identityAvatar} contentFit="cover" />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <SectionLabel>NAME</SectionLabel>
+          <TextInput
+            value={name}
+            onChangeText={(t) => { setName(t); if (error) setError(null); }}
+            placeholder="Player name"
+            placeholderTextColor={theme.placeholder}
+            style={[
+              styles.input,
+              type.body,
+              { color: theme.text, backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+              Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
+            ]}
+          />
+        </View>
+      </View>
+
+      <SectionLabel>CHOOSE AVATAR</SectionLabel>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.avatarStrip}>
+        {AVATAR_KEYS.slice(0, 12).map(key => {
+          const on = avatarKey === key;
+          return (
+            <Pressable key={key} onPress={() => setAvatarKey(key)}>
+              <Image
+                source={getAvatarSource(key)}
+                style={[
+                  styles.avatarChoice,
+                  { borderColor: on ? theme.primary : 'transparent', borderWidth: on ? 2 : 0 },
+                ]}
+                contentFit="cover"
+              />
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <SectionLabel>MOBILE NUMBER (OPTIONAL)</SectionLabel>
+      <View
+        style={[
+          styles.search,
+          {
+            backgroundColor: theme.surfaceLow,
+            borderColor: phoneOk ? theme.primary : theme.outlineVariant + '44',
+            marginBottom: 0,
+          },
+        ]}
+      >
+        <Ionicons name="call-outline" size={14} color={phoneOk ? theme.primary : theme.textSecondary} />
+        <TextInput
+          value={phone}
+          onChangeText={(t) => setPhone(t.replace(/[^0-9+ ]/g, '').slice(0, 16))}
+          placeholder="e.g. 98765 43210"
+          keyboardType="phone-pad"
+          placeholderTextColor={theme.placeholder}
+          style={[
+            styles.searchInput,
+            type.body,
+            { color: theme.text },
+            Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
+          ]}
+        />
+        {phoneOk && <Ionicons name="checkmark-circle" size={16} color={theme.primary} />}
+      </View>
+
+      {/* Credit incentive — the reason a number is worth giving. */}
+      <View
+        style={[
+          styles.creditBanner,
+          {
+            backgroundColor: phoneOk ? '#10B98114' : theme.primary + '10',
+            borderColor: phoneOk ? '#10B98155' : theme.primary + '33',
+          },
+        ]}
+      >
+        <Ionicons
+          name={phoneOk ? 'checkmark-circle' : 'gift'}
+          size={14}
+          color={phoneOk ? '#10B981' : theme.primary}
+        />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <ThemedText style={[type.micro, { color: phoneOk ? '#10B981' : theme.primary, fontFamily: 'Sora_700Bold' }]}>
+            {phoneOk
+              ? `${creditReward} credits unlocked`
+              : `Get ${creditReward} credits upon entering your mobile number`}
+          </ThemedText>
+          <ThemedText style={[type.micro, { color: theme.textSecondary, marginTop: 1 }]}>
+            Syncs the squad, keeps score history, and connects friends of friends.
+          </ThemedText>
+        </View>
+      </View>
+
+      {error && (
+        <View style={styles.errorRow}>
+          <Ionicons name="alert-circle" size={12} color={theme.error} />
+          <ThemedText style={[type.micro, { color: theme.error, flexShrink: 1 }]}>{error}</ThemedText>
+        </View>
+      )}
+    </SquadModalShell>
+  );
+}
+
 function EmptySlot({ label }: { label: string }) {
   const theme = useTheme();
   const type = useTypeRamp();
@@ -683,6 +923,24 @@ const styles = StyleSheet.create({
 
   avatarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   avatarChoice: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#00000010' },
+
+  // ── Add-player modal ──────────────────────────────────────────────────
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: Spacing.base },
+  orLine: { flex: 1, height: 1 },
+  identityRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  identityAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#00000010' },
+  avatarStrip: { gap: 7, paddingRight: 4 },
+  creditBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: Spacing.sm,
+  },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 },
 
   createRow: {
     flexDirection: 'row',

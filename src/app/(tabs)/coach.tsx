@@ -345,11 +345,22 @@ export default function CoachTab() {
                         Active classes live on the platform
                       </ThemedText>
                     </View>
-                    <Pressable onPress={() => router.push('/coach-students')}>
-                      <ThemedText type="labelMd" style={{ color: theme.secondary }}>
-                        STUDENTS DIRECTORY →
-                      </ThemedText>
-                    </Pressable>
+                    <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                      <Pressable
+                        onPress={() => router.push('/coach-classes')}
+                        accessibilityRole="button"
+                        accessibilityLabel="Manage all classes"
+                      >
+                        <ThemedText type="labelMd" style={{ color: theme.primary }}>
+                          MANAGE CLASSES →
+                        </ThemedText>
+                      </Pressable>
+                      <Pressable onPress={() => router.push('/coach-students')}>
+                        <ThemedText type="labelMd" style={{ color: theme.secondary }}>
+                          STUDENTS DIRECTORY →
+                        </ThemedText>
+                      </Pressable>
+                    </View>
                   </View>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginTop: 8 }}>
                     {classes.map((cls: any, i: number) => {

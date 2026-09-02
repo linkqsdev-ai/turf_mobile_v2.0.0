@@ -1205,6 +1205,38 @@ export default function ProfileScreen() {
                 />
               </View>
 
+              {/* My Booking History Card */}
+              <Pressable
+                onPress={() => router.push('/booking-history')}
+                style={{
+                  backgroundColor: theme.surfaceLowest,
+                  borderRadius: BorderRadius.lg,
+                  padding: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderWidth: 1,
+                  borderColor: theme.outlineVariant + '33',
+                  marginTop: 10,
+                  ...Shadows.level1,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: theme.primary + '18', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="calendar" size={17} color={theme.primary} />
+                  </View>
+                  <View>
+                    <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 12.5, color: theme.text }}>
+                      My Booking History
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary, marginTop: 1, fontFamily: 'Sora_500Medium' }}>
+                      View all active, completed & cancelled turf slots
+                    </ThemedText>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+              </Pressable>
+
               {/* Offers & Vouchers Action Card */}
               <Pressable
                 onPress={() => router.push('/wallet')}

@@ -295,8 +295,10 @@ export default function SettingsScreen() {
             </Pressable>
           </SectionCard>
 
-          {/* ── Wallet ── */}
-          <SectionCard title="WALLET & PAYMENTS" icon="wallet-outline" theme={theme}>
+          {/* ── Bookings & Wallet ── */}
+          <SectionCard title="BOOKINGS & PAYMENTS" icon="calendar-outline" theme={theme}>
+            <LinkRow theme={theme} icon="calendar-outline" title="Booking History" subtitle="View active, completed & cancelled reservations" onPress={() => router.push('/booking-history')} />
+            <Divider theme={theme} />
             <LinkRow theme={theme} icon="wallet-outline" title="My Sports Wallet" subtitle={`Balance: ₹${walletBalance.toFixed(2)}`} onPress={() => router.push('/wallet')} />
           </SectionCard>
 

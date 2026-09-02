@@ -238,6 +238,13 @@ function RootNavigation() {
           presentation: 'card'
         }}
       />
+      <Stack.Screen
+        name="coach-classes"
+        options={{
+          animation: 'slide_from_right',
+          presentation: 'card'
+        }}
+      />
     </Stack>
   );
 }

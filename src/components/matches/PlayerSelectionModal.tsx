@@ -1,11 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,7 +36,7 @@ import {
   type Player,
 } from '@/store/match-store';
 import { useWalletStore } from '@/store/app-store';
-import { searchFoFDirectory } from '@/services/fof-network';
+import { AddPlayerModal } from '@/components/scoring/squad-modals';
 
 /** Wallet credits paid the first time a player is added with a mobile number. */
 const CREDIT_REWARD = 5;
@@ -144,10 +142,7 @@ export function PlayerSelectionModal({
     teamA: initialTeamA,
     teamB: initialTeamB,
   });
-  // Mobile-number-first entry: one field searches the directory by number or
-  // name; `newPlayerPhone` holds a number captured before its owner is named.
-  const [playerQuery, setPlayerQuery] = useState('');
-  const [newPlayerPhone, setNewPlayerPhone] = useState('');
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
@@ -240,26 +235,9 @@ export function PlayerSelectionModal({
     [everyone]
   );
 
-  /**
-   * Directory suggestions for the current query. Searching by mobile number is
-   * the primary path — `searchFoFDirectory` matches on phone digits (3+) as well
-   * as name, and each hit carries its friend-of-friend degree, so adding someone
-   * by number also tells you how you know them.
-   */
-  const suggestions = useMemo(() => {
-    const q = playerQuery.trim();
-    if (q.length < 3) return [];
-    return searchFoFDirectory(q)
-      .filter((p) => !isAlreadyIn({ name: p.name, phone: p.phone }))
-      .slice(0, 4);
-  }, [playerQuery, isAlreadyIn]);
-
-  const queryDigits = playerQuery.replace(/\D/g, '');
-  const queryIsPhone = queryDigits.length >= 6;
-
   /** Adds a player and, when a usable mobile is supplied, pays the 5-credit bonus. */
   const commitPlayer = useCallback(
-    (name: string, phone?: string) => {
+    ({ name, phone, avatarUrl }: { name: string; phone?: string; avatarUrl?: string }) => {
       const trimmed = name.trim();
       if (!trimmed) return;
       if (isAlreadyIn({ name: trimmed, phone })) {
@@ -271,11 +249,11 @@ export function PlayerSelectionModal({
         name: trimmed,
         position: 'Player',
         skillLevel: 'Intermediate',
+        ...(avatarUrl ? { avatarUrl } : {}),
         ...(isUsablePhone(phone) ? { phone: normalizePhone(phone) } : {}),
       };
       setBuckets((prev) => ({ ...prev, master: [...prev.master, player] }));
-      setPlayerQuery('');
-      setNewPlayerPhone('');
+      setAddModalOpen(false);
       setDuplicateWarning(null);
 
       // The incentive is paid once per number, so re-adding the same person
@@ -291,18 +269,6 @@ export function PlayerSelectionModal({
     },
     [isAlreadyIn, addWalletFunds]
   );
-
-  const handleAddTyped = useCallback(() => {
-    const q = playerQuery.trim();
-    if (!q) return;
-    // A bare number needs a name before it can become a player.
-    if (queryIsPhone && !newPlayerPhone) {
-      setNewPlayerPhone(q);
-      setPlayerQuery('');
-      return;
-    }
-    commitPlayer(q, newPlayerPhone);
-  }, [playerQuery, queryIsPhone, newPlayerPhone, commitPlayer]);
 
   /**
    * Every bubble carries explicit one-tap targets for the moves that make
@@ -415,93 +381,29 @@ export function PlayerSelectionModal({
               players={buckets.master}
               emptyLabel="No players yet — add one below."
             >
-              {/* A captured number waiting for its owner's name. */}
-              {newPlayerPhone !== '' && (
-                <View style={[styles.phoneChip, { backgroundColor: theme.primary + '14', borderColor: theme.primary + '44' }]}>
-                  <Ionicons name="call" size={11} color={theme.primary} />
-                  <ThemedText style={[styles.phoneChipText, { color: theme.primary }]}>
-                    {newPlayerPhone}
+              {/* Adding a player opens the full Add Player popup — same shell
+                  as the batsmen/bowler squad popups, with avatar, mobile +
+                  credit incentive, name, and directory search. */}
+              <Pressable
+                onPress={() => setAddModalOpen(true)}
+                style={({ pressed }) => [
+                  styles.addCta,
+                  { backgroundColor: bubble, opacity: pressed ? 0.75 : 1 },
+                ]}
+              >
+                <View style={[styles.addCtaIcon, { backgroundColor: theme.primary + '18' }]}>
+                  <Ionicons name="person-add" size={14} color={theme.primary} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <ThemedText style={[styles.addCtaTitle, { color: bubbleText }]} numberOfLines={1}>
+                    Add a player
                   </ThemedText>
-                  <Pressable onPress={() => setNewPlayerPhone('')} hitSlop={6} accessibilityLabel="Clear mobile number">
-                    <Ionicons name="close-circle" size={13} color={theme.primary} />
-                  </Pressable>
+                  <ThemedText style={[styles.addCtaSub, { color: theme.textSecondary }]} numberOfLines={1}>
+                    Search by number or name · +{CREDIT_REWARD} credits
+                  </ThemedText>
                 </View>
-              )}
-
-              <View style={[styles.addRow, { backgroundColor: bubble }]}>
-                <Ionicons
-                  name={queryIsPhone ? 'call-outline' : 'search-outline'}
-                  size={14}
-                  color={theme.textSecondary}
-                  style={{ marginRight: 6 }}
-                />
-                <TextInput
-                  value={playerQuery}
-                  onChangeText={(t) => { setPlayerQuery(t); if (duplicateWarning) setDuplicateWarning(null); }}
-                  placeholder={newPlayerPhone ? 'Name for this number' : 'Mobile number or name'}
-                  placeholderTextColor={theme.placeholder}
-                  keyboardType={newPlayerPhone ? 'default' : 'default'}
-                  style={[
-                    styles.addInput,
-                    { color: bubbleText },
-                    Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
-                  ]}
-                  onSubmitEditing={handleAddTyped}
-                  returnKeyType="done"
-                />
-                <Pressable
-                  onPress={handleAddTyped}
-                  disabled={!playerQuery.trim()}
-                  accessibilityLabel={queryIsPhone && !newPlayerPhone ? 'Use this mobile number' : 'Add player'}
-                  style={[
-                    styles.addBtn,
-                    { backgroundColor: playerQuery.trim() ? theme.primary : theme.outlineVariant },
-                  ]}
-                >
-                  <Ionicons
-                    name={queryIsPhone && !newPlayerPhone ? 'arrow-forward' : 'add'}
-                    size={15}
-                    color="#ffffff"
-                  />
-                </Pressable>
-              </View>
-
-              {/* Directory matches — searching by number is the primary path. */}
-              {suggestions.length > 0 && (
-                <View style={styles.suggestList}>
-                  {suggestions.map((s) => (
-                    <Pressable
-                      key={s.id}
-                      onPress={() => commitPlayer(s.name, s.phone)}
-                      style={({ pressed }) => [
-                        styles.suggestRow,
-                        { backgroundColor: bubble, opacity: pressed ? 0.7 : 1 },
-                      ]}
-                    >
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <ThemedText style={[styles.suggestName, { color: bubbleText }]} numberOfLines={1}>
-                          {s.name}
-                        </ThemedText>
-                        <ThemedText style={[styles.suggestMeta, { color: theme.textSecondary }]} numberOfLines={1}>
-                          {s.phone} · {s.team}
-                        </ThemedText>
-                      </View>
-                      <Ionicons name="add-circle" size={18} color={theme.primary} />
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-
-              {/* Incentive — why giving a number is worth it. */}
-              <View style={[styles.incentive, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '33' }]}>
-                <Ionicons name="gift" size={13} color={theme.primary} />
-                <ThemedText style={[styles.incentiveText, { color: theme.primary }]}>
-                  Get {CREDIT_REWARD} credits upon entering your mobile number
-                </ThemedText>
-              </View>
-              <ThemedText style={[styles.incentiveSub, { color: theme.textSecondary }]}>
-                Optional — but it syncs the squad, keeps score history, and connects friends of friends.
-              </ThemedText>
+                <Ionicons name="chevron-forward" size={15} color={theme.textSecondary} />
+              </Pressable>
 
               {creditToast && (
                 <View style={styles.warnRow}>
@@ -559,6 +461,15 @@ export function PlayerSelectionModal({
               </ThemedText>
             </Pressable>
           </View>
+
+          {/* Add Player — same shell as the batsmen/bowler squad popups. */}
+          <AddPlayerModal
+            visible={addModalOpen}
+            onClose={() => setAddModalOpen(false)}
+            existing={everyone}
+            creditReward={CREDIT_REWARD}
+            onAdd={commitPlayer}
+          />
 
           {/* Floating drag ghost */}
           {draggingPlayer && (
@@ -874,52 +785,21 @@ const styles = StyleSheet.create({
   warnRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, paddingHorizontal: 4 },
   warnText: { fontFamily: 'Sora_600SemiBold', fontSize: 10.5, flexShrink: 1 },
 
-  // Captured-number chip shown while the number waits for a name.
-  phoneChip: {
+  // Entry point that opens the full Add Player popup.
+  addCta: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 5,
+    gap: 10,
     borderRadius: 9999,
-    borderWidth: 1,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingLeft: 6,
+    paddingRight: 14,
+    paddingVertical: 6,
     marginTop: Spacing.sm,
+    ...Shadows.level1,
   },
-  phoneChipText: { fontFamily: 'Sora_600SemiBold', fontSize: 11 },
-
-  // Directory suggestions (phone-first search).
-  suggestList: { marginTop: 6, gap: 5 },
-  suggestRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 12,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-  },
-  suggestName: { fontFamily: 'Sora_600SemiBold', fontSize: 11.5 },
-  suggestMeta: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
-
-  // Credit incentive.
-  incentive: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    marginTop: Spacing.sm,
-  },
-  incentiveText: { fontFamily: 'Sora_700Bold', fontSize: 10.5, flexShrink: 1 },
-  incentiveSub: {
-    fontFamily: 'Sora_400Regular',
-    fontSize: 9.5,
-    lineHeight: 13,
-    marginTop: 4,
-    paddingHorizontal: 4,
-  },
+  addCtaIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  addCtaTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 12 },
+  addCtaSub: { fontFamily: 'Sora_400Regular', fontSize: 9.5, marginTop: 1 },
   addBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
 
   // ── Footer ─────────────────────────────────────────────────────────────
