@@ -2833,13 +2833,22 @@ export default function CricketScoring({
         })
       );
 
-      // Update bowler runs/balls
-      const updatedBowlerRuns = (bowler.runs || 0) + runVal;
-      const updatedBowlerBalls = (bowler.ballsInOver || 0) + 1;
+      // Update bowler runs/balls safely avoiding NaN
+      const currBowlerOvers = typeof bowler.overs === 'number' ? bowler.overs : (parseInt(bowler.overs as any) || 0);
+      const currBowlerBalls = typeof bowler.ballsInOver === 'number' ? bowler.ballsInOver : (parseInt(bowler.ballsInOver as any) || 0);
+      const currBowlerRuns = typeof bowler.runs === 'number' ? bowler.runs : (parseInt(bowler.runs as any) || 0);
+      const currBowlerWickets = typeof bowler.wickets === 'number' ? bowler.wickets : (parseInt(bowler.wickets as any) || 0);
+      const currBowlerMaidens = typeof bowler.maidens === 'number' ? bowler.maidens : (parseInt(bowler.maidens as any) || 0);
+
+      const updatedBowlerRuns = currBowlerRuns + runVal;
+      const updatedBowlerBalls = currBowlerBalls + 1;
       setBowler(prev => ({
         ...prev,
-        ballsInOver: prev.ballsInOver + 1,
-        runs: (prev.runs || 0) + runVal,
+        overs: typeof prev.overs === 'number' ? prev.overs : (parseInt(prev.overs as any) || 0),
+        ballsInOver: (typeof prev.ballsInOver === 'number' ? prev.ballsInOver : (parseInt(prev.ballsInOver as any) || 0)) + 1,
+        runs: (typeof prev.runs === 'number' ? prev.runs : (parseInt(prev.runs as any) || 0)) + runVal,
+        wickets: typeof prev.wickets === 'number' ? prev.wickets : (parseInt(prev.wickets as any) || 0),
+        maidens: typeof prev.maidens === 'number' ? prev.maidens : (parseInt(prev.maidens as any) || 0),
       }));
 
       if (bowler.name && bowler.name.trim()) {
@@ -2850,11 +2859,11 @@ export default function CricketScoring({
             ...prev,
             [bKey]: {
               name: bowler.name.trim(),
-              overs: bowler.overs !== undefined ? Math.max(bowler.overs, ex?.overs ?? 0) : (ex?.overs ?? 0),
+              overs: bowler.overs !== undefined ? Math.max(currBowlerOvers, ex?.overs ?? 0) : (ex?.overs ?? 0),
               ballsInOver: updatedBowlerBalls,
-              maidens: bowler.maidens !== undefined ? Math.max(bowler.maidens, ex?.maidens ?? 0) : (ex?.maidens ?? 0),
+              maidens: bowler.maidens !== undefined ? Math.max(currBowlerMaidens, ex?.maidens ?? 0) : (ex?.maidens ?? 0),
               runs: Math.max(updatedBowlerRuns, ex?.runs ?? 0),
-              wickets: bowler.wickets !== undefined ? Math.max(bowler.wickets, ex?.wickets ?? 0) : (ex?.wickets ?? 0),
+              wickets: Math.max(currBowlerWickets, ex?.wickets ?? 0),
               avatar: bowler.avatar || ex?.avatar,
             },
           };
@@ -2933,6 +2942,9 @@ export default function CricketScoring({
         // The striker is credited with the runs completed and the ball faced;
         // a run-out non-striker gets neither.
         const isStrikerOut = targetIdx === safeStrikerIdx;
+        const finalDismissedRuns = dismissedPlayer.runs + (isStrikerOut ? runsCompleted : 0);
+        const finalDismissedBalls = dismissedPlayer.balls + (isStrikerOut ? 1 : 0);
+
         setDismissedBatsmen(prev => [
           ...prev,
           {
@@ -2942,12 +2954,26 @@ export default function CricketScoring({
             dismissalDescription: dismissalDesc,
             fielder: fielderName,
             bowler: bowler.name,
-            runs: dismissedPlayer.runs + (isStrikerOut ? runsCompleted : 0),
-            balls: dismissedPlayer.balls + (isStrikerOut ? 1 : 0),
-            fours: dismissedPlayer.fours,
-            sixes: dismissedPlayer.sixes,
+            runs: finalDismissedRuns,
+            balls: finalDismissedBalls,
+            fours: dismissedPlayer.fours || 0,
+            sixes: dismissedPlayer.sixes || 0,
           }
         ]);
+
+        // Keep master innings archive in sync with dismissed player's final runs & balls
+        const dKey = dismissedPlayer.name.trim().toLowerCase();
+        setInningsBatsmenArchive(prev => ({
+          ...prev,
+          [dKey]: {
+            name: dismissedPlayer.name.trim(),
+            runs: finalDismissedRuns,
+            balls: finalDismissedBalls,
+            fours: dismissedPlayer.fours || 0,
+            sixes: dismissedPlayer.sixes || 0,
+            avatar: dismissedPlayer.avatar || prev[dKey]?.avatar,
+          },
+        }));
       }
 
       setBatsmen(prev =>
@@ -2986,16 +3012,24 @@ export default function CricketScoring({
         setB2Sixes('0');
       }
 
-      const updatedWicketBowlerRuns = (bowler.runs || 0) + runsCompleted;
-      const updatedWicketBowlerBalls = (bowler.ballsInOver || 0) + 1;
-      const updatedWicketBowlerWkts = (bowler.wickets || 0) + (creditBowler ? 1 : 0);
+      const currBowlerOvers = typeof bowler.overs === 'number' ? bowler.overs : (parseInt(bowler.overs as any) || 0);
+      const currBowlerBalls = typeof bowler.ballsInOver === 'number' ? bowler.ballsInOver : (parseInt(bowler.ballsInOver as any) || 0);
+      const currBowlerRuns = typeof bowler.runs === 'number' ? bowler.runs : (parseInt(bowler.runs as any) || 0);
+      const currBowlerWkts = typeof bowler.wickets === 'number' ? bowler.wickets : (parseInt(bowler.wickets as any) || 0);
+      const currBowlerMaidens = typeof bowler.maidens === 'number' ? bowler.maidens : (parseInt(bowler.maidens as any) || 0);
+
+      const updatedWicketBowlerRuns = currBowlerRuns + runsCompleted;
+      const updatedWicketBowlerBalls = currBowlerBalls + 1;
+      const updatedWicketBowlerWkts = currBowlerWkts + (creditBowler ? 1 : 0);
       setBowler(prev => ({
         ...prev,
-        ballsInOver: prev.ballsInOver + 1,
+        overs: typeof prev.overs === 'number' ? prev.overs : (parseInt(prev.overs as any) || 0),
+        ballsInOver: (typeof prev.ballsInOver === 'number' ? prev.ballsInOver : (parseInt(prev.ballsInOver as any) || 0)) + 1,
         // Runs conceded still count against the bowler even on a run out.
-        runs: (prev.runs || 0) + runsCompleted,
+        runs: (typeof prev.runs === 'number' ? prev.runs : (parseInt(prev.runs as any) || 0)) + runsCompleted,
         // Run outs & retirements are not the bowler's wicket.
-        wickets: creditBowler ? (prev.wickets || 0) + 1 : (prev.wickets || 0),
+        wickets: (typeof prev.wickets === 'number' ? prev.wickets : (parseInt(prev.wickets as any) || 0)) + (creditBowler ? 1 : 0),
+        maidens: typeof prev.maidens === 'number' ? prev.maidens : (parseInt(prev.maidens as any) || 0),
       }));
 
       if (bowler.name && bowler.name.trim()) {
@@ -3006,9 +3040,9 @@ export default function CricketScoring({
             ...prev,
             [bKey]: {
               name: bowler.name.trim(),
-              overs: bowler.overs !== undefined ? Math.max(bowler.overs, ex?.overs ?? 0) : (ex?.overs ?? 0),
+              overs: bowler.overs !== undefined ? Math.max(currBowlerOvers, ex?.overs ?? 0) : (ex?.overs ?? 0),
               ballsInOver: updatedWicketBowlerBalls,
-              maidens: bowler.maidens !== undefined ? Math.max(bowler.maidens, ex?.maidens ?? 0) : (ex?.maidens ?? 0),
+              maidens: bowler.maidens !== undefined ? Math.max(currBowlerMaidens, ex?.maidens ?? 0) : (ex?.maidens ?? 0),
               runs: Math.max(updatedWicketBowlerRuns, ex?.runs ?? 0),
               wickets: Math.max(updatedWicketBowlerWkts, ex?.wickets ?? 0),
               avatar: bowler.avatar || ex?.avatar,
@@ -3140,12 +3174,21 @@ export default function CricketScoring({
       setLastWasNoBall(false);
     }
 
-    const updatedExtraBowlerRuns = (bowler.runs || 0) + runCount;
-    const updatedExtraBowlerBalls = isLegal ? (bowler.ballsInOver || 0) + 1 : (bowler.ballsInOver || 0);
+    const currBowlerOvers = typeof bowler.overs === 'number' ? bowler.overs : (parseInt(bowler.overs as any) || 0);
+    const currBowlerBalls = typeof bowler.ballsInOver === 'number' ? bowler.ballsInOver : (parseInt(bowler.ballsInOver as any) || 0);
+    const currBowlerRuns = typeof bowler.runs === 'number' ? bowler.runs : (parseInt(bowler.runs as any) || 0);
+    const currBowlerWkts = typeof bowler.wickets === 'number' ? bowler.wickets : (parseInt(bowler.wickets as any) || 0);
+    const currBowlerMaidens = typeof bowler.maidens === 'number' ? bowler.maidens : (parseInt(bowler.maidens as any) || 0);
+
+    const updatedExtraBowlerRuns = currBowlerRuns + runCount;
+    const updatedExtraBowlerBalls = isLegal ? currBowlerBalls + 1 : currBowlerBalls;
     setBowler(prev => ({
       ...prev,
-      runs: (prev.runs || 0) + runCount,
-      ballsInOver: isLegal ? (prev.ballsInOver || 0) + 1 : (prev.ballsInOver || 0),
+      overs: typeof prev.overs === 'number' ? prev.overs : (parseInt(prev.overs as any) || 0),
+      runs: (typeof prev.runs === 'number' ? prev.runs : (parseInt(prev.runs as any) || 0)) + runCount,
+      ballsInOver: (typeof prev.ballsInOver === 'number' ? prev.ballsInOver : (parseInt(prev.ballsInOver as any) || 0)) + (isLegal ? 1 : 0),
+      wickets: typeof prev.wickets === 'number' ? prev.wickets : (parseInt(prev.wickets as any) || 0),
+      maidens: typeof prev.maidens === 'number' ? prev.maidens : (parseInt(prev.maidens as any) || 0),
     }));
 
     if (bowler.name && bowler.name.trim()) {
@@ -3156,11 +3199,11 @@ export default function CricketScoring({
           ...prev,
           [bKey]: {
             name: bowler.name.trim(),
-            overs: bowler.overs !== undefined ? Math.max(bowler.overs, ex?.overs ?? 0) : (ex?.overs ?? 0),
+            overs: bowler.overs !== undefined ? Math.max(currBowlerOvers, ex?.overs ?? 0) : (ex?.overs ?? 0),
             ballsInOver: updatedExtraBowlerBalls,
-            maidens: bowler.maidens !== undefined ? Math.max(bowler.maidens, ex?.maidens ?? 0) : (ex?.maidens ?? 0),
+            maidens: bowler.maidens !== undefined ? Math.max(currBowlerMaidens, ex?.maidens ?? 0) : (ex?.maidens ?? 0),
             runs: Math.max(updatedExtraBowlerRuns, ex?.runs ?? 0),
-            wickets: bowler.wickets !== undefined ? Math.max(bowler.wickets, ex?.wickets ?? 0) : (ex?.wickets ?? 0),
+            wickets: Math.max(currBowlerWkts, ex?.wickets ?? 0),
             avatar: bowler.avatar || ex?.avatar,
           },
         };
