@@ -2483,6 +2483,28 @@ export default function CricketScoring({
     // Filter out from yet to bat list
     setYetToBatBatsmen(prev => prev.filter(p => (typeof p === 'string' ? p : p.name).toLowerCase() !== nameLower));
 
+    // Sync player into batting squad and ensure removal from bowling squad
+    const isTeamABat = (battingTeamName || teamA).trim().toLowerCase() === teamA.trim().toLowerCase();
+    const newBatPlayer: Player = {
+      id: `p_${Date.now()}_${nameLower.replace(/\s+/g, '_')}`,
+      name: trimmed,
+      position: 'Batsman',
+      skillLevel: 'Intermediate',
+    };
+    if (isTeamABat) {
+      setTeamASquad(prev => {
+        if (prev.some(p => (typeof p === 'string' ? p : p.name).trim().toLowerCase() === nameLower)) return prev;
+        return [...prev, newBatPlayer];
+      });
+      setTeamBSquad(prev => prev.filter(p => (typeof p === 'string' ? p : p.name).trim().toLowerCase() !== nameLower));
+    } else {
+      setTeamBSquad(prev => {
+        if (prev.some(p => (typeof p === 'string' ? p : p.name).trim().toLowerCase() === nameLower)) return prev;
+        return [...prev, newBatPlayer];
+      });
+      setTeamASquad(prev => prev.filter(p => (typeof p === 'string' ? p : p.name).trim().toLowerCase() !== nameLower));
+    }
+
     const b1Valid = batsmen[0] && batsmen[0].name && batsmen[0].name.trim() !== '' && batsmen[0].name.trim() !== 'Batsman 1';
     const b2Valid = batsmen[1] && batsmen[1].name && batsmen[1].name.trim() !== '' && batsmen[1].name.trim() !== 'Batsman 2';
 

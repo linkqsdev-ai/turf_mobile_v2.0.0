@@ -254,7 +254,13 @@ export function PlayerSelectionModal({
         teamB,
       });
 
-      setCurrentBattingTeam(propBattingTeam || labelA);
+      const effectiveBatTeam = propBattingTeam || labelA;
+      const isPropBatTeamA = effectiveBatTeam.trim().toLowerCase() === labelA.trim().toLowerCase();
+      setCurrentBattingTeam(effectiveBatTeam);
+
+      const batSquad = isPropBatTeamA ? teamA : teamB;
+      const bowlSquad = isPropBatTeamA ? teamB : teamA;
+
       const sOut = (dismissedPlayers || []).find(
         (d) => d && d.name && d.name.trim().toLowerCase() === activeStrikerName.trim().toLowerCase() &&
                d.status !== 'Retired Hurt' && d.status !== 'Retired Not Out' && d.dismissalType !== 'retired_hurt'
@@ -263,11 +269,17 @@ export function PlayerSelectionModal({
         (d) => d && d.name && d.name.trim().toLowerCase() === activeNonStrikerName.trim().toLowerCase() &&
                d.status !== 'Retired Hurt' && d.status !== 'Retired Not Out' && d.dismissalType !== 'retired_hurt'
       );
-      setStrikerName(sOut ? '' : activeStrikerName);
+
+      // Only assign striker/nonStriker if they belong to batting team or squad is empty
+      const sValid = !sOut && (batSquad.length === 0 || batSquad.some((p) => p.name.trim().toLowerCase() === activeStrikerName.trim().toLowerCase()));
+      const nsValid = !nsOut && (batSquad.length === 0 || batSquad.some((p) => p.name.trim().toLowerCase() === activeNonStrikerName.trim().toLowerCase()));
+      const bowlValid = bowlSquad.length === 0 || bowlSquad.some((p) => p.name.trim().toLowerCase() === activeBowlerName.trim().toLowerCase());
+
+      setStrikerName(sValid ? activeStrikerName : '');
       setNonStrikerName(
-        nsOut || activeNonStrikerName.trim().toLowerCase() === activeStrikerName.trim().toLowerCase() ? '' : activeNonStrikerName
+        nsValid && activeNonStrikerName.trim().toLowerCase() !== activeStrikerName.trim().toLowerCase() ? activeNonStrikerName : ''
       );
-      setBowlerName(activeBowlerName);
+      setBowlerName(bowlValid ? activeBowlerName : '');
 
       const initRetired: { name: string; type: 'Retired Hurt' | 'Retired Out' }[] = [];
       (dismissedPlayers || []).forEach((d) => {
@@ -364,10 +376,14 @@ export function PlayerSelectionModal({
       [to]: strictDedupe([...(prev[to] || []).filter((p) => p.name.trim().toLowerCase() !== playerKey), player]),
     }));
 
-    if (player.name.toLowerCase() === strikerName.toLowerCase()) setStrikerName('');
-    if (player.name.toLowerCase() === nonStrikerName.toLowerCase()) setNonStrikerName('');
-    if (player.name.toLowerCase() === bowlerName.toLowerCase()) setBowlerName('');
-  }, [strikerName, nonStrikerName, bowlerName]);
+    if (to !== batTeamBucket) {
+      if (player.name.toLowerCase() === strikerName.toLowerCase()) setStrikerName('');
+      if (player.name.toLowerCase() === nonStrikerName.toLowerCase()) setNonStrikerName('');
+    }
+    if (to !== bowlTeamBucket) {
+      if (player.name.toLowerCase() === bowlerName.toLowerCase()) setBowlerName('');
+    }
+  }, [strikerName, nonStrikerName, bowlerName, batTeamBucket, bowlTeamBucket]);
 
   const handleDragStart = useCallback((player: Player, _from: BucketId) => {
     measureDropZones();
@@ -612,12 +628,25 @@ export function PlayerSelectionModal({
       setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot bat!`);
       return;
     }
+    const pKey = player.name.trim().toLowerCase();
     setStrikerName(player.name);
     // Strictly clear non-striker if same player
-    if (nonStrikerName.toLowerCase() === player.name.toLowerCase()) {
+    if (nonStrikerName.toLowerCase() === pKey) {
       setNonStrikerName('');
     }
-    setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
+    setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== pKey));
+
+    // Ensure player is placed inside the batting team bucket and removed from master & bowling team
+    setBuckets((prev) => ({
+      master: (prev.master || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+      teamA: isTeamABatting
+        ? strictDedupe([...(prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
+        : (prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+      teamB: !isTeamABatting
+        ? strictDedupe([...(prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
+        : (prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+    }));
+
     if (onSetStriker) onSetStriker(player);
   };
 
@@ -627,17 +656,43 @@ export function PlayerSelectionModal({
       setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot bat!`);
       return;
     }
+    const pKey = player.name.trim().toLowerCase();
     setNonStrikerName(player.name);
     // Strictly clear striker if same player
-    if (strikerName.toLowerCase() === player.name.toLowerCase()) {
+    if (strikerName.toLowerCase() === pKey) {
       setStrikerName('');
     }
-    setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
+    setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== pKey));
+
+    // Ensure player is placed inside the batting team bucket and removed from master & bowling team
+    setBuckets((prev) => ({
+      master: (prev.master || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+      teamA: isTeamABatting
+        ? strictDedupe([...(prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
+        : (prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+      teamB: !isTeamABatting
+        ? strictDedupe([...(prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
+        : (prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+    }));
+
     if (onSetNonStriker) onSetNonStriker(player);
   };
 
   const handleSetBowler = (player: Player) => {
+    const pKey = player.name.trim().toLowerCase();
     setBowlerName(player.name);
+
+    // Ensure player is placed inside the bowling team bucket and removed from master & batting team
+    setBuckets((prev) => ({
+      master: (prev.master || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+      teamA: !isTeamABatting
+        ? strictDedupe([...(prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
+        : (prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+      teamB: isTeamABatting
+        ? strictDedupe([...(prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
+        : (prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+    }));
+
     if (onSetBowler) onSetBowler(player);
   };
 
@@ -2118,13 +2173,56 @@ function PlayerActionModal({
 
             {bucketId === 'master' && (
               <>
+                {!outInfo.isOut && (
+                  <>
+                    <Pressable
+                      onPress={() => {
+                        onSetStriker(player);
+                        onClose();
+                      }}
+                      style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                    >
+                      <Ionicons name="flash-outline" size={15} color={theme.primary} />
+                      <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                        Set as Striker ({isTeamABatting ? labelA : labelB})
+                      </ThemedText>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => {
+                        onSetNonStriker(player);
+                        onClose();
+                      }}
+                      style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                    >
+                      <Ionicons name="walk-outline" size={15} color={theme.primary} />
+                      <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                        Set as Non-Striker ({isTeamABatting ? labelA : labelB})
+                      </ThemedText>
+                    </Pressable>
+                  </>
+                )}
+
+                <Pressable
+                  onPress={() => {
+                    onSetBowler(player);
+                    onClose();
+                  }}
+                  style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                >
+                  <Ionicons name="baseball-outline" size={15} color={theme.primary} />
+                  <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                    Set as Bowler ({!isTeamABatting ? labelA : labelB})
+                  </ThemedText>
+                </Pressable>
+
                 <Pressable
                   onPress={() => onMoveToTeam(player, 'master', 'teamA')}
                   style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
                 >
                   <Ionicons name="arrow-forward" size={15} color={theme.primary} />
                   <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    Assign to {labelA}
+                    Assign to {labelA} ({isTeamABatting ? '🏏 Batting' : '🎯 Bowling'})
                   </ThemedText>
                 </Pressable>
                 <Pressable
@@ -2133,7 +2231,7 @@ function PlayerActionModal({
                 >
                   <Ionicons name="arrow-forward" size={15} color={textPrimary} />
                   <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    Assign to {labelB}
+                    Assign to {labelB} ({!isTeamABatting ? '🏏 Batting' : '🎯 Bowling'})
                   </ThemedText>
                 </Pressable>
               </>
