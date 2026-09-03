@@ -7807,21 +7807,28 @@ export default function CricketScoring({
         bowlerStats={(() => {
           const map: Record<string, { overs: string; maidens: number; runs: number; wickets: number; econ: string }> = {};
           const addBowl = (b: any) => {
-            if (!b || !b.name || !b.name.trim()) return;
-            const totalLegalBalls = (b.overs || 0) * 6 + (b.ballsInOver || 0);
-            if (totalLegalBalls === 0 && (!b.runs || b.runs === 0)) return;
-            const oversStr = `${b.overs || 0}.${b.ballsInOver || 0}`;
-            const econ = totalLegalBalls > 0 ? ((b.runs || 0) / (totalLegalBalls / 6)).toFixed(2) : '0.00';
-            map[b.name.trim().toLowerCase()] = {
+            if (!b) return;
+            const bName = typeof b === 'string' ? b : b.name;
+            if (!bName || !bName.trim()) return;
+            const bOvers = typeof b === 'string' ? 0 : (b.overs || 0);
+            const bBalls = typeof b === 'string' ? 0 : (b.ballsInOver || 0);
+            const bRuns = typeof b === 'string' ? 0 : (b.runs || 0);
+            const bWickets = typeof b === 'string' ? 0 : (b.wickets || 0);
+            const bMaidens = typeof b === 'string' ? 0 : (b.maidens || 0);
+            const totalLegalBalls = bOvers * 6 + bBalls;
+            if (totalLegalBalls === 0 && bRuns === 0 && bWickets === 0) return;
+            const oversStr = `${bOvers}.${bBalls}`;
+            const econ = totalLegalBalls > 0 ? (bRuns / (totalLegalBalls / 6)).toFixed(2) : '0.00';
+            map[bName.trim().toLowerCase()] = {
               overs: oversStr,
-              maidens: b.maidens || 0,
-              runs: b.runs || 0,
-              wickets: b.wickets || 0,
+              maidens: bMaidens,
+              runs: bRuns,
+              wickets: bWickets,
               econ,
             };
           };
-          if (bowler && bowler.name) addBowl(bowler);
           (otherBowlers || []).forEach(b => addBowl(b));
+          if (bowler && bowler.name) addBowl(bowler);
           return map;
         })()}
         dismissedPlayers={dismissedBatsmen}
@@ -7855,9 +7862,13 @@ export default function CricketScoring({
         }}
         onSetBowler={(player) => {
           const pNameKey = player.name.trim().toLowerCase();
+          if (bowler?.name && bowler.name.trim().toLowerCase() === pNameKey) {
+            return;
+          }
+
           const prevBowlRecord = (otherBowlers || []).find(b => b && b.name && b.name.trim().toLowerCase() === pNameKey);
           
-          if (bowler?.name && bowler.name.trim().toLowerCase() !== pNameKey) {
+          if (bowler?.name && bowler.name.trim()) {
             setOtherBowlers(prev => {
               const filtered = (prev || []).filter(b => b && b.name && b.name.trim().toLowerCase() !== bowler.name.trim().toLowerCase());
               return [...filtered, bowler];
@@ -7881,6 +7892,12 @@ export default function CricketScoring({
           showToast('info', `${player.name} is now bowling`);
         }}
         onRetireBowler={(player) => {
+          if (bowler?.name) {
+            setOtherBowlers(prev => {
+              const filtered = (prev || []).filter(b => b && b.name && b.name.trim().toLowerCase() !== bowler.name.trim().toLowerCase());
+              return [...filtered, bowler];
+            });
+          }
           setBowler(prev => ({ ...prev, name: '', avatar: undefined }));
           setBowlName('');
           showToast('info', `${player.name} stepped down from bowling`);
@@ -7916,9 +7933,16 @@ export default function CricketScoring({
           // If striker was explicitly set in modal
           if (meta?.strikerName) {
             const b1 = currentBatList.find(p => p.name.toLowerCase() === meta.strikerName?.toLowerCase()) || { name: meta.strikerName };
+            const b1Key = b1.name.trim().toLowerCase();
+            const existingBat = batsmen.find(b => b && b.name && b.name.trim().toLowerCase() === b1Key);
+            const initialRuns = existingBat ? (existingBat.runs || 0) : (inningsBatsmenArchive[b1Key]?.runs || 0);
+            const initialBalls = existingBat ? (existingBat.balls || 0) : (inningsBatsmenArchive[b1Key]?.balls || 0);
+            const initialFours = existingBat ? (existingBat.fours || 0) : (inningsBatsmenArchive[b1Key]?.fours || 0);
+            const initialSixes = existingBat ? (existingBat.sixes || 0) : (inningsBatsmenArchive[b1Key]?.sixes || 0);
+
             setB1Name(b1.name);
             setBatsmen(prev => [
-              { ...(prev[0] || {}), name: b1.name, active: true, runs: prev[0]?.runs || 0, balls: prev[0]?.balls || 0, fours: prev[0]?.fours || 0, sixes: prev[0]?.sixes || 0, avatar: (b1 as any).avatarUrl || prev[0]?.avatar },
+              { ...(prev[0] || {}), name: b1.name, active: true, runs: initialRuns, balls: initialBalls, fours: initialFours, sixes: initialSixes, avatar: (b1 as any).avatarUrl || prev[0]?.avatar },
               prev[1] || { name: '', active: false, runs: 0, balls: 0, fours: 0, sixes: 0 },
             ]);
           }
@@ -7926,10 +7950,17 @@ export default function CricketScoring({
           // If non-striker was explicitly set in modal
           if (meta?.nonStrikerName) {
             const b2 = currentBatList.find(p => p.name.toLowerCase() === meta.nonStrikerName?.toLowerCase()) || { name: meta.nonStrikerName };
+            const b2Key = b2.name.trim().toLowerCase();
+            const existingBat = batsmen.find(b => b && b.name && b.name.trim().toLowerCase() === b2Key);
+            const initialRuns = existingBat ? (existingBat.runs || 0) : (inningsBatsmenArchive[b2Key]?.runs || 0);
+            const initialBalls = existingBat ? (existingBat.balls || 0) : (inningsBatsmenArchive[b2Key]?.balls || 0);
+            const initialFours = existingBat ? (existingBat.fours || 0) : (inningsBatsmenArchive[b2Key]?.fours || 0);
+            const initialSixes = existingBat ? (existingBat.sixes || 0) : (inningsBatsmenArchive[b2Key]?.sixes || 0);
+
             setB2Name(b2.name);
             setBatsmen(prev => [
               prev[0] || { name: '', active: true, runs: 0, balls: 0, fours: 0, sixes: 0 },
-              { ...(prev[1] || {}), name: b2.name, active: false, runs: prev[1]?.runs || 0, balls: prev[1]?.balls || 0, fours: prev[1]?.fours || 0, sixes: prev[1]?.sixes || 0, avatar: (b2 as any).avatarUrl || prev[1]?.avatar },
+              { ...(prev[1] || {}), name: b2.name, active: false, runs: initialRuns, balls: initialBalls, fours: initialFours, sixes: initialSixes, avatar: (b2 as any).avatarUrl || prev[1]?.avatar },
             ]);
           }
 
@@ -7937,21 +7968,23 @@ export default function CricketScoring({
           if (meta?.bowlerName) {
             const b = currentBowlList.find(p => p.name.toLowerCase() === meta.bowlerName?.toLowerCase()) || { name: meta.bowlerName };
             const pNameKey = b.name.trim().toLowerCase();
-            const prevBowlRecord = (otherBowlers || []).find(ob => ob && ob.name && ob.name.trim().toLowerCase() === pNameKey);
-            if (prevBowlRecord) {
-              setBowler(prevBowlRecord);
-            } else if (bowler.name.trim().toLowerCase() !== pNameKey) {
-              setBowler({
-                name: b.name,
-                overs: 0,
-                ballsInOver: 0,
-                runs: 0,
-                wickets: 0,
-                maidens: 0,
-                avatar: (b as any).avatarUrl,
-              });
+            if (!bowler.name || bowler.name.trim().toLowerCase() !== pNameKey) {
+              const prevBowlRecord = (otherBowlers || []).find(ob => ob && ob.name && ob.name.trim().toLowerCase() === pNameKey);
+              if (prevBowlRecord) {
+                setBowler(prevBowlRecord);
+              } else {
+                setBowler({
+                  name: b.name,
+                  overs: 0,
+                  ballsInOver: 0,
+                  runs: 0,
+                  wickets: 0,
+                  maidens: 0,
+                  avatar: (b as any).avatarUrl,
+                });
+              }
+              setBowlName(b.name);
             }
-            setBowlName(b.name);
           }
 
           // If active batsmen are empty, auto-assign from the batting squad
