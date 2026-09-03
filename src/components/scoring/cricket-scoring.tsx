@@ -28,7 +28,7 @@ import { saveMatchToOwnBoard } from '@/store/own-board-store';
 import { exportScoreSheetPDF } from '@/services/score-sheet-pdf';
 import { registerFoFPlayer } from '@/services/fof-network';
 import { CoinTossModal } from '@/components/coin-toss-modal';
-import { PlayerSelectionModal } from '@/components/matches/PlayerSelectionModal';
+import { PlayerSelectionModal, strictDedupe } from '@/components/matches/PlayerSelectionModal';
 import { Player } from '@/store/match-store';
 import {
   ChangePlayerModal,
@@ -1424,6 +1424,10 @@ export default function CricketScoring({
   const [yetToBatBatsmen, setYetToBatBatsmen] = useState<any[]>([]);
   const [otherBowlers, setOtherBowlers] = useState<any[]>([]);
 
+  // Master persistent squad lists for Team A and Team B across both innings
+  const [teamASquad, setTeamASquad] = useState<Player[]>([]);
+  const [teamBSquad, setTeamBSquad] = useState<Player[]>([]);
+
   // Live Innings Bowler Master Archive: Keeps track of each bowler's cumulative overs/balls/maidens/runs/wickets this innings
   const [inningsBowlersArchive, setInningsBowlersArchive] = useState<
     Record<string, { name: string; overs: number; ballsInOver: number; maidens: number; runs: number; wickets: number; avatar?: string }>
@@ -1457,6 +1461,112 @@ export default function CricketScoring({
   }, [bowler.name, bowler.overs, bowler.ballsInOver, bowler.maidens, bowler.runs, bowler.wickets, bowler.avatar]);
 
   const { teams, addPlayerToTeam } = useMatchStore();
+
+  // Initialize and merge master team squads from stored teams and selected lineups
+  React.useEffect(() => {
+    const teamAObj = teams.find(t => t.name.toLowerCase() === teamA.toLowerCase());
+    const teamBObj = teams.find(t => t.name.toLowerCase() === teamB.toLowerCase());
+    const xiA = selectedLineups[(teamA || '').toLowerCase()] || teamAObj?.players || [];
+    const xiB = selectedLineups[(teamB || '').toLowerCase()] || teamBObj?.players || [];
+
+    setTeamASquad(prev => {
+      const seen = new Set<string>();
+      const out: Player[] = [];
+      const add = (p: any) => {
+        const pName = typeof p === 'string' ? p : p?.name;
+        if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
+          seen.add(pName.trim().toLowerCase());
+          out.push(
+            typeof p === 'string'
+              ? { id: `ta_${pName}`, name: pName.trim(), position: 'Batsman', skillLevel: 'Intermediate' }
+              : {
+                  id: p.id || `ta_${pName}`,
+                  name: pName.trim(),
+                  phone: p.phone || p.mobile,
+                  avatarUrl: p.avatarUrl || p.avatar,
+                  position: p.position || p.role || 'Batsman',
+                  skillLevel: p.skillLevel || 'Intermediate',
+                }
+          );
+        }
+      };
+      (prev || []).forEach(add);
+      (xiA || []).forEach(add);
+      return out;
+    });
+
+    setTeamBSquad(prev => {
+      const seen = new Set<string>();
+      const out: Player[] = [];
+      const add = (p: any) => {
+        const pName = typeof p === 'string' ? p : p?.name;
+        if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
+          seen.add(pName.trim().toLowerCase());
+          out.push(
+            typeof p === 'string'
+              ? { id: `tb_${pName}`, name: pName.trim(), position: 'Bowler', skillLevel: 'Intermediate' }
+              : {
+                  id: p.id || `tb_${pName}`,
+                  name: pName.trim(),
+                  phone: p.phone || p.mobile,
+                  avatarUrl: p.avatarUrl || p.avatar,
+                  position: p.position || p.role || 'Bowler',
+                  skillLevel: p.skillLevel || 'Intermediate',
+                }
+          );
+        }
+      };
+      (prev || []).forEach(add);
+      (xiB || []).forEach(add);
+      return out;
+    });
+  }, [teamA, teamB, teams, selectedLineups]);
+
+  // Canonical player registration helper to keep all squads, FoF network, and bench lists in perfect sync
+  const registerPlayerToSquad = React.useCallback((targetTeam: 'A' | 'B' | string, player: any) => {
+    if (!player || !player.name || !player.name.trim()) return;
+    const pName = player.name.trim();
+    const isTeamA = targetTeam === 'A' || targetTeam.toLowerCase() === teamA.toLowerCase();
+    const actualTeamName = isTeamA ? teamA : teamB;
+    const playerObj: Player = {
+      id: player.id || (isTeamA ? `ta_${pName}` : `tb_${pName}`),
+      name: pName,
+      phone: player.phone || player.mobile,
+      avatarUrl: player.avatarUrl || player.avatar,
+      position: player.position || player.role || 'All-Rounder',
+      skillLevel: player.skillLevel || 'Intermediate',
+    };
+
+    if (isTeamA) {
+      setTeamASquad(prev => strictDedupe([...prev, playerObj]));
+    } else {
+      setTeamBSquad(prev => strictDedupe([...prev, playerObj]));
+    }
+
+    if (typeof addPlayerToTeam === 'function') {
+      addPlayerToTeam(actualTeamName, playerObj);
+    }
+
+    registerFoFPlayer({
+      name: playerObj.name,
+      phone: playerObj.phone,
+      avatar: playerObj.avatarUrl,
+      sport: 'Cricket 🏏',
+    });
+
+    const isTargetBatting = (battingTeamName || teamA).trim().toLowerCase() === actualTeamName.trim().toLowerCase();
+    if (isTargetBatting) {
+      setYetToBatBatsmen(prev => {
+        const exists = prev.some(p => (typeof p === 'string' ? p : p.name).trim().toLowerCase() === pName.toLowerCase());
+        return exists ? prev : [...prev, playerObj];
+      });
+    } else {
+      setOtherBowlers(prev => {
+        const exists = prev.some(p => (typeof p === 'string' ? p : p.name).trim().toLowerCase() === pName.toLowerCase());
+        return exists ? prev : [...prev, playerObj];
+      });
+    }
+  }, [teamA, teamB, battingTeamName, addPlayerToTeam]);
 
   const [showPreRulesModal, setShowPreRulesModal] = useState(false);
   const [currentTotalOvers, setCurrentTotalOvers] = useState<string>(totalOvers);
@@ -1524,7 +1634,7 @@ export default function CricketScoring({
     });
   };
 
-  // Sync squad players from persistent team store on mount or team change
+  // Sync squad players from master team squads or persistent team store on mount
   React.useEffect(() => {
     const currentBatTeam = battingTeamName || teamA;
     const currentBowlTeam = bowlingTeamName || teamB;
@@ -1532,14 +1642,21 @@ export default function CricketScoring({
     const batTeamObj = teams.find(t => t.name.toLowerCase() === currentBatTeam.toLowerCase());
     const bowlTeamObj = teams.find(t => t.name.toLowerCase() === currentBowlTeam.toLowerCase());
 
-    // A pre-match Playing XI wins over the team's full stored roster — that
-    // selection is the whole point of the picker. Falls back to the roster for
-    // sides the user skipped.
-    const batSquad = squadFor(currentBatTeam, batTeamObj?.players);
-    const bowlSquad = squadFor(currentBowlTeam, bowlTeamObj?.players);
-    if (batSquad) setYetToBatBatsmen(batSquad);
-    if (bowlSquad) setOtherBowlers(bowlSquad);
-  }, [battingTeamName, bowlingTeamName, teamA, teamB, teams, currentInnings, squadFor]);
+    const isBatTeamA = currentBatTeam.toLowerCase() === teamA.toLowerCase();
+    const batSquad = (isBatTeamA ? teamASquad : teamBSquad).length > 0
+      ? (isBatTeamA ? teamASquad : teamBSquad)
+      : squadFor(currentBatTeam, batTeamObj?.players);
+    const bowlSquad = (isBatTeamA ? teamBSquad : teamASquad).length > 0
+      ? (isBatTeamA ? teamBSquad : teamASquad)
+      : squadFor(currentBowlTeam, bowlTeamObj?.players);
+
+    if (batSquad && batSquad.length > 0 && yetToBatBatsmen.length === 0 && batsmen.length === 0) {
+      setYetToBatBatsmen(batSquad);
+    }
+    if (bowlSquad && bowlSquad.length > 0 && otherBowlers.length === 0 && (!bowler || !bowler.name)) {
+      setOtherBowlers(bowlSquad);
+    }
+  }, [teamA, teamB, teams, teamASquad, teamBSquad]);
 
   // Computed bench batsmen (including available yet-to-bat squad AND previously batted/retired batsmen who can resume play!)
   const availableBenchBatsmen = React.useMemo(() => {
@@ -1616,6 +1733,21 @@ export default function CricketScoring({
     const seen = new Set<string>();
     const teamAObj = teams.find(t => t.name.toLowerCase() === teamA.toLowerCase());
     const isTeamABatting = (battingTeamName || teamA).trim().toLowerCase() === teamA.trim().toLowerCase();
+
+    // 1. Explicit team A squad
+    (teamASquad || []).forEach((p: any) => {
+      const pName = typeof p === 'string' ? p : p?.name;
+      if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
+        seen.add(pName.trim().toLowerCase());
+        list.push(
+          typeof p === 'string'
+            ? { id: `ta_${pName}`, name: pName.trim(), position: 'Batsman', skillLevel: 'Intermediate' }
+            : p
+        );
+      }
+    });
+
+    // 2. Active, dismissed, or yet-to-bat batsmen / bowlers currently in match
     const currentBatOrBowl = isTeamABatting
       ? [...batsmen, ...dismissedBatsmen, ...yetToBatBatsmen]
       : [bowler, ...otherBowlers];
@@ -1634,6 +1766,26 @@ export default function CricketScoring({
       }
     });
 
+    // 3. Innings archives for team A
+    if (isTeamABatting) {
+      Object.values(inningsBatsmenArchive || {}).forEach((ab: any) => {
+        const pName = ab?.name;
+        if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
+          seen.add(pName.trim().toLowerCase());
+          list.push({ id: `ta_${pName}`, name: pName.trim(), position: 'Batsman', skillLevel: 'Intermediate', avatarUrl: ab.avatar });
+        }
+      });
+    } else {
+      Object.values(inningsBowlersArchive || {}).forEach((ab: any) => {
+        const pName = ab?.name;
+        if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
+          seen.add(pName.trim().toLowerCase());
+          list.push({ id: `ta_${pName}`, name: pName.trim(), position: 'Bowler', skillLevel: 'Intermediate', avatarUrl: ab.avatar });
+        }
+      });
+    }
+
+    // 4. Stored team A roster
     (teamAObj?.players || []).forEach((p: any) => {
       const pName = typeof p === 'string' ? p : p?.name;
       if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
@@ -1648,13 +1800,28 @@ export default function CricketScoring({
       }
     });
     return list;
-  }, [teamA, battingTeamName, batsmen, dismissedBatsmen, yetToBatBatsmen, bowler, otherBowlers, teams]);
+  }, [teamA, battingTeamName, teamASquad, batsmen, dismissedBatsmen, yetToBatBatsmen, bowler, otherBowlers, inningsBatsmenArchive, inningsBowlersArchive, teams]);
 
   const currentPoolB: Player[] = React.useMemo(() => {
     const list: Player[] = [];
     const seen = new Set<string>();
     const teamBObj = teams.find(t => t.name.toLowerCase() === teamB.toLowerCase());
     const isTeamBBatting = (battingTeamName || teamA).trim().toLowerCase() === teamB.trim().toLowerCase();
+
+    // 1. Explicit team B squad
+    (teamBSquad || []).forEach((p: any) => {
+      const pName = typeof p === 'string' ? p : p?.name;
+      if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
+        seen.add(pName.trim().toLowerCase());
+        list.push(
+          typeof p === 'string'
+            ? { id: `tb_${pName}`, name: pName.trim(), position: 'Bowler', skillLevel: 'Intermediate' }
+            : p
+        );
+      }
+    });
+
+    // 2. Active, dismissed, or yet-to-bat batsmen / bowlers currently in match
     const currentBatOrBowl = isTeamBBatting
       ? [...batsmen, ...dismissedBatsmen, ...yetToBatBatsmen]
       : [bowler, ...otherBowlers];
@@ -1673,6 +1840,26 @@ export default function CricketScoring({
       }
     });
 
+    // 3. Innings archives for team B
+    if (isTeamBBatting) {
+      Object.values(inningsBatsmenArchive || {}).forEach((ab: any) => {
+        const pName = ab?.name;
+        if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
+          seen.add(pName.trim().toLowerCase());
+          list.push({ id: `tb_${pName}`, name: pName.trim(), position: 'Batsman', skillLevel: 'Intermediate', avatarUrl: ab.avatar });
+        }
+      });
+    } else {
+      Object.values(inningsBowlersArchive || {}).forEach((ab: any) => {
+        const pName = ab?.name;
+        if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
+          seen.add(pName.trim().toLowerCase());
+          list.push({ id: `tb_${pName}`, name: pName.trim(), position: 'Bowler', skillLevel: 'Intermediate', avatarUrl: ab.avatar });
+        }
+      });
+    }
+
+    // 4. Stored team B roster
     (teamBObj?.players || []).forEach((p: any) => {
       const pName = typeof p === 'string' ? p : p?.name;
       if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
@@ -1687,7 +1874,7 @@ export default function CricketScoring({
       }
     });
     return list;
-  }, [teamB, battingTeamName, batsmen, dismissedBatsmen, yetToBatBatsmen, bowler, otherBowlers, teams]);
+  }, [teamB, battingTeamName, teamBSquad, batsmen, dismissedBatsmen, yetToBatBatsmen, bowler, otherBowlers, inningsBatsmenArchive, inningsBowlersArchive, teams]);
 
   // Computed bench bowlers (strictly excluding current active bowler, active batsmen, dismissed batsmen, and identifying quota full)
   const availableBenchBowlers = React.useMemo(() => {
@@ -3089,8 +3276,13 @@ export default function CricketScoring({
       // Swap squad bench lists
       const teamAObj = teams.find(t => t.name.toLowerCase() === teamA.toLowerCase());
       const teamBObj = teams.find(t => t.name.toLowerCase() === teamB.toLowerCase());
-      const nextBatSquad = squadFor(newBatting, teamBObj?.players);
-      const nextBowlSquad = squadFor(newBowling, teamAObj?.players);
+      const isNewBatTeamA = newBatting.toLowerCase() === teamA.toLowerCase();
+      const nextBatSquad = (isNewBatTeamA ? teamASquad : teamBSquad).length > 0
+        ? (isNewBatTeamA ? teamASquad : teamBSquad)
+        : squadFor(newBatting, isNewBatTeamA ? teamAObj?.players : teamBObj?.players);
+      const nextBowlSquad = (isNewBatTeamA ? teamBSquad : teamASquad).length > 0
+        ? (isNewBatTeamA ? teamBSquad : teamASquad)
+        : squadFor(newBowling, isNewBatTeamA ? teamBObj?.players : teamAObj?.players);
       if (nextBatSquad) setYetToBatBatsmen(nextBatSquad);
       if (nextBowlSquad) setOtherBowlers(nextBowlSquad);
 
