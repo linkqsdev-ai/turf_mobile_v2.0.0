@@ -135,6 +135,7 @@ const avatarSourceFor = (player: Player) => {
 
 export interface PlayerSelectionModalProps {
   visible: boolean;
+  isInitialSetup?: boolean;
   teamAName: string;
   teamBName: string;
   teamAMascot?: string;
@@ -175,6 +176,7 @@ export interface PlayerSelectionModalProps {
 
 export function PlayerSelectionModal({
   visible,
+  isInitialSetup,
   teamAName,
   teamBName,
   teamAMascot,
@@ -201,6 +203,8 @@ export function PlayerSelectionModal({
   onRetireBowler,
 }: PlayerSelectionModalProps) {
   const { theme, canvas, cardBg, zoneBg, borderColor, textPrimary, textSecondary, textMuted } = usePalette();
+
+  const isInitialSetupMode = isInitialSetup ?? (!propBattingTeam && !activeStrikerName && !activeBowlerName);
 
   const labelA = (teamAName || '').trim() || 'Team A';
   const labelB = (teamBName || '').trim() || 'Team B';
@@ -769,23 +773,29 @@ export function PlayerSelectionModal({
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
-              <ThemedText style={[styles.title, { color: textPrimary }]}>Manage Squads</ThemedText>
+              <ThemedText style={[styles.title, { color: textPrimary }]}>
+                {isInitialSetupMode ? 'Select Playing XI' : 'Manage Squads'}
+              </ThemedText>
               <ThemedText style={[styles.subtitle, { color: textSecondary }]} numberOfLines={1}>
-                Drag directly into slots or tap player for actions
+                {isInitialSetupMode
+                  ? 'Assign players to both teams · hold to drag or tap to assign'
+                  : 'Drag directly into slots or tap player for actions'}
               </ThemedText>
             </View>
 
-            {/* Swap Sides Toggle */}
-            <Pressable
-              onPress={handleSwapBatBowl}
-              hitSlop={6}
-              style={[styles.swapBatBowlBtn, { backgroundColor: cardBg, borderColor }]}
-            >
-              <Ionicons name="swap-horizontal" size={13} color={theme.primary} />
-              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
-                Swap Sides
-              </ThemedText>
-            </Pressable>
+            {/* Swap Sides Toggle - In-Match Only */}
+            {!isInitialSetupMode && (
+              <Pressable
+                onPress={handleSwapBatBowl}
+                hitSlop={6}
+                style={[styles.swapBatBowlBtn, { backgroundColor: cardBg, borderColor }]}
+              >
+                <Ionicons name="swap-horizontal" size={13} color={theme.primary} />
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
+                  Swap Sides
+                </ThemedText>
+              </Pressable>
+            )}
 
             <Pressable
               onPress={handleClose}
@@ -806,7 +816,7 @@ export function PlayerSelectionModal({
               cardBg={cardBg}
               borderColor={borderColor}
               textPrimary={textPrimary}
-              roleBadge={isTeamABatting ? '🏏 Batting' : '🎯 Bowling'}
+              roleBadge={isInitialSetupMode ? undefined : (isTeamABatting ? '🏏 Batting' : '🎯 Bowling')}
               theme={theme}
             />
             <LegendPill
@@ -816,7 +826,7 @@ export function PlayerSelectionModal({
               cardBg={cardBg}
               borderColor={borderColor}
               textPrimary={textPrimary}
-              roleBadge={!isTeamABatting ? '🏏 Batting' : '🎯 Bowling'}
+              roleBadge={isInitialSetupMode ? undefined : (!isTeamABatting ? '🏏 Batting' : '🎯 Bowling')}
               theme={theme}
             />
           </View>
@@ -1129,6 +1139,7 @@ export function PlayerSelectionModal({
               otherTeamCode={codeB}
               players={buckets.teamA}
               isBatting={isTeamABatting}
+              isInitialSetup={isInitialSetupMode}
               strikerName={strikerName}
               nonStrikerName={nonStrikerName}
               bowlerName={bowlerName}
@@ -1168,6 +1179,7 @@ export function PlayerSelectionModal({
               otherTeamCode={codeA}
               players={buckets.teamB}
               isBatting={!isTeamABatting}
+              isInitialSetup={isInitialSetupMode}
               strikerName={strikerName}
               nonStrikerName={nonStrikerName}
               bowlerName={bowlerName}
@@ -1198,9 +1210,9 @@ export function PlayerSelectionModal({
 
           {/* Clean Footer Bar */}
           <View style={[styles.footer, { backgroundColor: cardBg, borderTopColor: borderColor }]}>
-            <Pressable onPress={onSkip} style={styles.skipBtn}>
+            <Pressable onPress={isInitialSetupMode ? onSkip : handleClose} style={styles.skipBtn}>
               <ThemedText style={[styles.skipText, { color: textSecondary }]}>
-                Skip
+                {isInitialSetupMode ? 'Skip for now' : 'Close'}
               </ThemedText>
             </Pressable>
             <Pressable
@@ -1208,7 +1220,13 @@ export function PlayerSelectionModal({
               style={[styles.confirmBtn, { backgroundColor: theme.primary }]}
             >
               <ThemedText style={styles.confirmText}>
-                {totalAssigned > 0 ? `Apply Lineup (${totalAssigned})` : 'Continue'}
+                {isInitialSetupMode
+                  ? totalAssigned > 0
+                    ? `Continue to Match (${totalAssigned})`
+                    : 'Continue to Match'
+                  : totalAssigned > 0
+                  ? `Apply Lineup (${totalAssigned})`
+                  : 'Confirm & Resume'}
               </ThemedText>
             </Pressable>
           </View>
@@ -1237,6 +1255,7 @@ export function PlayerSelectionModal({
               textPrimary={textPrimary}
               textSecondary={textSecondary}
               textMuted={textMuted}
+              isInitialSetup={isInitialSetupMode}
               isTeamABatting={isTeamABatting}
               labelA={labelA}
               labelB={labelB}
@@ -1321,6 +1340,7 @@ function TeamZoneCard({
   teamMascot,
   players,
   isBatting,
+  isInitialSetup,
   strikerName,
   nonStrikerName,
   bowlerName,
@@ -1356,6 +1376,7 @@ function TeamZoneCard({
   otherTeamCode: string;
   players: Player[];
   isBatting: boolean;
+  isInitialSetup?: boolean;
   strikerName: string;
   nonStrikerName: string;
   bowlerName: string;
@@ -1855,7 +1876,7 @@ function LegendPill({
   cardBg: string;
   borderColor: string;
   textPrimary: string;
-  roleBadge: string;
+  roleBadge?: string;
   theme: any;
 }) {
   return (
@@ -1870,11 +1891,13 @@ function LegendPill({
       <ThemedText style={[styles.legendName, { color: textPrimary }]} numberOfLines={1}>
         {name}
       </ThemedText>
-      <View style={styles.legendBadge}>
-        <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
-          {roleBadge}
-        </ThemedText>
-      </View>
+      {roleBadge && (
+        <View style={styles.legendBadge}>
+          <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
+            {roleBadge}
+          </ThemedText>
+        </View>
+      )}
     </View>
   );
 }
@@ -1892,6 +1915,7 @@ function PlayerActionModal({
   textSecondary,
   textMuted,
   isTeamABatting,
+  isInitialSetup,
   labelA,
   labelB,
   strikerName,
@@ -1922,6 +1946,7 @@ function PlayerActionModal({
   textSecondary: string;
   textMuted: string;
   isTeamABatting: boolean;
+  isInitialSetup?: boolean;
   labelA: string;
   labelB: string;
   strikerName: string;
