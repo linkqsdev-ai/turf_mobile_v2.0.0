@@ -7796,6 +7796,7 @@ export default function CricketScoring({
           const addBowl = (b: any) => {
             if (!b || !b.name || !b.name.trim()) return;
             const totalLegalBalls = (b.overs || 0) * 6 + (b.ballsInOver || 0);
+            if (totalLegalBalls === 0 && (!b.runs || b.runs === 0)) return;
             const oversStr = `${b.overs || 0}.${b.ballsInOver || 0}`;
             const econ = totalLegalBalls > 0 ? ((b.runs || 0) / (totalLegalBalls / 6)).toFixed(2) : '0.00';
             map[b.name.trim().toLowerCase()] = {
@@ -7840,7 +7841,29 @@ export default function CricketScoring({
           sendInBatsman(player.name, 1);
         }}
         onSetBowler={(player) => {
-          setBowler(prev => ({ ...prev, name: player.name, avatar: player.avatarUrl }));
+          const pNameKey = player.name.trim().toLowerCase();
+          const prevBowlRecord = (otherBowlers || []).find(b => b && b.name && b.name.trim().toLowerCase() === pNameKey);
+          
+          if (bowler?.name && bowler.name.trim().toLowerCase() !== pNameKey) {
+            setOtherBowlers(prev => {
+              const filtered = (prev || []).filter(b => b && b.name && b.name.trim().toLowerCase() !== bowler.name.trim().toLowerCase());
+              return [...filtered, bowler];
+            });
+          }
+
+          if (prevBowlRecord) {
+            setBowler(prevBowlRecord);
+          } else {
+            setBowler({
+              name: player.name,
+              overs: 0,
+              ballsInOver: 0,
+              runs: 0,
+              wickets: 0,
+              maidens: 0,
+              avatar: player.avatarUrl,
+            });
+          }
           setBowlName(player.name);
           showToast('info', `${player.name} is now bowling`);
         }}
@@ -7900,7 +7923,21 @@ export default function CricketScoring({
           // If bowler was explicitly set in modal
           if (meta?.bowlerName) {
             const b = currentBowlList.find(p => p.name.toLowerCase() === meta.bowlerName?.toLowerCase()) || { name: meta.bowlerName };
-            setBowler(prev => ({ ...prev, name: b.name, avatar: (b as any).avatarUrl || prev.avatar }));
+            const pNameKey = b.name.trim().toLowerCase();
+            const prevBowlRecord = (otherBowlers || []).find(ob => ob && ob.name && ob.name.trim().toLowerCase() === pNameKey);
+            if (prevBowlRecord) {
+              setBowler(prevBowlRecord);
+            } else if (bowler.name.trim().toLowerCase() !== pNameKey) {
+              setBowler({
+                name: b.name,
+                overs: 0,
+                ballsInOver: 0,
+                runs: 0,
+                wickets: 0,
+                maidens: 0,
+                avatar: (b as any).avatarUrl,
+              });
+            }
             setBowlName(b.name);
           }
 

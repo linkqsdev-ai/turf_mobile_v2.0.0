@@ -22,7 +22,7 @@ import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile, getShortLocation } from '@/hooks/use-user-profile';
 import { getAvatarSource } from '@/constants/avatars';
-import { WashCard } from '@/components/wash-card';
+import { RecordCard } from '@/components/record-card';
 import { useClassStore, useTurfStore, useBookings } from '@/store/app-store';
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
@@ -141,6 +141,9 @@ const COACHES = [
     defaultAction: 'Book Coach',
   },
 ];
+
+/** Calendar order for `selectedDays`, matching the create-class form. */
+const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function CoachTab() {
   const theme = useTheme();
@@ -1035,20 +1038,19 @@ export default function CoachTab() {
                     const capacity = parseInt(String(coach.maxStudents || ''), 10);
                     const seatsLeft = isNaN(capacity) ? null : Math.max(0, capacity - booked);
 
-                    // Arrays here can arrive as a list or a single value depending
-                    // on which form version wrote the record, so normalise both.
-                    const asList = (v: any) =>
-                      Array.isArray(v) ? v.filter(Boolean) : v ? [v] : [];
-                    const days = asList(coach.selectedDays);
-                    const sessions = asList(coach.sessionTime);
+                    // `selectedDays` is a Record<string, boolean> keyed by day,
+                    // not a list — reading it as an array yields "[object
+                    // Object]". Pull the ticked keys in calendar order.
+                    const days = DAYS_OF_WEEK.filter(
+                      (d) => (coach.selectedDays || {})[d]
+                    ).join(', ');
                     const dateRange = [coach.startDate, coach.endDate]
                       .filter(Boolean)
                       .join(' – ');
 
                     return (
-                      <WashCard
+                      <RecordCard
                         key={coach.id}
-                        washIndex={index}
                         delay={index * 0.06}
                         dimmed={!coach.isActive}
                         avatar={getAvatarSource(coach.avatar)}
@@ -1059,16 +1061,22 @@ export default function CoachTab() {
                           ...(coach.isActive ? [] : [{ label: 'Inactive', tone: 'danger' as const }]),
                         ]}
                         description={coach.classDescription}
-                        meta={[
-                          { icon: 'calendar-outline', text: dateRange },
-                          { icon: 'repeat-outline', text: days.join(', ') },
-                          { icon: 'time-outline', text: sessions.join(' · ') },
-                          { icon: 'location-outline', text: coach.venue || coach.location },
+                        details={[
+                          { icon: 'calendar-outline', label: 'Runs', value: dateRange, full: true },
+                          { icon: 'repeat-outline', label: 'Days', value: days },
+                          { icon: 'time-outline', label: 'Sessions', value: coach.sessionTime },
+                          { icon: 'pricetag-outline', label: 'Fee', value: coach.rate },
                           {
                             icon: 'trending-up-outline',
-                            text: [coach.skillLevel, coach.ageGroup].filter(Boolean).join(' · '),
+                            label: 'Level',
+                            value: [coach.skillLevel, coach.ageGroup].filter(Boolean).join(' · '),
                           },
-                          { icon: 'pricetag-outline', text: coach.rate },
+                          {
+                            icon: 'location-outline',
+                            label: 'Venue',
+                            value: coach.venue || coach.location,
+                            full: true,
+                          },
                         ]}
                         statLeft={`${booked} ${booked === 1 ? 'student' : 'students'} booked`}
                         statRight={

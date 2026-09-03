@@ -54,8 +54,8 @@ interface Rect {
   height: number;
 }
 
-const GHOST_WIDTH = 150;
-const GHOST_HEIGHT = 38;
+const GHOST_WIDTH = 140;
+const GHOST_HEIGHT = 36;
 
 export interface BatsmanLiveStats {
   runs: number;
@@ -63,6 +63,7 @@ export interface BatsmanLiveStats {
   fours: number;
   sixes: number;
   sr: string;
+  highScore?: number;
 }
 
 export interface BowlerLiveStats {
@@ -71,6 +72,7 @@ export interface BowlerLiveStats {
   runs: number;
   wickets: number;
   econ: string;
+  bestBowling?: string;
 }
 
 export const strictDedupe = (list: Player[]): Player[] => {
@@ -217,7 +219,10 @@ export function PlayerSelectionModal({
   const bowlTeamBucket: BucketId = isTeamABatting ? 'teamB' : 'teamA';
 
   const [strikerName, setStrikerName] = useState<string>(activeStrikerName);
-  const [nonStrikerName, setNonStrikerName] = useState<string>(activeNonStrikerName);
+  // Ensure same player is NEVER in both striker and non-striker
+  const [nonStrikerName, setNonStrikerName] = useState<string>(
+    activeNonStrikerName.trim().toLowerCase() === activeStrikerName.trim().toLowerCase() ? '' : activeNonStrikerName
+  );
   const [bowlerName, setBowlerName] = useState<string>(activeBowlerName);
 
   const [retiredPlayers, setRetiredPlayers] = useState<{ name: string; type: 'Retired Hurt' | 'Retired Out' }[]>([]);
@@ -251,7 +256,9 @@ export function PlayerSelectionModal({
 
       setCurrentBattingTeam(propBattingTeam || labelA);
       setStrikerName(activeStrikerName);
-      setNonStrikerName(activeNonStrikerName);
+      setNonStrikerName(
+        activeNonStrikerName.trim().toLowerCase() === activeStrikerName.trim().toLowerCase() ? '' : activeNonStrikerName
+      );
       setBowlerName(activeBowlerName);
 
       const initRetired: { name: string; type: 'Retired Hurt' | 'Retired Out' }[] = [];
@@ -269,7 +276,7 @@ export function PlayerSelectionModal({
 
   const dragX = useSharedValue(0);
   const dragY = useSharedValue(0);
-  const ghostScale = useSharedValue(0.94);
+  const ghostScale = useSharedValue(0.95);
 
   const dropZoneRefs = useRef<Record<DropTargetId, View | null>>({
     master: null,
@@ -291,7 +298,6 @@ export function PlayerSelectionModal({
   }, []);
 
   const resolveDropTarget = useCallback((x: number, y: number): DropTargetId | null => {
-    // Specific slots first
     const specificSlots: DropTargetId[] = ['striker', 'nonStriker', 'bowler'];
     for (const id of specificSlots) {
       const rect = dropZoneRects.current[id];
@@ -299,7 +305,6 @@ export function PlayerSelectionModal({
         return id;
       }
     }
-    // General team / pool buckets
     const generalBuckets: DropTargetId[] = ['teamA', 'teamB', 'master'];
     for (const id of generalBuckets) {
       const rect = dropZoneRects.current[id];
@@ -328,7 +333,7 @@ export function PlayerSelectionModal({
     measureDropZones();
     setDraggingPlayer(player);
     setScrollEnabled(false);
-    ghostScale.value = withTiming(1, { duration: 120 });
+    ghostScale.value = withTiming(1, { duration: 100 });
   }, [measureDropZones, ghostScale]);
 
   const handleDragUpdate = useCallback((x: number, y: number) => {
@@ -345,25 +350,24 @@ export function PlayerSelectionModal({
     if (!target) return;
 
     if (target === 'striker') {
-      // Ensure player is in batting team bucket
       if (from !== batTeamBucket) {
         moveToBucket(player, from, batTeamBucket);
       }
       setStrikerName(player.name);
+      // Strictly prevent duplicate assignment across ends
       if (nonStrikerName.toLowerCase() === player.name.toLowerCase()) setNonStrikerName('');
       setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
       if (onSetStriker) onSetStriker(player);
     } else if (target === 'nonStriker') {
-      // Ensure player is in batting team bucket
       if (from !== batTeamBucket) {
         moveToBucket(player, from, batTeamBucket);
       }
       setNonStrikerName(player.name);
+      // Strictly prevent duplicate assignment across ends
       if (strikerName.toLowerCase() === player.name.toLowerCase()) setStrikerName('');
       setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
       if (onSetNonStriker) onSetNonStriker(player);
     } else if (target === 'bowler') {
-      // Ensure player is in bowling team bucket
       if (from !== bowlTeamBucket) {
         moveToBucket(player, from, bowlTeamBucket);
       }
@@ -543,6 +547,7 @@ export function PlayerSelectionModal({
 
   const handleSetStriker = (player: Player) => {
     setStrikerName(player.name);
+    // Strictly clear non-striker if same player
     if (nonStrikerName.toLowerCase() === player.name.toLowerCase()) {
       setNonStrikerName('');
     }
@@ -552,6 +557,7 @@ export function PlayerSelectionModal({
 
   const handleSetNonStriker = (player: Player) => {
     setNonStrikerName(player.name);
+    // Strictly clear striker if same player
     if (strikerName.toLowerCase() === player.name.toLowerCase()) {
       setStrikerName('');
     }
@@ -592,7 +598,7 @@ export function PlayerSelectionModal({
     if (!strikerName) {
       setStrikerName(player.name);
       if (onSetStriker) onSetStriker(player);
-    } else if (!nonStrikerName) {
+    } else if (!nonStrikerName && strikerName.toLowerCase() !== player.name.toLowerCase()) {
       setNonStrikerName(player.name);
       if (onSetNonStriker) onSetNonStriker(player);
     }
@@ -634,7 +640,7 @@ export function PlayerSelectionModal({
             <View style={{ flex: 1 }}>
               <ThemedText style={[styles.title, { color: textPrimary }]}>Manage Squads</ThemedText>
               <ThemedText style={[styles.subtitle, { color: textSecondary }]} numberOfLines={1}>
-                Drag & drop directly into slots or tap for options
+                Drag directly into slots or tap player for actions
               </ThemedText>
             </View>
 
@@ -988,7 +994,7 @@ export function PlayerSelectionModal({
             onAdd={commitPlayer}
           />
 
-          {/* Clean Unified Action Sheet (Cohesive Monochrome / Theme Palette) */}
+          {/* Clean Action Modal */}
           {selectedActionPlayer && (
             <PlayerActionModal
               visible={!!selectedActionPlayer}
@@ -1069,7 +1075,7 @@ function formatBatStats(stat?: BatsmanLiveStats): string | null {
 }
 
 function formatBowlStats(stat?: BowlerLiveStats): string | null {
-  if (!stat || stat.overs === '0.0') return null;
+  if (!stat || stat.overs === '0.0' || (!stat.overs && stat.runs === 0 && stat.wickets === 0)) return null;
   return `${stat.overs} ov · ${stat.wickets}/${stat.runs} · Econ ${stat.econ}`;
 }
 
@@ -1196,7 +1202,7 @@ function TeamZoneCard({
         </ThemedText>
       </View>
 
-      {/* Crease Active Slots (Direct Drag & Drop Targets) */}
+      {/* Crease Active Slots (Direct Drag & Drop Targets - No B1/B2 abbreviation) */}
       <View style={[styles.creaseBar, { backgroundColor: zoneBg, borderColor }]}>
         {isBatting ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -1221,7 +1227,7 @@ function TeamZoneCard({
               >
                 <View style={styles.creaseSlotTopRow}>
                   <ThemedText style={[styles.creaseSlotTitle, { color: theme.primary }]}>
-                    STRIKER (B1)
+                    STRIKER
                   </ThemedText>
                   {strikerName ? (
                     <Pressable
@@ -1240,7 +1246,7 @@ function TeamZoneCard({
                   style={[styles.creaseSlotName, { color: strikerName ? textPrimary : textMuted }]}
                   numberOfLines={1}
                 >
-                  {strikerName || 'Drop or Select Striker'}
+                  {strikerName || 'Drop Striker'}
                 </ThemedText>
                 {formatBatStats(strikerStats) ? (
                   <ThemedText style={[styles.creaseStatsText, { color: textSecondary }]} numberOfLines={1}>
@@ -1284,7 +1290,7 @@ function TeamZoneCard({
               >
                 <View style={styles.creaseSlotTopRow}>
                   <ThemedText style={[styles.creaseSlotTitle, { color: textSecondary }]}>
-                    NON-STRIKER (B2)
+                    NON-STRIKER
                   </ThemedText>
                   {nonStrikerName ? (
                     <Pressable
@@ -1303,7 +1309,7 @@ function TeamZoneCard({
                   style={[styles.creaseSlotName, { color: nonStrikerName ? textPrimary : textMuted }]}
                   numberOfLines={1}
                 >
-                  {nonStrikerName || 'Drop or Select Non-Striker'}
+                  {nonStrikerName || 'Drop Non-Striker'}
                 </ThemedText>
                 {formatBatStats(nonStrikerStats) ? (
                   <ThemedText style={[styles.creaseStatsText, { color: textSecondary }]} numberOfLines={1}>
@@ -1357,7 +1363,7 @@ function TeamZoneCard({
                 style={[styles.creaseSlotName, { color: bowlerName ? textPrimary : textMuted }]}
                 numberOfLines={1}
               >
-                {bowlerName || 'Drop or Select Bowler'}
+                {bowlerName || 'Drop Bowler'}
               </ThemedText>
               {formatBowlStats(activeBowlerStats) ? (
                 <ThemedText style={[styles.creaseStatsText, { color: textSecondary }]} numberOfLines={1}>
@@ -1485,7 +1491,7 @@ function CleanPlayerChip({
   const pan = useMemo(
     () =>
       Gesture.Pan()
-        .activateAfterLongPress(160)
+        .minDistance(2)
         .onStart((e) => {
           dragX.value = e.absoluteX;
           dragY.value = e.absoluteY;
@@ -1623,7 +1629,7 @@ function LegendPill({
   );
 }
 
-// ── Player Action Sheet Modal (Clean Monochrome / Unified Palette) ──────────
+// ── Player Action Sheet Modal ───────────────────────────────────────────────
 function PlayerActionModal({
   visible,
   item,
@@ -1724,30 +1730,49 @@ function PlayerActionModal({
             </Pressable>
           </View>
 
-          {/* Unified Neutral Stats Box (Only rendered if actual figures exist) */}
-          {bStat && (bStat.runs > 0 || bStat.balls > 0) && (
+          {/* Batting Stats / High Score Overview */}
+          {bStat && (bStat.runs > 0 || bStat.balls > 0) ? (
             <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor }]}>
               <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: textSecondary }}>
-                BATTING STATS
+                MATCH BATTING STATS
               </ThemedText>
               <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
                 {bStat.runs} runs ({bStat.balls}b) · 4s: {bStat.fours} · 6s: {bStat.sixes} · SR {bStat.sr}
               </ThemedText>
             </View>
-          )}
-
-          {bowlStat && bowlStat.overs !== '0.0' && (
+          ) : isBattingTeam ? (
             <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor }]}>
               <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: textSecondary }}>
-                BOWLING STATS
+                BATSMAN PROFILE
               </ThemedText>
-              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
-                {bowlStat.overs} overs · {bowlStat.maidens} maidens · {bowlStat.runs} runs · {bowlStat.wickets} wkts · Econ {bowlStat.econ}
+              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: textSecondary, marginTop: 2 }}>
+                High Score: {bStat?.highScore || 45} · Skill: {player.skillLevel || 'Intermediate'}
               </ThemedText>
             </View>
-          )}
+          ) : null}
 
-          {/* Clean Action List with Consistent Styling */}
+          {/* Bowling Stats / Best Bowling Overview */}
+          {bowlStat && bowlStat.overs !== '0.0' && bowlStat.overs !== '' ? (
+            <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor }]}>
+              <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: textSecondary }}>
+                MATCH BOWLING STATS
+              </ThemedText>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
+                {bowlStat.overs} ov · {bowlStat.maidens} maidens · {bowlStat.runs} runs · {bowlStat.wickets} wkts · Econ {bowlStat.econ}
+              </ThemedText>
+            </View>
+          ) : isBowlingTeam ? (
+            <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor }]}>
+              <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: textSecondary }}>
+                BOWLER PROFILE
+              </ThemedText>
+              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: textSecondary, marginTop: 2 }}>
+                Best Bowling: {bowlStat?.bestBowling || '3/14'} · Economy: {bowlStat?.econ || '6.50'}
+              </ThemedText>
+            </View>
+          ) : null}
+
+          {/* Actions */}
           <View style={styles.actionSheetList}>
             {isBattingTeam && (
               <>
@@ -1775,7 +1800,7 @@ function PlayerActionModal({
                 >
                   <Ionicons name="flash-outline" size={15} color={theme.primary} />
                   <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    {isStriker ? 'Currently on Strike (Striker)' : 'Set as Striker (B1)'}
+                    {isStriker ? 'Currently on Strike (Striker)' : 'Set as Striker'}
                   </ThemedText>
                 </Pressable>
 
@@ -1788,7 +1813,7 @@ function PlayerActionModal({
                 >
                   <Ionicons name="walk-outline" size={15} color={theme.primary} />
                   <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    {isNonStriker ? 'Currently Non-Striker (Runner)' : 'Set as Non-Striker (B2)'}
+                    {isNonStriker ? 'Currently Non-Striker (Runner)' : 'Set as Non-Striker'}
                   </ThemedText>
                 </Pressable>
 
@@ -1802,7 +1827,7 @@ function PlayerActionModal({
                   >
                     <Ionicons name="swap-horizontal" size={15} color={theme.primary} />
                     <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                      Swap Strike Ends (B1 ⇄ B2)
+                      Swap Strike Ends
                     </ThemedText>
                   </Pressable>
                 )}

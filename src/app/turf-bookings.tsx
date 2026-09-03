@@ -20,7 +20,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useBookings, useTurfStore } from '@/store/app-store';
 import { useToast } from '@/context/ToastContext';
 import { getAvatarSource } from '@/constants/avatars';
-import { WashCard } from '@/components/wash-card';
+import { RecordCard } from '@/components/record-card';
 import { formatSlotsRange } from '@/utils/date-utils';
 import type { Booking } from '@/store/booking-store';
 
@@ -134,9 +134,8 @@ export default function TurfBookingsScreen() {
     const isToday = b.date === todayISO;
 
     return (
-      <WashCard
+      <RecordCard
         key={b.id}
-        washIndex={index}
         delay={index * 0.06}
         dimmed={isCancelled}
         avatar={getAvatarSource(b.customerAvatar || 'avatar_1')}
@@ -149,12 +148,12 @@ export default function TurfBookingsScreen() {
           ...(isToday && !isCancelled ? [{ label: 'Today', tone: 'info' as const }] : []),
           { label: b.bookingRef, tone: 'neutral' },
         ]}
-        meta={[
-          { icon: 'calendar-outline', text: b.dayLabel },
-          { icon: 'time-outline', text: formatSlotsRange(b.slots) },
-          { icon: 'location-outline', text: b.venueName },
-          { icon: 'call-outline', text: b.customerPhone },
-          { icon: 'card-outline', text: b.paymentMethod },
+        details={[
+          { icon: 'calendar-outline', label: 'Date', value: b.dayLabel },
+          { icon: 'time-outline', label: 'Slot', value: formatSlotsRange(b.slots) },
+          { icon: 'call-outline', label: 'Phone', value: b.customerPhone },
+          { icon: 'card-outline', label: 'Paid via', value: b.paymentMethod },
+          { icon: 'location-outline', label: 'Venue', value: b.venueName, full: true },
         ]}
         statLeft={`₹${b.totalAmount} total`}
         statRight={
