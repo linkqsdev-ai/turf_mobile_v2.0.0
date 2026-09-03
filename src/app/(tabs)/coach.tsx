@@ -1062,7 +1062,7 @@ export default function CoachTab() {
                             <View style={styles.coachAvatarRing}>
                               <Image
                                 source={getAvatarSource(coach.avatar)}
-                                style={styles.coachAvatar}
+                                style={styles.coachCardAvatar}
                                 contentFit="cover"
                               />
                             </View>
@@ -1574,7 +1574,7 @@ const styles = StyleSheet.create({
     marginTop: -46,
     marginLeft: -44,
   },
-  coachAvatar: { width: '100%', height: '100%' },
+  coachCardAvatar: { width: '100%', height: '100%' },
   coachHeadText: { flex: 1, marginLeft: -32 },
   coachName: { fontSize: 19, fontFamily: 'Sora_700Bold' },
   coachChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 7 },

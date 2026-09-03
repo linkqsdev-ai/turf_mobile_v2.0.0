@@ -2046,10 +2046,11 @@ export default function CricketScoring({
     setHistory(prev => [...prev.slice(-19), oldState]);
 
     const retiringPlayer = batsmen[idx];
+    if (!retiringPlayer || !retiringPlayer.name) return;
 
-    // Add to dismissed batsmen with explicit type
+    // Add to dismissed batsmen with explicit type (deduped)
     setDismissedBatsmen(prev => [
-      ...prev,
+      ...prev.filter(db => db && db.name && db.name.trim().toLowerCase() !== retiringPlayer.name.trim().toLowerCase()),
       {
         name: retiringPlayer.name,
         status: type,
@@ -2240,10 +2241,8 @@ export default function CricketScoring({
     const initialFours = archived ? (archived.fours || 0) : (retiredHurtRecord ? (retiredHurtRecord.fours || 0) : 0);
     const initialSixes = archived ? (archived.sixes || 0) : (retiredHurtRecord ? (retiredHurtRecord.sixes || 0) : 0);
 
-    // If returning from Retired Hurt, remove from dismissed list
-    if (retiredHurtRecord) {
-      setDismissedBatsmen(prev => prev.filter(db => db.name.trim().toLowerCase() !== nameLower));
-    }
+    // If returning from retirement, remove from dismissed list so they can play again!
+    setDismissedBatsmen(prev => prev.filter(db => db && db.name && db.name.trim().toLowerCase() !== nameLower));
 
     // Filter out from yet to bat list
     setYetToBatBatsmen(prev => prev.filter(p => (typeof p === 'string' ? p : p.name).toLowerCase() !== nameLower));
@@ -2297,7 +2296,7 @@ export default function CricketScoring({
           }
         }));
         setYetToBatBatsmen(prev => [
-          ...prev,
+          ...prev.filter(p => (typeof p === 'string' ? p : p.name).toLowerCase() !== oldPlayer.name.toLowerCase()),
           { name: oldPlayer.name, status: 'yet to bat', runs: oldPlayer.runs, balls: oldPlayer.balls, fours: oldPlayer.fours, sixes: oldPlayer.sixes }
         ]);
       }
