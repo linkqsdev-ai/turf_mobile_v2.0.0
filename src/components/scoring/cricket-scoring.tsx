@@ -1424,6 +1424,33 @@ export default function CricketScoring({
   const [yetToBatBatsmen, setYetToBatBatsmen] = useState<any[]>([]);
   const [otherBowlers, setOtherBowlers] = useState<any[]>([]);
 
+  // Live Innings Bowler Master Archive: Keeps track of each bowler's cumulative overs/balls/maidens/runs/wickets this innings
+  const [inningsBowlersArchive, setInningsBowlersArchive] = useState<
+    Record<string, { name: string; overs: number; ballsInOver: number; maidens: number; runs: number; wickets: number; avatar?: string }>
+  >({});
+
+  // Synchronize live bowler stats to innings archive in real time
+  React.useEffect(() => {
+    if (bowler && bowler.name && bowler.name.trim()) {
+      const key = bowler.name.trim().toLowerCase();
+      setInningsBowlersArchive(prev => {
+        const existing = prev[key];
+        return {
+          ...prev,
+          [key]: {
+            name: bowler.name.trim(),
+            overs: bowler.overs !== undefined ? bowler.overs : (existing?.overs ?? 0),
+            ballsInOver: bowler.ballsInOver !== undefined ? bowler.ballsInOver : (existing?.ballsInOver ?? 0),
+            maidens: bowler.maidens !== undefined ? bowler.maidens : (existing?.maidens ?? 0),
+            runs: bowler.runs !== undefined ? bowler.runs : (existing?.runs ?? 0),
+            wickets: bowler.wickets !== undefined ? bowler.wickets : (existing?.wickets ?? 0),
+            avatar: bowler.avatar || existing?.avatar,
+          },
+        };
+      });
+    }
+  }, [bowler]);
+
   const { teams, addPlayerToTeam } = useMatchStore();
 
   const [showPreRulesModal, setShowPreRulesModal] = useState(false);
@@ -2403,9 +2430,22 @@ export default function CricketScoring({
       return Array.from(map.values());
     });
 
-    const isFromBench = otherBowlers.find(p => (typeof p === 'string' ? p : p.name).toLowerCase() === trimmedNewName.toLowerCase());
+    const nameKey = trimmedNewName.toLowerCase();
+    const isFromBench = otherBowlers.find(p => (typeof p === 'string' ? p : p.name).toLowerCase() === nameKey);
+    const archived = inningsBowlersArchive[nameKey];
+
     let newBowlerObj: Bowler;
-    if (isFromBench && typeof isFromBench !== 'string') {
+    if (archived) {
+      newBowlerObj = {
+        name: archived.name || trimmedNewName,
+        overs: archived.overs || 0,
+        ballsInOver: archived.ballsInOver || 0,
+        maidens: archived.maidens || 0,
+        runs: archived.runs || 0,
+        wickets: archived.wickets || 0,
+        avatar: archived.avatar,
+      };
+    } else if (isFromBench && typeof isFromBench !== 'string') {
       newBowlerObj = {
         name: isFromBench.name,
         overs: isFromBench.overs || 0,
@@ -2936,6 +2976,7 @@ export default function CricketScoring({
       setCurrentInnings(2);
       setViewingScorecardInnings(2);
       setInningsBatsmenArchive({});
+      setInningsBowlersArchive({});
 
       // Immediately swap teams & position (Batting Team -> Bowling Team, Bowling Team -> Batting Team)
       const newBatting = bowlingTeamName || teamB;
@@ -3103,6 +3144,7 @@ export default function CricketScoring({
     setBowler({ name: '', overs: 0, ballsInOver: 0, maidens: 0, runs: 0, wickets: 0 });
     setDismissedBatsmen([]);
     setInningsBatsmenArchive({});
+    setInningsBowlersArchive({});
     setMatchVictoryData(null);
     setShowVictoryModal(false);
     setShowRematchSquadChoiceModal(false);
@@ -7828,6 +7870,7 @@ export default function CricketScoring({
               econ,
             };
           };
+          Object.values(inningsBowlersArchive || {}).forEach(b => addBowl(b));
           (otherBowlers || []).forEach(b => addBowl(b));
           if (bowler && bowler.name) addBowl(bowler);
           return map;
@@ -7867,6 +7910,7 @@ export default function CricketScoring({
             return;
           }
 
+          const existingArchived = inningsBowlersArchive[pNameKey];
           const prevBowlRecord = (otherBowlers || []).find(b => b && b.name && b.name.trim().toLowerCase() === pNameKey);
           
           if (bowler?.name && bowler.name.trim()) {
@@ -7876,7 +7920,17 @@ export default function CricketScoring({
             });
           }
 
-          if (prevBowlRecord) {
+          if (existingArchived) {
+            setBowler({
+              name: player.name,
+              overs: existingArchived.overs || 0,
+              ballsInOver: existingArchived.ballsInOver || 0,
+              runs: existingArchived.runs || 0,
+              wickets: existingArchived.wickets || 0,
+              maidens: existingArchived.maidens || 0,
+              avatar: player.avatarUrl || existingArchived.avatar,
+            });
+          } else if (prevBowlRecord) {
             setBowler(prevBowlRecord);
           } else {
             setBowler({
@@ -7970,8 +8024,19 @@ export default function CricketScoring({
             const b = currentBowlList.find(p => p.name.toLowerCase() === meta.bowlerName?.toLowerCase()) || { name: meta.bowlerName };
             const pNameKey = b.name.trim().toLowerCase();
             if (!bowler.name || bowler.name.trim().toLowerCase() !== pNameKey) {
+              const existingArchived = inningsBowlersArchive[pNameKey];
               const prevBowlRecord = (otherBowlers || []).find(ob => ob && ob.name && ob.name.trim().toLowerCase() === pNameKey);
-              if (prevBowlRecord) {
+              if (existingArchived) {
+                setBowler({
+                  name: b.name,
+                  overs: existingArchived.overs || 0,
+                  ballsInOver: existingArchived.ballsInOver || 0,
+                  runs: existingArchived.runs || 0,
+                  wickets: existingArchived.wickets || 0,
+                  maidens: existingArchived.maidens || 0,
+                  avatar: (b as any).avatarUrl || existingArchived.avatar,
+                });
+              } else if (prevBowlRecord) {
                 setBowler(prevBowlRecord);
               } else {
                 setBowler({
@@ -8006,7 +8071,21 @@ export default function CricketScoring({
           const activeBowlerName = bowler?.name ? bowler.name.trim().toLowerCase() : '';
           if (!activeBowlerName && currentBowlList.length >= 1) {
             const b = currentBowlList[0];
-            setBowler({ name: b.name, overs: 0, ballsInOver: 0, runs: 0, wickets: 0, maidens: 0, avatar: b.avatarUrl });
+            const bKey = b.name.trim().toLowerCase();
+            const existingArchived = inningsBowlersArchive[bKey];
+            if (existingArchived) {
+              setBowler({
+                name: b.name,
+                overs: existingArchived.overs || 0,
+                ballsInOver: existingArchived.ballsInOver || 0,
+                runs: existingArchived.runs || 0,
+                wickets: existingArchived.wickets || 0,
+                maidens: existingArchived.maidens || 0,
+                avatar: b.avatarUrl || existingArchived.avatar,
+              });
+            } else {
+              setBowler({ name: b.name, overs: 0, ballsInOver: 0, runs: 0, wickets: 0, maidens: 0, avatar: b.avatarUrl });
+            }
             setBowlName(b.name);
           }
 
