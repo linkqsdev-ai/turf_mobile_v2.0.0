@@ -7891,19 +7891,64 @@ export default function CricketScoring({
         visible={showPlayingXIModal}
         teamAName={teamA}
         teamBName={teamB}
+        battingTeamName={battingTeamName || teamA}
+        bowlingTeamName={bowlingTeamName || teamB}
+        activeStrikerName={batsmen[0]?.active ? batsmen[0]?.name : (batsmen[1]?.active ? batsmen[1]?.name : batsmen[0]?.name || '')}
+        activeNonStrikerName={batsmen[0]?.active ? batsmen[1]?.name : (batsmen[1]?.active ? batsmen[0]?.name : batsmen[1]?.name || '')}
+        activeBowlerName={bowler?.name || ''}
+        dismissedPlayers={dismissedBatsmen}
         initialPool={[]}
         initialTeamA={currentPoolA}
         initialTeamB={currentPoolB}
         onClose={() => setShowPlayingXIModal(false)}
         onSkip={() => setShowPlayingXIModal(false)}
-        onConfirm={(teamAPlayers, teamBPlayers) => {
+        onRetireBatsman={(player, type) => {
+          const idx = batsmen.findIndex(b => b && b.name && b.name.trim().toLowerCase() === player.name.trim().toLowerCase());
+          if (idx >= 0) {
+            setActionTarget({ type: 'retire', batsmanIndex: idx });
+            executeRetireBatsman(type);
+          }
+        }}
+        onSwapStrike={() => {
+          setBatsmen(prev => {
+            if (!prev || prev.length < 2) return prev;
+            return [
+              { ...prev[0], active: !prev[0].active },
+              { ...prev[1], active: !prev[1].active },
+            ];
+          });
+          showToast('info', 'Strike swapped');
+        }}
+        onSetStriker={(player) => {
+          sendInBatsman(player.name, 0);
+        }}
+        onSetNonStriker={(player) => {
+          sendInBatsman(player.name, 1);
+        }}
+        onSetBowler={(player) => {
+          setBowler(prev => ({ ...prev, name: player.name, avatar: player.avatarUrl }));
+          setBowlName(player.name);
+          showToast('info', `${player.name} is now bowling`);
+        }}
+        onRetireBowler={(player) => {
+          setBowler(prev => ({ ...prev, name: '', avatar: undefined }));
+          setBowlName('');
+          showToast('info', `${player.name} stepped down from bowling`);
+        }}
+        onConfirm={(teamAPlayers, teamBPlayers, _unassigned, meta) => {
           const isRematch = matchVictoryData !== null || firstInningsScore !== null;
           if (isRematch) {
             resetMatchScoringState();
           }
 
-          const batTeamName = (battingTeamName || teamA).trim().toLowerCase();
-          const isTeamABatting = batTeamName === teamA.trim().toLowerCase();
+          // Handle batting team swap if changed
+          if (meta?.battingTeamName && meta.battingTeamName !== battingTeamName) {
+            setBattingTeamName(meta.battingTeamName);
+            setBowlingTeamName(meta.bowlingTeamName || (meta.battingTeamName === teamA ? teamB : teamA));
+          }
+
+          const effectiveBatTeam = (meta?.battingTeamName || battingTeamName || teamA).trim().toLowerCase();
+          const isTeamABatting = effectiveBatTeam === teamA.trim().toLowerCase();
           const currentBatList = isTeamABatting ? teamAPlayers : teamBPlayers;
           const currentBowlList = isTeamABatting ? teamBPlayers : teamAPlayers;
 
@@ -7916,6 +7961,33 @@ export default function CricketScoring({
             setCoinSide(null);
             setShowRematchTossModal(true);
             return;
+          }
+
+          // If striker was explicitly set in modal
+          if (meta?.strikerName) {
+            const b1 = currentBatList.find(p => p.name.toLowerCase() === meta.strikerName?.toLowerCase()) || { name: meta.strikerName };
+            setB1Name(b1.name);
+            setBatsmen(prev => [
+              { ...(prev[0] || {}), name: b1.name, active: true, runs: prev[0]?.runs || 0, balls: prev[0]?.balls || 0, fours: prev[0]?.fours || 0, sixes: prev[0]?.sixes || 0, avatar: (b1 as any).avatarUrl || prev[0]?.avatar },
+              prev[1] || { name: '', active: false, runs: 0, balls: 0, fours: 0, sixes: 0 },
+            ]);
+          }
+
+          // If non-striker was explicitly set in modal
+          if (meta?.nonStrikerName) {
+            const b2 = currentBatList.find(p => p.name.toLowerCase() === meta.nonStrikerName?.toLowerCase()) || { name: meta.nonStrikerName };
+            setB2Name(b2.name);
+            setBatsmen(prev => [
+              prev[0] || { name: '', active: true, runs: 0, balls: 0, fours: 0, sixes: 0 },
+              { ...(prev[1] || {}), name: b2.name, active: false, runs: prev[1]?.runs || 0, balls: prev[1]?.balls || 0, fours: prev[1]?.fours || 0, sixes: prev[1]?.sixes || 0, avatar: (b2 as any).avatarUrl || prev[1]?.avatar },
+            ]);
+          }
+
+          // If bowler was explicitly set in modal
+          if (meta?.bowlerName) {
+            const b = currentBowlList.find(p => p.name.toLowerCase() === meta.bowlerName?.toLowerCase()) || { name: meta.bowlerName };
+            setBowler(prev => ({ ...prev, name: b.name, avatar: (b as any).avatarUrl || prev.avatar }));
+            setBowlName(b.name);
           }
 
           // If active batsmen are empty, auto-assign from the batting squad

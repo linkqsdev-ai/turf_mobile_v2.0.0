@@ -192,7 +192,6 @@ export default function CoachTab() {
   const [backendTurfs, setBackendTurfs] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [coinTossVisible, setCoinTossVisible] = useState(false);
-  const [coachFilter, setCoachFilter] = useState<'Me' | 'All' | 'Others'>('Me');
 
   const fetchTurfs = React.useCallback(async () => {
     try {
@@ -238,16 +237,25 @@ export default function CoachTab() {
     }));
   }, [classes, profile.name, profile.avatarUrl]);
 
-  // Filter items based on coachFilter selection
-  const visibleCoaches = useMemo(() => {
-    if (coachFilter === 'Me') {
-      return myCreatedCoaches;
-    } else if (coachFilter === 'Others') {
-      return COACHES;
-    } else {
-      return [...myCreatedCoaches, ...COACHES];
-    }
-  }, [coachFilter, myCreatedCoaches]);
+  /**
+   * The coach's own published classes. Browsing other coaches lives in the
+   * /coach directory; this tab is about the classes you run, so there is no
+   * longer a Me/All/Others switch to get lost in.
+   */
+  const visibleCoaches = myCreatedCoaches;
+
+  /**
+   * What the calendar button on an own-class card reads. The card id is the
+   * class id, so enrolments resolve directly.
+   */
+  const classBookingLabel = React.useCallback(
+    (classId: string) => {
+      const n = enrollmentCountForClass(classId);
+      if (n === 0) return 'No bookings yet';
+      return `${n} Booked`;
+    },
+    [enrollmentCountForClass]
+  );
 
   const [coachActionStates, setCoachActionStates] = useState<Record<string, string>>(
     Object.fromEntries(COACHES.map(c => [c.id, c.defaultAction]))
@@ -973,9 +981,9 @@ export default function CoachTab() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <View>
-                  <ThemedText type="headlineSm">Top Coaches for You</ThemedText>
+                  <ThemedText type="headlineSm">My Coaching Classes</ThemedText>
                   <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
-                    Recommended based on your Elite ranking
+                    Tap a class to see who has booked it
                   </ThemedText>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
@@ -985,28 +993,6 @@ export default function CoachTab() {
                     </ThemedText>
                   </Pressable>
                 </View>
-              </View>
-
-              {/* Segmented Filter Bar */}
-              <View style={styles.filterTabsRow}>
-                {['Me', 'All', 'Others'].map((tab) => {
-                  const isActive = coachFilter === tab;
-                  return (
-                    <Pressable
-                      key={tab}
-                      onPress={() => setCoachFilter(tab as any)}
-                      style={[
-                        styles.filterTabChip,
-                        { backgroundColor: isActive ? theme.primary : theme.surfaceLow },
-                        isActive && { borderColor: theme.primary }
-                      ]}
-                    >
-                      <ThemedText style={[styles.filterTabText, { color: isActive ? '#ffffff' : theme.textSecondary }]}>
-                        {tab === 'Me' ? 'Me (Created)' : tab === 'All' ? 'All Coaches' : 'Others'}
-                      </ThemedText>
-                    </Pressable>
-                  );
-                })}
               </View>
 
               {/* Coach Cards */}
@@ -1055,7 +1041,12 @@ export default function CoachTab() {
 
                     const navigateToBooking = () => {
                       if (coach.badge === 'OWNER') {
-                        Alert.alert('Manage Class', 'This is your own published coaching class.');
+                        // Own class: the calendar button opens who has booked it,
+                        // rather than the dead-end alert it used to show.
+                        router.push({
+                          pathname: '/coach-students',
+                          params: { classId: coach.id, className: coach.specialty || '' },
+                        });
                         return;
                       }
                       router.push({
@@ -1072,7 +1063,7 @@ export default function CoachTab() {
                     return (
                       <React.Fragment key={coach.id}>
                         {/* Summer Class Ad after 2nd and 4th coach */}
-                        {index === 2 && coachFilter !== 'Me' && (
+                        {false && (
                           <Reanimated.View entering={FadeInDown.delay(index * 80 - 20).duration(500).damping(14)}>
                             <Pressable
                               style={styles.summerAdCard}
@@ -1134,7 +1125,7 @@ export default function CoachTab() {
                           </Reanimated.View>
                         )}
 
-                        {index === 4 && coachFilter !== 'Me' && (
+                        {false && (
                           <Reanimated.View entering={FadeInDown.delay(index * 80 - 20).duration(500).damping(14)}>
                             <Pressable
                               style={styles.summerAdCard}
@@ -1300,7 +1291,7 @@ export default function CoachTab() {
                                   type="labelMd"
                                   style={{ color: '#ffffff' }}
                                 >
-                                  {actionState}
+                                  {coach.badge === 'OWNER' ? classBookingLabel(coach.id) : actionState}
                                 </ThemedText>
                               </Pressable>
                               {coach.id !== 'volt' && coach.badge !== 'OWNER' && (
@@ -1321,42 +1312,6 @@ export default function CoachTab() {
               </View>
             </View>
 
-            {/* Nearby Players */}
-            <View style={[styles.section, { paddingBottom: 100 }]}>
-              <View style={styles.sectionHeader}>
-                <ThemedText type="headlineSm">Nearby Players</ThemedText>
-              </View>
-
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.playersScroll}>
-                {PLAYERS.map(player => (
-                  <Pressable
-                    key={player.id}
-                    onPress={() => router.push({ pathname: '/player-profile', params: { id: player.id } })}
-                    style={[styles.playerCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
-                  >
-                    <Image source={player.image} style={styles.playerAvatar} contentFit="cover" />
-                    <ThemedText type="labelMd" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                      {player.name}
-                    </ThemedText>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10 }}>
-                      {player.role}
-                    </ThemedText>
-                    <Pressable
-                      onPress={() => handleInviteClick(player.id)}
-                      style={[
-                        styles.inviteBtn,
-                        { borderColor: theme.secondary },
-                        inviteStates[player.id] && { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
-                      ]}
-                    >
-                      <ThemedText type="labelSm" style={{ color: inviteStates[player.id] ? theme.onSecondaryContainer : theme.secondary, fontFamily: 'Sora_500Medium' }}>
-                        {inviteStates[player.id] ? 'Invited!' : 'Invite'}
-                      </ThemedText>
-                    </Pressable>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
 
           </ScrollView>
         </Reanimated.View>
