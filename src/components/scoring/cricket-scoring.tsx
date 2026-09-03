@@ -707,19 +707,19 @@ function PlayerDropdownSelector({
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          backgroundColor: '#ffffff',
+          backgroundColor: theme.surfaceLowest,
           borderWidth: 1.5,
-          borderColor: isOpen ? theme.primary : '#cbd5e1',
-          borderRadius: 8,
-          paddingHorizontal: 10,
-          height: 36,
+          borderColor: isOpen ? theme.primary : (theme.outlineVariant + '55'),
+          borderRadius: 12,
+          paddingHorizontal: 12,
+          height: 40,
         }}
       >
         <ThemedText
           style={{
-            fontSize: 13,
+            fontSize: 13.5,
             fontFamily: 'Sora_500Medium',
-            color: value ? '#0f172a' : '#94a3b8',
+            color: value ? theme.text : theme.textSecondary,
           }}
           numberOfLines={1}
         >
@@ -735,8 +735,8 @@ function PlayerDropdownSelector({
             top: 46,
             left: 0,
             right: 0,
-            backgroundColor: '#ffffff',
-            borderRadius: 10,
+            backgroundColor: theme.surfaceLowest,
+            borderRadius: 14,
             borderWidth: 1.5,
             borderColor: theme.primary,
             shadowColor: '#000000',
@@ -755,13 +755,13 @@ function PlayerDropdownSelector({
               flexDirection: 'row',
               alignItems: 'center',
               paddingHorizontal: 10,
-              paddingVertical: 6,
+              paddingVertical: 8,
               borderBottomWidth: 1,
-              borderBottomColor: '#e2e8f0',
-              backgroundColor: '#f8fafc',
+              borderBottomColor: theme.outlineVariant + '22',
+              backgroundColor: theme.surfaceLow,
             }}
           >
-            <Ionicons name="search" size={14} color="#64748b" style={{ marginRight: 6 }} />
+            <Ionicons name="search" size={14} color={theme.textSecondary} style={{ marginRight: 6 }} />
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -770,9 +770,9 @@ function PlayerDropdownSelector({
               style={{
                 flex: 1,
                 height: 28,
-                fontSize: 12,
+                fontSize: 12.5,
                 fontFamily: 'Sora_500Medium',
-                color: '#0f172a',
+                color: theme.text,
                 padding: 0,
               }}
             />
@@ -5752,33 +5752,81 @@ export default function CricketScoring({
         </View>
       </Modal>
 
-      {/* Edit Players Modal */}
+      {/* ── Manage Match Players Modal (Redesigned matching Select Squad XI UI) ── */}
       <Modal
         visible={showEditPlayersModal}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setShowEditPlayersModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setShowEditPlayersModal(false)} />
-          <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', width: '92%', maxWidth: 420, alignSelf: 'center', maxHeight: '90%', paddingBottom: 12 }]}>
-            {/* Manage Match Players Header */}
-            <View style={[styles.modalHeader, { marginBottom: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '22' }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center' }}>
-                  <Ionicons name="people" size={18} color={theme.primary} />
+          {/* Locked backdrop */}
+          <View style={StyleSheet.absoluteFill} />
+          <View
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: theme.surfaceLowest,
+                borderColor: theme.outlineVariant + '33',
+                borderWidth: 1.5,
+                borderRadius: 24,
+                width: '92%',
+                maxWidth: 440,
+                alignSelf: 'center',
+                maxHeight: '90%',
+                padding: 0,
+                overflow: 'hidden',
+                ...Shadows.level3,
+              },
+            ]}
+          >
+            {/* Header */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                borderBottomWidth: 1,
+                borderBottomColor: theme.outlineVariant + '22',
+                backgroundColor: theme.surfaceLowest,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <View
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 12,
+                    backgroundColor: theme.primary + '18',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Ionicons name="people" size={20} color={theme.primary} />
                 </View>
-                <View>
-                  <ThemedText type="headlineSm" style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 15.5 }}>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 16 }}>
                     Manage Match Players
                   </ThemedText>
-                  <ThemedText style={{ fontSize: 10, color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
+                  <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontFamily: 'Sora_400Regular', marginTop: 1 }}>
                     Configure active batsmen and current bowler
                   </ThemedText>
                 </View>
               </View>
-              <Pressable onPress={() => setShowEditPlayersModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={20} color={theme.text} />
+              <Pressable
+                onPress={() => setShowEditPlayersModal(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: theme.surfaceLow,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <Ionicons name="close" size={18} color={theme.text} />
               </Pressable>
             </View>
 
@@ -5786,32 +5834,56 @@ export default function CricketScoring({
               ref={modalScrollRef}
               style={{ flex: 1 }}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: activeDropdownKey !== null ? 220 : 20 }}
+              contentContainerStyle={{ padding: 16, paddingBottom: activeDropdownKey !== null ? 240 : 20 }}
             >
-
               {/* Inline replacement options */}
               {actionTarget !== null && (
-                <View style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outline, borderWidth: 1.5, marginBottom: 16, padding: 12 }]}>
+                <View
+                  style={{
+                    backgroundColor: theme.surfaceLowest,
+                    borderColor: theme.primary,
+                    borderWidth: 1.5,
+                    borderRadius: 16,
+                    marginBottom: 16,
+                    padding: 14,
+                    ...Shadows.level2,
+                  }}
+                >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium' }}>
-                      {actionTarget.type === 'retire' ? 'RETIRE & REPLACE BATSMAN' : actionTarget.type === 'replace' ? 'SUBSTITUTE BATSMAN' : 'CHANGE BOWLER'}
-                    </ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="swap-horizontal" size={16} color={theme.primary} />
+                      <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_700Bold', fontSize: 12, letterSpacing: 0.5 }}>
+                        {actionTarget.type === 'retire' ? 'RETIRE & REPLACE BATSMAN' : actionTarget.type === 'replace' ? 'SUBSTITUTE BATSMAN' : 'CHANGE BOWLER'}
+                      </ThemedText>
+                    </View>
                     <Pressable onPress={() => setActionTarget(null)}>
-                      <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+                      <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
                     </Pressable>
                   </View>
 
                   {actionTarget.type === 'retire' && (
                     <View style={{ marginBottom: 12 }}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 4 }}>Select Dismissal Type:</ThemedText>
+                      <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontFamily: 'Sora_500Medium', marginBottom: 6 }}>
+                        Select Dismissal Type:
+                      </ThemedText>
                       <View style={{ flexDirection: 'row', gap: 8 }}>
                         {['Retired Hurt', 'Retired Out'].map((type) => (
                           <Pressable
                             key={type}
                             onPress={() => executeRetire(type as any, customNewName || 'New Batsman')}
-                            style={[styles.subOptionBtn, { backgroundColor: theme.surfaceLow }]}
+                            style={{
+                              flex: 1,
+                              backgroundColor: theme.surfaceLow,
+                              paddingVertical: 8,
+                              borderRadius: 10,
+                              alignItems: 'center',
+                              borderWidth: 1,
+                              borderColor: theme.outlineVariant + '33',
+                            }}
                           >
-                            <ThemedText type="labelSm" style={{ color: theme.text }}>{type}</ThemedText>
+                            <ThemedText style={{ color: theme.text, fontSize: 12, fontFamily: 'Sora_600SemiBold' }}>
+                              {type}
+                            </ThemedText>
                           </Pressable>
                         ))}
                       </View>
@@ -5819,7 +5891,7 @@ export default function CricketScoring({
                   )}
 
                   {/* Selection lists (Cards) */}
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 8, fontFamily: 'Sora_500Medium' }}>
+                  <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontFamily: 'Sora_500Medium', marginBottom: 8 }}>
                     Select player from squad bench ({actionTarget.type === 'bowler' ? availableBenchBowlers.length : availableBenchBatsmen.length} available):
                   </ThemedText>
 
@@ -5842,14 +5914,14 @@ export default function CricketScoring({
                               backgroundColor: theme.surfaceLow,
                               paddingHorizontal: 12,
                               paddingVertical: 10,
-                              borderRadius: 8,
+                              borderRadius: 10,
                               borderWidth: 1,
                               borderColor: theme.outlineVariant + '33',
                             }, pressed && { backgroundColor: theme.primary + '15' }]}
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
-                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.primary }}>
+                              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
+                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>
                                   {bName.charAt(0).toUpperCase()}
                                 </ThemedText>
                               </View>
@@ -5857,8 +5929,8 @@ export default function CricketScoring({
                                 {bName}
                               </ThemedText>
                             </View>
-                            <View style={{ backgroundColor: theme.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-                              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: '#ffffff' }}>
+                            <View style={{ backgroundColor: theme.primary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
+                              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
                                 Select Bowler
                               </ThemedText>
                             </View>
@@ -5886,14 +5958,14 @@ export default function CricketScoring({
                               backgroundColor: theme.surfaceLow,
                               paddingHorizontal: 12,
                               paddingVertical: 10,
-                              borderRadius: 8,
+                              borderRadius: 10,
                               borderWidth: 1,
                               borderColor: theme.outlineVariant + '33',
                             }, pressed && { backgroundColor: theme.primary + '15' }]}
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
-                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.primary }}>
+                              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
+                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>
                                   {bName.charAt(0).toUpperCase()}
                                 </ThemedText>
                               </View>
@@ -5908,8 +5980,8 @@ export default function CricketScoring({
                                 ) : null}
                               </View>
                             </View>
-                            <View style={{ backgroundColor: theme.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-                              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: '#ffffff' }}>
+                            <View style={{ backgroundColor: theme.primary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
+                              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
                                 Send In
                               </ThemedText>
                             </View>
@@ -5917,18 +5989,31 @@ export default function CricketScoring({
                         );
                       })}
                     {((actionTarget.type === 'bowler' ? availableBenchBowlers : availableBenchBatsmen).length === 0) && (
-                      <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontStyle: 'italic', paddingVertical: 4 }}>No players available on squad bench.</ThemedText>
+                      <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontStyle: 'italic', paddingVertical: 4 }}>
+                        No players available on squad bench.
+                      </ThemedText>
                     )}
                   </View>
 
                   {/* Direct Custom Type-in Input */}
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 6 }}>
-                    Or enter custom name (without list):
+                  <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontFamily: 'Sora_500Medium', marginBottom: 6 }}>
+                    Or enter custom name:
                   </ThemedText>
 
                   <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                     <TextInput
-                      style={[styles.modalInput, { flex: 1, color: theme.text, borderColor: theme.outlineVariant, marginBottom: 0 }]}
+                      style={{
+                        flex: 1,
+                        height: 40,
+                        backgroundColor: theme.surfaceLow,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        paddingHorizontal: 12,
+                        fontSize: 13,
+                        fontFamily: 'Sora_500Medium',
+                        color: theme.text,
+                      }}
                       value={customNewName}
                       onChangeText={setCustomNewName}
                       placeholder="E.g. Virat Kohli"
@@ -5948,842 +6033,723 @@ export default function CricketScoring({
                           executeReplaceBatsman(customNewName);
                         }
                       }}
-                      style={[styles.addBtn, { backgroundColor: theme.primary }]}
+                      style={{
+                        backgroundColor: theme.primary,
+                        height: 40,
+                        paddingHorizontal: 14,
+                        borderRadius: 10,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
                     >
-                      <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Add & Set</ThemedText>
+                      <ThemedText style={{ color: '#ffffff', fontSize: 12, fontFamily: 'Sora_600SemiBold' }}>
+                        Add & Set
+                      </ThemedText>
                     </Pressable>
                   </View>
                 </View>
               )}
 
-              {/* DYNAMIC SECTION ORDER: Show Bowler at top if actionTarget is bowler, else show Batsmen at top */}
-              {actionTarget?.type === 'bowler' ? (
-                <>
-                  {/* BOWLER MANAGEMENT SECTION */}
-                  <ThemedText type="labelMd" style={{ color: theme.primary, marginTop: 4, marginBottom: 10, letterSpacing: 0.5 }}>
-                    CURRENT BOWLER
-                  </ThemedText>
+              {/* ── ACTIVE BATSMEN SECTION ── */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10, marginTop: 4 }}>
+                <Ionicons name="baseball-outline" size={15} color={theme.primary} />
+                <ThemedText style={{ color: theme.primary, fontSize: 11.5, fontFamily: 'Sora_700Bold', letterSpacing: 0.8 }}>
+                  ACTIVE BATSMEN
+                </ThemedText>
+              </View>
 
-                  <View style={[styles.card, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33', marginBottom: 16, zIndex: activeDropdownKey === 'bowler' ? 9999 : 1 }]}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <ThemedText type="labelMd" style={{ color: theme.text }}>
-                        Active Bowler
-                      </ThemedText>
-                      <Pressable
-                        onPress={() => setActionTarget({ type: 'bowler' })}
-                        style={[styles.smallActionChip, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}
-                      >
-                        <ThemedText style={{ fontSize: 10, color: theme.text }}>Change Bowler</ThemedText>
-                      </Pressable>
-                    </View>
-
-                    {/* Avatar Picker & Name Input */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, zIndex: activeDropdownKey === 'bowler' ? 9999 : 1 }}>
-                      <Pressable
-                        onPress={() => handlePickAvatar('bowler')}
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          backgroundColor: theme.primary + '15',
-                          borderWidth: 1.5,
-                          borderColor: theme.primary + '40',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {bowlAvatar ? (
-                          <Image source={{ uri: bowlAvatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                        ) : (
-                          <Ionicons name="camera-outline" size={20} color={theme.primary} />
-                        )}
-                      </Pressable>
-                      <PlayerDropdownSelector
-                        value={bowlName}
-                        placeholder="Select Active Bowler..."
-                        squadList={otherBowlers}
-                        maxBowlerOvers={ruleMaxOversPerBowler === 'unlimited' ? Infinity : (parseInt(ruleMaxOversPerBowler) || Infinity)}
-                        opposingTeamNames={[...yetToBatBatsmen, ...batsmen, ...dismissedBatsmen].map(p => typeof p === 'string' ? p : p?.name).filter(Boolean)}
-                        theme={theme}
-                        isOpen={activeDropdownKey === 'bowler'}
-                        setIsOpen={(val) => setActiveDropdownKey(val ? 'bowler' : null)}
-                        onSelectPlayer={(name, avatar) => {
-                          setBowlName(name);
-                          if (avatar) setBowlAvatar(avatar);
-                        }}
-                        onCustomNameChange={(name) => setBowlName(name)}
-                        onAddPlayerToSquad={(player) => setOtherBowlers(prev => [...prev, player])}
-                      />
-                    </View>
-                    <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 8, fontStyle: 'italic' }}>
-                      * No numbers allowed · Max 25 chars · Tap icon to upload photo
+              {/* Batsman 1 */}
+              <View
+                style={{
+                  backgroundColor: theme.surfaceLow,
+                  borderRadius: 16,
+                  borderWidth: 1.2,
+                  borderColor: theme.outlineVariant + '33',
+                  padding: 14,
+                  marginBottom: 12,
+                  zIndex: activeDropdownKey === 'b1' ? 9999 : 3,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13.5 }}>
+                      Batsman 1
                     </ThemedText>
-
-                    <View style={styles.statsEditRow}>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Overs</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={bowlOvers}
-                          onChangeText={(val) => setBowlOvers(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Maidens</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={bowlMaidens}
-                          onChangeText={(val) => setBowlMaidens(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Runs</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={bowlRuns}
-                          onChangeText={(val) => setBowlRuns(sanitizeNumericInput(val, 3))}
-                          keyboardType="numeric"
-                          maxLength={3}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Wickets</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={bowlWickets}
-                          onChangeText={(val) => setBowlWickets(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
+                    <View
+                      style={{
+                        backgroundColor: batsmen[0]?.active ? '#10B98118' : theme.surfaceLowest,
+                        paddingHorizontal: 7,
+                        paddingVertical: 2.5,
+                        borderRadius: 6,
+                        borderWidth: batsmen[0]?.active ? 0 : 1,
+                        borderColor: theme.outlineVariant + '44',
+                      }}
+                    >
+                      <ThemedText
+                        style={{
+                          fontSize: 9.5,
+                          fontFamily: 'Sora_600SemiBold',
+                          color: batsmen[0]?.active ? '#10B981' : theme.textSecondary,
+                        }}
+                      >
+                        {batsmen[0]?.active ? '🏏 On Strike' : 'Non-Striker'}
+                      </ThemedText>
                     </View>
                   </View>
-
-                  {/* BATSMEN MANAGEMENT SECTION */}
-                  <ThemedText type="labelMd" style={{ color: theme.primary, marginBottom: 10, letterSpacing: 0.5 }}>
-                    ACTIVE BATSMEN
-                  </ThemedText>
-
-                  {/* Batsman 1 */}
-                  <View style={[styles.card, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33', marginBottom: 12, zIndex: activeDropdownKey === 'b1' ? 9999 : 3 }]}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <ThemedText type="labelMd" style={{ color: theme.text }}>
-                        Batsman 1 {batsmen[0]?.active ? '🏏 (On Strike)' : '(Non-Strike)'}
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <Pressable
+                      onPress={() => setActionTarget({ type: 'replace', batsmanIndex: 0 })}
+                      style={{
+                        backgroundColor: theme.surfaceLowest,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        borderRadius: 8,
+                        paddingHorizontal: 9,
+                        paddingVertical: 4.5,
+                      }}
+                    >
+                      <ThemedText style={{ fontSize: 10.5, color: theme.text, fontFamily: 'Sora_500Medium' }}>
+                        Swap/Sub
                       </ThemedText>
-                      <View style={{ flexDirection: 'row', gap: 6 }}>
-                        <Pressable
-                          onPress={() => setActionTarget({ type: 'replace', batsmanIndex: 0 })}
-                          style={[styles.smallActionChip, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}
-                        >
-                          <ThemedText style={{ fontSize: 10, color: theme.text }}>Swap/Sub</ThemedText>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => setActionTarget({ type: 'retire', batsmanIndex: 0 })}
-                          style={[styles.smallActionChip, { backgroundColor: theme.error + '22', borderColor: theme.error + '44' }]}
-                        >
-                          <ThemedText style={{ fontSize: 10, color: theme.error }}>Retire</ThemedText>
-                        </Pressable>
-                      </View>
-                    </View>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setActionTarget({ type: 'retire', batsmanIndex: 0 })}
+                      style={{
+                        backgroundColor: theme.error + '14',
+                        borderWidth: 1,
+                        borderColor: theme.error + '33',
+                        borderRadius: 8,
+                        paddingHorizontal: 9,
+                        paddingVertical: 4.5,
+                      }}
+                    >
+                      <ThemedText style={{ fontSize: 10.5, color: theme.error, fontFamily: 'Sora_500Medium' }}>
+                        Retire
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
 
-                    {/* Avatar Picker & Name Input */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, zIndex: activeDropdownKey === 'b1' ? 9999 : 1 }}>
-                      <Pressable
-                        onPress={() => handlePickAvatar('b1')}
+                {/* Avatar Picker & Dropdown */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, zIndex: activeDropdownKey === 'b1' ? 9999 : 1 }}>
+                  <Pressable
+                    onPress={() => handlePickAvatar('b1')}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: theme.surfaceLowest,
+                      borderWidth: 1.5,
+                      borderColor: theme.primary + '50',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      overflow: 'hidden',
+                      position: 'relative',
+                    }}
+                  >
+                    {b1Avatar ? (
+                      <Image source={{ uri: b1Avatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                    ) : (
+                      <Ionicons name="camera-outline" size={20} color={theme.primary} />
+                    )}
+                  </Pressable>
+                  <PlayerDropdownSelector
+                    value={b1Name}
+                    placeholder="Select Batsman 1..."
+                    squadList={availableBenchBatsmen}
+                    otherSelectedName={b2Name}
+                    dismissedNames={dismissedBatsmen.filter(db => db && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt').map(db => db.name)}
+                    retiredHurtNames={dismissedBatsmen.filter(db => db && (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')).map(db => db.name)}
+                    opposingTeamNames={otherBowlers.map(p => typeof p === 'string' ? p : p.name).filter(Boolean)}
+                    theme={theme}
+                    isOpen={activeDropdownKey === 'b1'}
+                    setIsOpen={(val) => setActiveDropdownKey(val ? 'b1' : null)}
+                    onSelectPlayer={(name, avatar, existingStats) => {
+                      const nameTrimmed = name.trim();
+                      const nameLower = nameTrimmed.toLowerCase();
+                      if (b1Name.trim() && b1Name.trim().toLowerCase() !== nameLower) {
+                        setInningsBatsmenArchive(prev => ({
+                          ...prev,
+                          [b1Name.trim().toLowerCase()]: {
+                            name: b1Name.trim(),
+                            runs: parseInt(b1Runs) || 0,
+                            balls: parseInt(b1Balls) || 0,
+                            fours: parseInt(b1Fours) || 0,
+                            sixes: parseInt(b1Sixes) || 0,
+                            avatar: b1Avatar,
+                          }
+                        }));
+                      }
+                      setB1Name(nameTrimmed);
+                      if (avatar) setB1Avatar(avatar);
+                      const archived = existingStats || inningsBatsmenArchive[nameLower];
+                      if (archived && (archived.runs !== undefined || archived.balls !== undefined)) {
+                        setB1Runs(String(archived.runs || 0));
+                        setB1Balls(String(archived.balls || 0));
+                        setB1Fours(String(archived.fours || 0));
+                        setB1Sixes(String(archived.sixes || 0));
+                      } else {
+                        setB1Runs('0');
+                        setB1Balls('0');
+                        setB1Fours('0');
+                        setB1Sixes('0');
+                      }
+                    }}
+                    onCustomNameChange={(name) => setB1Name(name)}
+                  />
+                </View>
+                <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 10, fontStyle: 'italic', marginTop: 3 }}>
+                  * Tap photo to upload · No numbers allowed
+                </ThemedText>
+
+                {/* Stat Grid */}
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>Runs</ThemedText>
+                    <TextInput
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        backgroundColor: theme.surfaceLowest,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontFamily: 'Sora_600SemiBold',
+                        color: theme.text,
+                      }}
+                      value={b1Runs}
+                      onChangeText={(val) => setB1Runs(sanitizeNumericInput(val, 3))}
+                      keyboardType="numeric"
+                      maxLength={3}
+                    />
+                  </View>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>Balls</ThemedText>
+                    <TextInput
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        backgroundColor: theme.surfaceLowest,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontFamily: 'Sora_600SemiBold',
+                        color: theme.text,
+                      }}
+                      value={b1Balls}
+                      onChangeText={(val) => setB1Balls(sanitizeNumericInput(val, 3))}
+                      keyboardType="numeric"
+                      maxLength={3}
+                    />
+                  </View>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>4s</ThemedText>
+                    <TextInput
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        backgroundColor: theme.surfaceLowest,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontFamily: 'Sora_600SemiBold',
+                        color: theme.text,
+                      }}
+                      value={b1Fours}
+                      onChangeText={(val) => setB1Fours(sanitizeNumericInput(val, 2))}
+                      keyboardType="numeric"
+                      maxLength={2}
+                    />
+                  </View>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>6s</ThemedText>
+                    <TextInput
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        backgroundColor: theme.surfaceLowest,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontFamily: 'Sora_600SemiBold',
+                        color: theme.text,
+                      }}
+                      value={b1Sixes}
+                      onChangeText={(val) => setB1Sixes(sanitizeNumericInput(val, 2))}
+                      keyboardType="numeric"
+                      maxLength={2}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* Batsman 2 */}
+              <View
+                style={{
+                  backgroundColor: theme.surfaceLow,
+                  borderRadius: 16,
+                  borderWidth: 1.2,
+                  borderColor: theme.outlineVariant + '33',
+                  padding: 14,
+                  marginBottom: 16,
+                  zIndex: activeDropdownKey === 'b2' ? 9999 : 2,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13.5 }}>
+                      Batsman 2
+                    </ThemedText>
+                    <View
+                      style={{
+                        backgroundColor: batsmen[1]?.active ? '#10B98118' : theme.surfaceLowest,
+                        paddingHorizontal: 7,
+                        paddingVertical: 2.5,
+                        borderRadius: 6,
+                        borderWidth: batsmen[1]?.active ? 0 : 1,
+                        borderColor: theme.outlineVariant + '44',
+                      }}
+                    >
+                      <ThemedText
                         style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          backgroundColor: theme.primary + '15',
-                          borderWidth: 1.5,
-                          borderColor: theme.primary + '40',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          overflow: 'hidden',
+                          fontSize: 9.5,
+                          fontFamily: 'Sora_600SemiBold',
+                          color: batsmen[1]?.active ? '#10B981' : theme.textSecondary,
                         }}
                       >
-                        {b1Avatar ? (
-                          <Image source={{ uri: b1Avatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                        ) : (
-                          <Ionicons name="camera-outline" size={20} color={theme.primary} />
-                        )}
-                      </Pressable>
-                      <PlayerDropdownSelector
-                        value={b1Name}
-                        placeholder="Select Batsman 1..."
-                        squadList={availableBenchBatsmen}
-                        otherSelectedName={b2Name}
-                        dismissedNames={dismissedBatsmen.filter(db => db && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt').map(db => db.name)}
-                        retiredHurtNames={dismissedBatsmen.filter(db => db && (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')).map(db => db.name)}
-                        theme={theme}
-                        isOpen={activeDropdownKey === 'b1'}
-                        setIsOpen={(val) => setActiveDropdownKey(val ? 'b1' : null)}
-                        onSelectPlayer={(name, avatar, existingStats) => {
-                          const nameTrimmed = name.trim();
-                          const nameLower = nameTrimmed.toLowerCase();
-
-                          // Archive current batsman 1 stats before swapping
-                          if (b1Name.trim() && b1Name.trim().toLowerCase() !== nameLower) {
-                            setInningsBatsmenArchive(prev => ({
-                              ...prev,
-                              [b1Name.trim().toLowerCase()]: {
-                                name: b1Name.trim(),
-                                runs: parseInt(b1Runs) || 0,
-                                balls: parseInt(b1Balls) || 0,
-                                fours: parseInt(b1Fours) || 0,
-                                sixes: parseInt(b1Sixes) || 0,
-                                avatar: b1Avatar,
-                              }
-                            }));
-                          }
-
-                          setB1Name(nameTrimmed);
-                          if (avatar) setB1Avatar(avatar);
-
-                          // Load incoming batsman stats (restore if previously batted, otherwise 0 for new batsman!)
-                          const archived = existingStats || inningsBatsmenArchive[nameLower];
-                          if (archived && (archived.runs !== undefined || archived.balls !== undefined)) {
-                            setB1Runs(String(archived.runs || 0));
-                            setB1Balls(String(archived.balls || 0));
-                            setB1Fours(String(archived.fours || 0));
-                            setB1Sixes(String(archived.sixes || 0));
-                          } else {
-                            // Brand new batsman: ALWAYS start at 0!
-                            setB1Runs('0');
-                            setB1Balls('0');
-                            setB1Fours('0');
-                            setB1Sixes('0');
-                          }
-                        }}
-                        onCustomNameChange={(name) => setB1Name(name)}
-                        onAddPlayerToSquad={(player) => setYetToBatBatsmen(prev => [...prev, player])}
-                      />
-                    </View>
-                    <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 8, fontStyle: 'italic' }}>
-                      * No numbers allowed · Max 25 chars · Tap icon to upload photo
-                    </ThemedText>
-
-                    <View style={styles.statsEditRow}>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Runs</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b1Runs}
-                          onChangeText={(val) => setB1Runs(sanitizeNumericInput(val, 3))}
-                          keyboardType="numeric"
-                          maxLength={3}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Balls</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b1Balls}
-                          onChangeText={(val) => setB1Balls(sanitizeNumericInput(val, 3))}
-                          keyboardType="numeric"
-                          maxLength={3}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4s</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b1Fours}
-                          onChangeText={(val) => setB1Fours(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>6s</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b1Sixes}
-                          onChangeText={(val) => setB1Sixes(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
+                        {batsmen[1]?.active ? '🏏 On Strike' : 'Non-Striker'}
+                      </ThemedText>
                     </View>
                   </View>
-
-                  {/* Batsman 2 */}
-                  <View style={[styles.card, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33', marginBottom: 12, zIndex: activeDropdownKey === 'b2' ? 9999 : 2 }]}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <ThemedText type="labelMd" style={{ color: theme.text }}>
-                        Batsman 2 {batsmen[1]?.active ? '🏏 (On Strike)' : '(Non-Strike)'}
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <Pressable
+                      onPress={() => setActionTarget({ type: 'replace', batsmanIndex: 1 })}
+                      style={{
+                        backgroundColor: theme.surfaceLowest,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        borderRadius: 8,
+                        paddingHorizontal: 9,
+                        paddingVertical: 4.5,
+                      }}
+                    >
+                      <ThemedText style={{ fontSize: 10.5, color: theme.text, fontFamily: 'Sora_500Medium' }}>
+                        Swap/Sub
                       </ThemedText>
-                      <View style={{ flexDirection: 'row', gap: 6 }}>
-                        <Pressable
-                          onPress={() => setActionTarget({ type: 'replace', batsmanIndex: 1 })}
-                          style={[styles.smallActionChip, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}
-                        >
-                          <ThemedText style={{ fontSize: 10, color: theme.text }}>Swap/Sub</ThemedText>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => setActionTarget({ type: 'retire', batsmanIndex: 1 })}
-                          style={[styles.smallActionChip, { backgroundColor: theme.error + '22', borderColor: theme.error + '44' }]}
-                        >
-                          <ThemedText style={{ fontSize: 10, color: theme.error }}>Retire</ThemedText>
-                        </Pressable>
-                      </View>
-                    </View>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setActionTarget({ type: 'retire', batsmanIndex: 1 })}
+                      style={{
+                        backgroundColor: theme.error + '14',
+                        borderWidth: 1,
+                        borderColor: theme.error + '33',
+                        borderRadius: 8,
+                        paddingHorizontal: 9,
+                        paddingVertical: 4.5,
+                      }}
+                    >
+                      <ThemedText style={{ fontSize: 10.5, color: theme.error, fontFamily: 'Sora_500Medium' }}>
+                        Retire
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
 
-                    {/* Avatar Picker & Name Input */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, zIndex: activeDropdownKey === 'b2' ? 9999 : 1 }}>
-                      <Pressable
-                        onPress={() => handlePickAvatar('b2')}
+                {/* Avatar Picker & Dropdown */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, zIndex: activeDropdownKey === 'b2' ? 9999 : 1 }}>
+                  <Pressable
+                    onPress={() => handlePickAvatar('b2')}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: theme.surfaceLowest,
+                      borderWidth: 1.5,
+                      borderColor: theme.primary + '50',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      overflow: 'hidden',
+                      position: 'relative',
+                    }}
+                  >
+                    {b2Avatar ? (
+                      <Image source={{ uri: b2Avatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                    ) : (
+                      <Ionicons name="camera-outline" size={20} color={theme.primary} />
+                    )}
+                  </Pressable>
+                  <PlayerDropdownSelector
+                    value={b2Name}
+                    placeholder="Select Batsman 2..."
+                    squadList={availableBenchBatsmen}
+                    otherSelectedName={b1Name}
+                    dismissedNames={dismissedBatsmen.filter(db => db && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt').map(db => db.name)}
+                    retiredHurtNames={dismissedBatsmen.filter(db => db && (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')).map(db => db.name)}
+                    opposingTeamNames={otherBowlers.map(p => typeof p === 'string' ? p : p.name).filter(Boolean)}
+                    theme={theme}
+                    isOpen={activeDropdownKey === 'b2'}
+                    setIsOpen={(val) => setActiveDropdownKey(val ? 'b2' : null)}
+                    onSelectPlayer={(name, avatar, existingStats) => {
+                      const nameTrimmed = name.trim();
+                      const nameLower = nameTrimmed.toLowerCase();
+                      if (b2Name.trim() && b2Name.trim().toLowerCase() !== nameLower) {
+                        setInningsBatsmenArchive(prev => ({
+                          ...prev,
+                          [b2Name.trim().toLowerCase()]: {
+                            name: b2Name.trim(),
+                            runs: parseInt(b2Runs) || 0,
+                            balls: parseInt(b2Balls) || 0,
+                            fours: parseInt(b2Fours) || 0,
+                            sixes: parseInt(b2Sixes) || 0,
+                            avatar: b2Avatar,
+                          }
+                        }));
+                      }
+                      setB2Name(nameTrimmed);
+                      if (avatar) setB2Avatar(avatar);
+                      const archived = existingStats || inningsBatsmenArchive[nameLower];
+                      if (archived && (archived.runs !== undefined || archived.balls !== undefined)) {
+                        setB2Runs(String(archived.runs || 0));
+                        setB2Balls(String(archived.balls || 0));
+                        setB2Fours(String(archived.fours || 0));
+                        setB2Sixes(String(archived.sixes || 0));
+                      } else {
+                        setB2Runs('0');
+                        setB2Balls('0');
+                        setB2Fours('0');
+                        setB2Sixes('0');
+                      }
+                    }}
+                    onCustomNameChange={(name) => setB2Name(name)}
+                  />
+                </View>
+                <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 10, fontStyle: 'italic', marginTop: 3 }}>
+                  * Tap photo to upload · No numbers allowed
+                </ThemedText>
+
+                {/* Stat Grid */}
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>Runs</ThemedText>
+                    <TextInput
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        backgroundColor: theme.surfaceLowest,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontFamily: 'Sora_600SemiBold',
+                        color: theme.text,
+                      }}
+                      value={b2Runs}
+                      onChangeText={(val) => setB2Runs(sanitizeNumericInput(val, 3))}
+                      keyboardType="numeric"
+                      maxLength={3}
+                    />
+                  </View>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>Balls</ThemedText>
+                    <TextInput
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        backgroundColor: theme.surfaceLowest,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontFamily: 'Sora_600SemiBold',
+                        color: theme.text,
+                      }}
+                      value={b2Balls}
+                      onChangeText={(val) => setB2Balls(sanitizeNumericInput(val, 3))}
+                      keyboardType="numeric"
+                      maxLength={3}
+                    />
+                  </View>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>4s</ThemedText>
+                    <TextInput
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        backgroundColor: theme.surfaceLowest,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontFamily: 'Sora_600SemiBold',
+                        color: theme.text,
+                      }}
+                      value={b2Fours}
+                      onChangeText={(val) => setB2Fours(sanitizeNumericInput(val, 2))}
+                      keyboardType="numeric"
+                      maxLength={2}
+                    />
+                  </View>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>6s</ThemedText>
+                    <TextInput
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        backgroundColor: theme.surfaceLowest,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontFamily: 'Sora_600SemiBold',
+                        color: theme.text,
+                      }}
+                      value={b2Sixes}
+                      onChangeText={(val) => setB2Sixes(sanitizeNumericInput(val, 2))}
+                      keyboardType="numeric"
+                      maxLength={2}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* ── CURRENT BOWLER SECTION ── */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <Ionicons name="sync-outline" size={15} color={theme.primary} />
+                <ThemedText style={{ color: theme.primary, fontSize: 11.5, fontFamily: 'Sora_700Bold', letterSpacing: 0.8 }}>
+                  CURRENT BOWLER
+                </ThemedText>
+              </View>
+
+              <View
+                style={{
+                  backgroundColor: theme.surfaceLow,
+                  borderRadius: 16,
+                  borderWidth: 1.2,
+                  borderColor: theme.outlineVariant + '33',
+                  padding: 14,
+                  marginBottom: 16,
+                  zIndex: activeDropdownKey === 'bowler' ? 9999 : 1,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 13.5 }}>
+                      Active Bowler
+                    </ThemedText>
+                    <View
+                      style={{
+                        backgroundColor: theme.primary + '18',
+                        paddingHorizontal: 7,
+                        paddingVertical: 2.5,
+                        borderRadius: 6,
+                      }}
+                    >
+                      <ThemedText
                         style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          backgroundColor: theme.primary + '15',
-                          borderWidth: 1.5,
-                          borderColor: theme.primary + '40',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          overflow: 'hidden',
+                          fontSize: 9.5,
+                          fontFamily: 'Sora_600SemiBold',
+                          color: theme.primary,
                         }}
                       >
-                        {b2Avatar ? (
-                          <Image source={{ uri: b2Avatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                        ) : (
-                          <Ionicons name="camera-outline" size={20} color={theme.primary} />
-                        )}
-                      </Pressable>
-                      <PlayerDropdownSelector
-                        value={b2Name}
-                        placeholder="Select Batsman 2..."
-                        squadList={availableBenchBatsmen}
-                        otherSelectedName={b1Name}
-                        dismissedNames={dismissedBatsmen.filter(db => db && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt').map(db => db.name)}
-                        retiredHurtNames={dismissedBatsmen.filter(db => db && (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')).map(db => db.name)}
-                        theme={theme}
-                        isOpen={activeDropdownKey === 'b2'}
-                        setIsOpen={(val) => setActiveDropdownKey(val ? 'b2' : null)}
-                        onSelectPlayer={(name, avatar, existingStats) => {
-                          const nameTrimmed = name.trim();
-                          const nameLower = nameTrimmed.toLowerCase();
-
-                          // Archive current batsman 2 stats before swapping
-                          if (b2Name.trim() && b2Name.trim().toLowerCase() !== nameLower) {
-                            setInningsBatsmenArchive(prev => ({
-                              ...prev,
-                              [b2Name.trim().toLowerCase()]: {
-                                name: b2Name.trim(),
-                                runs: parseInt(b2Runs) || 0,
-                                balls: parseInt(b2Balls) || 0,
-                                fours: parseInt(b2Fours) || 0,
-                                sixes: parseInt(b2Sixes) || 0,
-                                avatar: b2Avatar,
-                              }
-                            }));
-                          }
-
-                          setB2Name(nameTrimmed);
-                          if (avatar) setB2Avatar(avatar);
-
-                          // Load incoming batsman stats (restore if previously batted, otherwise 0 for new batsman!)
-                          const archived = existingStats || inningsBatsmenArchive[nameLower];
-                          if (archived && (archived.runs !== undefined || archived.balls !== undefined)) {
-                            setB2Runs(String(archived.runs || 0));
-                            setB2Balls(String(archived.balls || 0));
-                            setB2Fours(String(archived.fours || 0));
-                            setB2Sixes(String(archived.sixes || 0));
-                          } else {
-                            // Brand new batsman: ALWAYS start at 0!
-                            setB2Runs('0');
-                            setB2Balls('0');
-                            setB2Fours('0');
-                            setB2Sixes('0');
-                          }
-                        }}
-                        onCustomNameChange={(name) => setB2Name(name)}
-                        onAddPlayerToSquad={(player) => setYetToBatBatsmen(prev => [...prev, player])}
-                      />
-                    </View>
-                    <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 8, fontStyle: 'italic' }}>
-                      * No numbers allowed · Max 25 chars · Tap icon to upload photo
-                    </ThemedText>
-
-                    <View style={styles.statsEditRow}>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Runs</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b2Runs}
-                          onChangeText={(val) => setB2Runs(sanitizeNumericInput(val, 3))}
-                          keyboardType="numeric"
-                          maxLength={3}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Balls</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b2Balls}
-                          onChangeText={(val) => setB2Balls(sanitizeNumericInput(val, 3))}
-                          keyboardType="numeric"
-                          maxLength={3}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4s</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b2Fours}
-                          onChangeText={(val) => setB2Fours(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>6s</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b2Sixes}
-                          onChangeText={(val) => setB2Sixes(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
+                        🎯 Bowling
+                      </ThemedText>
                     </View>
                   </View>
-                </>
-              ) : (
-                <>
-                  {/* BATSMEN MANAGEMENT SECTION */}
-                  <ThemedText type="labelMd" style={{ color: theme.primary, marginBottom: 10, letterSpacing: 0.5 }}>
-                    ACTIVE BATSMEN
-                  </ThemedText>
-
-                  {/* Batsman 1 */}
-                  <View style={[styles.card, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33', marginBottom: 12, zIndex: activeDropdownKey === 'b1' ? 9999 : 3 }]}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <ThemedText type="labelMd" style={{ color: theme.text }}>
-                        Batsman 1 {batsmen[0]?.active ? '🏏 (On Strike)' : '(Non-Strike)'}
-                      </ThemedText>
-                      <View style={{ flexDirection: 'row', gap: 6 }}>
-                        <Pressable
-                          onPress={() => setActionTarget({ type: 'replace', batsmanIndex: 0 })}
-                          style={[styles.smallActionChip, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}
-                        >
-                          <ThemedText style={{ fontSize: 10, color: theme.text }}>Swap/Sub</ThemedText>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => setActionTarget({ type: 'retire', batsmanIndex: 0 })}
-                          style={[styles.smallActionChip, { backgroundColor: theme.error + '22', borderColor: theme.error + '44' }]}
-                        >
-                          <ThemedText style={{ fontSize: 10, color: theme.error }}>Retire</ThemedText>
-                        </Pressable>
-                      </View>
-                    </View>
-
-                    {/* Avatar Picker & Name Input */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, zIndex: activeDropdownKey === 'b1' ? 9999 : 1 }}>
-                      <Pressable
-                        onPress={() => handlePickAvatar('b1')}
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          backgroundColor: theme.primary + '15',
-                          borderWidth: 1.5,
-                          borderColor: theme.primary + '40',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {b1Avatar ? (
-                          <Image source={{ uri: b1Avatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                        ) : (
-                          <Ionicons name="camera-outline" size={20} color={theme.primary} />
-                        )}
-                      </Pressable>
-                      <PlayerDropdownSelector
-                        value={b1Name}
-                        placeholder="Select Batsman 1..."
-                        squadList={availableBenchBatsmen}
-                        otherSelectedName={b2Name}
-                        dismissedNames={dismissedBatsmen.filter(db => db && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt').map(db => db.name)}
-                        retiredHurtNames={dismissedBatsmen.filter(db => db && (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')).map(db => db.name)}
-                        opposingTeamNames={otherBowlers.map(p => typeof p === 'string' ? p : p.name).filter(Boolean)}
-                        theme={theme}
-                        isOpen={activeDropdownKey === 'b1'}
-                        setIsOpen={(val) => setActiveDropdownKey(val ? 'b1' : null)}
-                        onSelectPlayer={(name, avatar, existingStats) => {
-                          const nameTrimmed = name.trim();
-                          const nameLower = nameTrimmed.toLowerCase();
-
-                          // Archive current batsman 1 stats before swapping
-                          if (b1Name.trim() && b1Name.trim().toLowerCase() !== nameLower) {
-                            setInningsBatsmenArchive(prev => ({
-                              ...prev,
-                              [b1Name.trim().toLowerCase()]: {
-                                name: b1Name.trim(),
-                                runs: parseInt(b1Runs) || 0,
-                                balls: parseInt(b1Balls) || 0,
-                                fours: parseInt(b1Fours) || 0,
-                                sixes: parseInt(b1Sixes) || 0,
-                                avatar: b1Avatar,
-                              }
-                            }));
-                          }
-
-                          setB1Name(nameTrimmed);
-                          if (avatar) setB1Avatar(avatar);
-
-                          // Load incoming batsman stats (restore if previously batted, otherwise 0 for new batsman!)
-                          const archived = existingStats || inningsBatsmenArchive[nameLower];
-                          if (archived && (archived.runs !== undefined || archived.balls !== undefined)) {
-                            setB1Runs(String(archived.runs || 0));
-                            setB1Balls(String(archived.balls || 0));
-                            setB1Fours(String(archived.fours || 0));
-                            setB1Sixes(String(archived.sixes || 0));
-                          } else {
-                            // Brand new batsman: ALWAYS start at 0!
-                            setB1Runs('0');
-                            setB1Balls('0');
-                            setB1Fours('0');
-                            setB1Sixes('0');
-                          }
-                        }}
-                        onCustomNameChange={(name) => setB1Name(name)}
-                      />
-                    </View>
-                    <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 8, fontStyle: 'italic' }}>
-                      * No numbers allowed · Max 25 chars · Tap icon to upload photo
+                  <Pressable
+                    onPress={() => setActionTarget({ type: 'bowler' })}
+                    style={{
+                      backgroundColor: theme.surfaceLowest,
+                      borderWidth: 1,
+                      borderColor: theme.outlineVariant + '55',
+                      borderRadius: 8,
+                      paddingHorizontal: 9,
+                      paddingVertical: 4.5,
+                    }}
+                  >
+                    <ThemedText style={{ fontSize: 10.5, color: theme.text, fontFamily: 'Sora_500Medium' }}>
+                      Change Bowler
                     </ThemedText>
+                  </Pressable>
+                </View>
 
-                    <View style={styles.statsEditRow}>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Runs</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b1Runs}
-                          onChangeText={(val) => setB1Runs(sanitizeNumericInput(val, 3))}
-                          keyboardType="numeric"
-                          maxLength={3}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Balls</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b1Balls}
-                          onChangeText={(val) => setB1Balls(sanitizeNumericInput(val, 3))}
-                          keyboardType="numeric"
-                          maxLength={3}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4s</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b1Fours}
-                          onChangeText={(val) => setB1Fours(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>6s</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b1Sixes}
-                          onChangeText={(val) => setB1Sixes(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
-                    </View>
+                {/* Avatar Picker & Dropdown */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, zIndex: activeDropdownKey === 'bowler' ? 9999 : 1 }}>
+                  <Pressable
+                    onPress={() => handlePickAvatar('bowler')}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: theme.surfaceLowest,
+                      borderWidth: 1.5,
+                      borderColor: theme.primary + '50',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      overflow: 'hidden',
+                      position: 'relative',
+                    }}
+                  >
+                    {bowlAvatar ? (
+                      <Image source={{ uri: bowlAvatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                    ) : (
+                      <Ionicons name="camera-outline" size={20} color={theme.primary} />
+                    )}
+                  </Pressable>
+                  <PlayerDropdownSelector
+                    value={bowlName}
+                    placeholder="Select Active Bowler..."
+                    squadList={otherBowlers}
+                    maxBowlerOvers={ruleMaxOversPerBowler === 'unlimited' ? Infinity : (parseInt(ruleMaxOversPerBowler) || Infinity)}
+                    opposingTeamNames={[...yetToBatBatsmen, ...batsmen, ...dismissedBatsmen].map(p => typeof p === 'string' ? p : p?.name).filter(Boolean)}
+                    theme={theme}
+                    isOpen={activeDropdownKey === 'bowler'}
+                    setIsOpen={(val) => setActiveDropdownKey(val ? 'bowler' : null)}
+                    onSelectPlayer={(name, avatar) => {
+                      setBowlName(name);
+                      if (avatar) setBowlAvatar(avatar);
+                    }}
+                    onCustomNameChange={(name) => setBowlName(name)}
+                    onAddPlayerToSquad={(player) => setOtherBowlers(prev => [...prev, player])}
+                  />
+                </View>
+                <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 10, fontStyle: 'italic', marginTop: 3 }}>
+                  * Tap photo to upload · No numbers allowed
+                </ThemedText>
+
+                {/* Stat Grid */}
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>Overs</ThemedText>
+                    <TextInput
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        backgroundColor: theme.surfaceLowest,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontFamily: 'Sora_600SemiBold',
+                        color: theme.text,
+                      }}
+                      value={bowlOvers}
+                      onChangeText={(val) => setBowlOvers(sanitizeNumericInput(val, 2))}
+                      keyboardType="numeric"
+                      maxLength={2}
+                    />
                   </View>
-
-                  {/* Batsman 2 */}
-                  <View style={[styles.card, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33', marginBottom: 12, zIndex: activeDropdownKey === 'b2' ? 9999 : 2 }]}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <ThemedText type="labelMd" style={{ color: theme.text }}>
-                        Batsman 2 {batsmen[1]?.active ? '🏏 (On Strike)' : '(Non-Strike)'}
-                      </ThemedText>
-                      <View style={{ flexDirection: 'row', gap: 6 }}>
-                        <Pressable
-                          onPress={() => setActionTarget({ type: 'replace', batsmanIndex: 1 })}
-                          style={[styles.smallActionChip, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}
-                        >
-                          <ThemedText style={{ fontSize: 10, color: theme.text }}>Swap/Sub</ThemedText>
-                        </Pressable>
-                        <Pressable
-                          onPress={() => setActionTarget({ type: 'retire', batsmanIndex: 1 })}
-                          style={[styles.smallActionChip, { backgroundColor: theme.error + '22', borderColor: theme.error + '44' }]}
-                        >
-                          <ThemedText style={{ fontSize: 10, color: theme.error }}>Retire</ThemedText>
-                        </Pressable>
-                      </View>
-                    </View>
-
-                    {/* Avatar Picker & Name Input */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, zIndex: activeDropdownKey === 'b2' ? 9999 : 1 }}>
-                      <Pressable
-                        onPress={() => handlePickAvatar('b2')}
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          backgroundColor: theme.primary + '15',
-                          borderWidth: 1.5,
-                          borderColor: theme.primary + '40',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {b2Avatar ? (
-                          <Image source={{ uri: b2Avatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                        ) : (
-                          <Ionicons name="camera-outline" size={20} color={theme.primary} />
-                        )}
-                      </Pressable>
-                      <PlayerDropdownSelector
-                        value={b2Name}
-                        placeholder="Select Batsman 2..."
-                        squadList={availableBenchBatsmen}
-                        otherSelectedName={b1Name}
-                        dismissedNames={dismissedBatsmen.filter(db => db && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt').map(db => db.name)}
-                        retiredHurtNames={dismissedBatsmen.filter(db => db && (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')).map(db => db.name)}
-                        opposingTeamNames={otherBowlers.map(p => typeof p === 'string' ? p : p.name).filter(Boolean)}
-                        theme={theme}
-                        isOpen={activeDropdownKey === 'b2'}
-                        setIsOpen={(val) => setActiveDropdownKey(val ? 'b2' : null)}
-                        onSelectPlayer={(name, avatar, existingStats) => {
-                          const nameTrimmed = name.trim();
-                          const nameLower = nameTrimmed.toLowerCase();
-
-                          // Archive current batsman 2 stats before swapping
-                          if (b2Name.trim() && b2Name.trim().toLowerCase() !== nameLower) {
-                            setInningsBatsmenArchive(prev => ({
-                              ...prev,
-                              [b2Name.trim().toLowerCase()]: {
-                                name: b2Name.trim(),
-                                runs: parseInt(b2Runs) || 0,
-                                balls: parseInt(b2Balls) || 0,
-                                fours: parseInt(b2Fours) || 0,
-                                sixes: parseInt(b2Sixes) || 0,
-                                avatar: b2Avatar,
-                              }
-                            }));
-                          }
-
-                          setB2Name(nameTrimmed);
-                          if (avatar) setB2Avatar(avatar);
-
-                          // Load incoming batsman stats (restore if previously batted, otherwise 0 for new batsman!)
-                          const archived = existingStats || inningsBatsmenArchive[nameLower];
-                          if (archived && (archived.runs !== undefined || archived.balls !== undefined)) {
-                            setB2Runs(String(archived.runs || 0));
-                            setB2Balls(String(archived.balls || 0));
-                            setB2Fours(String(archived.fours || 0));
-                            setB2Sixes(String(archived.sixes || 0));
-                          } else {
-                            // Brand new batsman: ALWAYS start at 0!
-                            setB2Runs('0');
-                            setB2Balls('0');
-                            setB2Fours('0');
-                            setB2Sixes('0');
-                          }
-                        }}
-                        onCustomNameChange={(name) => setB2Name(name)}
-                      />
-                    </View>
-                    <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 8, fontStyle: 'italic' }}>
-                      * No numbers allowed · Max 25 chars · Tap icon to upload photo
-                    </ThemedText>
-
-                    <View style={styles.statsEditRow}>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Runs</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b2Runs}
-                          onChangeText={(val) => setB2Runs(sanitizeNumericInput(val, 3))}
-                          keyboardType="numeric"
-                          maxLength={3}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Balls</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b2Balls}
-                          onChangeText={(val) => setB2Balls(sanitizeNumericInput(val, 3))}
-                          keyboardType="numeric"
-                          maxLength={3}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>4s</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b2Fours}
-                          onChangeText={(val) => setB2Fours(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>6s</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={b2Sixes}
-                          onChangeText={(val) => setB2Sixes(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
-                    </View>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>Maidens</ThemedText>
+                    <TextInput
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        backgroundColor: theme.surfaceLowest,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontFamily: 'Sora_600SemiBold',
+                        color: theme.text,
+                      }}
+                      value={bowlMaidens}
+                      onChangeText={(val) => setBowlMaidens(sanitizeNumericInput(val, 2))}
+                      keyboardType="numeric"
+                      maxLength={2}
+                    />
                   </View>
-
-                  {/* BOWLER MANAGEMENT SECTION */}
-                  <ThemedText type="labelMd" style={{ color: theme.primary, marginTop: 8, marginBottom: 10, letterSpacing: 0.5 }}>
-                    CURRENT BOWLER
-                  </ThemedText>
-
-                  <View style={[styles.card, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33', marginBottom: 16, zIndex: activeDropdownKey === 'bowler' ? 9999 : 1 }]}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <ThemedText type="labelMd" style={{ color: theme.text }}>
-                        Active Bowler
-                      </ThemedText>
-                      <Pressable
-                        onPress={() => setActionTarget({ type: 'bowler' })}
-                        style={[styles.smallActionChip, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}
-                      >
-                        <ThemedText style={{ fontSize: 10, color: theme.text }}>Change Bowler</ThemedText>
-                      </Pressable>
-                    </View>
-
-                    {/* Avatar Picker & Name Input */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, zIndex: activeDropdownKey === 'bowler' ? 9999 : 1 }}>
-                      <Pressable
-                        onPress={() => handlePickAvatar('bowler')}
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          backgroundColor: theme.primary + '15',
-                          borderWidth: 1.5,
-                          borderColor: theme.primary + '40',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {bowlAvatar ? (
-                          <Image source={{ uri: bowlAvatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                        ) : (
-                          <Ionicons name="camera-outline" size={20} color={theme.primary} />
-                        )}
-                      </Pressable>
-                      <PlayerDropdownSelector
-                        value={bowlName}
-                        placeholder="Select Active Bowler..."
-                        squadList={otherBowlers}
-                        maxBowlerOvers={ruleMaxOversPerBowler === 'unlimited' ? Infinity : (parseInt(ruleMaxOversPerBowler) || Infinity)}
-                        opposingTeamNames={[...yetToBatBatsmen, ...batsmen, ...dismissedBatsmen].map(p => typeof p === 'string' ? p : p?.name).filter(Boolean)}
-                        theme={theme}
-                        isOpen={activeDropdownKey === 'bowler'}
-                        setIsOpen={(val) => setActiveDropdownKey(val ? 'bowler' : null)}
-                        onSelectPlayer={(name, avatar) => {
-                          setBowlName(name);
-                          if (avatar) setBowlAvatar(avatar);
-                        }}
-                        onCustomNameChange={(name) => setBowlName(name)}
-                      />
-                    </View>
-                    <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 8, fontStyle: 'italic' }}>
-                      * No numbers allowed · Max 25 chars · Tap icon to upload photo
-                    </ThemedText>
-
-                    <View style={styles.statsEditRow}>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Overs</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={bowlOvers}
-                          onChangeText={(val) => setBowlOvers(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Maidens</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={bowlMaidens}
-                          onChangeText={(val) => setBowlMaidens(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Runs</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={bowlRuns}
-                          onChangeText={(val) => setBowlRuns(sanitizeNumericInput(val, 3))}
-                          keyboardType="numeric"
-                          maxLength={3}
-                        />
-                      </View>
-                      <View style={styles.statEditCol}>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Wickets</ThemedText>
-                        <TextInput
-                          style={[styles.statInput, { color: theme.text, borderColor: theme.outlineVariant }]}
-                          value={bowlWickets}
-                          onChangeText={(val) => setBowlWickets(sanitizeNumericInput(val, 2))}
-                          keyboardType="numeric"
-                          maxLength={2}
-                        />
-                      </View>
-                    </View>
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>Runs</ThemedText>
+                    <TextInput
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        backgroundColor: theme.surfaceLowest,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontFamily: 'Sora_600SemiBold',
+                        color: theme.text,
+                      }}
+                      value={bowlRuns}
+                      onChangeText={(val) => setBowlRuns(sanitizeNumericInput(val, 3))}
+                      keyboardType="numeric"
+                      maxLength={3}
+                    />
                   </View>
-                </>
-              )}
+                  <View style={{ flex: 1, alignItems: 'center' }}>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', marginBottom: 3 }}>Wickets</ThemedText>
+                    <TextInput
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        backgroundColor: theme.surfaceLowest,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '55',
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontFamily: 'Sora_600SemiBold',
+                        color: theme.text,
+                      }}
+                      value={bowlWickets}
+                      onChangeText={(val) => setBowlWickets(sanitizeNumericInput(val, 2))}
+                      keyboardType="numeric"
+                      maxLength={2}
+                    />
+                  </View>
+                </View>
+              </View>
             </ScrollView>
 
-            {/* FIXED STICKY ACTION FOOTER - ALWAYS FULLY VISIBLE & ATTRACTIVE */}
-            <View style={{
-              flexDirection: 'row',
-              gap: 12,
-              paddingTop: 12,
-              paddingBottom: 4,
-              borderTopWidth: 1,
-              borderTopColor: theme.outlineVariant + '22',
-              backgroundColor: theme.surfaceLowest,
-            }}>
+            {/* FIXED STICKY ACTION FOOTER */}
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: 10,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                borderTopWidth: 1,
+                borderTopColor: theme.outlineVariant + '22',
+                backgroundColor: theme.surfaceLowest,
+              }}
+            >
               <Pressable
                 onPress={() => setShowEditPlayersModal(false)}
-                style={({ pressed }) => [
-                  styles.cancelBtn,
-                  {
-                    borderColor: theme.outlineVariant + '66',
-                    height: 44,
-                    borderRadius: 12,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                    backgroundColor: theme.surfaceLow,
-                    opacity: pressed ? 0.8 : 1,
-                  }
-                ]}
+                style={({ pressed }) => [{
+                  flex: 1,
+                  height: 46,
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderColor: theme.outlineVariant + '55',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  backgroundColor: theme.surfaceLow,
+                  opacity: pressed ? 0.8 : 1,
+                }]}
               >
-                <Ionicons name="close-circle-outline" size={16} color={theme.textSecondary} />
-                <ThemedText type="labelMd" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>Cancel</ThemedText>
+                <Ionicons name="close-circle-outline" size={18} color={theme.textSecondary} />
+                <ThemedText style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>
+                  Cancel
+                </ThemedText>
               </Pressable>
 
               {(() => {
@@ -6797,25 +6763,23 @@ export default function CricketScoring({
                   <Pressable
                     disabled={!isPitchLineupReady}
                     onPress={savePlayersEdit}
-                    style={({ pressed }) => [
-                      styles.saveBtn,
-                      {
-                        backgroundColor: isPitchLineupReady ? theme.primary : (theme.outlineVariant + '44'),
-                        height: 44,
-                        borderRadius: 12,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 6,
-                        elevation: isPitchLineupReady ? 3 : 0,
-                        boxShadow: isPitchLineupReady ? `0px 4px 12px ${theme.primary}40` : 'none',
-                        opacity: !isPitchLineupReady ? 0.55 : pressed ? 0.85 : 1,
-                      }
-                    ]}
+                    style={({ pressed }) => [{
+                      flex: 1.6,
+                      height: 46,
+                      borderRadius: 12,
+                      backgroundColor: isPitchLineupReady ? theme.primary : (theme.outlineVariant + '44'),
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      elevation: isPitchLineupReady ? 3 : 0,
+                      boxShadow: isPitchLineupReady ? `0px 4px 12px ${theme.primary}40` : 'none',
+                      opacity: !isPitchLineupReady ? 0.55 : pressed ? 0.85 : 1,
+                    }]}
                   >
                     <Ionicons name={isPitchLineupReady ? "checkmark-circle" : "alert-circle-outline"} size={18} color="#ffffff" />
-                    <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 13.5 }}>
-                      {isPitchLineupReady ? 'On Pitch' : 'Select Batsmen (On Pitch)'}
+                    <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_700Bold', fontSize: 13.5 }}>
+                      {isPitchLineupReady ? 'Confirm Lineup' : 'Select Players (On Pitch)'}
                     </ThemedText>
                   </Pressable>
                 );

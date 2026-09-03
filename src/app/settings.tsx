@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ThemedText } from '@/components/themed-text';
@@ -21,6 +21,11 @@ import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import {
+  payoutReadiness,
+  maskAccountNumber,
+  type PayeeProfile,
+} from '@/store/payout-store';
 import { getAvatarSource } from '@/constants/avatars';
 import { useWalletStore } from '@/store/app-store';
 import { useToast } from '@/context/ToastContext';
@@ -120,6 +125,48 @@ export default function SettingsScreen() {
   const { profile, updateProfile } = useUserProfile();
   const { walletBalance } = useWalletStore();
   const { showSuccess } = useToast();
+
+  /**
+   * Only these roles ever receive money. A Player has nothing to be paid for,
+   * so payout and tax fields are hidden from them entirely rather than shown
+   * and left permanently empty.
+   */
+  const role = profile.role || 'Player';
+  const isTurfOwner = role === 'Owner' || role === 'Super Admin';
+  const isPayee = isTurfOwner || role === 'Coach' || role === 'Organizer';
+
+  // Mirrors payout-settings' own storage, read-only, so this screen can report
+  // real completion status instead of a static "set this up" prompt.
+  const [payeeProfile, setPayeeProfile] = useState<Partial<PayeeProfile> | null>(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let alive = true;
+      (async () => {
+        try {
+          const raw = await AsyncStorage.getItem('@turf_payout_profile');
+          if (alive) setPayeeProfile(raw ? JSON.parse(raw) : null);
+        } catch {
+          if (alive) setPayeeProfile(null);
+        }
+      })();
+      return () => {
+        alive = false;
+      };
+    }, [])
+  );
+
+  const readiness = React.useMemo(() => payoutReadiness(payeeProfile), [payeeProfile]);
+
+  /** Where money actually lands, summarised for an at-a-glance check. */
+  const payoutTargetLabel = React.useMemo(() => {
+    if (!payeeProfile) return 'Not set up yet';
+    if (payeeProfile.payoutMethod === 'upi') {
+      return payeeProfile.upiId ? `UPI · ${payeeProfile.upiId}` : 'UPI · not set';
+    }
+    const acc = payeeProfile.bank?.accountNumber;
+    return acc ? `Bank · ${maskAccountNumber(acc)}` : 'Bank · not set';
+  }, [payeeProfile]);
 
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
   const [signOutVisible, setSignOutVisible] = useState(false);
@@ -300,13 +347,103 @@ export default function SettingsScreen() {
             <LinkRow theme={theme} icon="calendar-outline" title="Booking History" subtitle="View active, completed & cancelled reservations" onPress={() => router.push('/booking-history')} />
             <Divider theme={theme} />
             <LinkRow theme={theme} icon="wallet-outline" title="My Sports Wallet" subtitle={`Balance: ₹${walletBalance.toFixed(2)}`} onPress={() => router.push('/wallet')} />
-            <Divider theme={theme} />
-            {/* Reachable from Settings rather than only the owner hub, because
-                coaches and organizers get paid through the same profile. */}
-            <LinkRow theme={theme} icon="cash-outline" title="Earnings & Payments" subtitle="Payment status, escrow and statements" onPress={() => router.push('/owner-earnings')} />
-            <Divider theme={theme} />
-            <LinkRow theme={theme} icon="card-outline" title="Payout & Tax Details" subtitle="Address, GST and how you get paid" onPress={() => router.push('/payout-settings')} />
+            {/* Coaches and organizers are paid through the same payee profile,
+                so they keep these rows. Owners get the richer section below
+                instead, and Players — who are never paid — see neither. */}
+            {isPayee && !isTurfOwner && (
+              <>
+                <Divider theme={theme} />
+                <LinkRow theme={theme} icon="cash-outline" title="Earnings & Payments" subtitle="Payment status, escrow and statements" onPress={() => router.push('/owner-earnings')} />
+                <Divider theme={theme} />
+                <LinkRow theme={theme} icon="card-outline" title="Payout & Tax Details" subtitle="Address, GST and how you get paid" onPress={() => router.push('/payout-settings')} />
+              </>
+            )}
           </SectionCard>
+
+          {/* ── Turf owner only ────────────────────────────────────────────── */}
+          {isTurfOwner && (
+            <SectionCard title="TURF OWNER" icon="business-outline" theme={theme}>
+              {/* Status first: an owner whose details are incomplete is not
+                  getting paid, and that should be the first thing they see. */}
+              <View
+                style={[
+                  styles.ownerStatusBanner,
+                  {
+                    backgroundColor: readiness.payable ? '#DCFCE7' : '#FEF3C7',
+                    borderColor: readiness.payable ? '#86EFAC' : '#FDE68A',
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={readiness.payable ? 'checkmark-circle' : 'alert-circle'}
+                  size={16}
+                  color={readiness.payable ? '#15803D' : '#B45309'}
+                />
+                <View style={{ flex: 1 }}>
+                  <ThemedText
+                    style={[
+                      styles.ownerStatusTitle,
+                      { color: readiness.payable ? '#15803D' : '#B45309' },
+                    ]}
+                  >
+                    {readiness.payable
+                      ? 'Ready to receive payments'
+                      : payeeProfile
+                        ? `${readiness.issues.length} detail${readiness.issues.length === 1 ? '' : 's'} still needed`
+                        : 'Payment details not set up'}
+                  </ThemedText>
+                  <ThemedText
+                    style={[
+                      styles.ownerStatusBody,
+                      { color: readiness.payable ? '#166534' : '#92400E' },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {readiness.payable
+                      ? payoutTargetLabel
+                      : readiness.issues[0]?.message || 'Add your business and bank details to get paid.'}
+                  </ThemedText>
+                </View>
+              </View>
+
+              <Divider theme={theme} />
+              <LinkRow
+                theme={theme}
+                icon="business-outline"
+                title="Turf Owner Details"
+                subtitle={
+                  payeeProfile?.legalName
+                    ? `${payeeProfile.legalName}${payeeProfile.gstin ? ` · GST ${payeeProfile.gstin}` : ''}`
+                    : 'Legal name, address, PAN and GST'
+                }
+                onPress={() => router.push('/payout-settings')}
+              />
+              <Divider theme={theme} />
+              <LinkRow
+                theme={theme}
+                icon="card-outline"
+                title="Payment Details"
+                subtitle={payoutTargetLabel}
+                onPress={() => router.push('/payout-settings')}
+              />
+              <Divider theme={theme} />
+              <LinkRow
+                theme={theme}
+                icon="receipt-outline"
+                title="Payment Transactions"
+                subtitle="Settlements, escrow status and statements"
+                onPress={() => router.push('/owner-earnings')}
+              />
+              <Divider theme={theme} />
+              <LinkRow
+                theme={theme}
+                icon="calendar-outline"
+                title="Turf Bookings"
+                subtitle="Who has booked your venues"
+                onPress={() => router.push('/turf-bookings')}
+              />
+            </SectionCard>
+          )}
 
           {/* ── Language & Region ── */}
           <SectionCard title="LANGUAGE & REGION" icon="language-outline" theme={theme}>
@@ -508,6 +645,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
   },
+  ownerStatusBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    padding: 12,
+    marginBottom: 4,
+  },
+  ownerStatusTitle: { fontSize: 12.5, fontFamily: 'Sora_700Bold' },
+  ownerStatusBody: { fontSize: 11, lineHeight: 16, marginTop: 3 },
   divider: {
     height: 1,
   },
