@@ -9,9 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
@@ -22,6 +20,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useBookings, useTurfStore } from '@/store/app-store';
 import { useToast } from '@/context/ToastContext';
 import { getAvatarSource } from '@/constants/avatars';
+import { WashCard } from '@/components/wash-card';
 import { formatSlotsRange } from '@/utils/date-utils';
 import type { Booking } from '@/store/booking-store';
 
@@ -38,13 +37,6 @@ const FILTERS: { key: Filter; label: string }[] = [
  * The soft multi-colour wash behind each card. Per-card hues keep a long list
  * from reading as one flat block while staying within the same pastel family.
  */
-const CARD_WASHES: [string, string, string][] = [
-  ['#BFD4F2', '#F6C9A8', '#E3C9F0'],
-  ['#C9E5D8', '#F7D6B0', '#C3D8F5'],
-  ['#EBD0E8', '#FAD9B4', '#C6DDF2'],
-  ['#D3D9F5', '#F8CBB8', '#CDE8DC'],
-];
-
 export default function TurfBookingsScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -137,112 +129,50 @@ export default function TurfBookingsScreen() {
   };
 
   const renderCard = (b: Booking, index: number) => {
-    const wash = CARD_WASHES[index % CARD_WASHES.length];
     const isPaidUp = (b.remaining || 0) <= 0;
     const isCancelled = b.status === 'cancelled';
     const isToday = b.date === todayISO;
 
     return (
-      <Reanimated.View
+      <WashCard
         key={b.id}
-        entering={FadeInDown.delay(index * 60).duration(400)}
-        style={styles.cardOuter}
-      >
-        {/* Soft gradient wash, matching the reference's blurred backdrop */}
-        <LinearGradient
-          colors={wash}
-          start={{ x: 0.1, y: 0 }}
-          end={{ x: 0.9, y: 1 }}
-          style={[styles.wash, isCancelled && { opacity: 0.45 }]}
-        />
-
-        {/* Floating white card, inset so the wash reads as a halo */}
-        <View style={[styles.card, { backgroundColor: theme.surfaceLowest }]}>
-          <View style={styles.cardHeaderRow}>
-            <View style={styles.avatarRing}>
-              <Image
-                source={getAvatarSource(b.customerAvatar || 'avatar_1')}
-                style={styles.avatar}
-                contentFit="cover"
-              />
-            </View>
-
-            <View style={styles.headerText}>
-              <ThemedText style={[styles.customerName, { color: theme.text }]} numberOfLines={1}>
-                {b.customerName || 'Guest booking'}
-              </ThemedText>
-
-              <View style={styles.chipRow}>
-                <View style={[styles.chip, { backgroundColor: isCancelled ? '#FEE2E2' : isPaidUp ? '#DCFCE7' : '#FEF3C7' }]}>
-                  <ThemedText
-                    style={[styles.chipText, { color: isCancelled ? '#B91C1C' : isPaidUp ? '#15803D' : '#B45309' }]}
-                  >
-                    {isCancelled ? 'Cancelled' : isPaidUp ? 'Paid' : `₹${b.remaining} due`}
-                  </ThemedText>
-                </View>
-                {isToday && !isCancelled && (
-                  <View style={[styles.chip, { backgroundColor: '#E0E7FF' }]}>
-                    <ThemedText style={[styles.chipText, { color: '#4338CA' }]}>Today</ThemedText>
-                  </View>
-                )}
-                <View style={[styles.chip, { backgroundColor: '#F1F5F9' }]}>
-                  <ThemedText style={[styles.chipText, { color: '#475569' }]}>
-                    {b.bookingRef}
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          <ThemedText style={[styles.description, { color: theme.textSecondary }]} numberOfLines={2}>
-            {b.dayLabel} · {formatSlotsRange(b.slots)} · {b.venueName}
-          </ThemedText>
-
-          <View style={styles.actionRow}>
-            <Pressable
-              onPress={() => callCustomer(b)}
-              accessibilityRole="button"
-              accessibilityLabel={`Call ${b.customerName || 'customer'}`}
-              style={({ pressed }) => [
-                styles.primaryPill,
-                { backgroundColor: isCancelled ? '#94A3B8' : '#0F172A', opacity: pressed ? 0.85 : 1 },
-              ]}
-            >
-              <Ionicons name="call" size={17} color="#ffffff" />
-              <ThemedText style={styles.primaryPillText}>Call</ThemedText>
-            </Pressable>
-
-            <Pressable
-              onPress={() => messageCustomer(b)}
-              accessibilityRole="button"
-              accessibilityLabel={`Message ${b.customerName || 'customer'}`}
-              style={({ pressed }) => [
-                styles.circleBtn,
-                { borderColor: theme.outlineVariant + '66', opacity: pressed ? 0.7 : 1 },
-              ]}
-            >
-              <Ionicons name="mail-outline" size={18} color={theme.text} />
-            </Pressable>
-
-            <Pressable
-              onPress={() =>
-                showInfo(
-                  `₹${b.totalAmount} total`,
-                  `Paid ₹${b.advancePaid} · ${b.remaining > 0 ? `₹${b.remaining} due` : 'settled'} · ${b.paymentMethod}`
-                )
-              }
-              accessibilityRole="button"
-              accessibilityLabel="Payment details"
-              style={({ pressed }) => [
-                styles.circleBtn,
-                { borderColor: theme.outlineVariant + '66', opacity: pressed ? 0.7 : 1 },
-              ]}
-            >
-              <Ionicons name="receipt-outline" size={18} color={theme.text} />
-            </Pressable>
-          </View>
-        </View>
-      </Reanimated.View>
+        washIndex={index}
+        delay={index * 0.06}
+        dimmed={isCancelled}
+        avatar={getAvatarSource(b.customerAvatar || 'avatar_1')}
+        title={b.customerName || 'Guest booking'}
+        chips={[
+          {
+            label: isCancelled ? 'Cancelled' : isPaidUp ? 'Paid' : `₹${b.remaining} due`,
+            tone: isCancelled ? 'danger' : isPaidUp ? 'success' : 'warn',
+          },
+          ...(isToday && !isCancelled ? [{ label: 'Today', tone: 'info' as const }] : []),
+          { label: b.bookingRef, tone: 'neutral' },
+        ]}
+        description={`${b.dayLabel} · ${formatSlotsRange(b.slots)} · ${b.venueName}`}
+        primary={{
+          icon: 'call',
+          label: 'Call',
+          accessibilityLabel: `Call ${b.customerName || 'customer'}`,
+          onPress: () => callCustomer(b),
+        }}
+        actions={[
+          {
+            icon: 'mail-outline',
+            accessibilityLabel: `Message ${b.customerName || 'customer'}`,
+            onPress: () => messageCustomer(b),
+          },
+          {
+            icon: 'receipt-outline',
+            accessibilityLabel: 'Payment details',
+            onPress: () =>
+              showInfo(
+                `₹${b.totalAmount} total`,
+                `Paid ₹${b.advancePaid} · ${b.remaining > 0 ? `₹${b.remaining} due` : 'settled'} · ${b.paymentMethod}`
+              ),
+          },
+        ]}
+      />
     );
   };
 
@@ -415,79 +345,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Booking card, per the reference: gradient wash + inset white card ──────
-  cardOuter: {
-    marginBottom: 18,
-    borderRadius: 30,
-    position: 'relative',
-    // The wash is a coloured backdrop, so the shadow belongs on the outer shell.
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 22,
-    elevation: 6,
-  },
-  wash: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 30,
-  },
-  card: {
-    borderRadius: 26,
-    // Asymmetric inset: a wider band of wash at the top-left lets the avatar
-    // overlap it the way the reference does.
-    marginTop: 34,
-    marginLeft: 26,
-    marginRight: 10,
-    marginBottom: 10,
-    paddingTop: 16,
-    paddingHorizontal: 18,
-    paddingBottom: 16,
-  },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatarRing: {
-    width: AVATAR,
-    height: AVATAR,
-    borderRadius: AVATAR / 2,
-    borderWidth: 4,
-    borderColor: '#ffffff',
-    backgroundColor: '#ffffff',
-    overflow: 'hidden',
-    // Pulls the avatar up and left so it straddles the card edge onto the wash.
-    marginTop: -46,
-    marginLeft: -44,
-  },
-  avatar: { width: '100%', height: '100%' },
-  headerText: { flex: 1, marginLeft: -32 },
-  customerName: { fontSize: 19, fontFamily: 'Sora_700Bold' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 7 },
-  chip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full },
-  chipText: { fontSize: 10.5, fontFamily: 'Sora_600SemiBold' },
-
-  description: { fontSize: 12.5, lineHeight: 18, marginTop: 14 },
-
-  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
-  primaryPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    height: 52,
-    borderRadius: 26,
-  },
-  primaryPillText: { color: '#ffffff', fontSize: 15, fontFamily: 'Sora_600SemiBold' },
-  circleBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
   emptyState: { alignItems: 'center', paddingVertical: 56, paddingHorizontal: Spacing.lg },
   emptyTitle: { fontSize: 15, fontFamily: 'Sora_700Bold', marginTop: 14 },
   emptyBody: {

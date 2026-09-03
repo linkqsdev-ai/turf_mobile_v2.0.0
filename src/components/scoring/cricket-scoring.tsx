@@ -7890,11 +7890,50 @@ export default function CricketScoring({
         visible={showPlayingXIModal}
         teamAName={teamA}
         teamBName={teamB}
+        teamAMascot={teams.find(t => t.name.toLowerCase() === teamA.toLowerCase())?.mascot}
+        teamBMascot={teams.find(t => t.name.toLowerCase() === teamB.toLowerCase())?.mascot}
         battingTeamName={battingTeamName || teamA}
         bowlingTeamName={bowlingTeamName || teamB}
         activeStrikerName={batsmen[0]?.active ? batsmen[0]?.name : (batsmen[1]?.active ? batsmen[1]?.name : batsmen[0]?.name || '')}
         activeNonStrikerName={batsmen[0]?.active ? batsmen[1]?.name : (batsmen[1]?.active ? batsmen[0]?.name : batsmen[1]?.name || '')}
         activeBowlerName={bowler?.name || ''}
+        batsmenStats={(() => {
+          const map: Record<string, { runs: number; balls: number; fours: number; sixes: number; sr: string }> = {};
+          const addStat = (name: string, runs: number, balls: number, fours: number, sixes: number) => {
+            if (!name || !name.trim()) return;
+            const sr = balls > 0 ? ((runs / balls) * 100).toFixed(1) : '0.0';
+            map[name.trim().toLowerCase()] = { runs, balls, fours, sixes, sr };
+          };
+          (batsmen || []).forEach(b => {
+            if (b && b.name) addStat(b.name, b.runs || 0, b.balls || 0, b.fours || 0, b.sixes || 0);
+          });
+          (dismissedBatsmen || []).forEach(db => {
+            if (db && db.name) addStat(db.name, db.runs || 0, db.balls || 0, db.fours || 0, db.sixes || 0);
+          });
+          Object.values(inningsBatsmenArchive || {}).forEach((ab: any) => {
+            if (ab && ab.name) addStat(ab.name, ab.runs || 0, ab.balls || 0, ab.fours || 0, ab.sixes || 0);
+          });
+          return map;
+        })()}
+        bowlerStats={(() => {
+          const map: Record<string, { overs: string; maidens: number; runs: number; wickets: number; econ: string }> = {};
+          const addBowl = (b: any) => {
+            if (!b || !b.name || !b.name.trim()) return;
+            const totalLegalBalls = (b.overs || 0) * 6 + (b.ballsInOver || 0);
+            const oversStr = `${b.overs || 0}.${b.ballsInOver || 0}`;
+            const econ = totalLegalBalls > 0 ? ((b.runs || 0) / (totalLegalBalls / 6)).toFixed(2) : '0.00';
+            map[b.name.trim().toLowerCase()] = {
+              overs: oversStr,
+              maidens: b.maidens || 0,
+              runs: b.runs || 0,
+              wickets: b.wickets || 0,
+              econ,
+            };
+          };
+          if (bowler && bowler.name) addBowl(bowler);
+          (otherBowlers || []).forEach(b => addBowl(b));
+          return map;
+        })()}
         dismissedPlayers={dismissedBatsmen}
         initialPool={[]}
         initialTeamA={currentPoolA}

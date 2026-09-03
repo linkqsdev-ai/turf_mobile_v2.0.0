@@ -22,6 +22,7 @@ import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile, getShortLocation } from '@/hooks/use-user-profile';
 import { getAvatarSource } from '@/constants/avatars';
+import { WashCard } from '@/components/wash-card';
 import { useClassStore, useTurfStore, useBookings } from '@/store/app-store';
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
@@ -139,17 +140,6 @@ const COACHES = [
     badge: 'NEW',
     defaultAction: 'Book Coach',
   },
-];
-
-/**
- * Pastel washes behind each coach card. Rotating the hue per card keeps a long
- * list from reading as one flat block, as in the reference design.
- */
-const COACH_CARD_WASHES: [string, string, string][] = [
-  ['#BFD4F2', '#F6C9A8', '#E3C9F0'],
-  ['#C9E5D8', '#F7D6B0', '#C3D8F5'],
-  ['#EBD0E8', '#FAD9B4', '#C6DDF2'],
-  ['#D3D9F5', '#F8CBB8', '#CDE8DC'],
 ];
 
 export default function CoachTab() {
@@ -1032,135 +1022,58 @@ export default function CoachTab() {
                   </View>
                 ) : (
                   visibleCoaches.map((coach: any, index: number) => {
-                    const wash = COACH_CARD_WASHES[index % COACH_CARD_WASHES.length];
                     const booked = coach.trainees || 0;
                     const capacity = parseInt(String(coach.maxStudents || ''), 10);
                     const seatsLeft = isNaN(capacity) ? null : Math.max(0, capacity - booked);
 
-                    const openBookings = () =>
-                      router.push({
-                        pathname: '/coach-students',
-                        params: { classId: coach.id, className: coach.specialty || '' },
-                      });
-
                     return (
-                      <Reanimated.View
+                      <WashCard
                         key={coach.id}
-                        entering={FadeInDown.delay(index * 70).duration(420)}
-                        style={styles.coachCardOuter}
-                      >
-                        {/* Soft gradient wash behind the card */}
-                        <LinearGradient
-                          colors={wash}
-                          start={{ x: 0.1, y: 0 }}
-                          end={{ x: 0.9, y: 1 }}
-                          style={[styles.coachWash, !coach.isActive && { opacity: 0.4 }]}
-                        />
-
-                        <View style={[styles.coachCard, { backgroundColor: theme.surfaceLowest }]}>
-                          <View style={styles.coachCardHead}>
-                            <View style={styles.coachAvatarRing}>
-                              <Image
-                                source={getAvatarSource(coach.avatar)}
-                                style={styles.coachCardAvatar}
-                                contentFit="cover"
-                              />
-                            </View>
-
-                            <View style={styles.coachHeadText}>
-                              <ThemedText
-                                style={[styles.coachName, { color: theme.text }]}
-                                numberOfLines={1}
-                              >
-                                {coach.specialty || coach.name}
-                              </ThemedText>
-
-                              {/* Class type chips — sport first, so "Cricket"
-                                  or "Swimming" is readable at a glance. */}
-                              <View style={styles.coachChipRow}>
-                                <View style={[styles.coachChip, { backgroundColor: '#E0E7FF' }]}>
-                                  <ThemedText style={[styles.coachChipText, { color: '#4338CA' }]}>
-                                    {coach.sportType}
-                                  </ThemedText>
-                                </View>
-                                <View style={[styles.coachChip, { backgroundColor: '#FEF3C7' }]}>
-                                  <ThemedText style={[styles.coachChipText, { color: '#B45309' }]}>
-                                    {coach.classType}
-                                  </ThemedText>
-                                </View>
-                                {!coach.isActive && (
-                                  <View style={[styles.coachChip, { backgroundColor: '#FEE2E2' }]}>
-                                    <ThemedText style={[styles.coachChipText, { color: '#B91C1C' }]}>
-                                      Inactive
-                                    </ThemedText>
-                                  </View>
-                                )}
-                              </View>
-                            </View>
-                          </View>
-
-                          <ThemedText
-                            style={[styles.coachDesc, { color: theme.textSecondary }]}
-                            numberOfLines={2}
-                          >
-                            {[coach.ageGroup, coach.location, coach.rate].filter(Boolean).join(' · ')}
-                          </ThemedText>
-
-                          <View style={styles.coachStatRow}>
-                            <ThemedText style={[styles.coachStatStrong, { color: theme.primary }]}>
-                              {booked} {booked === 1 ? 'student' : 'students'} booked
-                            </ThemedText>
-                            {seatsLeft !== null && (
-                              <ThemedText style={[styles.coachStatMuted, { color: theme.textSecondary }]}>
-                                {seatsLeft === 0 ? 'Full' : `${seatsLeft} seats left`}
-                              </ThemedText>
-                            )}
-                          </View>
-
-                          <View style={styles.coachActionRow}>
-                            <Pressable
-                              onPress={openBookings}
-                              accessibilityRole="button"
-                              accessibilityLabel={`View ${booked} booked students for ${coach.specialty}`}
-                              style={({ pressed }) => [
-                                styles.coachPrimaryPill,
-                                { backgroundColor: '#0F172A', opacity: pressed ? 0.85 : 1 },
-                              ]}
-                            >
-                              <Ionicons name="calendar" size={17} color="#ffffff" />
-                              <ThemedText style={styles.coachPrimaryPillText}>
-                                {booked > 0 ? `${booked} Booked` : 'Bookings'}
-                              </ThemedText>
-                            </Pressable>
-
-                            <Pressable
-                              onPress={() =>
-                                router.push({ pathname: '/create-class', params: { editId: coach.id } })
-                              }
-                              accessibilityRole="button"
-                              accessibilityLabel={`Edit ${coach.specialty}`}
-                              style={({ pressed }) => [
-                                styles.coachCircleBtn,
-                                { borderColor: theme.outlineVariant + '66', opacity: pressed ? 0.7 : 1 },
-                              ]}
-                            >
-                              <Ionicons name="create-outline" size={18} color={theme.text} />
-                            </Pressable>
-
-                            <Pressable
-                              onPress={() => router.push('/coach-classes')}
-                              accessibilityRole="button"
-                              accessibilityLabel="Manage all classes"
-                              style={({ pressed }) => [
-                                styles.coachCircleBtn,
-                                { borderColor: theme.outlineVariant + '66', opacity: pressed ? 0.7 : 1 },
-                              ]}
-                            >
-                              <Ionicons name="options-outline" size={18} color={theme.text} />
-                            </Pressable>
-                          </View>
-                        </View>
-                      </Reanimated.View>
+                        washIndex={index}
+                        delay={index * 0.06}
+                        dimmed={!coach.isActive}
+                        avatar={getAvatarSource(coach.avatar)}
+                        title={coach.specialty || coach.name}
+                        chips={[
+                          { label: coach.sportType, tone: 'info' },
+                          { label: coach.classType, tone: 'warn' },
+                          ...(coach.isActive ? [] : [{ label: 'Inactive', tone: 'danger' as const }]),
+                        ]}
+                        description={[coach.ageGroup, coach.location, coach.rate]
+                          .filter(Boolean)
+                          .join(' · ')}
+                        statLeft={`${booked} ${booked === 1 ? 'student' : 'students'} booked`}
+                        statRight={
+                          seatsLeft === null
+                            ? undefined
+                            : seatsLeft === 0
+                              ? 'Full'
+                              : `${seatsLeft} seats left`
+                        }
+                        primary={{
+                          icon: 'calendar',
+                          label: booked > 0 ? `${booked} Booked` : 'Bookings',
+                          accessibilityLabel: `View ${booked} booked students for ${coach.specialty}`,
+                          onPress: () =>
+                            router.push({
+                              pathname: '/coach-students',
+                              params: { classId: coach.id, className: coach.specialty || '' },
+                            }),
+                        }}
+                        actions={[
+                          {
+                            icon: 'create-outline',
+                            accessibilityLabel: `Edit ${coach.specialty}`,
+                            onPress: () =>
+                              router.push({ pathname: '/create-class', params: { editId: coach.id } }),
+                          },
+                          {
+                            icon: 'options-outline',
+                            accessibilityLabel: 'Manage all classes',
+                            onPress: () => router.push('/coach-classes'),
+                          },
+                        ]}
+                      />
                     );
                   })
                 )}
@@ -1530,84 +1443,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 12,
     zIndex: 999,
-  },
-  // ── Coach card (reference design: gradient wash + inset white card) ──────
-  coachCardOuter: {
-    width: '100%',
-    marginBottom: 18,
-    borderRadius: 30,
-    position: 'relative',
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 22,
-    elevation: 6,
-  },
-  coachWash: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 30,
-  },
-  coachCard: {
-    borderRadius: 26,
-    // Wider band of wash at the top-left so the avatar can straddle the edge.
-    marginTop: 34,
-    marginLeft: 26,
-    marginRight: 10,
-    marginBottom: 10,
-    paddingTop: 16,
-    paddingHorizontal: 18,
-    paddingBottom: 16,
-  },
-  coachCardHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  coachAvatarRing: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    borderWidth: 4,
-    borderColor: '#ffffff',
-    backgroundColor: '#ffffff',
-    overflow: 'hidden',
-    marginTop: -46,
-    marginLeft: -44,
-  },
-  coachCardAvatar: { width: '100%', height: '100%' },
-  coachHeadText: { flex: 1, marginLeft: -32 },
-  coachName: { fontSize: 19, fontFamily: 'Sora_700Bold' },
-  coachChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 7 },
-  coachChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full },
-  coachChipText: { fontSize: 10.5, fontFamily: 'Sora_600SemiBold' },
-  coachDesc: { fontSize: 12.5, lineHeight: 18, marginTop: 14 },
-  coachStatRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginTop: 10,
-  },
-  coachStatStrong: { fontSize: 12, fontFamily: 'Sora_700Bold' },
-  coachStatMuted: { fontSize: 11, fontFamily: 'Sora_500Medium' },
-  coachActionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
-  coachPrimaryPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    height: 52,
-    borderRadius: 26,
-  },
-  coachPrimaryPillText: { color: '#ffffff', fontSize: 15, fontFamily: 'Sora_600SemiBold' },
-  coachCircleBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   fabGradient: {
     width: '100%',

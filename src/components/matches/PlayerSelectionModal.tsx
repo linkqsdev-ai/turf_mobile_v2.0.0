@@ -27,15 +27,14 @@ import Animated, {
 import { ThemedText } from '@/components/themed-text';
 import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
 import { AVATAR_KEYS, getAvatarSource } from '@/constants/avatars';
+import { getMascotImage } from '@/constants/mascots';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 import {
-  dedupePlayers,
   generatePlayerId,
   getTwoLetterLogo,
   isUsablePhone,
   normalizePhone,
-  playerIdentity,
   type Player,
 } from '@/store/match-store';
 import { useMatchStore, useWalletStore } from '@/store/app-store';
@@ -58,7 +57,24 @@ interface Rect {
 const GHOST_WIDTH = 160;
 const GHOST_HEIGHT = 40;
 
+export interface BatsmanLiveStats {
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  sr: string;
+}
+
+export interface BowlerLiveStats {
+  overs: string;
+  maidens: number;
+  runs: number;
+  wickets: number;
+  econ: string;
+}
+
 export const strictDedupe = (list: Player[]): Player[] => {
+  if (!Array.isArray(list)) return [];
   const seen = new Set<string>();
   const out: Player[] = [];
   for (const p of list) {
@@ -89,7 +105,7 @@ function usePalette() {
 }
 
 const shortCode = (name: string, fallback: string): string => {
-  const words = name.trim().split(/\s+/).filter(Boolean);
+  const words = (name || '').trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return fallback;
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   return (words[0][0] + words[1][0]).toUpperCase();
@@ -119,11 +135,15 @@ export interface PlayerSelectionModalProps {
   visible: boolean;
   teamAName: string;
   teamBName: string;
+  teamAMascot?: string;
+  teamBMascot?: string;
   battingTeamName?: string;
   bowlingTeamName?: string;
   activeStrikerName?: string;
   activeNonStrikerName?: string;
   activeBowlerName?: string;
+  batsmenStats?: Record<string, BatsmanLiveStats>;
+  bowlerStats?: Record<string, BowlerLiveStats>;
   dismissedPlayers?: { name: string; status: string; dismissalType?: string }[];
   initialPool?: Player[];
   initialTeamA?: Player[];
@@ -155,11 +175,15 @@ export function PlayerSelectionModal({
   visible,
   teamAName,
   teamBName,
+  teamAMascot,
+  teamBMascot,
   battingTeamName: propBattingTeam,
   bowlingTeamName: propBowlingTeam,
   activeStrikerName = '',
   activeNonStrikerName = '',
   activeBowlerName = '',
+  batsmenStats = {},
+  bowlerStats = {},
   dismissedPlayers = [],
   initialPool = [],
   initialTeamA = [],
@@ -176,15 +200,15 @@ export function PlayerSelectionModal({
 }: PlayerSelectionModalProps) {
   const { theme, canvas, cardBg, zoneBg, borderColor, textPrimary, textSecondary, textMuted } = usePalette();
 
-  const labelA = teamAName.trim() || 'Team A';
-  const labelB = teamBName.trim() || 'Team B';
+  const labelA = (teamAName || '').trim() || 'Team A';
+  const labelB = (teamBName || '').trim() || 'Team B';
   const codeA = shortCode(labelA, 'TA');
   const codeB = shortCode(labelB, 'TB');
 
   const [buckets, setBuckets] = useState<Buckets>({
-    master: strictDedupe(initialPool),
-    teamA: strictDedupe(initialTeamA),
-    teamB: strictDedupe(initialTeamB),
+    master: strictDedupe(initialPool || []),
+    teamA: strictDedupe(initialTeamA || []),
+    teamB: strictDedupe(initialTeamB || []),
   });
 
   const [currentBattingTeam, setCurrentBattingTeam] = useState<string>(propBattingTeam || labelA);
@@ -207,17 +231,17 @@ export function PlayerSelectionModal({
   const [creditToast, setCreditToast] = useState<string | null>(null);
   const creditedPhones = useRef<Set<string>>(new Set());
 
-  // Re-seed only on modal open
+  // Re-seed only when modal opens
   useEffect(() => {
     if (visible) {
       loadFoFDatabase().catch(() => {});
-      const teamA = strictDedupe(initialTeamA);
-      const teamB = strictDedupe(initialTeamB).filter(
+      const teamA = strictDedupe(initialTeamA || []);
+      const teamB = strictDedupe(initialTeamB || []).filter(
         (p) => !teamA.some((a) => a.name.trim().toLowerCase() === p.name.trim().toLowerCase())
       );
       const assigned = new Set([...teamA, ...teamB].map((p) => p.name.trim().toLowerCase()));
       setBuckets({
-        master: strictDedupe(initialPool).filter((p) => !assigned.has(p.name.trim().toLowerCase())),
+        master: strictDedupe(initialPool || []).filter((p) => !assigned.has(p.name.trim().toLowerCase())),
         teamA,
         teamB,
       });
@@ -228,7 +252,8 @@ export function PlayerSelectionModal({
       setBowlerName(activeBowlerName);
 
       const initRetired: { name: string; type: 'Retired Hurt' | 'Retired Out' }[] = [];
-      dismissedPlayers.forEach((d) => {
+      (dismissedPlayers || []).forEach((d) => {
+        if (!d || !d.name) return;
         if (d.status === 'Retired Hurt' || d.dismissalType === 'retired_hurt') {
           initRetired.push({ name: d.name, type: 'Retired Hurt' });
         } else if (d.status === 'Retired Out' || d.dismissalType === 'retired_out' || d.status === 'Retired') {
@@ -266,12 +291,12 @@ export function PlayerSelectionModal({
   }, []);
 
   const moveToBucket = useCallback((player: Player, from: BucketId, to: BucketId) => {
-    if (from === to) return;
+    if (from === to || !player || !player.name) return;
     const playerKey = player.name.trim().toLowerCase();
     setBuckets((prev) => ({
       ...prev,
-      [from]: prev[from].filter((p) => p.name.trim().toLowerCase() !== playerKey),
-      [to]: strictDedupe([...prev[to].filter((p) => p.name.trim().toLowerCase() !== playerKey), player]),
+      [from]: (prev[from] || []).filter((p) => p.name.trim().toLowerCase() !== playerKey),
+      [to]: strictDedupe([...(prev[to] || []).filter((p) => p.name.trim().toLowerCase() !== playerKey), player]),
     }));
 
     if (player.name === strikerName) setStrikerName('');
@@ -297,19 +322,22 @@ export function PlayerSelectionModal({
   const { addWalletFunds } = useWalletStore();
 
   const everyone = useMemo(
-    () => [...buckets.master, ...buckets.teamA, ...buckets.teamB],
+    () => [...(buckets.master || []), ...(buckets.teamA || []), ...(buckets.teamB || [])],
     [buckets]
   );
 
   const isAlreadyIn = useCallback(
-    (candidate: { name: string; phone?: string | null }) =>
-      everyone.some((p) => p.name.trim().toLowerCase() === candidate.name.trim().toLowerCase()),
+    (candidate: { name: string; phone?: string | null }) => {
+      if (!candidate || !candidate.name) return false;
+      const candidateKey = candidate.name.trim().toLowerCase();
+      return everyone.some((p) => p && p.name && p.name.trim().toLowerCase() === candidateKey);
+    },
     [everyone]
   );
 
   const commitPlayer = useCallback(
     (fields: { name: string; phone?: string | null; avatarUrl?: string }) => {
-      const trimmed = fields.name.trim();
+      const trimmed = (fields.name || '').trim();
       if (!trimmed) return;
 
       if (isAlreadyIn(fields)) {
@@ -330,7 +358,7 @@ export function PlayerSelectionModal({
 
       setBuckets((prev) => ({
         ...prev,
-        master: strictDedupe([player, ...prev.master]),
+        master: strictDedupe([player, ...(prev.master || [])]),
       }));
 
       registerFoFPlayer({
@@ -340,7 +368,7 @@ export function PlayerSelectionModal({
         sport: 'Cricket 🏏',
       });
 
-      // Close modal immediately and clear search state
+      // Auto-close modal immediately
       setAddModalOpen(false);
       setSearchQuery('');
       setDuplicateWarning(null);
@@ -360,27 +388,30 @@ export function PlayerSelectionModal({
     [isAlreadyIn, addWalletFunds]
   );
 
-  const queryClean = searchQuery.trim().toLowerCase();
-  const queryDigits = searchQuery.replace(/\D/g, '');
+  const queryClean = (searchQuery || '').trim().toLowerCase();
+  const queryDigits = (searchQuery || '').replace(/\D/g, '');
   const queryLooksLikePhone = queryDigits.length >= 6;
 
   const matchPlayerResults = useMemo(() => {
     if (queryClean.length < 2 && queryDigits.length < 3) return [];
     const results: { player: Player; location: BucketId; locationLabel: string }[] = [];
 
-    buckets.master.forEach((p) => {
+    (buckets.master || []).forEach((p) => {
+      if (!p || !p.name) return;
       const pDigits = p.phone ? normalizePhone(p.phone) : '';
       if (p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits))) {
         results.push({ player: p, location: 'master', locationLabel: 'Available Pool' });
       }
     });
-    buckets.teamA.forEach((p) => {
+    (buckets.teamA || []).forEach((p) => {
+      if (!p || !p.name) return;
       const pDigits = p.phone ? normalizePhone(p.phone) : '';
       if (p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits))) {
         results.push({ player: p, location: 'teamA', locationLabel: labelA });
       }
     });
-    buckets.teamB.forEach((p) => {
+    (buckets.teamB || []).forEach((p) => {
+      if (!p || !p.name) return;
       const pDigits = p.phone ? normalizePhone(p.phone) : '';
       if (p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits))) {
         results.push({ player: p, location: 'teamB', locationLabel: labelB });
@@ -390,32 +421,35 @@ export function PlayerSelectionModal({
   }, [buckets, queryClean, queryDigits, labelA, labelB]);
 
   const savedPlayerResults = useMemo(() => {
-    if (queryClean.length < 2 && queryDigits.length < 3) return [];
+    if (!savedTeams || (queryClean.length < 2 && queryDigits.length < 3)) return [];
     const allSavedPlayers: Player[] = [];
-    savedTeams.forEach((t) => {
-      t.players.forEach((p) => allSavedPlayers.push(p));
+    (savedTeams || []).forEach((t) => {
+      (t?.players || []).forEach((p) => {
+        if (p && p.name && p.name.trim()) allSavedPlayers.push(p);
+      });
     });
     return strictDedupe(allSavedPlayers)
       .filter((p) => !isAlreadyIn(p))
       .filter((p) => {
         const pDigits = p.phone ? normalizePhone(p.phone) : '';
-        return p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits));
+        return (p.name && p.name.toLowerCase().includes(queryClean)) || (queryDigits.length >= 3 && pDigits.includes(queryDigits));
       })
       .slice(0, 4);
   }, [savedTeams, queryClean, queryDigits, isAlreadyIn]);
 
   const directoryResults = useMemo(() => {
     if (queryClean.length < 2 && queryDigits.length < 3) return [];
-    const savedIds = new Set(savedPlayerResults.map((p) => p.name.trim().toLowerCase()));
-    return searchFoFDirectory(searchQuery)
-      .filter((p) => !isAlreadyIn({ name: p.name, phone: p.phone }))
-      .filter((p) => !savedIds.has(p.name.trim().toLowerCase()))
+    const savedIds = new Set((savedPlayerResults || []).map((p) => p.name.trim().toLowerCase()));
+    return (searchFoFDirectory(searchQuery || '') || [])
+      .filter((p) => p && p.name && !isAlreadyIn({ name: p.name, phone: p.phone }))
+      .filter((p) => p && p.name && !savedIds.has(p.name.trim().toLowerCase()))
       .slice(0, 6);
   }, [searchQuery, queryClean, queryDigits, isAlreadyIn, savedPlayerResults]);
 
   const exactMatchInPool = useMemo(() => {
     if (!queryClean && !queryDigits) return null;
     return everyone.find((p) => {
+      if (!p || !p.name) return false;
       const pDigits = p.phone ? normalizePhone(p.phone) : '';
       if (queryDigits.length >= 10 && pDigits === queryDigits) return true;
       if (queryClean.length >= 2 && p.name.toLowerCase() === queryClean) return true;
@@ -424,15 +458,16 @@ export function PlayerSelectionModal({
   }, [everyone, queryClean, queryDigits]);
 
   const displayedMaster = useMemo(() => {
-    if (!queryClean && !queryDigits) return buckets.master;
-    return buckets.master.filter((p) => {
+    if (!queryClean && !queryDigits) return buckets.master || [];
+    return (buckets.master || []).filter((p) => {
+      if (!p || !p.name) return false;
       const pDigits = p.phone ? normalizePhone(p.phone) : '';
       return p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits));
     });
   }, [buckets.master, queryClean, queryDigits]);
 
   const openAddPlayer = useCallback((seed: string) => {
-    const q = seed.trim();
+    const q = (seed || '').trim();
     const digits = q.replace(/\D/g, '');
     setAddSeed(
       digits.length >= 6 ? { name: '', phone: q } : { name: q, phone: '' }
@@ -518,7 +553,7 @@ export function PlayerSelectionModal({
     ],
   }));
 
-  const totalAssigned = buckets.teamA.length + buckets.teamB.length;
+  const totalAssigned = (buckets.teamA || []).length + (buckets.teamB || []).length;
 
   const handleConfirm = () => {
     onConfirm(buckets.teamA, buckets.teamB, buckets.master, {
@@ -572,24 +607,26 @@ export function PlayerSelectionModal({
             </Pressable>
           </View>
 
-          {/* Clean Legend Pill Overview */}
+          {/* Clean Legend Pill Overview with Team Mascot Logos */}
           <View style={styles.legend}>
             <LegendPill
               code={codeA}
               name={labelA}
+              mascot={teamAMascot}
               cardBg={cardBg}
               borderColor={borderColor}
               textPrimary={textPrimary}
-              roleBadge={isTeamABatting ? 'Batting' : 'Bowling'}
+              roleBadge={isTeamABatting ? '🏏 Batting' : '🎯 Bowling'}
               theme={theme}
             />
             <LegendPill
               code={codeB}
               name={labelB}
+              mascot={teamBMascot}
               cardBg={cardBg}
               borderColor={borderColor}
               textPrimary={textPrimary}
-              roleBadge={!isTeamABatting ? 'Batting' : 'Bowling'}
+              roleBadge={!isTeamABatting ? '🏏 Batting' : '🎯 Bowling'}
               theme={theme}
             />
           </View>
@@ -609,7 +646,7 @@ export function PlayerSelectionModal({
                   Available Players
                 </ThemedText>
                 <ThemedText style={[styles.zoneMeta, { color: textSecondary }]}>
-                  {buckets.master.length} unassigned
+                  {(buckets.master || []).length} unassigned
                 </ThemedText>
               </View>
 
@@ -790,12 +827,15 @@ export function PlayerSelectionModal({
               refNode={(node) => { bucketRefs.current.teamA = node; }}
               teamName={labelA}
               teamCode={codeA}
+              teamMascot={teamAMascot}
               otherTeamCode={codeB}
               players={buckets.teamA}
               isBatting={isTeamABatting}
               strikerName={strikerName}
               nonStrikerName={nonStrikerName}
               bowlerName={bowlerName}
+              batsmenStats={batsmenStats}
+              bowlerStats={bowlerStats}
               retiredPlayers={retiredPlayers}
               cardBg={cardBg}
               zoneBg={zoneBg}
@@ -821,12 +861,15 @@ export function PlayerSelectionModal({
               refNode={(node) => { bucketRefs.current.teamB = node; }}
               teamName={labelB}
               teamCode={codeB}
+              teamMascot={teamBMascot}
               otherTeamCode={codeA}
               players={buckets.teamB}
               isBatting={!isTeamABatting}
               strikerName={strikerName}
               nonStrikerName={nonStrikerName}
               bowlerName={bowlerName}
+              batsmenStats={batsmenStats}
+              bowlerStats={bowlerStats}
               retiredPlayers={retiredPlayers}
               cardBg={cardBg}
               zoneBg={zoneBg}
@@ -893,6 +936,8 @@ export function PlayerSelectionModal({
               strikerName={strikerName}
               nonStrikerName={nonStrikerName}
               bowlerName={bowlerName}
+              batsmenStats={batsmenStats}
+              bowlerStats={bowlerStats}
               retiredPlayers={retiredPlayers}
               onSetStriker={handleSetStriker}
               onSetNonStriker={handleSetNonStriker}
@@ -950,12 +995,15 @@ function TeamZoneCard({
   refNode,
   teamName,
   teamCode,
+  teamMascot,
   otherTeamCode,
   players,
   isBatting,
   strikerName,
   nonStrikerName,
   bowlerName,
+  batsmenStats,
+  bowlerStats,
   retiredPlayers,
   cardBg,
   zoneBg,
@@ -978,12 +1026,15 @@ function TeamZoneCard({
   refNode: (node: View | null) => void;
   teamName: string;
   teamCode: string;
+  teamMascot?: string;
   otherTeamCode: string;
   players: Player[];
   isBatting: boolean;
   strikerName: string;
   nonStrikerName: string;
   bowlerName: string;
+  batsmenStats: Record<string, BatsmanLiveStats>;
+  bowlerStats: Record<string, BowlerLiveStats>;
   retiredPlayers: { name: string; type: 'Retired Hurt' | 'Retired Out' }[];
   cardBg: string;
   zoneBg: string;
@@ -1005,11 +1056,29 @@ function TeamZoneCard({
 }) {
   const uniquePlayers = useMemo(() => strictDedupe(players), [players]);
 
+  const strikerKey = (strikerName || '').trim().toLowerCase();
+  const nonStrikerKey = (nonStrikerName || '').trim().toLowerCase();
+  const bowlerKey = (bowlerName || '').trim().toLowerCase();
+
+  const strikerStats = strikerKey ? batsmenStats[strikerKey] : undefined;
+  const nonStrikerStats = nonStrikerKey ? batsmenStats[nonStrikerKey] : undefined;
+  const activeBowlerStats = bowlerKey ? bowlerStats[bowlerKey] : undefined;
+
   return (
     <View ref={refNode} style={[styles.zoneCard, { backgroundColor: cardBg, borderColor }]}>
-      {/* Zone Header */}
+      {/* Zone Header with Team Logo */}
       <View style={styles.zoneHeader}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1 }}>
+          {/* Mascot or Team Monogram Logo */}
+          <View style={[styles.teamZoneLogoBox, { backgroundColor: zoneBg, borderColor }]}>
+            {teamMascot ? (
+              <Image source={getMascotImage(teamMascot)} style={styles.teamZoneLogoImg} contentFit="contain" />
+            ) : (
+              <ThemedText style={[styles.teamZoneLogoText, { color: theme.primary }]}>
+                {teamCode}
+              </ThemedText>
+            )}
+          </View>
           <ThemedText style={[styles.zoneTitle, { color: textPrimary }]} numberOfLines={1}>
             {teamName}
           </ThemedText>
@@ -1024,14 +1093,14 @@ function TeamZoneCard({
         </ThemedText>
       </View>
 
-      {/* Crease Active Slots (Clean & Unified) */}
+      {/* Crease Active Slots (With Live Stats: R, B, 4s, 6s, SR / O, M, R, W, Econ) */}
       <View style={[styles.creaseBar, { backgroundColor: zoneBg, borderColor }]}>
         {isBatting ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             {/* Striker Slot */}
             <Pressable
               onPress={() => {
-                const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === strikerName.toLowerCase());
+                const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === strikerKey);
                 if (p) onPlayerTap(p);
               }}
               style={[styles.creaseSlot, { flex: 1, backgroundColor: cardBg, borderColor }]}
@@ -1044,7 +1113,7 @@ function TeamZoneCard({
                   <Pressable
                     onPress={(e) => {
                       e.stopPropagation();
-                      const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === strikerName.toLowerCase());
+                      const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === strikerKey);
                       if (p) onRetirePlayer(p);
                     }}
                     hitSlop={4}
@@ -1061,6 +1130,11 @@ function TeamZoneCard({
               >
                 {strikerName || 'Select Striker'}
               </ThemedText>
+              {strikerStats && (
+                <ThemedText style={[styles.creaseStatsText, { color: theme.primary }]} numberOfLines={1}>
+                  R: {strikerStats.runs} · B: {strikerStats.balls} · 4s: {strikerStats.fours} · 6s: {strikerStats.sixes} · SR: {strikerStats.sr}
+                </ThemedText>
+              )}
             </Pressable>
 
             {/* Swap Strike */}
@@ -1075,7 +1149,7 @@ function TeamZoneCard({
             {/* Non-Striker Slot */}
             <Pressable
               onPress={() => {
-                const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === nonStrikerName.toLowerCase());
+                const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === nonStrikerKey);
                 if (p) onPlayerTap(p);
               }}
               style={[styles.creaseSlot, { flex: 1, backgroundColor: cardBg, borderColor }]}
@@ -1088,7 +1162,7 @@ function TeamZoneCard({
                   <Pressable
                     onPress={(e) => {
                       e.stopPropagation();
-                      const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === nonStrikerName.toLowerCase());
+                      const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === nonStrikerKey);
                       if (p) onRetirePlayer(p);
                     }}
                     hitSlop={4}
@@ -1105,13 +1179,18 @@ function TeamZoneCard({
               >
                 {nonStrikerName || 'Select Non-Striker'}
               </ThemedText>
+              {nonStrikerStats && (
+                <ThemedText style={[styles.creaseStatsText, { color: textSecondary }]} numberOfLines={1}>
+                  R: {nonStrikerStats.runs} · B: {nonStrikerStats.balls} · 4s: {nonStrikerStats.fours} · 6s: {nonStrikerStats.sixes} · SR: {nonStrikerStats.sr}
+                </ThemedText>
+              )}
             </Pressable>
           </View>
         ) : (
           /* Active Bowler Slot */
           <Pressable
             onPress={() => {
-              const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === bowlerName.toLowerCase());
+              const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === bowlerKey);
               if (p) onPlayerTap(p);
             }}
             style={[styles.creaseSlot, { backgroundColor: cardBg, borderColor }]}
@@ -1124,7 +1203,7 @@ function TeamZoneCard({
                 <Pressable
                   onPress={(e) => {
                     e.stopPropagation();
-                    const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === bowlerName.toLowerCase());
+                    const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === bowlerKey);
                     if (p) onPlayerTap(p);
                   }}
                   hitSlop={4}
@@ -1141,27 +1220,40 @@ function TeamZoneCard({
             >
               {bowlerName || 'Select Bowler'}
             </ThemedText>
+            {activeBowlerStats && (
+              <ThemedText style={[styles.creaseStatsText, { color: theme.primary }]} numberOfLines={1}>
+                O: {activeBowlerStats.overs} · M: {activeBowlerStats.maidens} · R: {activeBowlerStats.runs} · W: {activeBowlerStats.wickets} · Econ: {activeBowlerStats.econ}
+              </ThemedText>
+            )}
           </Pressable>
         )}
       </View>
 
-      {/* Squad Player Chips (Clean, Readable, Non-Cluttered) */}
+      {/* Squad Player Chips (Clean, Readable, with subtle stats subtext) */}
       <View style={styles.bubbleWrap}>
         {uniquePlayers.map((player) => {
-          const isStriker = isBatting && strikerName.trim().toLowerCase() === player.name.trim().toLowerCase();
-          const isNonStriker = isBatting && nonStrikerName.trim().toLowerCase() === player.name.trim().toLowerCase();
-          const isBowler = !isBatting && bowlerName.trim().toLowerCase() === player.name.trim().toLowerCase();
-          const retRec = retiredPlayers.find((r) => r.name.toLowerCase() === player.name.toLowerCase());
+          const pKey = player.name.trim().toLowerCase();
+          const isStriker = isBatting && strikerKey === pKey;
+          const isNonStriker = isBatting && nonStrikerKey === pKey;
+          const isBowler = !isBatting && bowlerKey === pKey;
+          const retRec = retiredPlayers.find((r) => r.name.toLowerCase() === pKey);
+
+          const bStat = isBatting ? batsmenStats[pKey] : undefined;
+          const bowlStat = !isBatting ? bowlerStats[pKey] : undefined;
 
           let roleLabel: string | undefined;
           if (retRec) {
             roleLabel = retRec.type === 'Retired Hurt' ? 'Injured' : 'Retired';
           } else if (isStriker) {
-            roleLabel = 'Striker';
+            roleLabel = bStat ? `Striker · ${bStat.runs}(${bStat.balls}b)` : 'Striker';
           } else if (isNonStriker) {
-            roleLabel = 'Non-Striker';
+            roleLabel = bStat ? `Non-Striker · ${bStat.runs}(${bStat.balls}b)` : 'Non-Striker';
           } else if (isBowler) {
-            roleLabel = 'Bowler';
+            roleLabel = bowlStat ? `Bowler · ${bowlStat.wickets}/${bowlStat.runs} (${bowlStat.overs})` : 'Bowler';
+          } else if (bStat && (bStat.runs > 0 || bStat.balls > 0)) {
+            roleLabel = `${bStat.runs}(${bStat.balls}b) · SR ${bStat.sr}`;
+          } else if (bowlStat && bowlStat.overs !== '0.0') {
+            roleLabel = `${bowlStat.wickets}/${bowlStat.runs} (${bowlStat.overs} ov)`;
           }
 
           return (
@@ -1347,6 +1439,7 @@ function CleanPlayerChip({
 function LegendPill({
   code,
   name,
+  mascot,
   cardBg,
   borderColor,
   textPrimary,
@@ -1355,6 +1448,7 @@ function LegendPill({
 }: {
   code: string;
   name: string;
+  mascot?: string;
   cardBg: string;
   borderColor: string;
   textPrimary: string;
@@ -1363,8 +1457,12 @@ function LegendPill({
 }) {
   return (
     <View style={[styles.legendPill, { backgroundColor: cardBg, borderColor }]}>
-      <View style={[styles.legendCode, { backgroundColor: theme.primary + '18' }]}>
-        <ThemedText style={[styles.legendCodeText, { color: theme.primary }]}>{code}</ThemedText>
+      <View style={[styles.legendLogoBox, { backgroundColor: theme.primary + '14', borderColor }]}>
+        {mascot ? (
+          <Image source={getMascotImage(mascot)} style={styles.legendMascotImg} contentFit="contain" />
+        ) : (
+          <ThemedText style={[styles.legendCodeText, { color: theme.primary }]}>{code}</ThemedText>
+        )}
       </View>
       <ThemedText style={[styles.legendName, { color: textPrimary }]} numberOfLines={1}>
         {name}
@@ -1394,6 +1492,8 @@ function PlayerActionModal({
   strikerName,
   nonStrikerName,
   bowlerName,
+  batsmenStats,
+  bowlerStats,
   retiredPlayers,
   onSetStriker,
   onSetNonStriker,
@@ -1419,6 +1519,8 @@ function PlayerActionModal({
   strikerName: string;
   nonStrikerName: string;
   bowlerName: string;
+  batsmenStats: Record<string, BatsmanLiveStats>;
+  bowlerStats: Record<string, BowlerLiveStats>;
   retiredPlayers: { name: string; type: 'Retired Hurt' | 'Retired Out' }[];
   onSetStriker: (p: Player) => void;
   onSetNonStriker: (p: Player) => void;
@@ -1432,16 +1534,20 @@ function PlayerActionModal({
 }) {
   const { player, bucketId } = item;
   const conn = getFoFConnection(player.phone || '');
+  const pKey = player.name.trim().toLowerCase();
 
   const isBattingTeam =
     (bucketId === 'teamA' && isTeamABatting) || (bucketId === 'teamB' && !isTeamABatting);
   const isBowlingTeam =
     (bucketId === 'teamA' && !isTeamABatting) || (bucketId === 'teamB' && isTeamABatting);
 
-  const isStriker = strikerName.toLowerCase() === player.name.toLowerCase();
-  const isNonStriker = nonStrikerName.toLowerCase() === player.name.toLowerCase();
-  const isBowler = bowlerName.toLowerCase() === player.name.toLowerCase();
-  const retRec = retiredPlayers.find((r) => r.name.toLowerCase() === player.name.toLowerCase());
+  const isStriker = (strikerName || '').toLowerCase() === pKey;
+  const isNonStriker = (nonStrikerName || '').toLowerCase() === pKey;
+  const isBowler = (bowlerName || '').toLowerCase() === pKey;
+  const retRec = retiredPlayers.find((r) => r.name.toLowerCase() === pKey);
+
+  const bStat = batsmenStats[pKey];
+  const bowlStat = bowlerStats[pKey];
 
   const otherBucketId: BucketId = bucketId === 'teamA' ? 'teamB' : 'teamA';
   const otherTeamLabel = bucketId === 'teamA' ? labelB : labelA;
@@ -1466,6 +1572,29 @@ function PlayerActionModal({
               <Ionicons name="close" size={14} color={textPrimary} />
             </Pressable>
           </View>
+
+          {/* Stats Bar if player has match records */}
+          {bStat && (
+            <View style={[styles.actionSheetStatsBox, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '30' }]}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                🏏 BATTING STATS
+              </ThemedText>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
+                Runs: {bStat.runs} ({bStat.balls}b) · 4s: {bStat.fours} · 6s: {bStat.sixes} · SR: {bStat.sr}
+              </ThemedText>
+            </View>
+          )}
+
+          {bowlStat && (
+            <View style={[styles.actionSheetStatsBox, { backgroundColor: '#10B98110', borderColor: '#10B98130' }]}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: '#10B981' }}>
+                🎯 BOWLING STATS
+              </ThemedText>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
+                Overs: {bowlStat.overs} · Maidens: {bowlStat.maidens} · Runs: {bowlStat.runs} · Wickets: {bowlStat.wickets} · Econ: {bowlStat.econ}
+              </ThemedText>
+            </View>
+          )}
 
           {/* Clean Action Options */}
           <View style={styles.actionSheetList}>
@@ -1772,14 +1901,16 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderWidth: 1,
   },
-  legendCode: {
-    minWidth: 22,
-    height: 20,
-    borderRadius: 10,
-    paddingHorizontal: 4,
+  legendLogoBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
   },
+  legendMascotImg: { width: 18, height: 18 },
   legendCodeText: { fontFamily: 'Sora_700Bold', fontSize: 9 },
   legendName: { fontFamily: 'Sora_600SemiBold', fontSize: 10.5, flexShrink: 1 },
   legendBadge: { marginLeft: 'auto' },
@@ -1799,6 +1930,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: Spacing.sm,
   },
+  teamZoneLogoBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  teamZoneLogoImg: { width: 20, height: 20 },
+  teamZoneLogoText: { fontFamily: 'Sora_700Bold', fontSize: 9.5 },
   zoneTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 12 },
   zoneMeta: { fontFamily: 'Sora_500Medium', fontSize: 10 },
   roleTag: {
@@ -1824,6 +1966,7 @@ const styles = StyleSheet.create({
   },
   creaseSlotTitle: { fontFamily: 'Sora_700Bold', fontSize: 8.5, letterSpacing: 0.2 },
   creaseSlotName: { fontFamily: 'Sora_600SemiBold', fontSize: 11, marginTop: 2 },
+  creaseStatsText: { fontFamily: 'Sora_600SemiBold', fontSize: 8.5, marginTop: 2 },
   creaseSwapBtn: {
     width: 26,
     height: 26,
@@ -1971,6 +2114,13 @@ const styles = StyleSheet.create({
   actionSheetAvatar: { width: 34, height: 34, borderRadius: 17 },
   actionSheetName: { fontFamily: 'Sora_700Bold', fontSize: 13 },
   actionSheetSub: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
+  actionSheetStatsBox: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: Spacing.xs,
+  },
   actionSheetList: { marginTop: Spacing.sm, gap: 6 },
   sheetActionItem: {
     flexDirection: 'row',
