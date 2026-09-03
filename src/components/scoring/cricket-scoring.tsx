@@ -1148,6 +1148,21 @@ export default function CricketScoring({
   const [showOverCompleteModal, setShowOverCompleteModal] = useState(false);
   const [showVictoryModal, setShowVictoryModal] = useState(false);
   const [matchVictoryData, setMatchVictoryData] = useState<any>(null);
+  const [showInnings1SuccessModal, setShowInnings1SuccessModal] = useState(false);
+  const [innings1SuccessData, setInnings1SuccessData] = useState<{
+    battingTeam: string;
+    bowlingTeam: string;
+    newBatting: string;
+    newBowling: string;
+    score: string;
+    overs: string;
+    runRate: string;
+    target: number;
+    maxOvers: number;
+    reqRunRate: string;
+    topBatsman?: { name: string; runs: number; balls: number; fours?: number; sixes?: number };
+    topBowler?: { name: string; wickets: number; runs: number; overs?: number };
+  } | null>(null);
   const [showRematchSquadChoiceModal, setShowRematchSquadChoiceModal] = useState(false);
 
   // Manage Players Modal Search & Add State

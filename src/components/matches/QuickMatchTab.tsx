@@ -1584,7 +1584,7 @@ export function QuickMatchTab({
                 Total Match Overs:
               </ThemedText>
               <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center' }}>
-                {['5', '7', '12', '20'].map((ov) => {
+                {['5', '10', '20'].map((ov) => {
                   const isSelected = !isCustomOversSelected && totalOversInput === ov;
                   return (
                     <Pressable

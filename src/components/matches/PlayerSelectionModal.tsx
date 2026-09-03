@@ -1068,29 +1068,47 @@ export function PlayerSelectionModal({
 
               {/* Pool Chips */}
               <View style={styles.bubbleWrap}>
-                {displayedMaster.map((player) => (
-                  <CleanPlayerChip
-                    key={player.id}
-                    player={player}
-                    bucketId="master"
-                    cardBg={zoneBg}
-                    borderColor={borderColor}
-                    textPrimary={textPrimary}
-                    textSecondary={textSecondary}
-                    theme={theme}
-                    onTap={() => setSelectedActionPlayer({ player, bucketId: 'master' })}
-                    onQuickAssignA={() => moveToBucket(player, 'master', 'teamA')}
-                    onQuickAssignB={() => moveToBucket(player, 'master', 'teamB')}
-                    codeA={codeA}
-                    codeB={codeB}
-                    dragX={dragX}
-                    dragY={dragY}
-                    onDragStart={handleDragStart}
-                    onDragUpdate={handleDragUpdate}
-                    onDragEnd={handleDragEnd}
-                    isDragging={draggingPlayer?.id === player.id}
-                  />
-                ))}
+                {displayedMaster.map((player) => {
+                  const outInfo = isPlayerPermanentlyOut(player.name);
+                  return (
+                    <CleanPlayerChip
+                      key={player.id}
+                      player={player}
+                      bucketId="master"
+                      cardBg={zoneBg}
+                      borderColor={borderColor}
+                      textPrimary={textPrimary}
+                      textSecondary={textSecondary}
+                      theme={theme}
+                      isDismissed={outInfo.isOut}
+                      dismissalReason={outInfo.reason}
+                      roleLabel={outInfo.isOut ? `OUT (${outInfo.reason})` : undefined}
+                      onTap={() => setSelectedActionPlayer({ player, bucketId: 'master' })}
+                      onQuickAssignA={() => {
+                        if (isTeamABatting && outInfo.isOut) {
+                          setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot be added to batting team!`);
+                          return;
+                        }
+                        moveToBucket(player, 'master', 'teamA');
+                      }}
+                      onQuickAssignB={() => {
+                        if (!isTeamABatting && outInfo.isOut) {
+                          setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot be added to batting team!`);
+                          return;
+                        }
+                        moveToBucket(player, 'master', 'teamB');
+                      }}
+                      codeA={codeA}
+                      codeB={codeB}
+                      dragX={dragX}
+                      dragY={dragY}
+                      onDragStart={handleDragStart}
+                      onDragUpdate={handleDragUpdate}
+                      onDragEnd={handleDragEnd}
+                      isDragging={draggingPlayer?.id === player.id}
+                    />
+                  );
+                })}
                 {displayedMaster.length === 0 && !searchQuery.trim() && (
                   <ThemedText style={[styles.emptyLabel, { color: textMuted }]}>
                     No unassigned players. Add new players above.
@@ -1936,7 +1954,7 @@ function PlayerActionModal({
   const isNonStriker = (nonStrikerName || '').toLowerCase() === pKey;
   const isBowler = (bowlerName || '').toLowerCase() === pKey;
   const retRec = retiredPlayers.find((r) => r.name.toLowerCase() === pKey);
-  const outInfo = isBattingTeam && isPlayerPermanentlyOut ? isPlayerPermanentlyOut(player.name) : { isOut: false, reason: '' };
+  const outInfo = isPlayerPermanentlyOut ? isPlayerPermanentlyOut(player.name) : { isOut: false, reason: '' };
 
   const bStat = batsmenStats[pKey];
   const bowlStat = bowlerStats[pKey];
@@ -2173,7 +2191,21 @@ function PlayerActionModal({
 
             {bucketId === 'master' && (
               <>
-                {!outInfo.isOut && (
+                {outInfo.isOut && (
+                  <View style={[styles.actionSheetStatsBox, { backgroundColor: '#EF444415', borderColor: '#EF444450', borderLeftWidth: 3, borderLeftColor: '#EF4444' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="close-circle" size={15} color="#EF4444" />
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>
+                        DISMISSED ({outInfo.reason.toUpperCase()})
+                      </ThemedText>
+                    </View>
+                    <ThemedText style={{ fontSize: 10, color: textSecondary, marginTop: 2 }}>
+                      This batsman is out in this innings and cannot bat again or be added to the crease.
+                    </ThemedText>
+                  </View>
+                )}
+
+                {!outInfo.isOut ? (
                   <>
                     <Pressable
                       onPress={() => {
@@ -2201,6 +2233,13 @@ function PlayerActionModal({
                       </ThemedText>
                     </Pressable>
                   </>
+                ) : (
+                  <View style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor, opacity: 0.55 }]}>
+                    <Ionicons name="lock-closed-outline" size={15} color="#EF4444" />
+                    <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_600SemiBold' }]}>
+                      Batting Disabled (Player is OUT)
+                    </ThemedText>
+                  </View>
                 )}
 
                 <Pressable
