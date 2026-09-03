@@ -220,7 +220,7 @@ export default function LiveScoringScreen() {
               <Ionicons name="arrow-back" size={22} color={theme.text} />
             </Pressable>
             <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_500Medium', marginLeft: 6, color: theme.text }}>
-              Match Console
+              Scoreboard
             </ThemedText>
           </View>
           <Pressable

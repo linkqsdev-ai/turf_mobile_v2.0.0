@@ -3270,12 +3270,8 @@ export default function CricketScoring({
     setBallsInCurrentOver(prev => {
       const next = prev + 1;
       if (next >= 6) {
-        // Fix #2: Keep counter at 6 (not 0) so the scoreboard banner briefly shows X.6
-        // handleOverCompletion resets it to 0 after running
-        setTimeout(() => {
-          handleOverCompletion();
-        }, 100);
-        return 6;
+        handleOverCompletion();
+        return 0;
       }
       return next;
     });
@@ -3473,8 +3469,8 @@ export default function CricketScoring({
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-
+      {/* ── Fixed Top Section: Live Scorecard Banner & Sub-Tab Bar ── */}
+      <View style={{ backgroundColor: theme.background, zIndex: 10 }}>
         {/* Live Scorecard Banner */}
         <View style={styles.bannerWrapper}>
           <View style={[styles.scoreBanner, { backgroundColor: theme.primaryContainer }]}>
@@ -3650,7 +3646,10 @@ export default function CricketScoring({
             </ThemedText>
           </Pressable>
         </View>
+      </View>
 
+      {/* ── Scrollable Tab Content ── */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, activeSubTab === 'scorecard' && { paddingBottom: 100 }]}>
         {activeSubTab === 'live' && (
           <>
             <View style={styles.section}>
@@ -4645,26 +4644,6 @@ export default function CricketScoring({
                 </View>
               );
             })()}
-
-            {/* 📄 Download Score Sheet PDF Button */}
-            <Pressable
-              onPress={handleExportPDF}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#059669',
-                paddingVertical: 12,
-                borderRadius: BorderRadius.lg,
-                gap: 8,
-                marginTop: 8,
-              }}
-            >
-              <Ionicons name="download-outline" size={18} color="#ffffff" />
-              <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 13 }}>
-                Download Score Sheet PDF
-              </ThemedText>
-            </Pressable>
           </View>
         )}
 
@@ -5055,6 +5034,28 @@ export default function CricketScoring({
                 </ThemedText>
               </>
             )}
+          </Pressable>
+        </View>
+      )}
+
+      {activeSubTab === 'scorecard' && (
+        <View style={[styles.stickyBottomBar, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '22', zIndex: 100 }]}>
+          <Pressable
+            onPress={handleExportPDF}
+            style={({ pressed }) => [
+              styles.mainEndMatchBtn,
+              {
+                flex: 1,
+                backgroundColor: '#059669',
+                opacity: pressed ? 0.85 : 1,
+                gap: 8,
+              }
+            ]}
+          >
+            <Ionicons name="download-outline" size={18} color="#ffffff" />
+            <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 13 }}>
+              Download Score Sheet PDF
+            </ThemedText>
           </Pressable>
         </View>
       )}
