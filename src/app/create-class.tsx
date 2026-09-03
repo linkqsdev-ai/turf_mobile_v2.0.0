@@ -743,8 +743,8 @@ export default function CreateClassScreen() {
 
             {/* Floating Yellow Circle Badge */}
             <View style={styles.kakaoYellowBadge}>
-              <ThemedText style={styles.kakaoYellowBadgeText}>VOUCHER</ThemedText>
-              <ThemedText style={styles.kakaoYellowBadgeText}>CLAIM</ThemedText>
+              <ThemedText style={styles.kakaoYellowBadgeText} numberOfLines={1}>VOUCHER</ThemedText>
+              <ThemedText style={styles.kakaoYellowBadgeText} numberOfLines={1}>CLAIM</ThemedText>
               <Ionicons name="arrow-down" size={13} color="#000000" style={{ marginTop: 1 }} />
             </View>
           </View>
@@ -1643,31 +1643,6 @@ export default function CreateClassScreen() {
           />
         </View>
 
-        {/* Action Buttons */}
-        <View style={styles.actionRow}>
-          <Pressable
-            onPress={handleSaveDraft}
-            disabled={isSavingDraft || isPublishing}
-            style={[styles.draftBtn, { borderColor: theme.outlineVariant, opacity: (isSavingDraft || isPublishing) ? 0.6 : 1 }]}
-          >
-            <Ionicons name="document-text-outline" size={16} color={theme.text} />
-            <ThemedText style={[styles.draftBtnText, { color: theme.text }]}>Save Draft</ThemedText>
-          </Pressable>
-          <Pressable
-            onPress={handlePublish}
-            disabled={isSavingDraft || isPublishing || !isAllValid}
-            style={[
-              styles.publishBtn,
-              { backgroundColor: theme.primary },
-              (!isAllValid || isSavingDraft || isPublishing) && { opacity: 0.45, backgroundColor: theme.outlineVariant + '77' }
-            ]}
-          >
-            <Ionicons name={editId ? "save-outline" : "checkmark-circle"} size={18} color="#fff" />
-            <ThemedText style={styles.publishBtnText}>
-              {isPublishing ? 'Publishing...' : editId ? 'Update Class 🎓' : 'Publish Class 🎓'}
-            </ThemedText>
-          </Pressable>
-        </View>
       </View>
     </ScrollView>
   );
@@ -1740,6 +1715,35 @@ export default function CreateClassScreen() {
           {currentStep === 1 && renderStepTwo()}
           {currentStep === 2 && renderStepThree()}
         </View>
+
+        {/* Publish step keeps its actions pinned, exactly like the Back/Next bar
+            on the earlier steps — they were scrolling away with the form. */}
+        {currentStep === 2 && (
+          <View style={[styles.bottomNav, { borderTopColor: theme.outlineVariant + '22', backgroundColor: theme.surfaceLowest }]}>
+            <Pressable
+              onPress={handleSaveDraft}
+              disabled={isSavingDraft || isPublishing}
+              style={[styles.draftBtn, { borderColor: theme.outlineVariant, opacity: (isSavingDraft || isPublishing) ? 0.6 : 1 }]}
+            >
+              <Ionicons name="document-text-outline" size={16} color={theme.text} />
+              <ThemedText style={[styles.draftBtnText, { color: theme.text }]}>Save Draft</ThemedText>
+            </Pressable>
+            <Pressable
+              onPress={handlePublish}
+              disabled={isSavingDraft || isPublishing || !isAllValid}
+              style={[
+                styles.publishBtn,
+                { backgroundColor: theme.primary, marginLeft: Spacing.sm },
+                (!isAllValid || isSavingDraft || isPublishing) && { opacity: 0.45, backgroundColor: theme.outlineVariant + '77' }
+              ]}
+            >
+              <Ionicons name={editId ? "save-outline" : "checkmark-circle"} size={18} color="#fff" />
+              <ThemedText style={styles.publishBtnText}>
+                {isPublishing ? 'Publishing...' : editId ? 'Update Class 🎓' : 'Publish Class 🎓'}
+              </ThemedText>
+            </Pressable>
+          </View>
+        )}
 
         {/* Bottom Navigation */}
         {currentStep < 2 && (
@@ -2315,6 +2319,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: 'rgba(255,255,255,0.8)',
   },
+  // Retained: the publish actions now live in the pinned bottomNav bar.
   actionRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -2491,12 +2496,17 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
   kakaoYellowBadge: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    // 46px could not hold "VOUCHER" at this size, so the word spilled past the
+    // circle's edge. Sized to the content instead, with padding so the text has
+    // room to centre inside the round shape rather than against it.
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: '#FEE500',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 5,
+    alignSelf: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -2505,10 +2515,11 @@ const styles = StyleSheet.create({
   },
   kakaoYellowBadgeText: {
     color: '#000000',
-    fontFamily: 'Sora_500Medium',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 7.5,
-    lineHeight: 9,
-    letterSpacing: 0.3,
+    lineHeight: 10,
+    letterSpacing: 0.2,
+    textAlign: 'center',
   },
   kakaoDiscountCenter: {
     flexDirection: 'row',

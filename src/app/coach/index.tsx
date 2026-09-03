@@ -43,19 +43,21 @@ export default function CoachList() {
   const t = useTokens();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['value']>('all');
-  const { classes, enrollmentCountForClass } = useClassStore();
+  const { classes, enrollmentCountForClass, isClassActive } = useClassStore();
 
   // Coach-created classes, filtered by the same search box as the coach list.
   const liveClasses = useMemo(() => {
-    if (!query) return classes;
+    // Deactivated classes are hidden from players entirely.
+    const active = classes.filter((c: any) => isClassActive(c));
+    if (!query) return active;
     const q = query.toLowerCase();
-    return classes.filter(
+    return active.filter(
       (c: any) =>
         String(c.className || '').toLowerCase().includes(q) ||
         String(c.sportType || '').toLowerCase().includes(q) ||
         String(c.venue || '').toLowerCase().includes(q)
     );
-  }, [classes, query]);
+  }, [classes, query, isClassActive]);
 
   const filtered = useMemo(() => {
     let list = COACHES.filter((c) => {

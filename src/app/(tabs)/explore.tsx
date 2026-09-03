@@ -102,7 +102,7 @@ export default function ExploreScreen() {
   const [coinTossVisible, setCoinTossVisible] = useState(false);
   // Turf Book now hosts both things a player books here: pitches and coaching.
   const [bookingMode, setBookingMode] = useState<'turf' | 'coaching'>('turf');
-  const { classes } = useClassStore();
+  const { classes, isClassActive } = useClassStore();
   const [bookmarkedCoaches, setBookmarkedCoaches] = useState<Record<string, boolean>>({});
 
   const toggleBookmarkCoach = (id: string) => {
@@ -189,7 +189,10 @@ export default function ExploreScreen() {
   // Coaching list matching the search and sport filters
   const displayedCoaches = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    const userCoaches = (classes || []).map((cls: any, idx: number) => ({
+    // A coach can deactivate a class; deactivated ones must not reach players.
+    const userCoaches = (classes || [])
+      .filter((cls: any) => isClassActive(cls))
+      .map((cls: any, idx: number) => ({
       id: cls.id || `class-coach-${idx}`,
       coachName: cls.coachName || cls.instructorName || (cls.className ? cls.className.split(' - ')[0] : 'Coach Specialist'),
       roleTitle: `${cls.classType || 'Academy Specialist'} • ${cls.sportType || 'Cricket'}`,
@@ -225,7 +228,7 @@ export default function ExploreScreen() {
         c.skills.some((s: string) => s.toLowerCase().includes(q))
       );
     });
-  }, [classes, searchQuery, selectedSport]);
+  }, [classes, searchQuery, selectedSport, isClassActive]);
 
   // Action feedback toasts
   const [toastMsg, setToastMsg] = useState<string | null>(null);

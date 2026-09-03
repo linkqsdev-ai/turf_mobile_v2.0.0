@@ -81,9 +81,9 @@ function usePalette() {
   const isDark = scheme === 'dark';
   return {
     theme,
-    canvas: isDark ? theme.background : CANVAS_LIGHT,
-    zone: isDark ? theme.surfaceLow : ZONE_LIGHT,
-    bubble: isDark ? theme.surface : '#FFFFFF',
+    canvas: isDark ? theme.background : theme.surfaceLow,
+    zone: isDark ? theme.surfaceLowest : theme.surfaceLowest,
+    bubble: isDark ? theme.surfaceLow : '#FFFFFF',
     bubbleText: isDark ? theme.text : '#1D1B1A',
   };
 }
@@ -146,7 +146,7 @@ export function PlayerSelectionModal({
   const handleClose = onClose || onSkip;
   const { theme, canvas, zone, bubble, bubbleText } = usePalette();
   const accentA = theme.primary;
-  const accentB = '#E08A3C';
+  const accentB = theme.secondary;
 
   const labelA = teamAName.trim() || 'Team A';
   const labelB = teamBName.trim() || 'Team B';
