@@ -3316,16 +3316,23 @@ export default function CricketScoring({
       setBowler({ name: '', overs: 0, ballsInOver: 0, maidens: 0, runs: 0, wickets: 0 });
       setDismissedBatsmen([]);
 
-      // Swap squad bench lists
+      // Swap squad bench lists while preserving all accumulated players
       const teamAObj = teams.find(t => t.name.toLowerCase() === teamA.toLowerCase());
       const teamBObj = teams.find(t => t.name.toLowerCase() === teamB.toLowerCase());
       const isNewBatTeamA = newBatting.toLowerCase() === teamA.toLowerCase();
-      const nextBatSquad = (isNewBatTeamA ? teamASquad : teamBSquad).length > 0
-        ? (isNewBatTeamA ? teamASquad : teamBSquad)
-        : squadFor(newBatting, isNewBatTeamA ? teamAObj?.players : teamBObj?.players);
-      const nextBowlSquad = (isNewBatTeamA ? teamBSquad : teamASquad).length > 0
-        ? (isNewBatTeamA ? teamBSquad : teamASquad)
-        : squadFor(newBowling, isNewBatTeamA ? teamBObj?.players : teamAObj?.players);
+
+      const fullSquadA = (currentPoolA && currentPoolA.length > 0)
+        ? currentPoolA
+        : (teamASquad.length > 0 ? teamASquad : (teamAObj?.players || []));
+      const fullSquadB = (currentPoolB && currentPoolB.length > 0)
+        ? currentPoolB
+        : (teamBSquad.length > 0 ? teamBSquad : (teamBObj?.players || []));
+
+      setTeamASquad(fullSquadA);
+      setTeamBSquad(fullSquadB);
+
+      const nextBatSquad = isNewBatTeamA ? fullSquadA : fullSquadB;
+      const nextBowlSquad = isNewBatTeamA ? fullSquadB : fullSquadA;
       if (nextBatSquad) setYetToBatBatsmen(nextBatSquad);
       if (nextBowlSquad) setOtherBowlers(nextBowlSquad);
 
@@ -4142,7 +4149,7 @@ export default function CricketScoring({
                 {/* Bowler balls indicator row */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '22', marginTop: 4 }}>
                   <ThemedText style={{ color: theme.textSecondary, fontSize: 12, fontFamily: 'Sora_500Medium' }}>
-                    Bowler: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>{bowler.name || 'Not Selected'}</ThemedText> ({bowler.overs * 6 + bowler.ballsInOver} balls)
+                    Bowler: <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>{bowler.name || 'Not Selected'}</ThemedText> ({((Number(bowler.overs) || 0) * 6) + (Number(bowler.ballsInOver) || 0)} balls)
                   </ThemedText>
                   <View style={{ flexDirection: 'row', gap: 5 }}>
                     {[1, 2, 3, 4, 5, 6].map((b) => (
@@ -5583,7 +5590,7 @@ export default function CricketScoring({
 
                 <View style={[styles.bowlerNameRow, { borderTopColor: theme.outlineVariant + '1a', marginTop: Spacing.sm, paddingTop: Spacing.sm }]}>
                   <ThemedText style={{ color: theme.textSecondary, fontSize: 12, fontFamily: 'Sora_500Medium' }}>
-                    Bowler: {bowler.name} ({bowler.overs * 6 + bowler.ballsInOver} balls)
+                    Bowler: {bowler.name} ({((Number(bowler.overs) || 0) * 6) + (Number(bowler.ballsInOver) || 0)} balls)
                   </ThemedText>
                   <View style={styles.bowlerOverDots}>
                     {[1, 2, 3, 4, 5, 6].map((b) => (
@@ -8240,11 +8247,14 @@ export default function CricketScoring({
           }
 
           const existingArchived = inningsBowlersArchive[pNameKey];
-          const prevBowlRecord = (otherBowlers || []).find(b => b && b.name && b.name.trim().toLowerCase() === pNameKey);
+          const prevBowlRecord = (otherBowlers || []).find(b => b && (typeof b === 'string' ? b.trim().toLowerCase() : b.name && b.name.trim().toLowerCase()) === pNameKey);
           
           if (bowler?.name && bowler.name.trim()) {
             setOtherBowlers(prev => {
-              const filtered = (prev || []).filter(b => b && b.name && b.name.trim().toLowerCase() !== bowler.name.trim().toLowerCase());
+              const filtered = (prev || []).filter(b => {
+                const bN = typeof b === 'string' ? b : b?.name;
+                return bN && bN.trim().toLowerCase() !== bowler.name.trim().toLowerCase();
+              });
               return [...filtered, bowler];
             });
           }
@@ -8252,15 +8262,23 @@ export default function CricketScoring({
           if (existingArchived) {
             setBowler({
               name: player.name,
-              overs: existingArchived.overs || 0,
-              ballsInOver: existingArchived.ballsInOver || 0,
-              runs: existingArchived.runs || 0,
-              wickets: existingArchived.wickets || 0,
-              maidens: existingArchived.maidens || 0,
+              overs: Number(existingArchived.overs) || 0,
+              ballsInOver: Number(existingArchived.ballsInOver) || 0,
+              runs: Number(existingArchived.runs) || 0,
+              wickets: Number(existingArchived.wickets) || 0,
+              maidens: Number(existingArchived.maidens) || 0,
               avatar: player.avatarUrl || existingArchived.avatar,
             });
           } else if (prevBowlRecord) {
-            setBowler(prevBowlRecord);
+            setBowler({
+              name: player.name,
+              overs: typeof prevBowlRecord === 'string' ? 0 : (Number(prevBowlRecord.overs) || 0),
+              ballsInOver: typeof prevBowlRecord === 'string' ? 0 : (Number(prevBowlRecord.ballsInOver) || 0),
+              runs: typeof prevBowlRecord === 'string' ? 0 : (Number(prevBowlRecord.runs) || 0),
+              wickets: typeof prevBowlRecord === 'string' ? 0 : (Number(prevBowlRecord.wickets) || 0),
+              maidens: typeof prevBowlRecord === 'string' ? 0 : (Number(prevBowlRecord.maidens) || 0),
+              avatar: player.avatarUrl || (typeof prevBowlRecord === 'string' ? undefined : prevBowlRecord.avatar),
+            });
           } else {
             setBowler({
               name: player.name,
@@ -8287,10 +8305,14 @@ export default function CricketScoring({
           showToast('info', `${player.name} stepped down from bowling`);
         }}
         onConfirm={(teamAPlayers, teamBPlayers, _unassigned, meta) => {
-          const isRematch = matchVictoryData !== null || firstInningsScore !== null;
+          const isRematch = matchVictoryData !== null;
           if (isRematch) {
             resetMatchScoringState();
           }
+
+          // Always persist full squad lineups to prevent losing players
+          setTeamASquad(teamAPlayers);
+          setTeamBSquad(teamBPlayers);
 
           // Handle batting team swap if changed
           if (meta?.battingTeamName && meta.battingTeamName !== battingTeamName) {
@@ -8352,21 +8374,29 @@ export default function CricketScoring({
           if (meta?.bowlerName) {
             const b = currentBowlList.find(p => p.name.toLowerCase() === meta.bowlerName?.toLowerCase()) || { name: meta.bowlerName };
             const pNameKey = b.name.trim().toLowerCase();
+            const existingArchived = inningsBowlersArchive[pNameKey];
+            const prevBowlRecord = (otherBowlers || []).find(ob => ob && (typeof ob === 'string' ? ob.trim().toLowerCase() : ob.name?.trim().toLowerCase()) === pNameKey);
             if (!bowler.name || bowler.name.trim().toLowerCase() !== pNameKey) {
-              const existingArchived = inningsBowlersArchive[pNameKey];
-              const prevBowlRecord = (otherBowlers || []).find(ob => ob && ob.name && ob.name.trim().toLowerCase() === pNameKey);
               if (existingArchived) {
                 setBowler({
                   name: b.name,
-                  overs: existingArchived.overs || 0,
-                  ballsInOver: existingArchived.ballsInOver || 0,
-                  runs: existingArchived.runs || 0,
-                  wickets: existingArchived.wickets || 0,
-                  maidens: existingArchived.maidens || 0,
+                  overs: Number(existingArchived.overs) || 0,
+                  ballsInOver: Number(existingArchived.ballsInOver) || 0,
+                  runs: Number(existingArchived.runs) || 0,
+                  wickets: Number(existingArchived.wickets) || 0,
+                  maidens: Number(existingArchived.maidens) || 0,
                   avatar: (b as any).avatarUrl || existingArchived.avatar,
                 });
               } else if (prevBowlRecord) {
-                setBowler(prevBowlRecord);
+                setBowler({
+                  name: b.name,
+                  overs: typeof prevBowlRecord === 'string' ? 0 : (Number(prevBowlRecord.overs) || 0),
+                  ballsInOver: typeof prevBowlRecord === 'string' ? 0 : (Number(prevBowlRecord.ballsInOver) || 0),
+                  runs: typeof prevBowlRecord === 'string' ? 0 : (Number(prevBowlRecord.runs) || 0),
+                  wickets: typeof prevBowlRecord === 'string' ? 0 : (Number(prevBowlRecord.wickets) || 0),
+                  maidens: typeof prevBowlRecord === 'string' ? 0 : (Number(prevBowlRecord.maidens) || 0),
+                  avatar: (b as any).avatarUrl || (typeof prevBowlRecord === 'string' ? undefined : prevBowlRecord.avatar),
+                });
               } else {
                 setBowler({
                   name: b.name,
@@ -8379,6 +8409,15 @@ export default function CricketScoring({
                 });
               }
               setBowlName(b.name);
+            } else {
+              setBowler(prev => ({
+                ...prev,
+                overs: Number(prev.overs) || 0,
+                ballsInOver: Number(prev.ballsInOver) || 0,
+                runs: Number(prev.runs) || 0,
+                wickets: Number(prev.wickets) || 0,
+                maidens: Number(prev.maidens) || 0,
+              }));
             }
           }
 
@@ -8405,11 +8444,11 @@ export default function CricketScoring({
             if (existingArchived) {
               setBowler({
                 name: b.name,
-                overs: existingArchived.overs || 0,
-                ballsInOver: existingArchived.ballsInOver || 0,
-                runs: existingArchived.runs || 0,
-                wickets: existingArchived.wickets || 0,
-                maidens: existingArchived.maidens || 0,
+                overs: Number(existingArchived.overs) || 0,
+                ballsInOver: Number(existingArchived.ballsInOver) || 0,
+                runs: Number(existingArchived.runs) || 0,
+                wickets: Number(existingArchived.wickets) || 0,
+                maidens: Number(existingArchived.maidens) || 0,
                 avatar: b.avatarUrl || existingArchived.avatar,
               });
             } else {
