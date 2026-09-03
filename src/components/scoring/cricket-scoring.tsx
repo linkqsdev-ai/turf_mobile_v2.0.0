@@ -1151,6 +1151,7 @@ export default function CricketScoring({
   const [showRematchSquadChoiceModal, setShowRematchSquadChoiceModal] = useState(false);
 
   // Manage Players Modal Search & Add State
+  const [manageSelectedTeamTab, setManageSelectedTeamTab] = useState<'bat' | 'bowl'>('bat');
   const [managePlayerSearchQuery, setManagePlayerSearchQuery] = useState('');
   const [showManageNewPlayerModal, setShowManageNewPlayerModal] = useState(false);
   const [managePlayerSearchSeed, setManagePlayerSearchSeed] = useState('');
@@ -4103,8 +4104,8 @@ export default function CricketScoring({
                           style={styles.batsmanNameCell}
                         >
                           <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
-                            <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_500Medium' }}>
-                              {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
+                            <ThemedText style={{ color: theme.primary, fontSize: 9.5, fontFamily: 'Sora_700Bold' }}>
+                              {getTwoLetterLogo(b.name || 'Player')}
                             </ThemedText>
                           </View>
                           <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text, flexShrink: 1 }}>
@@ -4197,9 +4198,9 @@ export default function CricketScoring({
                       }}
                       style={styles.batsmanNameCell}
                     >
-                      <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
-                        <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_500Medium' }}>
-                          {bowler.name ? bowler.name.trim().charAt(0).toUpperCase() : 'P'}
+                      <View style={[styles.playerAvatar, { backgroundColor: '#F59E0B18' }]}>
+                        <ThemedText style={{ color: '#F59E0B', fontSize: 9.5, fontFamily: 'Sora_700Bold' }}>
+                          {getTwoLetterLogo(bowler.name || 'Bowler')}
                         </ThemedText>
                       </View>
                       <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text }}>
@@ -4612,9 +4613,9 @@ export default function CricketScoring({
                           ]}
                         >
                           <View style={[styles.batsmanNameCell, { gap: 8 }]}>
-                            <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
-                              <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_500Medium' }}>
-                                {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
+                            <View style={[styles.playerAvatar, { backgroundColor: '#F59E0B18' }]}>
+                              <ThemedText style={{ color: '#F59E0B', fontSize: 9.5, fontFamily: 'Sora_700Bold' }}>
+                                {getTwoLetterLogo(b.name || 'Bowler')}
                               </ThemedText>
                             </View>
                             <View style={{ flex: 1 }}>
@@ -4965,8 +4966,8 @@ export default function CricketScoring({
                     return teamASquad.map((p, idx) => (
                       <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, borderBottomWidth: idx === teamASquad.length - 1 ? 0 : 1, borderBottomColor: theme.outlineVariant + '15' }}>
                         <View style={[styles.playerAvatar, { width: 22, height: 22, borderRadius: 11, backgroundColor: theme.primary + '10' }]}>
-                          <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: theme.primary }}>
-                            {p.name ? p.name.trim().charAt(0).toUpperCase() : 'P'}
+                          <ThemedText style={{ fontSize: 7.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                            {getTwoLetterLogo(p.name || 'Player')}
                           </ThemedText>
                         </View>
                         <View style={{ flex: 1, minWidth: 0 }}>
@@ -5000,8 +5001,8 @@ export default function CricketScoring({
                     return teamBSquad.map((p, idx) => (
                       <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, borderBottomWidth: idx === teamBSquad.length - 1 ? 0 : 1, borderBottomColor: theme.outlineVariant + '15' }}>
                         <View style={[styles.playerAvatar, { width: 22, height: 22, borderRadius: 11, backgroundColor: theme.secondary + '10' }]}>
-                          <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: theme.secondary }}>
-                            {p.name ? p.name.trim().charAt(0).toUpperCase() : 'P'}
+                          <ThemedText style={{ fontSize: 7.5, fontFamily: 'Sora_700Bold', color: theme.secondary }}>
+                            {getTwoLetterLogo(p.name || 'Player')}
                           </ThemedText>
                         </View>
                         <View style={{ flex: 1, minWidth: 0 }}>
@@ -5681,7 +5682,7 @@ export default function CricketScoring({
                     <View key={`bat-${idx}`} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.surfaceLow, padding: 10, borderRadius: 10 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 }}>
                         <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.primary }}>{b.name ? b.name.charAt(0).toUpperCase() : 'P'}</ThemedText>
+                          <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.primary }}>{getTwoLetterLogo(b.name || 'Player')}</ThemedText>
                         </View>
                         <View style={{ flex: 1, minWidth: 0 }}>
                           <ThemedText numberOfLines={1} style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text }}>{b.name} {b.active ? '★ (Striker)' : ''}</ThemedText>
@@ -5702,7 +5703,7 @@ export default function CricketScoring({
                           <Image source={{ uri: b.avatar }} style={{ width: 30, height: 30, borderRadius: 15 }} contentFit="cover" />
                         ) : (
                           <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#64748b20', justifyContent: 'center', alignItems: 'center' }}>
-                            <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#64748b' }}>{b.name ? b.name.charAt(0).toUpperCase() : 'P'}</ThemedText>
+                            <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#64748b' }}>{getTwoLetterLogo(b.name || 'Player')}</ThemedText>
                           </View>
                         )}
                         <View style={{ flex: 1, minWidth: 0 }}>
@@ -5749,7 +5750,7 @@ export default function CricketScoring({
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.secondaryContainer + '1a', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: theme.secondaryContainer }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.secondary, justifyContent: 'center', alignItems: 'center' }}>
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#ffffff' }}>{bowler.name.charAt(0)}</ThemedText>
+                          <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>{getTwoLetterLogo(bowler.name || 'Bowler')}</ThemedText>
                         </View>
                         <View>
                           <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text }}>{bowler.name} (Current Bowler)</ThemedText>
@@ -5767,7 +5768,7 @@ export default function CricketScoring({
                     <View key={`bowler-${idx}`} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: theme.surfaceLow, padding: 10, borderRadius: 10 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 }}>
                         <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#64748b20', justifyContent: 'center', alignItems: 'center' }}>
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#64748b' }}>{b.name ? b.name.charAt(0).toUpperCase() : 'P'}</ThemedText>
+                          <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#64748b' }}>{getTwoLetterLogo(b.name || 'Player')}</ThemedText>
                         </View>
                         <View style={{ flex: 1, minWidth: 0 }}>
                           <ThemedText numberOfLines={1} style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text }}>{b.name}</ThemedText>
@@ -5873,42 +5874,77 @@ export default function CricketScoring({
               </Pressable>
             </View>
 
-            {/* Team Legend Pills (KR Knights Riders & RR Royal Rockers) */}
+            {/* Team Legend / Tab Selector Pills */}
             <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 }}>
-              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.surfaceLow, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#3B82F644' }}>
-                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center' }}>
-                  <ThemedText style={{ color: '#ffffff', fontSize: 9.5, fontFamily: 'Sora_700Bold' }}>
+              <Pressable
+                onPress={() => setManageSelectedTeamTab('bat')}
+                style={({ pressed }) => [{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  backgroundColor: manageSelectedTeamTab === 'bat' ? '#3B82F6' : theme.surfaceLow,
+                  paddingHorizontal: 10,
+                  paddingVertical: 7,
+                  borderRadius: 20,
+                  borderWidth: 1.5,
+                  borderColor: manageSelectedTeamTab === 'bat' ? '#2563EB' : '#3B82F644',
+                  boxShadow: manageSelectedTeamTab === 'bat' ? '0px 2px 8px #3B82F640' : 'none',
+                  opacity: pressed ? 0.8 : 1,
+                }]}
+              >
+                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: manageSelectedTeamTab === 'bat' ? '#ffffff' : '#3B82F6', justifyContent: 'center', alignItems: 'center' }}>
+                  <ThemedText style={{ color: manageSelectedTeamTab === 'bat' ? '#3B82F6' : '#ffffff', fontSize: 9.5, fontFamily: 'Sora_700Bold' }}>
                     {shortCode(battingTeamName || teamA, 'KR')}
                   </ThemedText>
                 </View>
-                <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text, flex: 1 }} numberOfLines={1}>
+                <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: manageSelectedTeamTab === 'bat' ? '#ffffff' : theme.text, flex: 1 }} numberOfLines={1}>
                   {battingTeamName || teamA}
                 </ThemedText>
-              </View>
+              </Pressable>
 
-              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.surfaceLow, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#F59E0B44' }}>
-                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#F59E0B', justifyContent: 'center', alignItems: 'center' }}>
-                  <ThemedText style={{ color: '#ffffff', fontSize: 9.5, fontFamily: 'Sora_700Bold' }}>
+              <Pressable
+                onPress={() => setManageSelectedTeamTab('bowl')}
+                style={({ pressed }) => [{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  backgroundColor: manageSelectedTeamTab === 'bowl' ? '#F59E0B' : theme.surfaceLow,
+                  paddingHorizontal: 10,
+                  paddingVertical: 7,
+                  borderRadius: 20,
+                  borderWidth: 1.5,
+                  borderColor: manageSelectedTeamTab === 'bowl' ? '#D97706' : '#F59E0B44',
+                  boxShadow: manageSelectedTeamTab === 'bowl' ? '0px 2px 8px #F59E0B40' : 'none',
+                  opacity: pressed ? 0.8 : 1,
+                }]}
+              >
+                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: manageSelectedTeamTab === 'bowl' ? '#ffffff' : '#F59E0B', justifyContent: 'center', alignItems: 'center' }}>
+                  <ThemedText style={{ color: manageSelectedTeamTab === 'bowl' ? '#F59E0B' : '#ffffff', fontSize: 9.5, fontFamily: 'Sora_700Bold' }}>
                     {shortCode(bowlingTeamName || teamB, 'RR')}
                   </ThemedText>
                 </View>
-                <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text, flex: 1 }} numberOfLines={1}>
+                <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_700Bold', color: manageSelectedTeamTab === 'bowl' ? '#ffffff' : theme.text, flex: 1 }} numberOfLines={1}>
                   {bowlingTeamName || teamB}
                 </ThemedText>
-              </View>
+              </Pressable>
             </View>
 
             <ScrollView
               ref={modalScrollRef}
               style={{ flex: 1 }}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ padding: 16, paddingBottom: activeDropdownKey !== null ? 240 : 20 }}
+              contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
             >
-              {/* Available Squad Players Section */}
+              {/* Available Squad Players Section (Filtered by selected team tab) */}
               {(() => {
-                const activeNames = new Set([
+                const isBatTab = manageSelectedTeamTab === 'bat';
+                const activeBatNames = new Set([
                   b1Name.trim().toLowerCase(),
                   b2Name.trim().toLowerCase(),
+                ].filter(Boolean));
+                const activeBowlNames = new Set([
                   bowlName.trim().toLowerCase(),
                 ].filter(Boolean));
 
@@ -5916,30 +5952,31 @@ export default function CricketScoring({
                   dismissedBatsmen.map(d => (d && d.name ? d.name.trim().toLowerCase() : '')).filter(Boolean)
                 );
 
-                const list: Array<{ name: string; avatar?: string; phone?: string; mobile?: string; team: 'bat' | 'bowl' }> = [];
+                const list: Array<{ name: string; avatar?: string; phone?: string; mobile?: string; role?: string }> = [];
 
-                availableBenchBatsmen.forEach(p => {
-                  const pName = typeof p === 'string' ? p : p?.name;
-                  if (!pName || activeNames.has(pName.trim().toLowerCase()) || dismissed.has(pName.trim().toLowerCase())) return;
-                  list.push({
-                    name: pName,
-                    avatar: typeof p === 'object' ? p.avatar : undefined,
-                    phone: typeof p === 'object' ? (p.phone || p.mobile) : undefined,
-                    team: 'bat',
+                if (isBatTab) {
+                  availableBenchBatsmen.forEach(p => {
+                    const pName = typeof p === 'string' ? p : p?.name;
+                    if (!pName || activeBatNames.has(pName.trim().toLowerCase()) || dismissed.has(pName.trim().toLowerCase())) return;
+                    list.push({
+                      name: pName,
+                      avatar: typeof p === 'object' ? p.avatar : undefined,
+                      phone: typeof p === 'object' ? (p.phone || p.mobile) : undefined,
+                      role: typeof p === 'object' ? p.role : undefined,
+                    });
                   });
-                });
-
-                availableBenchBowlers.forEach(p => {
-                  const pName = typeof p === 'string' ? p : p?.name;
-                  if (!pName || activeNames.has(pName.trim().toLowerCase())) return;
-                  if (list.some(item => item.name.trim().toLowerCase() === pName.trim().toLowerCase())) return;
-                  list.push({
-                    name: pName,
-                    avatar: typeof p === 'object' ? p.avatar : undefined,
-                    phone: typeof p === 'object' ? (p.phone || p.mobile) : undefined,
-                    team: 'bowl',
+                } else {
+                  availableBenchBowlers.forEach(p => {
+                    const pName = typeof p === 'string' ? p : p?.name;
+                    if (!pName || activeBowlNames.has(pName.trim().toLowerCase())) return;
+                    list.push({
+                      name: pName,
+                      avatar: typeof p === 'object' ? p.avatar : undefined,
+                      phone: typeof p === 'object' ? (p.phone || p.mobile) : undefined,
+                      role: typeof p === 'object' ? p.role : undefined,
+                    });
                   });
-                });
+                }
 
                 const filteredAvail = managePlayerSearchQuery.trim()
                   ? list.filter(item => {
@@ -5950,14 +5987,13 @@ export default function CricketScoring({
                   })
                   : list;
 
-                const codeA = shortCode(battingTeamName || teamA, 'KR');
-                const codeB = shortCode(bowlingTeamName || teamB, 'RR');
+                const teamName = isBatTab ? (battingTeamName || teamA) : (bowlingTeamName || teamB);
 
                 return (
                   <View style={{ marginBottom: 14 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                       <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.text }}>
-                        Available Players
+                        Available Players ({teamName})
                       </ThemedText>
                       <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
                         {filteredAvail.length} unassigned
@@ -5985,12 +6021,12 @@ export default function CricketScoring({
                               gap: 6,
                             }}
                           >
-                            <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
+                            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: isBatTab ? '#3B82F620' : '#F59E0B20', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
                               {p.avatar ? (
-                                <Image source={{ uri: p.avatar }} style={{ width: 26, height: 26, borderRadius: 13 }} contentFit="cover" />
+                                <Image source={{ uri: p.avatar }} style={{ width: 28, height: 28, borderRadius: 14 }} contentFit="cover" />
                               ) : (
-                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>
-                                  {p.name.charAt(0).toUpperCase()}
+                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: isBatTab ? '#3B82F6' : '#F59E0B' }}>
+                                  {getTwoLetterLogo(p.name)}
                                 </ThemedText>
                               )}
                             </View>
@@ -5998,44 +6034,69 @@ export default function CricketScoring({
                               {p.name}
                             </ThemedText>
                             <View style={{ flexDirection: 'row', gap: 4 }}>
-                              <Pressable
-                                onPress={() => {
-                                  if (!b1Name.trim()) setB1Name(p.name);
-                                  else setB2Name(p.name);
-                                }}
-                                style={({ pressed }) => [{
-                                  backgroundColor: '#3B82F6',
-                                  paddingHorizontal: 6,
-                                  paddingVertical: 2,
-                                  borderRadius: 10,
-                                  opacity: pressed ? 0.75 : 1,
-                                }]}
-                              >
-                                <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
-                                  {codeA}
-                                </ThemedText>
-                              </Pressable>
-                              <Pressable
-                                onPress={() => setBowlName(p.name)}
-                                style={({ pressed }) => [{
-                                  backgroundColor: '#F59E0B',
-                                  paddingHorizontal: 6,
-                                  paddingVertical: 2,
-                                  borderRadius: 10,
-                                  opacity: pressed ? 0.75 : 1,
-                                }]}
-                              >
-                                <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
-                                  {codeB}
-                                </ThemedText>
-                              </Pressable>
+                              {isBatTab ? (
+                                <>
+                                  <Pressable
+                                    onPress={() => {
+                                      setB1Name(p.name);
+                                      if (p.avatar) setB1Avatar(p.avatar);
+                                    }}
+                                    style={({ pressed }) => [{
+                                      backgroundColor: '#3B82F6',
+                                      paddingHorizontal: 7,
+                                      paddingVertical: 2.5,
+                                      borderRadius: 10,
+                                      opacity: pressed ? 0.75 : 1,
+                                    }]}
+                                  >
+                                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                                      B1
+                                    </ThemedText>
+                                  </Pressable>
+                                  <Pressable
+                                    onPress={() => {
+                                      setB2Name(p.name);
+                                      if (p.avatar) setB2Avatar(p.avatar);
+                                    }}
+                                    style={({ pressed }) => [{
+                                      backgroundColor: '#2563EB',
+                                      paddingHorizontal: 7,
+                                      paddingVertical: 2.5,
+                                      borderRadius: 10,
+                                      opacity: pressed ? 0.75 : 1,
+                                    }]}
+                                  >
+                                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                                      B2
+                                    </ThemedText>
+                                  </Pressable>
+                                </>
+                              ) : (
+                                <Pressable
+                                  onPress={() => {
+                                    setBowlName(p.name);
+                                    if (p.avatar) setBowlAvatar(p.avatar);
+                                  }}
+                                  style={({ pressed }) => [{
+                                    backgroundColor: '#F59E0B',
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 2.5,
+                                    borderRadius: 10,
+                                    opacity: pressed ? 0.75 : 1,
+                                  }]}
+                                >
+                                  <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                                    Bowler
+                                  </ThemedText>
+                                </Pressable>
+                              )}
                             </View>
                           </View>
                         ))}
                       </ScrollView>
                     ) : (
                       <ThemedText style={{ fontSize: 11.5, color: theme.textSecondary, fontStyle: 'italic', paddingVertical: 2 }}>
-                        No unassigned players — add one below.
+                        No unassigned {teamName} players — add one below.
                       </ThemedText>
                     )}
                   </View>
@@ -6175,9 +6236,9 @@ export default function CricketScoring({
                             }, pressed && { backgroundColor: theme.primary + '15' }]}
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
-                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>
-                                  {bName.charAt(0).toUpperCase()}
+                              <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#F59E0B20', justifyContent: 'center', alignItems: 'center' }}>
+                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#F59E0B' }}>
+                                  {getTwoLetterLogo(bName)}
                                 </ThemedText>
                               </View>
                               <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text }}>
@@ -6219,9 +6280,9 @@ export default function CricketScoring({
                             }, pressed && { backgroundColor: theme.primary + '15' }]}
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
-                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: theme.primary }}>
-                                  {bName.charAt(0).toUpperCase()}
+                              <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#3B82F620', justifyContent: 'center', alignItems: 'center' }}>
+                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#3B82F6' }}>
+                                  {getTwoLetterLogo(bName)}
                                 </ThemedText>
                               </View>
                               <View>
@@ -6337,7 +6398,6 @@ export default function CricketScoring({
                     borderColor: theme.outlineVariant + '33',
                     padding: 12,
                     marginBottom: 10,
-                    zIndex: activeDropdownKey === 'b1' ? 9999 : 3,
                   }}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -6403,17 +6463,17 @@ export default function CricketScoring({
                     </View>
                   </View>
 
-                  {/* Avatar Picker & Dropdown */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, zIndex: activeDropdownKey === 'b1' ? 9999 : 1 }}>
+                  {/* Player Profile Info Row (Two-Letter Monogram Avatar + Name) */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                     <Pressable
                       onPress={() => handlePickAvatar('b1')}
                       style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: theme.surfaceLow,
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        backgroundColor: '#3B82F620',
                         borderWidth: 1.5,
-                        borderColor: theme.primary + '50',
+                        borderColor: '#3B82F6',
                         justifyContent: 'center',
                         alignItems: 'center',
                         overflow: 'hidden',
@@ -6423,57 +6483,24 @@ export default function CricketScoring({
                       {b1Avatar ? (
                         <Image source={{ uri: b1Avatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                       ) : (
-                        <Ionicons name="camera-outline" size={20} color={theme.primary} />
+                        <ThemedText style={{ fontSize: 15, fontFamily: 'Sora_700Bold', color: '#3B82F6' }}>
+                          {getTwoLetterLogo(b1Name || 'Batsman 1')}
+                        </ThemedText>
                       )}
+                      <View style={{ position: 'absolute', bottom: -1, right: -1, backgroundColor: '#3B82F6', borderRadius: 7, width: 14, height: 14, justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name="camera" size={8} color="#ffffff" />
+                      </View>
                     </Pressable>
-                    <PlayerDropdownSelector
-                      value={b1Name}
-                      placeholder="Select Batsman 1..."
-                      squadList={availableBenchBatsmen}
-                      otherSelectedName={b2Name}
-                      dismissedNames={dismissedBatsmen.filter(db => db && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt').map(db => db.name)}
-                      retiredHurtNames={dismissedBatsmen.filter(db => db && (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')).map(db => db.name)}
-                      opposingTeamNames={otherBowlers.map(p => typeof p === 'string' ? p : p.name).filter(Boolean)}
-                      theme={theme}
-                      isOpen={activeDropdownKey === 'b1'}
-                      setIsOpen={(val) => setActiveDropdownKey(val ? 'b1' : null)}
-                      onSelectPlayer={(name, avatar, existingStats) => {
-                        const nameTrimmed = name.trim();
-                        const nameLower = nameTrimmed.toLowerCase();
-                        if (b1Name.trim() && b1Name.trim().toLowerCase() !== nameLower) {
-                          setInningsBatsmenArchive(prev => ({
-                            ...prev,
-                            [b1Name.trim().toLowerCase()]: {
-                              name: b1Name.trim(),
-                              runs: parseInt(b1Runs) || 0,
-                              balls: parseInt(b1Balls) || 0,
-                              fours: parseInt(b1Fours) || 0,
-                              sixes: parseInt(b1Sixes) || 0,
-                              avatar: b1Avatar,
-                            }
-                          }));
-                        }
-                        setB1Name(nameTrimmed);
-                        if (avatar) setB1Avatar(avatar);
-                        const archived = existingStats || inningsBatsmenArchive[nameLower];
-                        if (archived && (archived.runs !== undefined || archived.balls !== undefined)) {
-                          setB1Runs(String(archived.runs || 0));
-                          setB1Balls(String(archived.balls || 0));
-                          setB1Fours(String(archived.fours || 0));
-                          setB1Sixes(String(archived.sixes || 0));
-                        } else {
-                          setB1Runs('0');
-                          setB1Balls('0');
-                          setB1Fours('0');
-                          setB1Sixes('0');
-                        }
-                      }}
-                      onCustomNameChange={(name) => setB1Name(name)}
-                    />
+
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <ThemedText style={{ fontSize: 14.5, fontFamily: 'Sora_700Bold', color: b1Name ? theme.text : theme.textSecondary }} numberOfLines={1}>
+                        {b1Name || 'Select from Available list above'}
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 10, color: theme.textSecondary, fontFamily: 'Sora_500Medium', marginTop: 1 }}>
+                        {battingTeamName || teamA} · Striker
+                      </ThemedText>
+                    </View>
                   </View>
-                  <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 8, fontStyle: 'italic', marginTop: 2 }}>
-                    * Tap photo to upload · No numbers allowed
-                  </ThemedText>
 
                   {/* Stat Grid */}
                   <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -6572,7 +6599,6 @@ export default function CricketScoring({
                     borderWidth: 1.2,
                     borderColor: theme.outlineVariant + '33',
                     padding: 12,
-                    zIndex: activeDropdownKey === 'b2' ? 9999 : 2,
                   }}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -6638,17 +6664,17 @@ export default function CricketScoring({
                     </View>
                   </View>
 
-                  {/* Avatar Picker & Dropdown */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, zIndex: activeDropdownKey === 'b2' ? 9999 : 1 }}>
+                  {/* Player Profile Info Row (Two-Letter Monogram Avatar + Name) */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                     <Pressable
                       onPress={() => handlePickAvatar('b2')}
                       style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: theme.surfaceLow,
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        backgroundColor: '#3B82F620',
                         borderWidth: 1.5,
-                        borderColor: theme.primary + '50',
+                        borderColor: '#3B82F6',
                         justifyContent: 'center',
                         alignItems: 'center',
                         overflow: 'hidden',
@@ -6658,57 +6684,24 @@ export default function CricketScoring({
                       {b2Avatar ? (
                         <Image source={{ uri: b2Avatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                       ) : (
-                        <Ionicons name="camera-outline" size={20} color={theme.primary} />
+                        <ThemedText style={{ fontSize: 15, fontFamily: 'Sora_700Bold', color: '#3B82F6' }}>
+                          {getTwoLetterLogo(b2Name || 'Batsman 2')}
+                        </ThemedText>
                       )}
+                      <View style={{ position: 'absolute', bottom: -1, right: -1, backgroundColor: '#3B82F6', borderRadius: 7, width: 14, height: 14, justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name="camera" size={8} color="#ffffff" />
+                      </View>
                     </Pressable>
-                    <PlayerDropdownSelector
-                      value={b2Name}
-                      placeholder="Select Batsman 2..."
-                      squadList={availableBenchBatsmen}
-                      otherSelectedName={b1Name}
-                      dismissedNames={dismissedBatsmen.filter(db => db && db.status !== 'Retired Hurt' && db.status !== 'Retired Not Out' && db.dismissalType !== 'retired_hurt').map(db => db.name)}
-                      retiredHurtNames={dismissedBatsmen.filter(db => db && (db.status === 'Retired Hurt' || db.status === 'Retired Not Out' || db.dismissalType === 'retired_hurt')).map(db => db.name)}
-                      opposingTeamNames={otherBowlers.map(p => typeof p === 'string' ? p : p.name).filter(Boolean)}
-                      theme={theme}
-                      isOpen={activeDropdownKey === 'b2'}
-                      setIsOpen={(val) => setActiveDropdownKey(val ? 'b2' : null)}
-                      onSelectPlayer={(name, avatar, existingStats) => {
-                        const nameTrimmed = name.trim();
-                        const nameLower = nameTrimmed.toLowerCase();
-                        if (b2Name.trim() && b2Name.trim().toLowerCase() !== nameLower) {
-                          setInningsBatsmenArchive(prev => ({
-                            ...prev,
-                            [b2Name.trim().toLowerCase()]: {
-                              name: b2Name.trim(),
-                              runs: parseInt(b2Runs) || 0,
-                              balls: parseInt(b2Balls) || 0,
-                              fours: parseInt(b2Fours) || 0,
-                              sixes: parseInt(b2Sixes) || 0,
-                              avatar: b2Avatar,
-                            }
-                          }));
-                        }
-                        setB2Name(nameTrimmed);
-                        if (avatar) setB2Avatar(avatar);
-                        const archived = existingStats || inningsBatsmenArchive[nameLower];
-                        if (archived && (archived.runs !== undefined || archived.balls !== undefined)) {
-                          setB2Runs(String(archived.runs || 0));
-                          setB2Balls(String(archived.balls || 0));
-                          setB2Fours(String(archived.fours || 0));
-                          setB2Sixes(String(archived.sixes || 0));
-                        } else {
-                          setB2Runs('0');
-                          setB2Balls('0');
-                          setB2Fours('0');
-                          setB2Sixes('0');
-                        }
-                      }}
-                      onCustomNameChange={(name) => setB2Name(name)}
-                    />
+
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <ThemedText style={{ fontSize: 14.5, fontFamily: 'Sora_700Bold', color: b2Name ? theme.text : theme.textSecondary }} numberOfLines={1}>
+                        {b2Name || 'Select from Available list above'}
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 10, color: theme.textSecondary, fontFamily: 'Sora_500Medium', marginTop: 1 }}>
+                        {battingTeamName || teamA} · Non-Striker
+                      </ThemedText>
+                    </View>
                   </View>
-                  <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 8, fontStyle: 'italic', marginTop: 2 }}>
-                    * Tap photo to upload · No numbers allowed
-                  </ThemedText>
 
                   {/* Stat Grid */}
                   <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -6831,7 +6824,6 @@ export default function CricketScoring({
                     borderWidth: 1.2,
                     borderColor: theme.outlineVariant + '33',
                     padding: 12,
-                    zIndex: activeDropdownKey === 'bowler' ? 9999 : 1,
                   }}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -6875,17 +6867,17 @@ export default function CricketScoring({
                     </Pressable>
                   </View>
 
-                  {/* Avatar Picker & Dropdown */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4, zIndex: activeDropdownKey === 'bowler' ? 9999 : 1 }}>
+                  {/* Player Profile Info Row (Two-Letter Monogram Avatar + Name) */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                     <Pressable
                       onPress={() => handlePickAvatar('bowler')}
                       style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 20,
-                        backgroundColor: theme.surfaceLow,
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        backgroundColor: '#F59E0B20',
                         borderWidth: 1.5,
-                        borderColor: theme.primary + '50',
+                        borderColor: '#F59E0B',
                         justifyContent: 'center',
                         alignItems: 'center',
                         overflow: 'hidden',
@@ -6895,29 +6887,24 @@ export default function CricketScoring({
                       {bowlAvatar ? (
                         <Image source={{ uri: bowlAvatar }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                       ) : (
-                        <Ionicons name="camera-outline" size={20} color={theme.primary} />
+                        <ThemedText style={{ fontSize: 15, fontFamily: 'Sora_700Bold', color: '#F59E0B' }}>
+                          {getTwoLetterLogo(bowlName || 'Bowler')}
+                        </ThemedText>
                       )}
+                      <View style={{ position: 'absolute', bottom: -1, right: -1, backgroundColor: '#F59E0B', borderRadius: 7, width: 14, height: 14, justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name="camera" size={8} color="#ffffff" />
+                      </View>
                     </Pressable>
-                    <PlayerDropdownSelector
-                      value={bowlName}
-                      placeholder="Select Active Bowler..."
-                      squadList={otherBowlers}
-                      maxBowlerOvers={ruleMaxOversPerBowler === 'unlimited' ? Infinity : (parseInt(ruleMaxOversPerBowler) || Infinity)}
-                      opposingTeamNames={[...yetToBatBatsmen, ...batsmen, ...dismissedBatsmen].map(p => typeof p === 'string' ? p : p?.name).filter(Boolean)}
-                      theme={theme}
-                      isOpen={activeDropdownKey === 'bowler'}
-                      setIsOpen={(val) => setActiveDropdownKey(val ? 'bowler' : null)}
-                      onSelectPlayer={(name, avatar) => {
-                        setBowlName(name);
-                        if (avatar) setBowlAvatar(avatar);
-                      }}
-                      onCustomNameChange={(name) => setBowlName(name)}
-                      onAddPlayerToSquad={(player) => setOtherBowlers(prev => [...prev, player])}
-                    />
+
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <ThemedText style={{ fontSize: 14.5, fontFamily: 'Sora_700Bold', color: bowlName ? theme.text : theme.textSecondary }} numberOfLines={1}>
+                        {bowlName || 'Select from Available list above'}
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 10, color: theme.textSecondary, fontFamily: 'Sora_500Medium', marginTop: 1 }}>
+                        {bowlingTeamName || teamB} · Active Bowler
+                      </ThemedText>
+                    </View>
                   </View>
-                  <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginBottom: 8, fontStyle: 'italic', marginTop: 2 }}>
-                    * Tap photo to upload · No numbers allowed
-                  </ThemedText>
 
                   {/* Stat Grid */}
                   <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -8240,8 +8227,8 @@ export default function CricketScoring({
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
-                    <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_500Medium', color: theme.primary }}>
-                      {matchVictoryData?.motmName?.charAt(0).toUpperCase()}
+                    <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                      {getTwoLetterLogo(matchVictoryData?.motmName || 'Player')}
                     </ThemedText>
                   </View>
                   <View>
