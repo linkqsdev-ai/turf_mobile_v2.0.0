@@ -255,9 +255,17 @@ export function PlayerSelectionModal({
       });
 
       setCurrentBattingTeam(propBattingTeam || labelA);
-      setStrikerName(activeStrikerName);
+      const sOut = (dismissedPlayers || []).find(
+        (d) => d && d.name && d.name.trim().toLowerCase() === activeStrikerName.trim().toLowerCase() &&
+               d.status !== 'Retired Hurt' && d.status !== 'Retired Not Out' && d.dismissalType !== 'retired_hurt'
+      );
+      const nsOut = (dismissedPlayers || []).find(
+        (d) => d && d.name && d.name.trim().toLowerCase() === activeNonStrikerName.trim().toLowerCase() &&
+               d.status !== 'Retired Hurt' && d.status !== 'Retired Not Out' && d.dismissalType !== 'retired_hurt'
+      );
+      setStrikerName(sOut ? '' : activeStrikerName);
       setNonStrikerName(
-        activeNonStrikerName.trim().toLowerCase() === activeStrikerName.trim().toLowerCase() ? '' : activeNonStrikerName
+        nsOut || activeNonStrikerName.trim().toLowerCase() === activeStrikerName.trim().toLowerCase() ? '' : activeNonStrikerName
       );
       setBowlerName(activeBowlerName);
 
@@ -273,6 +281,38 @@ export function PlayerSelectionModal({
       setRetiredPlayers(initRetired);
     }
   }, [visible]);
+
+  // Check if player is permanently OUT (dismissed) in the current innings
+  const isPlayerPermanentlyOut = useCallback(
+    (playerName?: string | null): { isOut: boolean; reason: string } => {
+      if (!playerName) return { isOut: false, reason: '' };
+      const pKey = playerName.trim().toLowerCase();
+
+      // 1. Check in dismissedPlayers prop (from match state)
+      const dRec = (dismissedPlayers || []).find(
+        (d) => d && d.name && d.name.trim().toLowerCase() === pKey
+      );
+      if (dRec) {
+        if (
+          dRec.status === 'Retired Hurt' ||
+          dRec.dismissalType === 'retired_hurt' ||
+          dRec.status === 'Retired Not Out'
+        ) {
+          return { isOut: false, reason: 'Retired Hurt' }; // Can resume!
+        }
+        return { isOut: true, reason: dRec.status || dRec.dismissalType || 'Out' };
+      }
+
+      // 2. Check local retiredPlayers state for 'Retired Out'
+      const retRec = (retiredPlayers || []).find((r) => r.name.toLowerCase() === pKey);
+      if (retRec && retRec.type === 'Retired Out') {
+        return { isOut: true, reason: 'Retired Out' };
+      }
+
+      return { isOut: false, reason: '' };
+    },
+    [dismissedPlayers, retiredPlayers]
+  );
 
   const dragX = useSharedValue(0);
   const dragY = useSharedValue(0);
@@ -350,6 +390,11 @@ export function PlayerSelectionModal({
     if (!target) return;
 
     if (target === 'striker') {
+      const outInfo = isPlayerPermanentlyOut(player.name);
+      if (outInfo.isOut) {
+        setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot bat again in this innings!`);
+        return;
+      }
       if (from !== batTeamBucket) {
         moveToBucket(player, from, batTeamBucket);
       }
@@ -359,6 +404,11 @@ export function PlayerSelectionModal({
       setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
       if (onSetStriker) onSetStriker(player);
     } else if (target === 'nonStriker') {
+      const outInfo = isPlayerPermanentlyOut(player.name);
+      if (outInfo.isOut) {
+        setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot bat again in this innings!`);
+        return;
+      }
       if (from !== batTeamBucket) {
         moveToBucket(player, from, batTeamBucket);
       }
@@ -376,7 +426,7 @@ export function PlayerSelectionModal({
     } else {
       moveToBucket(player, from, target as BucketId);
     }
-  }, [resolveDropTarget, batTeamBucket, bowlTeamBucket, nonStrikerName, strikerName, onSetStriker, onSetNonStriker, onSetBowler, moveToBucket]);
+  }, [resolveDropTarget, isPlayerPermanentlyOut, batTeamBucket, bowlTeamBucket, nonStrikerName, strikerName, onSetStriker, onSetNonStriker, onSetBowler, moveToBucket]);
 
   const { teams: savedTeams } = useMatchStore();
   const { addWalletFunds } = useWalletStore();
@@ -399,6 +449,14 @@ export function PlayerSelectionModal({
     (fields: { name: string; phone?: string | null; avatarUrl?: string }) => {
       const trimmed = (fields.name || '').trim();
       if (!trimmed) return;
+
+      const outCheck = isPlayerPermanentlyOut(trimmed);
+      if (outCheck.isOut) {
+        setDuplicateWarning(
+          `⛔ ${trimmed} was already dismissed (OUT: ${outCheck.reason}) in this match and cannot be added!`
+        );
+        return;
+      }
 
       if (isAlreadyIn(fields)) {
         setDuplicateWarning(
@@ -444,7 +502,7 @@ export function PlayerSelectionModal({
         setTimeout(() => setCreditToast(null), 3000);
       }
     },
-    [isAlreadyIn, addWalletFunds]
+    [isAlreadyIn, isPlayerPermanentlyOut, addWalletFunds]
   );
 
   const queryClean = (searchQuery || '').trim().toLowerCase();
@@ -453,31 +511,34 @@ export function PlayerSelectionModal({
 
   const matchPlayerResults = useMemo(() => {
     if (queryClean.length < 2 && queryDigits.length < 3) return [];
-    const results: { player: Player; location: BucketId; locationLabel: string }[] = [];
+    const results: { player: Player; location: BucketId; locationLabel: string; isOut: boolean; outReason: string }[] = [];
 
     (buckets.master || []).forEach((p) => {
       if (!p || !p.name) return;
       const pDigits = p.phone ? normalizePhone(p.phone) : '';
       if (p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits))) {
-        results.push({ player: p, location: 'master', locationLabel: 'Available Pool' });
+        const outInfo = isPlayerPermanentlyOut(p.name);
+        results.push({ player: p, location: 'master', locationLabel: 'Available Pool', isOut: outInfo.isOut, outReason: outInfo.reason });
       }
     });
     (buckets.teamA || []).forEach((p) => {
       if (!p || !p.name) return;
       const pDigits = p.phone ? normalizePhone(p.phone) : '';
       if (p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits))) {
-        results.push({ player: p, location: 'teamA', locationLabel: labelA });
+        const outInfo = isTeamABatting ? isPlayerPermanentlyOut(p.name) : { isOut: false, reason: '' };
+        results.push({ player: p, location: 'teamA', locationLabel: labelA, isOut: outInfo.isOut, outReason: outInfo.reason });
       }
     });
     (buckets.teamB || []).forEach((p) => {
       if (!p || !p.name) return;
       const pDigits = p.phone ? normalizePhone(p.phone) : '';
       if (p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits))) {
-        results.push({ player: p, location: 'teamB', locationLabel: labelB });
+        const outInfo = !isTeamABatting ? isPlayerPermanentlyOut(p.name) : { isOut: false, reason: '' };
+        results.push({ player: p, location: 'teamB', locationLabel: labelB, isOut: outInfo.isOut, outReason: outInfo.reason });
       }
     });
     return results;
-  }, [buckets, queryClean, queryDigits, labelA, labelB]);
+  }, [buckets, queryClean, queryDigits, labelA, labelB, isTeamABatting, isPlayerPermanentlyOut]);
 
   const savedPlayerResults = useMemo(() => {
     if (!savedTeams || (queryClean.length < 2 && queryDigits.length < 3)) return [];
@@ -546,6 +607,11 @@ export function PlayerSelectionModal({
   };
 
   const handleSetStriker = (player: Player) => {
+    const outInfo = isPlayerPermanentlyOut(player.name);
+    if (outInfo.isOut) {
+      setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot bat!`);
+      return;
+    }
     setStrikerName(player.name);
     // Strictly clear non-striker if same player
     if (nonStrikerName.toLowerCase() === player.name.toLowerCase()) {
@@ -556,6 +622,11 @@ export function PlayerSelectionModal({
   };
 
   const handleSetNonStriker = (player: Player) => {
+    const outInfo = isPlayerPermanentlyOut(player.name);
+    if (outInfo.isOut) {
+      setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot bat!`);
+      return;
+    }
     setNonStrikerName(player.name);
     // Strictly clear striker if same player
     if (strikerName.toLowerCase() === player.name.toLowerCase()) {
@@ -615,9 +686,14 @@ export function PlayerSelectionModal({
   const totalAssigned = (buckets.teamA || []).length + (buckets.teamB || []).length;
 
   const handleConfirm = () => {
+    const sOut = isPlayerPermanentlyOut(strikerName);
+    const nsOut = isPlayerPermanentlyOut(nonStrikerName);
+    const validStriker = sOut.isOut ? '' : strikerName;
+    const validNonStriker = nsOut.isOut ? '' : nonStrikerName;
+
     onConfirm(buckets.teamA, buckets.teamB, buckets.master, {
-      strikerName,
-      nonStrikerName,
+      strikerName: validStriker,
+      nonStrikerName: validNonStriker,
       bowlerName,
       battingTeamName: currentBattingTeam,
       bowlingTeamName: currentBattingTeam === labelA ? labelB : labelA,
@@ -750,22 +826,39 @@ export function PlayerSelectionModal({
               {/* Suggestions */}
               {matchPlayerResults.length > 0 && searchQuery.trim().length > 0 && (
                 <View style={styles.suggestList}>
-                  {matchPlayerResults.map(({ player: p, location, locationLabel }) => (
+                  {matchPlayerResults.map(({ player: p, location, locationLabel, isOut, outReason }) => (
                     <Pressable
                       key={p.id}
                       onPress={() => setSelectedActionPlayer({ player: p, bucketId: location })}
-                      style={[styles.suggestRow, { backgroundColor: zoneBg, borderColor }]}
+                      style={[
+                        styles.suggestRow,
+                        { backgroundColor: zoneBg, borderColor: isOut ? '#EF444440' : borderColor },
+                        isOut && { opacity: 0.65 },
+                      ]}
                     >
-                      <Image source={avatarSourceFor(p)} style={styles.avatarSmall} contentFit="cover" />
+                      <Image source={avatarSourceFor(p)} style={[styles.avatarSmall, isOut && { opacity: 0.6 }]} contentFit="cover" />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <ThemedText style={[styles.suggestName, { color: textPrimary }]} numberOfLines={1}>
+                        <ThemedText
+                          style={[
+                            styles.suggestName,
+                            { color: isOut ? textMuted : textPrimary },
+                            isOut && { textDecorationLine: 'line-through' },
+                          ]}
+                          numberOfLines={1}
+                        >
                           {p.name}
                         </ThemedText>
-                        <ThemedText style={[styles.suggestMeta, { color: textSecondary }]} numberOfLines={1}>
-                          {p.phone || 'No phone'} · {locationLabel}
+                        <ThemedText
+                          style={[
+                            styles.suggestMeta,
+                            { color: isOut ? '#EF4444' : textSecondary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {isOut ? `⛔ OUT (${outReason}) · ${locationLabel}` : `${p.phone || 'No phone'} · ${locationLabel}`}
                         </ThemedText>
                       </View>
-                      <Ionicons name="chevron-forward" size={14} color={textMuted} />
+                      <Ionicons name={isOut ? "lock-closed" : "chevron-forward"} size={14} color={isOut ? '#EF4444' : textMuted} />
                     </Pressable>
                   ))}
                 </View>
@@ -773,24 +866,56 @@ export function PlayerSelectionModal({
 
               {savedPlayerResults.length > 0 && (
                 <View style={styles.suggestList}>
-                  {savedPlayerResults.map((s) => (
-                    <Pressable
-                      key={s.id}
-                      onPress={() => commitPlayer({ name: s.name, phone: s.phone, avatarUrl: s.avatarUrl })}
-                      style={[styles.suggestRow, { backgroundColor: zoneBg, borderColor }]}
-                    >
-                      <Image source={avatarSourceFor(s)} style={styles.avatarSmall} contentFit="cover" />
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <ThemedText style={[styles.suggestName, { color: textPrimary }]} numberOfLines={1}>
-                          {s.name}
-                        </ThemedText>
-                        <ThemedText style={[styles.suggestMeta, { color: textSecondary }]} numberOfLines={1}>
-                          {s.phone || 'Saved Player'} · Tap to Add
-                        </ThemedText>
-                      </View>
-                      <Ionicons name="add-circle" size={16} color={theme.primary} />
-                    </Pressable>
-                  ))}
+                  {savedPlayerResults.map((s) => {
+                    const outCheck = isPlayerPermanentlyOut(s.name);
+                    return (
+                      <Pressable
+                        key={s.id}
+                        onPress={() => {
+                          if (outCheck.isOut) {
+                            setDuplicateWarning(`⛔ ${s.name} was already dismissed (OUT: ${outCheck.reason}) in this match and cannot be added back!`);
+                            return;
+                          }
+                          commitPlayer({ name: s.name, phone: s.phone, avatarUrl: s.avatarUrl });
+                        }}
+                        style={[
+                          styles.suggestRow,
+                          { backgroundColor: zoneBg, borderColor: outCheck.isOut ? '#EF444440' : borderColor },
+                          outCheck.isOut && { opacity: 0.55 },
+                        ]}
+                      >
+                        <Image source={avatarSourceFor(s)} style={[styles.avatarSmall, outCheck.isOut && { opacity: 0.6 }]} contentFit="cover" />
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <ThemedText
+                            style={[
+                              styles.suggestName,
+                              { color: outCheck.isOut ? textMuted : textPrimary },
+                              outCheck.isOut && { textDecorationLine: 'line-through' },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {s.name}
+                          </ThemedText>
+                          <ThemedText
+                            style={[
+                              styles.suggestMeta,
+                              { color: outCheck.isOut ? '#EF4444' : textSecondary },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {outCheck.isOut
+                              ? `⛔ OUT (${outCheck.reason}) · Dismissed in match`
+                              : `${s.phone || 'Saved Player'} · Tap to Add`}
+                          </ThemedText>
+                        </View>
+                        <Ionicons
+                          name={outCheck.isOut ? 'lock-closed' : 'add-circle'}
+                          size={16}
+                          color={outCheck.isOut ? '#EF4444' : theme.primary}
+                        />
+                      </Pressable>
+                    );
+                  })}
                 </View>
               )}
 
@@ -798,14 +923,25 @@ export function PlayerSelectionModal({
                 <View style={styles.suggestList}>
                   {directoryResults.map((s) => {
                     const conn = getFoFConnection(s.phone || '');
+                    const outCheck = isPlayerPermanentlyOut(s.name);
                     return (
                       <Pressable
                         key={s.id}
-                        onPress={() => commitPlayer({ name: s.name, phone: s.phone, avatarUrl: s.avatar })}
-                        style={[styles.suggestRow, { backgroundColor: zoneBg, borderColor }]}
+                        onPress={() => {
+                          if (outCheck.isOut) {
+                            setDuplicateWarning(`⛔ ${s.name} was already dismissed (OUT: ${outCheck.reason}) in this match and cannot be added back!`);
+                            return;
+                          }
+                          commitPlayer({ name: s.name, phone: s.phone, avatarUrl: s.avatar });
+                        }}
+                        style={[
+                          styles.suggestRow,
+                          { backgroundColor: zoneBg, borderColor: outCheck.isOut ? '#EF444440' : borderColor },
+                          outCheck.isOut && { opacity: 0.55 },
+                        ]}
                       >
                         {s.avatar && (s.avatar.startsWith('http') || s.avatar.startsWith('data:') || s.avatar.startsWith('file:') || s.avatar.startsWith('blob:')) ? (
-                          <Image source={{ uri: s.avatar }} style={styles.avatarSmall} contentFit="cover" />
+                          <Image source={{ uri: s.avatar }} style={[styles.avatarSmall, outCheck.isOut && { opacity: 0.6 }]} contentFit="cover" />
                         ) : (
                           <View style={[styles.avatarSmall, { backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center' }]}>
                             <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
@@ -814,14 +950,33 @@ export function PlayerSelectionModal({
                           </View>
                         )}
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <ThemedText style={[styles.suggestName, { color: textPrimary }]} numberOfLines={1}>
+                          <ThemedText
+                            style={[
+                              styles.suggestName,
+                              { color: outCheck.isOut ? textMuted : textPrimary },
+                              outCheck.isOut && { textDecorationLine: 'line-through' },
+                            ]}
+                            numberOfLines={1}
+                          >
                             {s.name}
                           </ThemedText>
-                          <ThemedText style={[styles.suggestMeta, { color: textSecondary }]} numberOfLines={1}>
-                            {s.phone} · {conn.degreeBadgeText}
+                          <ThemedText
+                            style={[
+                              styles.suggestMeta,
+                              { color: outCheck.isOut ? '#EF4444' : textSecondary },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {outCheck.isOut
+                              ? `⛔ OUT (${outCheck.reason}) · Dismissed in match`
+                              : `${s.phone} · ${conn.degreeBadgeText}`}
                           </ThemedText>
                         </View>
-                        <Ionicons name="add-circle" size={16} color={theme.primary} />
+                        <Ionicons
+                          name={outCheck.isOut ? 'lock-closed' : 'add-circle'}
+                          size={16}
+                          color={outCheck.isOut ? '#EF4444' : theme.primary}
+                        />
                       </Pressable>
                     );
                   })}
@@ -907,6 +1062,7 @@ export function PlayerSelectionModal({
               batsmenStats={batsmenStats}
               bowlerStats={bowlerStats}
               retiredPlayers={retiredPlayers}
+              isPlayerPermanentlyOut={isPlayerPermanentlyOut}
               cardBg={cardBg}
               zoneBg={zoneBg}
               borderColor={borderColor}
@@ -945,6 +1101,7 @@ export function PlayerSelectionModal({
               batsmenStats={batsmenStats}
               bowlerStats={bowlerStats}
               retiredPlayers={retiredPlayers}
+              isPlayerPermanentlyOut={isPlayerPermanentlyOut}
               cardBg={cardBg}
               zoneBg={zoneBg}
               borderColor={borderColor}
@@ -1016,6 +1173,7 @@ export function PlayerSelectionModal({
               batsmenStats={batsmenStats}
               bowlerStats={bowlerStats}
               retiredPlayers={retiredPlayers}
+              isPlayerPermanentlyOut={isPlayerPermanentlyOut}
               onSetStriker={handleSetStriker}
               onSetNonStriker={handleSetNonStriker}
               onSetBowler={handleSetBowler}
@@ -1096,6 +1254,7 @@ function TeamZoneCard({
   batsmenStats,
   bowlerStats,
   retiredPlayers,
+  isPlayerPermanentlyOut,
   cardBg,
   zoneBg,
   borderColor,
@@ -1130,6 +1289,7 @@ function TeamZoneCard({
   batsmenStats: Record<string, BatsmanLiveStats>;
   bowlerStats: Record<string, BowlerLiveStats>;
   retiredPlayers: { name: string; type: 'Retired Hurt' | 'Retired Out' }[];
+  isPlayerPermanentlyOut?: (name?: string | null) => { isOut: boolean; reason: string };
   cardBg: string;
   zoneBg: string;
   borderColor: string;
@@ -1387,12 +1547,15 @@ function TeamZoneCard({
           const isNonStriker = isBatting && nonStrikerKey === pKey;
           const isBowler = !isBatting && bowlerKey === pKey;
           const retRec = retiredPlayers.find((r) => r.name.toLowerCase() === pKey);
+          const outInfo = isBatting && isPlayerPermanentlyOut ? isPlayerPermanentlyOut(player.name) : { isOut: false, reason: '' };
 
           const bStat = isBatting ? batsmenStats[pKey] : undefined;
           const bowlStat = !isBatting ? bowlerStats[pKey] : undefined;
 
           let roleLabel: string | undefined;
-          if (retRec) {
+          if (outInfo.isOut) {
+            roleLabel = `OUT (${outInfo.reason})`;
+          } else if (retRec) {
             roleLabel = retRec.type === 'Retired Hurt' ? 'Injured' : 'Retired';
           } else if (isStriker) {
             roleLabel = bStat && (bStat.runs > 0 || bStat.balls > 0) ? `Striker · ${bStat.runs}(${bStat.balls}b)` : 'Striker';
@@ -1418,6 +1581,8 @@ function TeamZoneCard({
               theme={theme}
               roleLabel={roleLabel}
               isRetired={!!retRec}
+              isDismissed={outInfo.isOut}
+              dismissalReason={outInfo.reason}
               isActiveRole={isStriker || isNonStriker || isBowler}
               onTap={() => onPlayerTap(player)}
               onRemove={() => onRemovePlayer(player)}
@@ -1451,6 +1616,8 @@ function CleanPlayerChip({
   theme,
   roleLabel,
   isRetired,
+  isDismissed,
+  dismissalReason,
   isActiveRole,
   onTap,
   onRemove,
@@ -1474,6 +1641,8 @@ function CleanPlayerChip({
   theme: any;
   roleLabel?: string;
   isRetired?: boolean;
+  isDismissed?: boolean;
+  dismissalReason?: string;
   isActiveRole?: boolean;
   onTap: () => void;
   onRemove?: () => void;
@@ -1491,6 +1660,7 @@ function CleanPlayerChip({
   const pan = useMemo(
     () =>
       Gesture.Pan()
+        .enabled(!isDismissed)
         .minDistance(2)
         .onStart((e) => {
           dragX.value = e.absoluteX;
@@ -1505,7 +1675,7 @@ function CleanPlayerChip({
         .onEnd((e) => {
           runOnJS(onDragEnd)(player, bucketId, e.absoluteX, e.absoluteY);
         }),
-    [player.id, bucketId]
+    [player.id, bucketId, isDismissed]
   );
 
   const isMaster = bucketId === 'master';
@@ -1518,22 +1688,29 @@ function CleanPlayerChip({
           styles.chip,
           {
             backgroundColor: cardBg,
-            borderColor: isActiveRole ? theme.primary : borderColor,
+            borderColor: isDismissed ? '#EF444450' : isActiveRole ? theme.primary : borderColor,
             borderWidth: isActiveRole ? 1.5 : 1,
-            opacity: isDragging ? 0 : pressed ? 0.8 : 1,
+            opacity: isDragging ? 0 : isDismissed ? 0.5 : pressed ? 0.8 : 1,
           },
         ]}
       >
-        <Image source={avatarSourceFor(player)} style={styles.avatarSmall} contentFit="cover" />
+        <Image source={avatarSourceFor(player)} style={[styles.avatarSmall, isDismissed && { opacity: 0.6 }]} contentFit="cover" />
         <View style={{ flexShrink: 1 }}>
-          <ThemedText style={[styles.chipName, { color: textPrimary }]} numberOfLines={1}>
+          <ThemedText
+            style={[
+              styles.chipName,
+              { color: isDismissed ? textSecondary : textPrimary },
+              isDismissed && { textDecorationLine: 'line-through' },
+            ]}
+            numberOfLines={1}
+          >
             {player.name}
           </ThemedText>
           {roleLabel && (
             <ThemedText
               style={[
                 styles.chipRoleSub,
-                { color: isRetired ? '#EF4444' : isActiveRole ? theme.primary : textSecondary },
+                { color: isDismissed || isRetired ? '#EF4444' : isActiveRole ? theme.primary : textSecondary },
               ]}
               numberOfLines={1}
             >
@@ -1650,6 +1827,7 @@ function PlayerActionModal({
   batsmenStats,
   bowlerStats,
   retiredPlayers,
+  isPlayerPermanentlyOut,
   onSetStriker,
   onSetNonStriker,
   onSetBowler,
@@ -1679,6 +1857,7 @@ function PlayerActionModal({
   batsmenStats: Record<string, BatsmanLiveStats>;
   bowlerStats: Record<string, BowlerLiveStats>;
   retiredPlayers: { name: string; type: 'Retired Hurt' | 'Retired Out' }[];
+  isPlayerPermanentlyOut?: (name?: string | null) => { isOut: boolean; reason: string };
   onSetStriker: (p: Player) => void;
   onSetNonStriker: (p: Player) => void;
   onSetBowler: (p: Player) => void;
@@ -1702,6 +1881,7 @@ function PlayerActionModal({
   const isNonStriker = (nonStrikerName || '').toLowerCase() === pKey;
   const isBowler = (bowlerName || '').toLowerCase() === pKey;
   const retRec = retiredPlayers.find((r) => r.name.toLowerCase() === pKey);
+  const outInfo = isBattingTeam && isPlayerPermanentlyOut ? isPlayerPermanentlyOut(player.name) : { isOut: false, reason: '' };
 
   const bStat = batsmenStats[pKey];
   const bowlStat = bowlerStats[pKey];
@@ -1809,7 +1989,21 @@ function PlayerActionModal({
           <View style={styles.actionSheetList}>
             {isBattingTeam && (
               <>
-                {retRec && (
+                {outInfo.isOut && (
+                  <View style={[styles.actionSheetStatsBox, { backgroundColor: '#EF444415', borderColor: '#EF444450', borderLeftWidth: 3, borderLeftColor: '#EF4444' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="close-circle" size={15} color="#EF4444" />
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>
+                        DISMISSED ({outInfo.reason.toUpperCase()})
+                      </ThemedText>
+                    </View>
+                    <ThemedText style={{ fontSize: 10, color: textSecondary, marginTop: 2 }}>
+                      This batsman is out in this innings and cannot bat again or be added to the crease.
+                    </ThemedText>
+                  </View>
+                )}
+
+                {retRec && retRec.type === 'Retired Hurt' && (
                   <Pressable
                     onPress={() => {
                       onUnretire(player);
@@ -1824,31 +2018,42 @@ function PlayerActionModal({
                   </Pressable>
                 )}
 
-                <Pressable
-                  onPress={() => {
-                    onSetStriker(player);
-                    onClose();
-                  }}
-                  style={[styles.sheetActionItem, { backgroundColor: isStriker ? theme.primary + '12' : zoneBg, borderColor }]}
-                >
-                  <Ionicons name="flash-outline" size={15} color={theme.primary} />
-                  <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    {isStriker ? 'Currently on Strike (Striker)' : 'Set as Striker'}
-                  </ThemedText>
-                </Pressable>
+                {!outInfo.isOut ? (
+                  <>
+                    <Pressable
+                      onPress={() => {
+                        onSetStriker(player);
+                        onClose();
+                      }}
+                      style={[styles.sheetActionItem, { backgroundColor: isStriker ? theme.primary + '12' : zoneBg, borderColor }]}
+                    >
+                      <Ionicons name="flash-outline" size={15} color={theme.primary} />
+                      <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                        {isStriker ? 'Currently on Strike (Striker)' : 'Set as Striker'}
+                      </ThemedText>
+                    </Pressable>
 
-                <Pressable
-                  onPress={() => {
-                    onSetNonStriker(player);
-                    onClose();
-                  }}
-                  style={[styles.sheetActionItem, { backgroundColor: isNonStriker ? theme.primary + '12' : zoneBg, borderColor }]}
-                >
-                  <Ionicons name="walk-outline" size={15} color={theme.primary} />
-                  <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    {isNonStriker ? 'Currently Non-Striker (Runner)' : 'Set as Non-Striker'}
-                  </ThemedText>
-                </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        onSetNonStriker(player);
+                        onClose();
+                      }}
+                      style={[styles.sheetActionItem, { backgroundColor: isNonStriker ? theme.primary + '12' : zoneBg, borderColor }]}
+                    >
+                      <Ionicons name="walk-outline" size={15} color={theme.primary} />
+                      <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                        {isNonStriker ? 'Currently Non-Striker (Runner)' : 'Set as Non-Striker'}
+                      </ThemedText>
+                    </Pressable>
+                  </>
+                ) : (
+                  <View style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor, opacity: 0.55 }]}>
+                    <Ionicons name="lock-closed-outline" size={15} color="#EF4444" />
+                    <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_600SemiBold' }]}>
+                      Batting Disabled (Player is OUT)
+                    </ThemedText>
+                  </View>
+                )}
 
                 {(isStriker || isNonStriker) && (
                   <Pressable
