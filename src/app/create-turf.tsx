@@ -191,11 +191,16 @@ export default function CreateTurfScreen() {
   // Live count for the header badge, so an owner sees at a glance that slots
   // have been taken without opening the list.
   const turfBookingCount = React.useMemo(() => {
-    if (!params.editId) return 0;
-    return (bookings || []).filter(
-      b => b.venueId === params.editId && b.status !== 'cancelled'
-    ).length;
-  }, [bookings, params.editId]);
+    const active = (bookings || []).filter(b => b.status !== 'cancelled');
+    if (params.editId) return active.filter(b => b.venueId === params.editId).length;
+    // Creating a new turf: count across every venue this owner already runs.
+    const ownedIds = new Set((ownedTurfs || []).map((t: any) => t.id));
+    if (ownedIds.size === 0) return 0;
+    return active.filter(b => ownedIds.has(b.venueId)).length;
+  }, [bookings, ownedTurfs, params.editId]);
+
+  /** Hide the shortcut entirely for an owner with no turfs — nothing to show. */
+  const ownsAnyTurf = (ownedTurfs || []).length > 0;
 
   const { offers, addOffer, updateOffer, deleteOffer, isOfferCodeAvailable, offersLoading } =
     useOfferStore();
@@ -2062,19 +2067,26 @@ export default function CreateTurfScreen() {
             {params.editId ? 'Manage Pitch' : currentStep === PUBLISH_STEP ? 'Preview & Publish' : 'Create Turf'}
           </ThemedText>
 
-          {/* Bookings taken at this turf. Only meaningful once the turf exists,
-              so it appears while managing a pitch rather than creating one. */}
-          {!!params.editId && (
+          {/* Bookings check. While managing a pitch this scopes to that turf;
+              on a new turf there is nothing to scope to yet, so it opens the
+              owner's bookings across every venue instead of disappearing. */}
+          {(!!params.editId || ownsAnyTurf) && (
             <Pressable
               onPress={() =>
-                router.push({
-                  pathname: '/turf-bookings',
-                  params: { turfId: params.editId!, turfName: turfName || '' },
-                })
+                router.push(
+                  params.editId
+                    ? {
+                        pathname: '/turf-bookings',
+                        params: { turfId: params.editId, turfName: turfName || '' },
+                      }
+                    : { pathname: '/turf-bookings' }
+                )
               }
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="View bookings for this turf"
+              accessibilityLabel={
+                params.editId ? 'View bookings for this turf' : 'View bookings across your turfs'
+              }
               style={[styles.headerActionBtn, { borderColor: theme.outlineVariant + '55', backgroundColor: theme.surfaceLowest }]}
             >
               <Ionicons name="calendar-outline" size={18} color={theme.primary} />

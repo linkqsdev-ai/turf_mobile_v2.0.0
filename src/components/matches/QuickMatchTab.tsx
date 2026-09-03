@@ -1816,32 +1816,7 @@ export function QuickMatchTab({
         )}
       </ScrollView>
 
-        {/* ── PLAYING XI — offered AFTER the toss, and always skippable:
-            Start Match never requires it. ── */}
-        {isTossDone && isRolePicked && (
-          <Pressable
-            onPress={() => setIsPlayerSelectionOpen(true)}
-            style={[
-              styles_playingXi.card,
-              { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
-            ]}
-          >
-            <View style={[styles_playingXi.iconWrap, { backgroundColor: theme.primary + '18' }]}>
-              <Ionicons name={lineupConfigured ? 'people' : 'people-outline'} size={16} color={theme.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <ThemedText style={[styles_playingXi.title, { color: theme.text }]}>
-                {lineupConfigured ? 'Playing XI selected' : 'Select Playing XI'}
-              </ThemedText>
-              <ThemedText style={[styles_playingXi.subtitle, { color: theme.textSecondary }]}>
-                {lineupConfigured
-                  ? `${teamALineup.length} vs ${teamBLineup.length} players assigned — tap to edit`
-                  : 'Optional — pick who plays, or continue without it'}
-              </ThemedText>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-          </Pressable>
-        )}
+      {/* ── Toss or Start Action Button ─────────────────────────── */}
 
 
       {/* ── Toss or Start Action Button ─────────────────────────── */}

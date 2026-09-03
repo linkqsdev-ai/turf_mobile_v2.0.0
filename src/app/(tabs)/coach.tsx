@@ -147,6 +147,21 @@ export default function CoachTab() {
   const { profile } = useUserProfile();
   const { classes, deleteClass, enrollmentCountForClass } = useClassStore();
 
+  /**
+   * Active bookings per turf, keyed by venue id. Built once for the list rather
+   * than filtered inside each card, so adding turfs stays O(bookings) instead of
+   * O(turfs x bookings).
+   */
+  const turfBookingCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    (bookings || []).forEach(b => {
+      if (b.status === 'cancelled') return;
+      if (!b.venueId) return;
+      counts[b.venueId] = (counts[b.venueId] || 0) + 1;
+    });
+    return counts;
+  }, [bookings]);
+
   // Deleting is destructive and irreversible, so it always confirms. The store
   // re-checks enrolments itself, which is what actually guarantees a class with
   // students can't be removed even if this screen's state were stale.
@@ -731,6 +746,52 @@ export default function CoachTab() {
                           >
                             <Ionicons name="settings-outline" size={12} color="#ffffff" />
                             <ThemedText type="labelSm" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 10.5 }}>Manage Pitch</ThemedText>
+                          </Pressable>
+
+                          {/* Booking history for THIS turf. Compact so it does
+                              not steal width from the two labelled actions. */}
+                          <Pressable
+                            onPress={() => router.push({ pathname: '/turf-bookings', params: { turfId: turf.id, turfName: turf.name } })}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={
+                              turfBookingCounts[turf.id]
+                                ? `View ${turfBookingCounts[turf.id]} bookings for ${turf.name}`
+                                : `View bookings for ${turf.name}`
+                            }
+                            style={{
+                              width: 34,
+                              paddingVertical: 6,
+                              borderRadius: BorderRadius.md,
+                              borderWidth: 1,
+                              borderColor: theme.primary + '55',
+                              backgroundColor: theme.primary + '12',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              position: 'relative',
+                            }}
+                          >
+                            <Ionicons name="calendar-outline" size={14} color={theme.primary} />
+                            {turfBookingCounts[turf.id] > 0 && (
+                              <View style={{
+                                position: 'absolute',
+                                top: -6,
+                                right: -6,
+                                minWidth: 16,
+                                height: 16,
+                                borderRadius: 8,
+                                paddingHorizontal: 3,
+                                backgroundColor: theme.primary,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderWidth: 1.5,
+                                borderColor: theme.surfaceLowest,
+                              }}>
+                                <ThemedText style={{ color: '#ffffff', fontSize: 8.5, fontFamily: 'Sora_700Bold' }}>
+                                  {turfBookingCounts[turf.id] > 9 ? '9+' : turfBookingCounts[turf.id]}
+                                </ThemedText>
+                              </View>
+                            )}
                           </Pressable>
                         </View>
                       </View>

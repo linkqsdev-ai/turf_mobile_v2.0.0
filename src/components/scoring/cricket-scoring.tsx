@@ -1264,6 +1264,9 @@ export default function CricketScoring({
 
   const [showExtraModal, setShowExtraModal] = useState(false);
   const [activeExtraType, setActiveExtraType] = useState<'WD' | 'NB' | 'BYE' | 'LB' | null>(null);
+  const [extraRunsInput, setExtraRunsInput] = useState<number>(0);
+  const [extraCustomText, setExtraCustomText] = useState<string>('');
+  const [isExtraCustomMode, setIsExtraCustomMode] = useState<boolean>(false);
 
   // Wicket detail sheet — records dismissal type (bowled, caught, lbw, stumped, run out, etc.),
   // fielder attribution, runs completed, and dismissed batsman.
@@ -1274,6 +1277,8 @@ export default function CricketScoring({
   const [wicketFielderName, setWicketFielderName] = useState<string>('');
   const [customFielderInput, setCustomFielderInput] = useState<string>('');
   const [wicketRuns, setWicketRuns] = useState(0);
+  const [wicketCustomRunsText, setWicketCustomRunsText] = useState<string>('');
+  const [isWicketCustomRunsMode, setIsWicketCustomRunsMode] = useState<boolean>(false);
   const [wicketWhoIsOut, setWicketWhoIsOut] = useState<'striker' | 'non-striker'>('striker');
 
   // Full Squad Roster Modal States
@@ -2659,8 +2664,20 @@ export default function CricketScoring({
   };
 
 
+  const openExtraModal = (extraType: 'WD' | 'NB' | 'BYE' | 'LB') => {
+    if (!validatePlayersBeforeScoring()) return;
+    if (isInningsOver) return;
+
+    setActiveExtraType(extraType);
+    setExtraRunsInput(extraType === 'BYE' || extraType === 'LB' ? 1 : 0);
+    setExtraCustomText('');
+    setIsExtraCustomMode(false);
+    setShowExtraModal(true);
+  };
+
   const handleExtraClick = (extraType: 'WD' | 'NB' | 'BYE' | 'LB') => {
     if (!validatePlayersBeforeScoring()) return;
+    if (isInningsOver) return;
 
     // Auto-record pre-verified extras to avoid repetitive selection popups during live scoring
     if (extraType === 'WD' && ruleAutoWide) {
@@ -2680,8 +2697,7 @@ export default function CricketScoring({
       return;
     }
 
-    setActiveExtraType(extraType);
-    setShowExtraModal(true);
+    openExtraModal(extraType);
   };
 
   /**
@@ -6955,13 +6971,16 @@ export default function CricketScoring({
                   <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
                     RUNS COMPLETED BEFORE RUN OUT:
                   </ThemedText>
-                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-                    {[0, 1, 2, 3].map(r => {
-                      const active = wicketRuns === r;
+                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: isWicketCustomRunsMode ? 8 : 12 }}>
+                    {[0, 1, 2, 3, 4].map((r) => {
+                      const active = !isWicketCustomRunsMode && wicketRuns === r;
                       return (
                         <Pressable
                           key={r}
-                          onPress={() => setWicketRuns(r)}
+                          onPress={() => {
+                            setIsWicketCustomRunsMode(false);
+                            setWicketRuns(r);
+                          }}
                           style={{
                             flex: 1,
                             paddingVertical: 8,
@@ -6976,7 +6995,51 @@ export default function CricketScoring({
                         </Pressable>
                       );
                     })}
+                    <Pressable
+                      onPress={() => setIsWicketCustomRunsMode(true)}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 1.5,
+                        borderColor: isWicketCustomRunsMode ? '#3B82F6' : theme.outlineVariant + '44',
+                        backgroundColor: isWicketCustomRunsMode ? '#3B82F618' : theme.surfaceLowest,
+                      }}
+                    >
+                      <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 11, color: isWicketCustomRunsMode ? '#2563EB' : theme.text }}>
+                        Custom
+                      </ThemedText>
+                    </Pressable>
                   </View>
+
+                  {isWicketCustomRunsMode && (
+                    <TextInput
+                      style={{
+                        height: 38,
+                        borderWidth: 1,
+                        borderColor: '#3B82F6',
+                        borderRadius: 8,
+                        paddingHorizontal: 10,
+                        fontSize: 13,
+                        color: theme.text,
+                        backgroundColor: theme.surfaceLowest,
+                        marginBottom: 12,
+                      }}
+                      placeholder="Enter custom runs completed..."
+                      placeholderTextColor={theme.textSecondary + '99'}
+                      keyboardType="number-pad"
+                      autoFocus
+                      value={wicketCustomRunsText}
+                      onChangeText={(t) => {
+                        const cleaned = t.replace(/[^0-9]/g, '').slice(0, 2);
+                        setWicketCustomRunsText(cleaned);
+                        const n = parseInt(cleaned, 10);
+                        setWicketRuns(isNaN(n) ? 0 : n);
+                      }}
+                    />
+                  )}
 
                   <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>
                     WHO WAS RUN OUT?
@@ -7171,7 +7234,7 @@ export default function CricketScoring({
         </View>
       </Modal>
 
-      {/* Extra Runs Selection Modal */}
+      {/* ── Extra Runs Selection Modal with 1 2 3 Numeric Keypad & Custom Enter ── */}
       <Modal
         visible={showExtraModal}
         transparent
@@ -7189,13 +7252,62 @@ export default function CricketScoring({
               setActiveExtraType(null);
             }}
           />
-          <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', maxHeight: '70%' }]}>
-            <View style={styles.modalHeader}>
-              <ThemedText type="headlineSm" style={{ color: theme.text }}>
-                {activeExtraType === 'WD' ? 'Record Wide Ball' :
-                  activeExtraType === 'NB' ? 'Record No Ball' :
-                    activeExtraType === 'BYE' ? 'Record Bye' : 'Record Leg Bye'}
-              </ThemedText>
+          <View
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: theme.surfaceLowest,
+                borderColor: theme.outlineVariant + '33',
+                maxHeight: '85%',
+                width: '92%',
+                maxWidth: 440,
+                alignSelf: 'center',
+                borderRadius: 16,
+                padding: 18,
+              },
+            ]}
+          >
+            <View style={[styles.modalHeader, { paddingBottom: 10, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '22' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 10,
+                    backgroundColor:
+                      activeExtraType === 'WD' ? '#F59E0B20' :
+                      activeExtraType === 'NB' ? '#EF444420' :
+                      theme.primary + '20',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <ThemedText
+                    style={{
+                      fontFamily: 'Sora_700Bold',
+                      fontSize: 13,
+                      color:
+                        activeExtraType === 'WD' ? '#F59E0B' :
+                        activeExtraType === 'NB' ? '#EF4444' :
+                        theme.primary,
+                    }}
+                  >
+                    {activeExtraType || 'EX'}
+                  </ThemedText>
+                </View>
+                <View>
+                  <ThemedText type="headlineSm" style={{ color: theme.text, fontSize: 16 }}>
+                    {activeExtraType === 'WD' ? 'Record Wide Ball' :
+                      activeExtraType === 'NB' ? 'Record No Ball' :
+                        activeExtraType === 'BYE' ? 'Record Bye' : 'Record Leg Bye'}
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 1 }}>
+                    {activeExtraType === 'WD' ? '1 extra run + additional runs/overthrows' :
+                      activeExtraType === 'NB' ? '1 extra run + runs scored off the bat' :
+                        'Legal delivery with bye / leg-bye runs'}
+                  </ThemedText>
+                </View>
+              </View>
               <Pressable
                 onPress={() => {
                   setShowExtraModal(false);
@@ -7207,128 +7319,336 @@ export default function CricketScoring({
               </Pressable>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-              <ThemedText style={{ color: theme.textSecondary, marginBottom: 16, fontSize: 13 }}>
-                Select the runs and over configuration for this extra delivery:
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }} keyboardShouldPersistTaps="handled">
+              {/* Numeric Keypad Grid */}
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 }}>
+                {activeExtraType === 'WD' ? 'SELECT OVERTHROW / EXTRA RUNS:' :
+                  activeExtraType === 'NB' ? 'SELECT RUNS OFF BAT (STRIKER):' :
+                    'SELECT RUNS SCORED:'}
               </ThemedText>
 
-              {/* Wide & No Ball options */}
-              {(activeExtraType === 'WD' || activeExtraType === 'NB') && (
-                <View style={{ gap: 10 }}>
-                  {/* Options are expressed as "runs the batsmen RAN", with the
-                      1-run penalty added automatically and the resulting team
-                      total spelled out — picking "2 runs" for a wide previously
-                      scored 2 in total instead of the correct 3. */}
-                  {(activeExtraType === 'WD' ? [0, 1, 2, 3, 4] : [0, 1, 2, 3, 4, 6]).map(ran => {
-                    const total = ran + 1;
-                    const isWide = activeExtraType === 'WD';
-                    const label =
-                      ran === 0
-                        ? isWide ? 'Wide only (1 run)' : 'No ball only (1 run)'
-                        : `${isWide ? 'Wide' : 'No ball'} + ${ran} run${ran === 1 ? '' : 's'}${ran === 4 ? ' (Boundary)' : ran === 6 ? ' (Six!)' : ''} ${isWide ? 'byes/overthrow' : 'off the bat'}`;
-                    const sub =
-                      ran === 0
-                        ? `Adds ${total} run to the total · delivery re-bowled`
-                        : `Adds ${total} runs to the total (1 penalty + ${ran})${
-                            isWide ? '' : ` · ${ran} credited to the striker`
-                          } · delivery re-bowled`;
+              {/* Number Chips 0, 1, 2, 3, 4, 6, Custom */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                {(() => {
+                  const options: { value: number; label: string; sub?: string }[] =
+                    activeExtraType === 'WD'
+                      ? [
+                          { value: 0, label: '0', sub: 'WD Only' },
+                          { value: 1, label: '1', sub: '+1 Run' },
+                          { value: 2, label: '2', sub: '+2 Runs' },
+                          { value: 3, label: '3', sub: '+3 Runs' },
+                          { value: 4, label: '4', sub: 'Boundary' },
+                        ]
+                      : activeExtraType === 'NB'
+                      ? [
+                          { value: 0, label: '0', sub: 'NB Only' },
+                          { value: 1, label: '1', sub: '1 Run' },
+                          { value: 2, label: '2', sub: '2 Runs' },
+                          { value: 3, label: '3', sub: '3 Runs' },
+                          { value: 4, label: '4', sub: 'Four' },
+                          { value: 6, label: '6', sub: 'Six!' },
+                        ]
+                      : [
+                          { value: 1, label: '1', sub: '1 Run' },
+                          { value: 2, label: '2', sub: '2 Runs' },
+                          { value: 3, label: '3', sub: '3 Runs' },
+                          { value: 4, label: '4', sub: 'Four' },
+                          { value: 6, label: '6', sub: 'Six' },
+                        ];
+
+                  return options.map((opt) => {
+                    const isSelected = !isExtraCustomMode && extraRunsInput === opt.value;
+                    const accentColor =
+                      activeExtraType === 'WD' ? '#F59E0B' :
+                      activeExtraType === 'NB' ? '#EF4444' :
+                      theme.primary;
+
                     return (
                       <Pressable
-                        key={ran}
-                        style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
+                        key={opt.value}
                         onPress={() => {
-                          if (activeExtraType) {
-                            // Wides can't be hit, so nothing is credited off the bat.
-                            recordExtraWithRuns(activeExtraType, total, false, isWide ? 0 : ran);
-                          }
-                          setShowExtraModal(false);
+                          setIsExtraCustomMode(false);
+                          setExtraRunsInput(opt.value);
+                        }}
+                        style={{
+                          width: '30.5%',
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          borderWidth: 1.5,
+                          borderColor: isSelected ? accentColor : theme.outlineVariant + '44',
+                          backgroundColor: isSelected ? accentColor + '18' : theme.surfaceLow,
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
                       >
-                        <ThemedText style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>{label}</ThemedText>
-                        <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>{sub}</ThemedText>
+                        <ThemedText
+                          style={{
+                            fontFamily: 'Sora_700Bold',
+                            fontSize: 16,
+                            color: isSelected ? accentColor : theme.text,
+                          }}
+                        >
+                          {opt.label}
+                        </ThemedText>
+                        {opt.sub && (
+                          <ThemedText
+                            style={{
+                              fontSize: 9.5,
+                              color: isSelected ? accentColor : theme.textSecondary,
+                              marginTop: 1,
+                            }}
+                          >
+                            {opt.sub}
+                          </ThemedText>
+                        )}
                       </Pressable>
                     );
-                  })}
+                  });
+                })()}
 
-                  <Pressable
-                    style={[styles.extraOptionBtn, { backgroundColor: theme.primaryContainer + '22', borderColor: theme.primary }]}
-                    onPress={() => {
-                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 0, true);
-                      setShowExtraModal(false);
+                {/* Custom Enter Button */}
+                <Pressable
+                  onPress={() => {
+                    setIsExtraCustomMode(true);
+                  }}
+                  style={{
+                    width: '30.5%',
+                    paddingVertical: 10,
+                    borderRadius: 10,
+                    borderWidth: 1.5,
+                    borderColor: isExtraCustomMode ? theme.primary : theme.outlineVariant + '44',
+                    backgroundColor: isExtraCustomMode ? theme.primary + '18' : theme.surfaceLow,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons
+                    name="keypad-outline"
+                    size={16}
+                    color={isExtraCustomMode ? theme.primary : theme.text}
+                  />
+                  <ThemedText
+                    style={{
+                      fontFamily: 'Sora_500Medium',
+                      fontSize: 11,
+                      color: isExtraCustomMode ? theme.primary : theme.text,
+                      marginTop: 2,
                     }}
                   >
-                    <ThemedText style={{ fontFamily: 'Sora_500Medium', color: theme.primary }}>Correction: count as legal ball, 0 runs</ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>Use if this was called in error — consumes a ball, adds nothing</ThemedText>
-                  </Pressable>
+                    Custom
+                  </ThemedText>
+                </Pressable>
+              </View>
+
+              {/* Custom Number Input when active */}
+              {isExtraCustomMode && (
+                <View
+                  style={{
+                    backgroundColor: theme.surfaceLow,
+                    padding: 12,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: theme.primary + '66',
+                    marginBottom: 14,
+                  }}
+                >
+                  <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                    ENTER CUSTOM RUNS:
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <TextInput
+                      style={{
+                        flex: 1,
+                        height: 42,
+                        borderWidth: 1.5,
+                        borderColor: theme.primary,
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        fontSize: 16,
+                        fontFamily: 'Sora_700Bold',
+                        color: theme.text,
+                        backgroundColor: theme.surfaceLowest,
+                        textAlign: 'center',
+                      }}
+                      placeholder="e.g. 5, 7, 8"
+                      placeholderTextColor={theme.textSecondary + '88'}
+                      keyboardType="number-pad"
+                      autoFocus
+                      value={extraCustomText}
+                      onChangeText={(t) => {
+                        const cleaned = t.replace(/[^0-9]/g, '').slice(0, 2);
+                        setExtraCustomText(cleaned);
+                        const num = parseInt(cleaned, 10);
+                        setExtraRunsInput(isNaN(num) ? 0 : num);
+                      }}
+                    />
+                    <Pressable
+                      onPress={() => {
+                        const cur = extraRunsInput > 0 ? extraRunsInput - 1 : 0;
+                        setExtraRunsInput(cur);
+                        setExtraCustomText(String(cur));
+                      }}
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 8,
+                        backgroundColor: theme.surfaceLowest,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '66',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <ThemedText style={{ fontSize: 18, fontFamily: 'Sora_700Bold', color: theme.text }}>-</ThemedText>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        const cur = extraRunsInput + 1;
+                        setExtraRunsInput(cur);
+                        setExtraCustomText(String(cur));
+                      }}
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 8,
+                        backgroundColor: theme.surfaceLowest,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '66',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <ThemedText style={{ fontSize: 18, fontFamily: 'Sora_700Bold', color: theme.text }}>+</ThemedText>
+                    </Pressable>
+                  </View>
                 </View>
               )}
 
-              {/* Bye & Leg Bye options */}
-              {(activeExtraType === 'BYE' || activeExtraType === 'LB') && (
-                <View style={{ gap: 10 }}>
-                  <Pressable
-                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
-                    onPress={() => {
-                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 1, true);
-                      setShowExtraModal(false);
-                    }}
-                  >
-                    <ThemedText style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>1 Run</ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>1 bye/leg-bye run, counts as a legal ball</ThemedText>
-                  </Pressable>
+              {/* Live Outcome Summary Box */}
+              {(() => {
+                const isWide = activeExtraType === 'WD';
+                const isNoBall = activeExtraType === 'NB';
+                const totalRuns = (isWide || isNoBall) ? extraRunsInput + 1 : extraRunsInput;
+                const accentColor = isWide ? '#F59E0B' : isNoBall ? '#EF4444' : theme.primary;
 
-                  <Pressable
-                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
-                    onPress={() => {
-                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 2, true);
-                      setShowExtraModal(false);
+                return (
+                  <View
+                    style={{
+                      backgroundColor: accentColor + '12',
+                      padding: 12,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: accentColor + '33',
+                      marginBottom: 14,
                     }}
                   >
-                    <ThemedText style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>2 Runs</ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>2 bye/leg-bye runs, counts as a legal ball</ThemedText>
-                  </Pressable>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: accentColor, textTransform: 'uppercase' }}>
+                        DELIVERY OUTCOME PREVIEW
+                      </ThemedText>
+                      <View
+                        style={{
+                          backgroundColor: accentColor,
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#ffffff' }}>
+                          +{totalRuns} {totalRuns === 1 ? 'Run' : 'Runs'}
+                        </ThemedText>
+                      </View>
+                    </View>
 
-                  <Pressable
-                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
-                    onPress={() => {
-                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 3, true);
-                      setShowExtraModal(false);
-                    }}
-                  >
-                    <ThemedText style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>3 Runs</ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>3 bye/leg-bye runs, counts as a legal ball</ThemedText>
-                  </Pressable>
+                    <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text, marginTop: 6 }}>
+                      {isWide ? (
+                        `1 Extra (WD) + ${extraRunsInput} Overthrows = ${totalRuns} Runs`
+                      ) : isNoBall ? (
+                        `1 Extra (NB) + ${extraRunsInput} off bat = ${totalRuns} Runs`
+                      ) : (
+                        `${totalRuns} ${activeExtraType === 'BYE' ? 'Bye' : 'Leg Bye'} Runs`
+                      )}
+                    </ThemedText>
 
-                  <Pressable
-                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
-                    onPress={() => {
-                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 4, true);
-                      setShowExtraModal(false);
-                    }}
-                  >
-                    <ThemedText style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>4 Runs</ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>4 bye/leg-bye runs (boundary), counts as a legal ball</ThemedText>
-                  </Pressable>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 3 }}>
+                      {isWide
+                        ? 'Delivery will be re-bowled · 1 run credited to team extras'
+                        : isNoBall
+                        ? `Delivery will be re-bowled · Free Hit next ball · ${extraRunsInput} credited to striker`
+                        : 'Counts as 1 legal delivery in the current over'}
+                    </ThemedText>
+                  </View>
+                );
+              })()}
 
-                  <Pressable
-                    style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}
-                    onPress={() => {
-                      if (activeExtraType) recordExtraWithRuns(activeExtraType, 0, true);
-                      setShowExtraModal(false);
-                    }}
-                  >
-                    <ThemedText style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>0 Runs (Dot Ball)</ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary }}>Counts as a legal ball, 0 runs added</ThemedText>
-                  </Pressable>
+              {/* Correction Option */}
+              <Pressable
+                style={[styles.extraOptionBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44', paddingVertical: 10, marginBottom: 14 }]}
+                onPress={() => {
+                  if (activeExtraType) recordExtraWithRuns(activeExtraType, 0, true);
+                  setShowExtraModal(false);
+                  setActiveExtraType(null);
+                }}
+              >
+                <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 12, color: theme.text }}>
+                  Correction: Count as Legal Ball (0 Runs)
+                </ThemedText>
+                <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary }}>
+                  Use if called by mistake — consumes a legal ball, adds 0 runs
+                </ThemedText>
+              </Pressable>
+
+              {/* Confirm Action Button */}
+              <Pressable
+                style={[
+                  styles.extraOptionBtn,
+                  {
+                    backgroundColor:
+                      activeExtraType === 'WD' ? '#F59E0B' :
+                      activeExtraType === 'NB' ? '#EF4444' :
+                      theme.primary,
+                    borderColor:
+                      activeExtraType === 'WD' ? '#F59E0B' :
+                      activeExtraType === 'NB' ? '#EF4444' :
+                      theme.primary,
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 8,
+                  },
+                ]}
+                onPress={() => {
+                  if (activeExtraType) {
+                    const isWide = activeExtraType === 'WD';
+                    const isNoBall = activeExtraType === 'NB';
+                    const total = (isWide || isNoBall) ? extraRunsInput + 1 : extraRunsInput;
+                    const runsOffBat = isNoBall ? extraRunsInput : 0;
+                    const isLegal = !isWide && !isNoBall;
+                    recordExtraWithRuns(activeExtraType, total, isLegal, runsOffBat);
+                  }
+                  setShowExtraModal(false);
+                  setActiveExtraType(null);
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="checkmark-circle-outline" size={17} color="#ffffff" />
+                  <ThemedText style={{ fontFamily: 'Sora_700Bold', color: '#ffffff', fontSize: 13.5 }}>
+                    {(() => {
+                      const isWide = activeExtraType === 'WD';
+                      const isNoBall = activeExtraType === 'NB';
+                      const total = (isWide || isNoBall) ? extraRunsInput + 1 : extraRunsInput;
+                      return `Confirm & Record (+${total} Runs)`;
+                    })()}
+                  </ThemedText>
                 </View>
-              )}
+              </Pressable>
 
               <Pressable
                 onPress={() => {
                   setShowExtraModal(false);
                   setActiveExtraType(null);
                 }}
-                style={[styles.cancelBtn, { borderColor: theme.outlineVariant, width: '100%', marginTop: 20, paddingVertical: 10 }]}
+                style={[styles.cancelBtn, { borderColor: theme.outlineVariant + '44', width: '100%', paddingVertical: 9 }]}
               >
                 <ThemedText type="labelMd" style={{ color: theme.textSecondary, textAlign: 'center' }}>
                   Cancel
