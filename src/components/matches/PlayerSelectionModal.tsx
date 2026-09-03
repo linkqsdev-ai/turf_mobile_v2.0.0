@@ -46,7 +46,6 @@ import { registerFoFPlayer, searchFoFDirectory, getFoFConnection, loadFoFDatabas
 const CREDIT_REWARD = 5;
 
 type BucketId = 'master' | 'teamA' | 'teamB';
-
 type Buckets = Record<BucketId, Player[]>;
 
 interface Rect {
@@ -54,16 +53,6 @@ interface Rect {
   y: number;
   width: number;
   height: number;
-}
-
-/** One tap-target rendered on the right of a bubble (assign / move / remove). */
-interface BubbleAction {
-  key: string;
-  label?: string;
-  icon?: keyof typeof Ionicons.glyphMap;
-  color: string;
-  hint: string;
-  onPress: () => void;
 }
 
 const GHOST_WIDTH = 160;
@@ -75,14 +64,17 @@ function usePalette() {
   const isDark = scheme === 'dark';
   return {
     theme,
-    canvas: isDark ? theme.background : theme.surfaceLow,
-    zone: isDark ? theme.surfaceLowest : theme.surfaceLowest,
-    bubble: isDark ? theme.surfaceLow : '#FFFFFF',
-    bubbleText: isDark ? theme.text : '#1D1B1A',
+    isDark,
+    canvas: isDark ? theme.background : '#F8FAFC',
+    cardBg: isDark ? theme.surfaceLow : '#FFFFFF',
+    zoneBg: isDark ? theme.surfaceLowest : '#F1F5F9',
+    borderColor: isDark ? '#334155' : '#E2E8F0',
+    textPrimary: isDark ? theme.text : '#0F172A',
+    textSecondary: isDark ? theme.textSecondary : '#64748B',
+    textMuted: isDark ? '#64748B' : '#94A3B8',
   };
 }
 
-/** "Siva Team" -> "ST", "Strikers" -> "ST" — the code shown on assign buttons. */
 const shortCode = (name: string, fallback: string): string => {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return fallback;
@@ -90,9 +82,6 @@ const shortCode = (name: string, fallback: string): string => {
   return (words[0][0] + words[1][0]).toUpperCase();
 };
 
-/**
- * Players can have custom uploaded photos or fallback to preset portraits.
- */
 const avatarSourceFor = (player: Player) => {
   if (player.avatarUrl) {
     if (
@@ -123,7 +112,6 @@ export interface PlayerSelectionModalProps {
   activeNonStrikerName?: string;
   activeBowlerName?: string;
   dismissedPlayers?: { name: string; status: string; dismissalType?: string }[];
-  /** Combined pool of players available to draft (e.g. matched saved-team rosters). */
   initialPool?: Player[];
   initialTeamA?: Player[];
   initialTeamB?: Player[];
@@ -173,7 +161,7 @@ export function PlayerSelectionModal({
   onSetBowler,
   onRetireBowler,
 }: PlayerSelectionModalProps) {
-  const { theme, canvas, zone, bubble, bubbleText } = usePalette();
+  const { theme, canvas, cardBg, zoneBg, borderColor, textPrimary, textSecondary, textMuted } = usePalette();
 
   const labelA = teamAName.trim() || 'Team A';
   const labelB = teamBName.trim() || 'Team B';
@@ -186,22 +174,15 @@ export function PlayerSelectionModal({
     teamB: initialTeamB,
   });
 
-  // Batting / Bowling side tracking
   const [currentBattingTeam, setCurrentBattingTeam] = useState<string>(propBattingTeam || labelA);
   const isTeamABatting = currentBattingTeam.trim().toLowerCase() === labelA.trim().toLowerCase();
 
-  // On-pitch active players
   const [strikerName, setStrikerName] = useState<string>(activeStrikerName);
   const [nonStrikerName, setNonStrikerName] = useState<string>(activeNonStrikerName);
   const [bowlerName, setBowlerName] = useState<string>(activeBowlerName);
 
-  // Retired batsmen tracking
   const [retiredPlayers, setRetiredPlayers] = useState<{ name: string; type: 'Retired Hurt' | 'Retired Out' }[]>([]);
-
-  // Action Menu Sheet for a clicked player
   const [selectedActionPlayer, setSelectedActionPlayer] = useState<{ player: Player; bucketId: BucketId } | null>(null);
-
-  // Retire dialog state
   const [retireConfirmPlayer, setRetireConfirmPlayer] = useState<Player | null>(null);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -213,7 +194,6 @@ export function PlayerSelectionModal({
   const [creditToast, setCreditToast] = useState<string | null>(null);
   const creditedPhones = useRef<Set<string>>(new Set());
 
-  // Re-seed whenever the modal opens
   useEffect(() => {
     if (visible) {
       loadFoFDatabase().catch(() => {});
@@ -233,7 +213,6 @@ export function PlayerSelectionModal({
       setNonStrikerName(activeNonStrikerName);
       setBowlerName(activeBowlerName);
 
-      // Extract retired players
       const initRetired: { name: string; type: 'Retired Hurt' | 'Retired Out' }[] = [];
       dismissedPlayers.forEach((d) => {
         if (d.status === 'Retired Hurt' || d.dismissalType === 'retired_hurt') {
@@ -244,7 +223,6 @@ export function PlayerSelectionModal({
       });
       setRetiredPlayers(initRetired);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, propBattingTeam, activeStrikerName, activeNonStrikerName, activeBowlerName]);
 
   const dragX = useSharedValue(0);
@@ -281,7 +259,6 @@ export function PlayerSelectionModal({
       [to]: [...prev[to], player],
     }));
 
-    // If active player is moved or unassigned, update role slots
     if (player.name === strikerName) setStrikerName('');
     if (player.name === nonStrikerName) setNonStrikerName('');
     if (player.name === bowlerName) setBowlerName('');
@@ -341,7 +318,6 @@ export function PlayerSelectionModal({
         master: [player, ...prev.master],
       }));
 
-      // Register with FoF
       registerFoFPlayer({
         name: player.name,
         phone: player.phone,
@@ -352,7 +328,6 @@ export function PlayerSelectionModal({
       setSearchQuery('');
       setDuplicateWarning(null);
 
-      // Award bonus if phone provided
       const rawDigits = fields.phone ? normalizePhone(fields.phone) : '';
       if (
         isUsablePhone(fields.phone) &&
@@ -372,7 +347,6 @@ export function PlayerSelectionModal({
   const queryDigits = searchQuery.replace(/\D/g, '');
   const queryLooksLikePhone = queryDigits.length >= 6;
 
-  /** Current match players matching search query */
   const matchPlayerResults = useMemo(() => {
     if (queryClean.length < 2 && queryDigits.length < 3) return [];
     const results: { player: Player; location: BucketId; locationLabel: string }[] = [];
@@ -398,7 +372,6 @@ export function PlayerSelectionModal({
     return results;
   }, [buckets, queryClean, queryDigits, labelA, labelB]);
 
-  /** Saved Team Players matching query */
   const savedPlayerResults = useMemo(() => {
     if (queryClean.length < 2 && queryDigits.length < 3) return [];
     const allSavedPlayers: Player[] = [];
@@ -414,7 +387,6 @@ export function PlayerSelectionModal({
       .slice(0, 4);
   }, [savedTeams, queryClean, queryDigits, isAlreadyIn]);
 
-  /** FoF Directory search results */
   const directoryResults = useMemo(() => {
     if (queryClean.length < 2 && queryDigits.length < 3) return [];
     const savedIds = new Set(savedPlayerResults.map((p) => playerIdentity(p)));
@@ -451,22 +423,17 @@ export function PlayerSelectionModal({
     setAddModalOpen(true);
   }, []);
 
-  // Team swap toggle
   const handleSwapBatBowl = () => {
     setCurrentBattingTeam((prev) => (prev === labelA ? labelB : labelA));
   };
 
-  // Crease strike swap
   const handleSwapStrike = () => {
-    setStrikerName((prev) => {
-      const oldStriker = prev;
-      setNonStrikerName(oldStriker);
-      return nonStrikerName;
-    });
+    const oldStriker = strikerName;
+    setStrikerName(nonStrikerName);
+    setNonStrikerName(oldStriker);
     if (onSwapStrike) onSwapStrike();
   };
 
-  // Set Striker
   const handleSetStriker = (player: Player) => {
     setStrikerName(player.name);
     if (nonStrikerName.toLowerCase() === player.name.toLowerCase()) {
@@ -476,7 +443,6 @@ export function PlayerSelectionModal({
     if (onSetStriker) onSetStriker(player);
   };
 
-  // Set Non-Striker
   const handleSetNonStriker = (player: Player) => {
     setNonStrikerName(player.name);
     if (strikerName.toLowerCase() === player.name.toLowerCase()) {
@@ -486,13 +452,11 @@ export function PlayerSelectionModal({
     if (onSetNonStriker) onSetNonStriker(player);
   };
 
-  // Set Bowler
   const handleSetBowler = (player: Player) => {
     setBowlerName(player.name);
     if (onSetBowler) onSetBowler(player);
   };
 
-  // Retire Bowler
   const handleRetireBowler = (player: Player) => {
     if (bowlerName.toLowerCase() === player.name.toLowerCase()) {
       setBowlerName('');
@@ -500,7 +464,6 @@ export function PlayerSelectionModal({
     if (onRetireBowler) onRetireBowler(player);
   };
 
-  // Retire Batsman Execution
   const handleExecuteRetire = (player: Player, type: 'Retired Hurt' | 'Retired Out') => {
     setRetiredPlayers((prev) => [
       ...prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()),
@@ -517,7 +480,6 @@ export function PlayerSelectionModal({
     setSelectedActionPlayer(null);
   };
 
-  // Unretire / Resume Batting
   const handleUnretire = (player: Player) => {
     setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
     if (!strikerName) {
@@ -526,156 +488,6 @@ export function PlayerSelectionModal({
       setNonStrikerName(player.name);
     }
   };
-
-  const accentA = '#4F46E5';
-  const accentB = '#EA580C';
-
-  /** Action pills displayed on each bubble */
-  const actionsFor = useCallback(
-    (player: Player, from: BucketId): BubbleAction[] => {
-      const isPlayerInBattingTeam =
-        (from === 'teamA' && isTeamABatting) || (from === 'teamB' && !isTeamABatting);
-      const isPlayerInBowlingTeam =
-        (from === 'teamA' && !isTeamABatting) || (from === 'teamB' && isTeamABatting);
-
-      const isStriker = strikerName.trim().toLowerCase() === player.name.trim().toLowerCase();
-      const isNonStriker = nonStrikerName.trim().toLowerCase() === player.name.trim().toLowerCase();
-      const isBowler = bowlerName.trim().toLowerCase() === player.name.trim().toLowerCase();
-      const retiredInfo = retiredPlayers.find((r) => r.name.toLowerCase() === player.name.toLowerCase());
-
-      const toA: BubbleAction = {
-        key: 'a',
-        label: codeA,
-        color: accentA,
-        hint: `Move ${player.name} to ${labelA}`,
-        onPress: () => moveToBucket(player, from, 'teamA'),
-      };
-      const toB: BubbleAction = {
-        key: 'b',
-        label: codeB,
-        color: accentB,
-        hint: `Move ${player.name} to ${labelB}`,
-        onPress: () => moveToBucket(player, from, 'teamB'),
-      };
-      const remove: BubbleAction = {
-        key: 'x',
-        icon: 'close',
-        color: theme.textSecondary,
-        hint: `Remove ${player.name} from squad`,
-        onPress: () => moveToBucket(player, from, 'master'),
-      };
-
-      if (from === 'master') return [toA, toB];
-
-      const actions: BubbleAction[] = [];
-
-      // Batting team specific actions
-      if (isPlayerInBattingTeam) {
-        if (retiredInfo) {
-          if (retiredInfo.type === 'Retired Hurt') {
-            actions.push({
-              key: 'resume',
-              icon: 'refresh',
-              color: '#10B981',
-              hint: `Resume Batting (${player.name})`,
-              onPress: () => handleUnretire(player),
-            });
-          }
-        } else if (isStriker) {
-          actions.push({
-            key: 'swap-strike',
-            icon: 'swap-horizontal',
-            color: '#10B981',
-            hint: 'Swap Strike',
-            onPress: handleSwapStrike,
-          });
-          actions.push({
-            key: 'retire',
-            icon: 'hand-left-outline',
-            color: '#EF4444',
-            hint: `Retire ${player.name}`,
-            onPress: () => setRetireConfirmPlayer(player),
-          });
-        } else if (isNonStriker) {
-          actions.push({
-            key: 'make-striker',
-            icon: 'flash',
-            color: '#F59E0B',
-            hint: `Make Striker (${player.name})`,
-            onPress: () => handleSetStriker(player),
-          });
-          actions.push({
-            key: 'retire',
-            icon: 'hand-left-outline',
-            color: '#EF4444',
-            hint: `Retire ${player.name}`,
-            onPress: () => setRetireConfirmPlayer(player),
-          });
-        } else {
-          // Bench batsman
-          actions.push({
-            key: 'b1',
-            label: 'B1',
-            color: '#10B981',
-            hint: `Set as Striker (${player.name})`,
-            onPress: () => handleSetStriker(player),
-          });
-          actions.push({
-            key: 'b2',
-            label: 'B2',
-            color: '#3B82F6',
-            hint: `Set as Non-Striker (${player.name})`,
-            onPress: () => handleSetNonStriker(player),
-          });
-        }
-      }
-
-      // Bowling team specific actions
-      if (isPlayerInBowlingTeam) {
-        if (isBowler) {
-          actions.push({
-            key: 'retire-bowler',
-            icon: 'hand-left-outline',
-            color: '#EF4444',
-            hint: `Retire / Change Bowler (${player.name})`,
-            onPress: () => handleRetireBowler(player),
-          });
-        } else {
-          actions.push({
-            key: 'set-bowler',
-            icon: 'baseball-outline',
-            color: '#8B5CF6',
-            hint: `Set as Current Bowler (${player.name})`,
-            onPress: () => handleSetBowler(player),
-          });
-        }
-      }
-
-      // Swap team action (to other team)
-      if (from === 'teamA') actions.push(toB);
-      if (from === 'teamB') actions.push(toA);
-
-      // Remove from team action
-      actions.push(remove);
-
-      return actions;
-    },
-    [
-      isTeamABatting,
-      strikerName,
-      nonStrikerName,
-      bowlerName,
-      retiredPlayers,
-      codeA,
-      codeB,
-      accentA,
-      accentB,
-      labelA,
-      labelB,
-      theme.textSecondary,
-      moveToBucket,
-    ]
-  );
 
   const ghostStyle = useAnimatedStyle(() => ({
     transform: [
@@ -704,28 +516,6 @@ export function PlayerSelectionModal({
 
   if (!visible) return null;
 
-  const zoneCommon = {
-    draggingId: draggingPlayer?.id ?? null,
-    dragX,
-    dragY,
-    registerRef: (id: BucketId, node: View | null) => {
-      bucketRefs.current[id] = node;
-    },
-    onDragStart: handleDragStart,
-    onDragEnd: handleDragEnd,
-    onPlayerTap: (player: Player, bucketId: BucketId) => {
-      setSelectedActionPlayer({ player, bucketId });
-    },
-    actionsFor,
-    bubble,
-    bubbleText,
-    textSecondary: theme.textSecondary,
-    strikerName,
-    nonStrikerName,
-    bowlerName,
-    retiredPlayers,
-  };
-
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose} statusBarTranslucent>
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -733,20 +523,20 @@ export function PlayerSelectionModal({
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
-              <ThemedText style={[styles.title, { color: bubbleText }]}>Manage Match Squads</ThemedText>
-              <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]} numberOfLines={1}>
-                Swap teams · Assign batting / bowling · Retire batsmen
+              <ThemedText style={[styles.title, { color: textPrimary }]}>Manage Squads</ThemedText>
+              <ThemedText style={[styles.subtitle, { color: textSecondary }]} numberOfLines={1}>
+                Tap player for quick options · hold to drag
               </ThemedText>
             </View>
 
-            {/* Quick Swap Batting / Bowling Sides */}
+            {/* Subtle Swap Sides Toggle */}
             <Pressable
               onPress={handleSwapBatBowl}
               hitSlop={6}
-              style={[styles.swapBatBowlBtn, { backgroundColor: theme.primary + '18', borderColor: theme.primary + '40' }]}
+              style={[styles.swapBatBowlBtn, { backgroundColor: cardBg, borderColor }]}
             >
               <Ionicons name="swap-horizontal" size={13} color={theme.primary} />
-              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
                 Swap Sides
               </ThemedText>
             </Pressable>
@@ -755,31 +545,31 @@ export function PlayerSelectionModal({
               onPress={handleClose}
               hitSlop={8}
               accessibilityLabel="Close"
-              style={[styles.closeBtn, { backgroundColor: bubble }]}
+              style={[styles.closeBtn, { backgroundColor: cardBg, borderColor }]}
             >
-              <Ionicons name="close" size={15} color={bubbleText} />
+              <Ionicons name="close" size={15} color={textPrimary} />
             </Pressable>
           </View>
 
-          {/* Legend / Status Badges */}
+          {/* Clean Legend Pill Overview */}
           <View style={styles.legend}>
             <LegendPill
               code={codeA}
               name={labelA}
-              color={accentA}
-              bubble={bubble}
-              text={bubbleText}
-              roleBadge={isTeamABatting ? '🏏 Batting' : '🎯 Bowling'}
-              roleColor={isTeamABatting ? '#10B981' : '#8B5CF6'}
+              cardBg={cardBg}
+              borderColor={borderColor}
+              textPrimary={textPrimary}
+              roleBadge={isTeamABatting ? 'Batting' : 'Bowling'}
+              theme={theme}
             />
             <LegendPill
               code={codeB}
               name={labelB}
-              color={accentB}
-              bubble={bubble}
-              text={bubbleText}
-              roleBadge={!isTeamABatting ? '🏏 Batting' : '🎯 Bowling'}
-              roleColor={!isTeamABatting ? '#10B981' : '#8B5CF6'}
+              cardBg={cardBg}
+              borderColor={borderColor}
+              textPrimary={textPrimary}
+              roleBadge={!isTeamABatting ? 'Batting' : 'Bowling'}
+              theme={theme}
             />
           </View>
 
@@ -788,21 +578,26 @@ export function PlayerSelectionModal({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-            {/* ── Available Players Pool ── */}
-            <PlayerZone
-              {...zoneCommon}
-              id="master"
-              title="Available Players"
-              meta={`${buckets.master.length} unassigned`}
-              players={displayedMaster}
-              emptyLabel={searchQuery.trim() ? 'No matching available players found.' : 'No players yet — add one below.'}
+            {/* ── Available Pool Section ── */}
+            <View
+              ref={(node) => { bucketRefs.current.master = node; }}
+              style={[styles.zoneCard, { backgroundColor: cardBg, borderColor }]}
             >
-              {/* Search & Add Player Bar */}
-              <View style={[styles.addRow, { backgroundColor: bubble }]}>
+              <View style={styles.zoneHeader}>
+                <ThemedText style={[styles.zoneTitle, { color: textPrimary }]}>
+                  Available Players
+                </ThemedText>
+                <ThemedText style={[styles.zoneMeta, { color: textSecondary }]}>
+                  {buckets.master.length} unassigned
+                </ThemedText>
+              </View>
+
+              {/* Clean Minimal Search Input */}
+              <View style={[styles.searchBar, { backgroundColor: zoneBg, borderColor }]}>
                 <Ionicons
                   name={queryLooksLikePhone ? 'call-outline' : 'search-outline'}
                   size={14}
-                  color={theme.textSecondary}
+                  color={textSecondary}
                 />
                 <TextInput
                   value={searchQuery}
@@ -810,153 +605,114 @@ export function PlayerSelectionModal({
                     setSearchQuery(t);
                     if (duplicateWarning) setDuplicateWarning(null);
                   }}
-                  placeholder="Search by mobile number or name"
-                  placeholderTextColor={theme.placeholder}
+                  placeholder="Search player name or phone..."
+                  placeholderTextColor={textMuted}
                   style={[
-                    styles.addInput,
-                    { color: bubbleText },
+                    styles.searchInput,
+                    { color: textPrimary },
                     Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
                   ]}
                   returnKeyType="search"
                 />
                 <Pressable
                   onPress={() => openAddPlayer(searchQuery)}
-                  accessibilityLabel="Add a new player"
+                  accessibilityLabel="Add player"
                   style={[styles.addBtn, { backgroundColor: theme.primary }]}
                 >
-                  <Ionicons name="person-add" size={14} color="#ffffff" />
+                  <Ionicons name="person-add" size={13} color="#ffffff" />
                 </Pressable>
               </View>
 
-              {/* 1. In-Match Search Matches */}
+              {/* Suggestions */}
               {matchPlayerResults.length > 0 && searchQuery.trim().length > 0 && (
                 <View style={styles.suggestList}>
                   {matchPlayerResults.map(({ player: p, location, locationLabel }) => (
-                    <View key={p.id} style={[styles.suggestRow, { backgroundColor: bubble }]}>
-                      <Image source={avatarSourceFor(p)} style={styles.avatar} contentFit="cover" />
+                    <Pressable
+                      key={p.id}
+                      onPress={() => setSelectedActionPlayer({ player: p, bucketId: location })}
+                      style={[styles.suggestRow, { backgroundColor: zoneBg, borderColor }]}
+                    >
+                      <Image source={avatarSourceFor(p)} style={styles.avatarSmall} contentFit="cover" />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <ThemedText style={[styles.suggestName, { color: bubbleText }]} numberOfLines={1}>
+                        <ThemedText style={[styles.suggestName, { color: textPrimary }]} numberOfLines={1}>
                           {p.name}
                         </ThemedText>
-                        <ThemedText style={[styles.suggestMeta, { color: theme.textSecondary }]} numberOfLines={1}>
-                          {p.phone || 'No phone'} ·{' '}
-                          <ThemedText style={{ color: location === 'master' ? theme.primary : accentA, fontFamily: 'Sora_600SemiBold' }}>
-                            {locationLabel}
-                          </ThemedText>
+                        <ThemedText style={[styles.suggestMeta, { color: textSecondary }]} numberOfLines={1}>
+                          {p.phone || 'No phone'} · {locationLabel}
                         </ThemedText>
                       </View>
-                      <View style={styles.actionRow}>
-                        {actionsFor(p, location).map((action) => (
-                          <Pressable
-                            key={action.key}
-                            onPress={action.onPress}
-                            hitSlop={5}
-                            accessibilityLabel={action.hint}
-                            style={({ pressed }) => [
-                              styles.actionBtn,
-                              {
-                                backgroundColor: action.icon ? 'transparent' : action.color,
-                                borderColor: action.color + (action.icon ? '66' : '00'),
-                                borderWidth: action.icon ? 1 : 0,
-                                opacity: pressed ? 0.6 : 1,
-                              },
-                            ]}
-                          >
-                            {action.icon ? (
-                              <Ionicons name={action.icon} size={11} color={action.color} />
-                            ) : (
-                              <ThemedText style={styles.actionText}>{action.label}</ThemedText>
-                            )}
-                          </Pressable>
-                        ))}
-                      </View>
-                    </View>
+                      <Ionicons name="chevron-forward" size={14} color={textMuted} />
+                    </Pressable>
                   ))}
                 </View>
               )}
 
-              {/* 2. Saved Team Roster Matches */}
               {savedPlayerResults.length > 0 && (
                 <View style={styles.suggestList}>
                   {savedPlayerResults.map((s) => (
                     <Pressable
                       key={s.id}
                       onPress={() => commitPlayer({ name: s.name, phone: s.phone, avatarUrl: s.avatarUrl })}
-                      style={({ pressed }) => [
-                        styles.suggestRow,
-                        { backgroundColor: bubble, opacity: pressed ? 0.7 : 1 },
-                      ]}
+                      style={[styles.suggestRow, { backgroundColor: zoneBg, borderColor }]}
                     >
-                      <Image source={avatarSourceFor(s)} style={styles.avatar} contentFit="cover" />
+                      <Image source={avatarSourceFor(s)} style={styles.avatarSmall} contentFit="cover" />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <ThemedText style={[styles.suggestName, { color: bubbleText }]} numberOfLines={1}>
+                        <ThemedText style={[styles.suggestName, { color: textPrimary }]} numberOfLines={1}>
                           {s.name}
                         </ThemedText>
-                        <ThemedText style={[styles.suggestMeta, { color: theme.textSecondary }]} numberOfLines={1}>
+                        <ThemedText style={[styles.suggestMeta, { color: textSecondary }]} numberOfLines={1}>
                           {s.phone || 'Saved Player'} · Tap to Add
                         </ThemedText>
                       </View>
-                      <Ionicons name="add-circle" size={18} color={theme.primary} />
+                      <Ionicons name="add-circle" size={16} color={theme.primary} />
                     </Pressable>
                   ))}
                 </View>
               )}
 
-              {/* 3. FoF Directory Matches */}
               {directoryResults.length > 0 && (
                 <View style={styles.suggestList}>
                   {directoryResults.map((s) => {
-                    const conn = getFoFConnection(s.phone);
+                    const conn = getFoFConnection(s.phone || '');
                     return (
                       <Pressable
                         key={s.id}
                         onPress={() => commitPlayer({ name: s.name, phone: s.phone, avatarUrl: s.avatar })}
-                        style={({ pressed }) => [
-                          styles.suggestRow,
-                          { backgroundColor: bubble, opacity: pressed ? 0.7 : 1 },
-                        ]}
+                        style={[styles.suggestRow, { backgroundColor: zoneBg, borderColor }]}
                       >
                         {s.avatar && (s.avatar.startsWith('http') || s.avatar.startsWith('data:') || s.avatar.startsWith('file:') || s.avatar.startsWith('blob:')) ? (
-                          <Image source={{ uri: s.avatar }} style={styles.avatar} contentFit="cover" />
+                          <Image source={{ uri: s.avatar }} style={styles.avatarSmall} contentFit="cover" />
                         ) : (
-                          <View style={[styles.avatar, { backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center' }]}>
+                          <View style={[styles.avatarSmall, { backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center' }]}>
                             <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
                               {getTwoLetterLogo(s.name)}
                             </ThemedText>
                           </View>
                         )}
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <ThemedText style={[styles.suggestName, { color: bubbleText }]} numberOfLines={1}>
+                          <ThemedText style={[styles.suggestName, { color: textPrimary }]} numberOfLines={1}>
                             {s.name}
                           </ThemedText>
-                          <ThemedText style={[styles.suggestMeta, { color: theme.textSecondary }]} numberOfLines={1}>
-                            {s.phone} ·{' '}
-                            <ThemedText style={{ color: conn.badgeColor || theme.primary, fontFamily: 'Sora_600SemiBold' }}>
-                              {conn.degreeBadgeText}
-                            </ThemedText>
+                          <ThemedText style={[styles.suggestMeta, { color: textSecondary }]} numberOfLines={1}>
+                            {s.phone} · {conn.degreeBadgeText}
                           </ThemedText>
                         </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.primary + '14', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
-                          <Ionicons name="add-circle" size={14} color={theme.primary} />
-                          <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>Add</ThemedText>
-                        </View>
+                        <Ionicons name="add-circle" size={16} color={theme.primary} />
                       </Pressable>
                     );
                   })}
                 </View>
               )}
 
-              {/* Exact match info */}
               {exactMatchInPool && (
                 <View style={styles.warnRow}>
                   <Ionicons name="checkmark-circle" size={12} color={theme.primary} />
                   <ThemedText style={[styles.warnText, { color: theme.primary }]}>
-                    {`${exactMatchInPool.name}${exactMatchInPool.phone ? ` (${exactMatchInPool.phone})` : ''} is already in the match.`}
+                    {`${exactMatchInPool.name} is in match squad.`}
                   </ThemedText>
                 </View>
               )}
 
-              {/* Nothing matched */}
               {searchQuery.trim().length >= 3 &&
                 !exactMatchInPool &&
                 matchPlayerResults.length === 0 &&
@@ -964,105 +720,118 @@ export function PlayerSelectionModal({
                 directoryResults.length === 0 && (
                   <Pressable
                     onPress={() => openAddPlayer(searchQuery)}
-                    style={({ pressed }) => [
-                      styles.notFound,
-                      { borderColor: theme.primary + '55', opacity: pressed ? 0.75 : 1 },
-                    ]}
+                    style={[styles.notFound, { borderColor: theme.primary + '55' }]}
                   >
-                    <Ionicons name="person-add" size={14} color={theme.primary} />
+                    <Ionicons name="person-add" size={13} color={theme.primary} />
                     <ThemedText style={[styles.notFoundText, { color: theme.primary }]} numberOfLines={1}>
                       {queryLooksLikePhone
                         ? `Add player with ${searchQuery.trim()}`
                         : `Add “${searchQuery.trim()}” as new player`}
                     </ThemedText>
-                    <Ionicons name="arrow-forward" size={14} color={theme.primary} />
+                    <Ionicons name="arrow-forward" size={13} color={theme.primary} />
                   </Pressable>
                 )}
 
-              {creditToast && (
-                <View style={styles.warnRow}>
-                  <Ionicons name="checkmark-circle" size={12} color="#10B981" />
-                  <ThemedText style={[styles.warnText, { color: '#10B981' }]}>{creditToast}</ThemedText>
-                </View>
-              )}
-              {duplicateWarning && (
-                <View style={styles.warnRow}>
-                  <Ionicons name="alert-circle" size={12} color={theme.error} />
-                  <ThemedText style={[styles.warnText, { color: theme.error }]}>
-                    {duplicateWarning}
+              {/* Clean Chips in Pool */}
+              <View style={styles.bubbleWrap}>
+                {displayedMaster.map((player) => (
+                  <CleanPlayerChip
+                    key={player.id}
+                    player={player}
+                    bucketId="master"
+                    cardBg={zoneBg}
+                    borderColor={borderColor}
+                    textPrimary={textPrimary}
+                    textSecondary={textSecondary}
+                    theme={theme}
+                    onTap={() => setSelectedActionPlayer({ player, bucketId: 'master' })}
+                    onQuickAssignA={() => moveToBucket(player, 'master', 'teamA')}
+                    onQuickAssignB={() => moveToBucket(player, 'master', 'teamB')}
+                    codeA={codeA}
+                    codeB={codeB}
+                    dragX={dragX}
+                    dragY={dragY}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    isDragging={draggingPlayer?.id === player.id}
+                  />
+                ))}
+                {displayedMaster.length === 0 && !searchQuery.trim() && (
+                  <ThemedText style={[styles.emptyLabel, { color: textMuted }]}>
+                    No unassigned players. Add new players above.
                   </ThemedText>
-                </View>
-              )}
-            </PlayerZone>
+                )}
+              </View>
+            </View>
 
             {/* ── Team A Zone ── */}
-            <PlayerZone
-              {...zoneCommon}
-              id="teamA"
-              title={labelA}
-              meta={`${buckets.teamA.length} player${buckets.teamA.length === 1 ? '' : 's'}`}
+            <TeamZoneCard
+              refNode={(node) => { bucketRefs.current.teamA = node; }}
+              teamName={labelA}
+              teamCode={codeA}
+              otherTeamCode={codeB}
               players={buckets.teamA}
-              emptyLabel={`Tap ${codeA} on an available player or drag them here`}
-              zoneBg={zone}
-              accent={accentA}
-              roleBadge={isTeamABatting ? '🏏 Batting' : '🎯 Bowling'}
-              roleColor={isTeamABatting ? '#10B981' : '#8B5CF6'}
-              isBattingTeam={isTeamABatting}
+              isBatting={isTeamABatting}
               strikerName={strikerName}
               nonStrikerName={nonStrikerName}
               bowlerName={bowlerName}
+              retiredPlayers={retiredPlayers}
+              cardBg={cardBg}
+              zoneBg={zoneBg}
+              borderColor={borderColor}
+              textPrimary={textPrimary}
+              textSecondary={textSecondary}
+              textMuted={textMuted}
+              theme={theme}
               onSwapStrike={handleSwapStrike}
-              onRetireStriker={() => {
-                const p = buckets.teamA.find((pl) => pl.name.toLowerCase() === strikerName.toLowerCase());
-                if (p) setRetireConfirmPlayer(p);
-              }}
-              onRetireNonStriker={() => {
-                const p = buckets.teamA.find((pl) => pl.name.toLowerCase() === nonStrikerName.toLowerCase());
-                if (p) setRetireConfirmPlayer(p);
-              }}
-              onRetireBowler={() => {
-                const p = buckets.teamA.find((pl) => pl.name.toLowerCase() === bowlerName.toLowerCase());
-                if (p) handleRetireBowler(p);
-              }}
+              onPlayerTap={(p) => setSelectedActionPlayer({ player: p, bucketId: 'teamA' })}
+              onRemovePlayer={(p) => moveToBucket(p, 'teamA', 'master')}
+              onTransferPlayer={(p) => moveToBucket(p, 'teamA', 'teamB')}
+              onRetirePlayer={(p) => setRetireConfirmPlayer(p)}
+              dragX={dragX}
+              dragY={dragY}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              draggingId={draggingPlayer?.id ?? null}
             />
 
             {/* ── Team B Zone ── */}
-            <PlayerZone
-              {...zoneCommon}
-              id="teamB"
-              title={labelB}
-              meta={`${buckets.teamB.length} player${buckets.teamB.length === 1 ? '' : 's'}`}
+            <TeamZoneCard
+              refNode={(node) => { bucketRefs.current.teamB = node; }}
+              teamName={labelB}
+              teamCode={codeB}
+              otherTeamCode={codeA}
               players={buckets.teamB}
-              emptyLabel={`Tap ${codeB} on an available player or drag them here`}
-              zoneBg={zone}
-              accent={accentB}
-              roleBadge={!isTeamABatting ? '🏏 Batting' : '🎯 Bowling'}
-              roleColor={!isTeamABatting ? '#10B981' : '#8B5CF6'}
-              isBattingTeam={!isTeamABatting}
+              isBatting={!isTeamABatting}
               strikerName={strikerName}
               nonStrikerName={nonStrikerName}
               bowlerName={bowlerName}
+              retiredPlayers={retiredPlayers}
+              cardBg={cardBg}
+              zoneBg={zoneBg}
+              borderColor={borderColor}
+              textPrimary={textPrimary}
+              textSecondary={textSecondary}
+              textMuted={textMuted}
+              theme={theme}
               onSwapStrike={handleSwapStrike}
-              onRetireStriker={() => {
-                const p = buckets.teamB.find((pl) => pl.name.toLowerCase() === strikerName.toLowerCase());
-                if (p) setRetireConfirmPlayer(p);
-              }}
-              onRetireNonStriker={() => {
-                const p = buckets.teamB.find((pl) => pl.name.toLowerCase() === nonStrikerName.toLowerCase());
-                if (p) setRetireConfirmPlayer(p);
-              }}
-              onRetireBowler={() => {
-                const p = buckets.teamB.find((pl) => pl.name.toLowerCase() === bowlerName.toLowerCase());
-                if (p) handleRetireBowler(p);
-              }}
+              onPlayerTap={(p) => setSelectedActionPlayer({ player: p, bucketId: 'teamB' })}
+              onRemovePlayer={(p) => moveToBucket(p, 'teamB', 'master')}
+              onTransferPlayer={(p) => moveToBucket(p, 'teamB', 'teamA')}
+              onRetirePlayer={(p) => setRetireConfirmPlayer(p)}
+              dragX={dragX}
+              dragY={dragY}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              draggingId={draggingPlayer?.id ?? null}
             />
           </ScrollView>
 
-          {/* Footer Actions */}
-          <View style={styles.footer}>
+          {/* Clean Footer Bar */}
+          <View style={[styles.footer, { backgroundColor: cardBg, borderTopColor: borderColor }]}>
             <Pressable onPress={onSkip} style={styles.skipBtn}>
-              <ThemedText style={[styles.skipText, { color: theme.textSecondary }]}>
-                Skip for now
+              <ThemedText style={[styles.skipText, { color: textSecondary }]}>
+                Skip
               </ThemedText>
             </Pressable>
             <Pressable
@@ -1070,7 +839,7 @@ export function PlayerSelectionModal({
               style={[styles.confirmBtn, { backgroundColor: theme.primary }]}
             >
               <ThemedText style={styles.confirmText}>
-                {totalAssigned > 0 ? `Apply & Continue (${totalAssigned})` : 'Continue to Match'}
+                {totalAssigned > 0 ? `Apply Squad Lineup (${totalAssigned})` : 'Continue'}
               </ThemedText>
             </Pressable>
           </View>
@@ -1086,20 +855,20 @@ export function PlayerSelectionModal({
             onAdd={commitPlayer}
           />
 
-          {/* Player Quick Action Bottom Sheet / Modal */}
+          {/* Unified Action Sheet */}
           {selectedActionPlayer && (
             <PlayerActionModal
               visible={!!selectedActionPlayer}
               item={selectedActionPlayer}
               onClose={() => setSelectedActionPlayer(null)}
               theme={theme}
-              bubble={bubble}
-              bubbleText={bubbleText}
+              cardBg={cardBg}
+              borderColor={borderColor}
+              textPrimary={textPrimary}
+              textSecondary={textSecondary}
               isTeamABatting={isTeamABatting}
               labelA={labelA}
               labelB={labelB}
-              codeA={codeA}
-              codeB={codeB}
               strikerName={strikerName}
               nonStrikerName={nonStrikerName}
               bowlerName={bowlerName}
@@ -1109,40 +878,42 @@ export function PlayerSelectionModal({
               onSetBowler={handleSetBowler}
               onRetireBowler={handleRetireBowler}
               onSwapStrike={handleSwapStrike}
-              onRetireClick={(player) => {
+              onRetireClick={(p) => {
                 setSelectedActionPlayer(null);
-                setRetireConfirmPlayer(player);
+                setRetireConfirmPlayer(p);
               }}
               onUnretire={handleUnretire}
-              onMoveToTeam={(player, from, to) => {
-                moveToBucket(player, from, to);
+              onMoveToTeam={(p, from, to) => {
+                moveToBucket(p, from, to);
                 setSelectedActionPlayer(null);
               }}
-              onRemoveFromTeam={(player, from) => {
-                moveToBucket(player, from, 'master');
+              onRemoveFromTeam={(p, from) => {
+                moveToBucket(p, from, 'master');
                 setSelectedActionPlayer(null);
               }}
             />
           )}
 
-          {/* Retire Batsman Modal (Retired Hurt vs Retired Out) */}
+          {/* Retire Batsman Modal */}
           {retireConfirmPlayer && (
             <RetireConfirmationModal
               visible={!!retireConfirmPlayer}
               player={retireConfirmPlayer}
               onClose={() => setRetireConfirmPlayer(null)}
               theme={theme}
-              bubble={bubble}
-              bubbleText={bubbleText}
+              cardBg={cardBg}
+              borderColor={borderColor}
+              textPrimary={textPrimary}
+              textSecondary={textSecondary}
               onConfirmRetire={(type) => handleExecuteRetire(retireConfirmPlayer, type)}
             />
           )}
 
-          {/* Floating Drag Ghost */}
+          {/* Drag Ghost */}
           {draggingPlayer && (
-            <Animated.View pointerEvents="none" style={[styles.ghost, ghostStyle, { backgroundColor: bubble }]}>
-              <Image source={avatarSourceFor(draggingPlayer)} style={styles.avatar} contentFit="cover" />
-              <ThemedText style={[styles.bubbleName, { color: bubbleText }]} numberOfLines={1}>
+            <Animated.View pointerEvents="none" style={[styles.ghost, ghostStyle, { backgroundColor: cardBg, borderColor }]}>
+              <Image source={avatarSourceFor(draggingPlayer)} style={styles.avatarSmall} contentFit="cover" />
+              <ThemedText style={[styles.chipName, { color: textPrimary }]} numberOfLines={1}>
                 {draggingPlayer.name}
               </ThemedText>
             </Animated.View>
@@ -1153,72 +924,301 @@ export function PlayerSelectionModal({
   );
 }
 
-// ── Legend Pill ─────────────────────────────────────────────────────────────
-function LegendPill({
-  code,
-  name,
-  color,
-  bubble,
-  text,
-  roleBadge,
-  roleColor,
+// ── Team Zone Card ──────────────────────────────────────────────────────────
+function TeamZoneCard({
+  refNode,
+  teamName,
+  teamCode,
+  otherTeamCode,
+  players,
+  isBatting,
+  strikerName,
+  nonStrikerName,
+  bowlerName,
+  retiredPlayers,
+  cardBg,
+  zoneBg,
+  borderColor,
+  textPrimary,
+  textSecondary,
+  textMuted,
+  theme,
+  onSwapStrike,
+  onPlayerTap,
+  onRemovePlayer,
+  onTransferPlayer,
+  onRetirePlayer,
+  dragX,
+  dragY,
+  onDragStart,
+  onDragEnd,
+  draggingId,
 }: {
-  code: string;
-  name: string;
-  color: string;
-  bubble: string;
-  text: string;
-  roleBadge?: string;
-  roleColor?: string;
+  refNode: (node: View | null) => void;
+  teamName: string;
+  teamCode: string;
+  otherTeamCode: string;
+  players: Player[];
+  isBatting: boolean;
+  strikerName: string;
+  nonStrikerName: string;
+  bowlerName: string;
+  retiredPlayers: { name: string; type: 'Retired Hurt' | 'Retired Out' }[];
+  cardBg: string;
+  zoneBg: string;
+  borderColor: string;
+  textPrimary: string;
+  textSecondary: string;
+  textMuted: string;
+  theme: any;
+  onSwapStrike: () => void;
+  onPlayerTap: (p: Player) => void;
+  onRemovePlayer: (p: Player) => void;
+  onTransferPlayer: (p: Player) => void;
+  onRetirePlayer: (p: Player) => void;
+  dragX: SharedValue<number>;
+  dragY: SharedValue<number>;
+  onDragStart: (player: Player, from: BucketId) => void;
+  onDragEnd: (player: Player, from: BucketId, x: number, y: number) => void;
+  draggingId: string | null;
 }) {
   return (
-    <View style={[styles.legendPill, { backgroundColor: bubble }]}>
-      <View style={[styles.legendCode, { backgroundColor: color }]}>
-        <ThemedText style={styles.legendCodeText}>{code}</ThemedText>
-      </View>
-      <ThemedText style={[styles.legendName, { color: text }]} numberOfLines={1}>
-        {name}
-      </ThemedText>
-      {roleBadge && (
-        <View style={[styles.roleBadge, { backgroundColor: (roleColor || color) + '18' }]}>
-          <ThemedText style={[styles.roleBadgeText, { color: roleColor || color }]}>
-            {roleBadge}
+    <View ref={refNode} style={[styles.zoneCard, { backgroundColor: cardBg, borderColor }]}>
+      {/* Zone Header */}
+      <View style={styles.zoneHeader}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+          <ThemedText style={[styles.zoneTitle, { color: textPrimary }]} numberOfLines={1}>
+            {teamName}
           </ThemedText>
+          <View style={[styles.roleTag, { backgroundColor: zoneBg, borderColor }]}>
+            <ThemedText style={[styles.roleTagText, { color: theme.primary }]}>
+              {isBatting ? '🏏 Batting' : '🎯 Bowling'}
+            </ThemedText>
+          </View>
         </View>
-      )}
+        <ThemedText style={[styles.zoneMeta, { color: textSecondary }]}>
+          {players.length} player{players.length === 1 ? '' : 's'}
+        </ThemedText>
+      </View>
+
+      {/* Crease Active Slots (Clean & Unified) */}
+      <View style={[styles.creaseBar, { backgroundColor: zoneBg, borderColor }]}>
+        {isBatting ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {/* Striker Slot */}
+            <Pressable
+              onPress={() => {
+                const p = players.find((pl) => pl.name.toLowerCase() === strikerName.toLowerCase());
+                if (p) onPlayerTap(p);
+              }}
+              style={[styles.creaseSlot, { flex: 1, backgroundColor: cardBg, borderColor }]}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <ThemedText style={[styles.creaseSlotTitle, { color: theme.primary }]}>
+                  STRIKER (B1)
+                </ThemedText>
+                {strikerName ? (
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      const p = players.find((pl) => pl.name.toLowerCase() === strikerName.toLowerCase());
+                      if (p) onRetirePlayer(p);
+                    }}
+                    hitSlop={4}
+                  >
+                    <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>
+                      Retire
+                    </ThemedText>
+                  </Pressable>
+                ) : null}
+              </View>
+              <ThemedText
+                style={[styles.creaseSlotName, { color: strikerName ? textPrimary : textMuted }]}
+                numberOfLines={1}
+              >
+                {strikerName || 'Select Striker'}
+              </ThemedText>
+            </Pressable>
+
+            {/* Swap Strike */}
+            <Pressable
+              onPress={onSwapStrike}
+              hitSlop={6}
+              style={[styles.creaseSwapBtn, { backgroundColor: cardBg, borderColor }]}
+            >
+              <Ionicons name="swap-horizontal" size={14} color={theme.primary} />
+            </Pressable>
+
+            {/* Non-Striker Slot */}
+            <Pressable
+              onPress={() => {
+                const p = players.find((pl) => pl.name.toLowerCase() === nonStrikerName.toLowerCase());
+                if (p) onPlayerTap(p);
+              }}
+              style={[styles.creaseSlot, { flex: 1, backgroundColor: cardBg, borderColor }]}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <ThemedText style={[styles.creaseSlotTitle, { color: textSecondary }]}>
+                  NON-STRIKER (B2)
+                </ThemedText>
+                {nonStrikerName ? (
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      const p = players.find((pl) => pl.name.toLowerCase() === nonStrikerName.toLowerCase());
+                      if (p) onRetirePlayer(p);
+                    }}
+                    hitSlop={4}
+                  >
+                    <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>
+                      Retire
+                    </ThemedText>
+                  </Pressable>
+                ) : null}
+              </View>
+              <ThemedText
+                style={[styles.creaseSlotName, { color: nonStrikerName ? textPrimary : textMuted }]}
+                numberOfLines={1}
+              >
+                {nonStrikerName || 'Select Non-Striker'}
+              </ThemedText>
+            </Pressable>
+          </View>
+        ) : (
+          /* Active Bowler Slot */
+          <Pressable
+            onPress={() => {
+              const p = players.find((pl) => pl.name.toLowerCase() === bowlerName.toLowerCase());
+              if (p) onPlayerTap(p);
+            }}
+            style={[styles.creaseSlot, { backgroundColor: cardBg, borderColor }]}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <ThemedText style={[styles.creaseSlotTitle, { color: theme.primary }]}>
+                ACTIVE BOWLER
+              </ThemedText>
+              {bowlerName ? (
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    const p = players.find((pl) => pl.name.toLowerCase() === bowlerName.toLowerCase());
+                    if (p) onPlayerTap(p);
+                  }}
+                  hitSlop={4}
+                >
+                  <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: textSecondary }}>
+                    Change
+                  </ThemedText>
+                </Pressable>
+              ) : null}
+            </View>
+            <ThemedText
+              style={[styles.creaseSlotName, { color: bowlerName ? textPrimary : textMuted }]}
+              numberOfLines={1}
+            >
+              {bowlerName || 'Select Bowler'}
+            </ThemedText>
+          </Pressable>
+        )}
+      </View>
+
+      {/* Squad Player Chips (Clean, Readable, Non-Cluttered) */}
+      <View style={styles.bubbleWrap}>
+        {players.map((player) => {
+          const isStriker = isBatting && strikerName.trim().toLowerCase() === player.name.trim().toLowerCase();
+          const isNonStriker = isBatting && nonStrikerName.trim().toLowerCase() === player.name.trim().toLowerCase();
+          const isBowler = !isBatting && bowlerName.trim().toLowerCase() === player.name.trim().toLowerCase();
+          const retRec = retiredPlayers.find((r) => r.name.toLowerCase() === player.name.toLowerCase());
+
+          let roleLabel: string | undefined;
+          if (retRec) {
+            roleLabel = retRec.type === 'Retired Hurt' ? 'Injured' : 'Retired';
+          } else if (isStriker) {
+            roleLabel = 'Striker';
+          } else if (isNonStriker) {
+            roleLabel = 'Non-Striker';
+          } else if (isBowler) {
+            roleLabel = 'Bowler';
+          }
+
+          return (
+            <CleanPlayerChip
+              key={player.id}
+              player={player}
+              bucketId={teamCode === 'TA' ? 'teamA' : 'teamB'}
+              cardBg={zoneBg}
+              borderColor={borderColor}
+              textPrimary={textPrimary}
+              textSecondary={textSecondary}
+              theme={theme}
+              roleLabel={roleLabel}
+              isRetired={!!retRec}
+              isActiveRole={isStriker || isNonStriker || isBowler}
+              onTap={() => onPlayerTap(player)}
+              onRemove={() => onRemovePlayer(player)}
+              dragX={dragX}
+              dragY={dragY}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              isDragging={draggingId === player.id}
+            />
+          );
+        })}
+        {players.length === 0 && (
+          <ThemedText style={[styles.emptyLabel, { color: textMuted }]}>
+            No players assigned yet. Drag players here or add from pool.
+          </ThemedText>
+        )}
+      </View>
     </View>
   );
 }
 
-// ── Player Bubble ───────────────────────────────────────────────────────────
-function PlayerBubble({
+// ── Clean Single Player Chip ────────────────────────────────────────────────
+function CleanPlayerChip({
   player,
   bucketId,
-  isDragging,
-  bubble,
-  bubbleText,
-  actions,
+  cardBg,
+  borderColor,
+  textPrimary,
+  textSecondary,
+  theme,
+  roleLabel,
+  isRetired,
+  isActiveRole,
+  onTap,
+  onRemove,
+  onQuickAssignA,
+  onQuickAssignB,
+  codeA,
+  codeB,
   dragX,
   dragY,
-  roleTag,
-  roleTagColor,
   onDragStart,
   onDragEnd,
-  onTap,
+  isDragging,
 }: {
   player: Player;
   bucketId: BucketId;
-  isDragging: boolean;
-  bubble: string;
-  bubbleText: string;
-  actions: BubbleAction[];
+  cardBg: string;
+  borderColor: string;
+  textPrimary: string;
+  textSecondary: string;
+  theme: any;
+  roleLabel?: string;
+  isRetired?: boolean;
+  isActiveRole?: boolean;
+  onTap: () => void;
+  onRemove?: () => void;
+  onQuickAssignA?: () => void;
+  onQuickAssignB?: () => void;
+  codeA?: string;
+  codeB?: string;
   dragX: SharedValue<number>;
   dragY: SharedValue<number>;
-  roleTag?: string;
-  roleTagColor?: string;
   onDragStart: (player: Player, from: BucketId) => void;
   onDragEnd: (player: Player, from: BucketId, x: number, y: number) => void;
-  onTap?: (player: Player, bucketId: BucketId) => void;
+  isDragging: boolean;
 }) {
   const pan = useMemo(
     () =>
@@ -1236,283 +1236,121 @@ function PlayerBubble({
         .onEnd((e) => {
           runOnJS(onDragEnd)(player, bucketId, e.absoluteX, e.absoluteY);
         }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [player.id, bucketId]
   );
+
+  const isMaster = bucketId === 'master';
 
   return (
     <GestureDetector gesture={pan}>
       <Pressable
-        onPress={() => onTap && onTap(player, bucketId)}
-        style={[styles.bubble, { backgroundColor: bubble, opacity: isDragging ? 0 : 1 }]}
+        onPress={onTap}
+        style={({ pressed }) => [
+          styles.chip,
+          {
+            backgroundColor: cardBg,
+            borderColor: isActiveRole ? theme.primary + '55' : borderColor,
+            opacity: isDragging ? 0 : pressed ? 0.8 : 1,
+          },
+        ]}
       >
-        <Image source={avatarSourceFor(player)} style={styles.avatar} contentFit="cover" />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
-          <ThemedText style={[styles.bubbleName, { color: bubbleText }]} numberOfLines={1}>
+        <Image source={avatarSourceFor(player)} style={styles.avatarSmall} contentFit="cover" />
+        <View style={{ flexShrink: 1 }}>
+          <ThemedText style={[styles.chipName, { color: textPrimary }]} numberOfLines={1}>
             {player.name}
           </ThemedText>
-          {roleTag && (
-            <View style={[styles.bubbleRolePill, { backgroundColor: (roleTagColor || '#4F46E5') + '20' }]}>
-              <ThemedText style={[styles.bubbleRolePillText, { color: roleTagColor || '#4F46E5' }]}>
-                {roleTag}
-              </ThemedText>
-            </View>
+          {roleLabel && (
+            <ThemedText
+              style={[
+                styles.chipRoleSub,
+                { color: isRetired ? '#EF4444' : isActiveRole ? theme.primary : textSecondary },
+              ]}
+              numberOfLines={1}
+            >
+              {roleLabel}
+            </ThemedText>
           )}
         </View>
 
-        <View style={styles.actionRow}>
-          {actions.map((action) => (
+        {/* Quick Assign Buttons for Master Pool */}
+        {isMaster && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 2 }}>
             <Pressable
-              key={action.key}
-              onPress={action.onPress}
-              hitSlop={5}
-              accessibilityLabel={action.hint}
-              style={({ pressed }) => [
-                styles.actionBtn,
-                {
-                  backgroundColor: action.icon ? 'transparent' : action.color,
-                  borderColor: action.color + (action.icon ? '66' : '00'),
-                  borderWidth: action.icon ? 1 : 0,
-                  opacity: pressed ? 0.6 : 1,
-                },
-              ]}
+              onPress={(e) => {
+                e.stopPropagation();
+                if (onQuickAssignA) onQuickAssignA();
+              }}
+              hitSlop={4}
+              style={[styles.quickAssignBtn, { borderColor }]}
             >
-              {action.icon ? (
-                <Ionicons name={action.icon} size={11} color={action.color} />
-              ) : (
-                <ThemedText style={styles.actionText}>{action.label}</ThemedText>
-              )}
+              <ThemedText style={[styles.quickAssignText, { color: theme.primary }]}>
+                {codeA || 'A'}
+              </ThemedText>
             </Pressable>
-          ))}
-        </View>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                if (onQuickAssignB) onQuickAssignB();
+              }}
+              hitSlop={4}
+              style={[styles.quickAssignBtn, { borderColor }]}
+            >
+              <ThemedText style={[styles.quickAssignText, { color: textSecondary }]}>
+                {codeB || 'B'}
+              </ThemedText>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Subtle Remove icon for Team Zones */}
+        {!isMaster && onRemove && (
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            hitSlop={6}
+            style={styles.chipRemoveBtn}
+          >
+            <Ionicons name="close" size={12} color={textSecondary} />
+          </Pressable>
+        )}
       </Pressable>
     </GestureDetector>
   );
 }
 
-// ── Player Zone ─────────────────────────────────────────────────────────────
-function PlayerZone({
-  id,
-  title,
-  meta,
-  players,
-  draggingId,
-  dragX,
-  dragY,
-  registerRef,
-  onDragStart,
-  onDragEnd,
-  onPlayerTap,
-  actionsFor,
-  emptyLabel,
-  bubble,
-  bubbleText,
-  textSecondary,
-  zoneBg,
-  accent,
+// ── Clean Legend Pill ───────────────────────────────────────────────────────
+function LegendPill({
+  code,
+  name,
+  cardBg,
+  borderColor,
+  textPrimary,
   roleBadge,
-  roleColor,
-  isBattingTeam,
-  strikerName = '',
-  nonStrikerName = '',
-  bowlerName = '',
-  retiredPlayers = [],
-  onSwapStrike,
-  onRetireStriker,
-  onRetireNonStriker,
-  onRetireBowler,
-  children,
+  theme,
 }: {
-  id: BucketId;
-  title: string;
-  meta: string;
-  players: Player[];
-  draggingId: string | null;
-  dragX: SharedValue<number>;
-  dragY: SharedValue<number>;
-  registerRef: (id: BucketId, node: View | null) => void;
-  onDragStart: (player: Player, from: BucketId) => void;
-  onDragEnd: (player: Player, from: BucketId, x: number, y: number) => void;
-  onPlayerTap?: (player: Player, bucketId: BucketId) => void;
-  actionsFor: (player: Player, from: BucketId) => BubbleAction[];
-  emptyLabel: string;
-  bubble: string;
-  bubbleText: string;
-  textSecondary: string;
-  zoneBg?: string;
-  accent?: string;
-  roleBadge?: string;
-  roleColor?: string;
-  isBattingTeam?: boolean;
-  strikerName?: string;
-  nonStrikerName?: string;
-  bowlerName?: string;
-  retiredPlayers?: { name: string; type: 'Retired Hurt' | 'Retired Out' }[];
-  onSwapStrike?: () => void;
-  onRetireStriker?: () => void;
-  onRetireNonStriker?: () => void;
-  onRetireBowler?: () => void;
-  children?: React.ReactNode;
+  code: string;
+  name: string;
+  cardBg: string;
+  borderColor: string;
+  textPrimary: string;
+  roleBadge: string;
+  theme: any;
 }) {
-  const isTeamZone = id === 'teamA' || id === 'teamB';
-
   return (
-    <View
-      ref={(node) => registerRef(id, node)}
-      style={[styles.zone, zoneBg ? { backgroundColor: zoneBg } : null]}
-    >
-      <View style={styles.zoneHeader}>
-        {accent ? <View style={[styles.zoneDot, { backgroundColor: accent }]} /> : null}
-        <ThemedText style={[styles.zoneTitle, { color: bubbleText }]} numberOfLines={1}>
-          {title}
+    <View style={[styles.legendPill, { backgroundColor: cardBg, borderColor }]}>
+      <View style={[styles.legendCode, { backgroundColor: theme.primary + '18' }]}>
+        <ThemedText style={[styles.legendCodeText, { color: theme.primary }]}>{code}</ThemedText>
+      </View>
+      <ThemedText style={[styles.legendName, { color: textPrimary }]} numberOfLines={1}>
+        {name}
+      </ThemedText>
+      <View style={styles.legendBadge}>
+        <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
+          {roleBadge}
         </ThemedText>
-        {roleBadge && (
-          <View style={[styles.roleBadge, { backgroundColor: (roleColor || accent || '#4F46E5') + '18' }]}>
-            <ThemedText style={[styles.roleBadgeText, { color: roleColor || accent || '#4F46E5' }]}>
-              {roleBadge}
-            </ThemedText>
-          </View>
-        )}
-        <ThemedText style={[styles.zoneMeta, { color: textSecondary }]}>{meta}</ThemedText>
       </View>
-
-      {/* Crease / Active Slots Bar for Team Zones */}
-      {isTeamZone && (
-        <View style={[styles.creaseBar, { backgroundColor: bubble }]}>
-          {isBattingTeam ? (
-            <View style={{ gap: 6 }}>
-              {/* Striker & Non-Striker Slots */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                {/* Striker Slot */}
-                <View style={[styles.creaseSlot, { flex: 1, borderColor: '#10B98144', backgroundColor: '#10B9810C' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: '#10B981' }}>
-                      🏏 STRIKER (B1)
-                    </ThemedText>
-                    {strikerName ? (
-                      <Pressable onPress={onRetireStriker} hitSlop={4}>
-                        <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>
-                          Retire
-                        </ThemedText>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                  <ThemedText
-                    style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: strikerName ? bubbleText : textSecondary, marginTop: 2 }}
-                    numberOfLines={1}
-                  >
-                    {strikerName || 'Select Striker'}
-                  </ThemedText>
-                </View>
-
-                {/* Swap Strike Button */}
-                <Pressable
-                  onPress={onSwapStrike}
-                  hitSlop={6}
-                  style={[styles.creaseSwapBtn, { backgroundColor: '#10B98120' }]}
-                >
-                  <Ionicons name="swap-horizontal" size={14} color="#10B981" />
-                </Pressable>
-
-                {/* Non-Striker Slot */}
-                <View style={[styles.creaseSlot, { flex: 1, borderColor: '#3B82F644', backgroundColor: '#3B82F60C' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: '#3B82F6' }}>
-                      🏃 NON-STRIKER (B2)
-                    </ThemedText>
-                    {nonStrikerName ? (
-                      <Pressable onPress={onRetireNonStriker} hitSlop={4}>
-                        <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>
-                          Retire
-                        </ThemedText>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                  <ThemedText
-                    style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: nonStrikerName ? bubbleText : textSecondary, marginTop: 2 }}
-                    numberOfLines={1}
-                  >
-                    {nonStrikerName || 'Select Non-Striker'}
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
-          ) : (
-            /* Bowling Slot */
-            <View style={[styles.creaseSlot, { borderColor: '#8B5CF644', backgroundColor: '#8B5CF60C' }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: '#8B5CF6' }}>
-                  🎯 ACTIVE BOWLER
-                </ThemedText>
-                {bowlerName ? (
-                  <Pressable onPress={onRetireBowler} hitSlop={4}>
-                    <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>
-                      Change / Retire
-                    </ThemedText>
-                  </Pressable>
-                ) : null}
-              </View>
-              <ThemedText
-                style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: bowlerName ? bubbleText : textSecondary, marginTop: 2 }}
-                numberOfLines={1}
-              >
-                {bowlerName || 'Select Bowler'}
-              </ThemedText>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* Squad Player Bubbles */}
-      <View style={styles.bubbleWrap}>
-        {players.map((player) => {
-          const isStriker = isBattingTeam && strikerName.trim().toLowerCase() === player.name.trim().toLowerCase();
-          const isNonStriker = isBattingTeam && nonStrikerName.trim().toLowerCase() === player.name.trim().toLowerCase();
-          const isBowler = !isBattingTeam && bowlerName.trim().toLowerCase() === player.name.trim().toLowerCase();
-          const retRec = retiredPlayers.find((r) => r.name.toLowerCase() === player.name.toLowerCase());
-
-          let roleTag: string | undefined;
-          let roleTagColor: string | undefined;
-
-          if (retRec) {
-            roleTag = retRec.type === 'Retired Hurt' ? 'Injured' : 'Retired';
-            roleTagColor = '#EF4444';
-          } else if (isStriker) {
-            roleTag = '🏏 Striker';
-            roleTagColor = '#10B981';
-          } else if (isNonStriker) {
-            roleTag = '🏃 B2';
-            roleTagColor = '#3B82F6';
-          } else if (isBowler) {
-            roleTag = '🎯 Bowler';
-            roleTagColor = '#8B5CF6';
-          }
-
-          return (
-            <PlayerBubble
-              key={player.id}
-              player={player}
-              bucketId={id}
-              isDragging={draggingId === player.id}
-              bubble={bubble}
-              bubbleText={bubbleText}
-              actions={actionsFor(player, id)}
-              dragX={dragX}
-              dragY={dragY}
-              roleTag={roleTag}
-              roleTagColor={roleTagColor}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-              onTap={onPlayerTap}
-            />
-          );
-        })}
-        {players.length === 0 && (
-          <ThemedText style={[styles.emptyLabel, { color: textSecondary }]}>{emptyLabel}</ThemedText>
-        )}
-      </View>
-
-      {children}
     </View>
   );
 }
@@ -1523,13 +1361,13 @@ function PlayerActionModal({
   item,
   onClose,
   theme,
-  bubble,
-  bubbleText,
+  cardBg,
+  borderColor,
+  textPrimary,
+  textSecondary,
   isTeamABatting,
   labelA,
   labelB,
-  codeA,
-  codeB,
   strikerName,
   nonStrikerName,
   bowlerName,
@@ -1548,13 +1386,13 @@ function PlayerActionModal({
   item: { player: Player; bucketId: BucketId };
   onClose: () => void;
   theme: any;
-  bubble: string;
-  bubbleText: string;
+  cardBg: string;
+  borderColor: string;
+  textPrimary: string;
+  textSecondary: string;
   isTeamABatting: boolean;
   labelA: string;
   labelB: string;
-  codeA: string;
-  codeB: string;
   strikerName: string;
   nonStrikerName: string;
   bowlerName: string;
@@ -1588,29 +1426,26 @@ function PlayerActionModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={[styles.actionSheet, { backgroundColor: bubble }]} onPress={(e) => e.stopPropagation()}>
-          {/* Header */}
-          <View style={styles.actionSheetHeader}>
+        <Pressable style={[styles.actionSheet, { backgroundColor: cardBg, borderColor }]} onPress={(e) => e.stopPropagation()}>
+          {/* Sheet Header */}
+          <View style={[styles.actionSheetHeader, { borderBottomColor: borderColor }]}>
             <Image source={avatarSourceFor(player)} style={styles.actionSheetAvatar} contentFit="cover" />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <ThemedText style={[styles.actionSheetName, { color: bubbleText }]} numberOfLines={1}>
+              <ThemedText style={[styles.actionSheetName, { color: textPrimary }]} numberOfLines={1}>
                 {player.name}
               </ThemedText>
-              <ThemedText style={[styles.actionSheetSub, { color: theme.textSecondary }]}>
-                {player.phone || 'Player'}{' '}
-                <ThemedText style={{ color: conn.badgeColor || theme.primary, fontFamily: 'Sora_600SemiBold' }}>
-                  · {conn.degreeBadgeText}
-                </ThemedText>
+              <ThemedText style={[styles.actionSheetSub, { color: textSecondary }]}>
+                {player.phone || 'Match Player'}{' '}
+                {conn.degreeBadgeText ? `· ${conn.degreeBadgeText}` : ''}
               </ThemedText>
             </View>
-            <Pressable onPress={onClose} hitSlop={8} style={[styles.closeBtn, { backgroundColor: theme.surfaceLow }]}>
-              <Ionicons name="close" size={14} color={bubbleText} />
+            <Pressable onPress={onClose} hitSlop={8} style={[styles.closeBtn, { backgroundColor: cardBg, borderColor }]}>
+              <Ionicons name="close" size={14} color={textPrimary} />
             </Pressable>
           </View>
 
-          {/* Action List */}
+          {/* Clean Action Options */}
           <View style={styles.actionSheetList}>
-            {/* Batting Team Actions */}
             {isBattingTeam && (
               <>
                 {retRec ? (
@@ -1620,11 +1455,11 @@ function PlayerActionModal({
                         onUnretire(player);
                         onClose();
                       }}
-                      style={[styles.sheetActionItem, { backgroundColor: '#10B98114' }]}
+                      style={[styles.sheetActionItem, { backgroundColor: theme.primary + '12' }]}
                     >
-                      <Ionicons name="refresh" size={16} color="#10B981" />
-                      <ThemedText style={[styles.sheetActionText, { color: '#10B981' }]}>
-                        Resume Batting (Unretire)
+                      <Ionicons name="refresh" size={16} color={theme.primary} />
+                      <ThemedText style={[styles.sheetActionText, { color: theme.primary }]}>
+                        Resume Batting (Return to Crease)
                       </ThemedText>
                     </Pressable>
                   )
@@ -1635,11 +1470,11 @@ function PlayerActionModal({
                         onSetStriker(player);
                         onClose();
                       }}
-                      style={[styles.sheetActionItem, { backgroundColor: isStriker ? '#10B98122' : theme.surfaceLow }]}
+                      style={[styles.sheetActionItem, { backgroundColor: isStriker ? theme.primary + '18' : cardBg, borderColor }]}
                     >
-                      <Ionicons name="flash" size={16} color="#10B981" />
-                      <ThemedText style={[styles.sheetActionText, { color: bubbleText }]}>
-                        {isStriker ? 'Currently on Strike (Striker 🏏)' : 'Set as Striker (On Strike 🏏)'}
+                      <Ionicons name="flash-outline" size={15} color={theme.primary} />
+                      <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                        {isStriker ? 'Currently on Strike (Striker 🏏)' : 'Set as Striker (On Strike)'}
                       </ThemedText>
                     </Pressable>
 
@@ -1648,11 +1483,11 @@ function PlayerActionModal({
                         onSetNonStriker(player);
                         onClose();
                       }}
-                      style={[styles.sheetActionItem, { backgroundColor: isNonStriker ? '#3B82F622' : theme.surfaceLow }]}
+                      style={[styles.sheetActionItem, { backgroundColor: isNonStriker ? theme.primary + '18' : cardBg, borderColor }]}
                     >
-                      <Ionicons name="walk" size={16} color="#3B82F6" />
-                      <ThemedText style={[styles.sheetActionText, { color: bubbleText }]}>
-                        {isNonStriker ? 'Currently Non-Striker (🏃)' : 'Set as Non-Striker (Runner 🏃)'}
+                      <Ionicons name="walk-outline" size={15} color={textSecondary} />
+                      <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                        {isNonStriker ? 'Currently Non-Striker (🏃)' : 'Set as Non-Striker (Runner)'}
                       </ThemedText>
                     </Pressable>
 
@@ -1662,10 +1497,10 @@ function PlayerActionModal({
                           onSwapStrike();
                           onClose();
                         }}
-                        style={[styles.sheetActionItem, { backgroundColor: theme.surfaceLow }]}
+                        style={[styles.sheetActionItem, { backgroundColor: cardBg, borderColor }]}
                       >
-                        <Ionicons name="swap-horizontal" size={16} color="#10B981" />
-                        <ThemedText style={[styles.sheetActionText, { color: bubbleText }]}>
+                        <Ionicons name="swap-horizontal" size={15} color={theme.primary} />
+                        <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
                           Swap Strike Ends (B1 ⇄ B2)
                         </ThemedText>
                       </Pressable>
@@ -1674,9 +1509,9 @@ function PlayerActionModal({
                     {(isStriker || isNonStriker) && (
                       <Pressable
                         onPress={() => onRetireClick(player)}
-                        style={[styles.sheetActionItem, { backgroundColor: '#EF444414' }]}
+                        style={[styles.sheetActionItem, { backgroundColor: '#EF444410', borderColor: '#EF444433' }]}
                       >
-                        <Ionicons name="hand-left-outline" size={16} color="#EF4444" />
+                        <Ionicons name="hand-left-outline" size={15} color="#EF4444" />
                         <ThemedText style={[styles.sheetActionText, { color: '#EF4444' }]}>
                           Retire Batsman (Hurt / Out)
                         </ThemedText>
@@ -1687,7 +1522,6 @@ function PlayerActionModal({
               </>
             )}
 
-            {/* Bowling Team Actions */}
             {isBowlingTeam && (
               <>
                 <Pressable
@@ -1695,10 +1529,10 @@ function PlayerActionModal({
                     onSetBowler(player);
                     onClose();
                   }}
-                  style={[styles.sheetActionItem, { backgroundColor: isBowler ? '#8B5CF622' : theme.surfaceLow }]}
+                  style={[styles.sheetActionItem, { backgroundColor: isBowler ? theme.primary + '18' : cardBg, borderColor }]}
                 >
-                  <Ionicons name="baseball-outline" size={16} color="#8B5CF6" />
-                  <ThemedText style={[styles.sheetActionText, { color: bubbleText }]}>
+                  <Ionicons name="baseball-outline" size={15} color={theme.primary} />
+                  <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
                     {isBowler ? 'Active Current Bowler 🎯' : 'Set as Current Bowler 🎯'}
                   </ThemedText>
                 </Pressable>
@@ -1709,24 +1543,48 @@ function PlayerActionModal({
                       onRetireBowler(player);
                       onClose();
                     }}
-                    style={[styles.sheetActionItem, { backgroundColor: '#EF444414' }]}
+                    style={[styles.sheetActionItem, { backgroundColor: '#EF444410', borderColor: '#EF444433' }]}
                   >
-                    <Ionicons name="hand-left-outline" size={16} color="#EF4444" />
+                    <Ionicons name="hand-left-outline" size={15} color="#EF4444" />
                     <ThemedText style={[styles.sheetActionText, { color: '#EF4444' }]}>
-                      Retire / Step Down from Bowling
+                      Change / Step Down from Bowling
                     </ThemedText>
                   </Pressable>
                 )}
               </>
             )}
 
-            {/* Transfer / Swap Team */}
+            {/* Quick Move to Team A / B */}
+            {bucketId === 'master' && (
+              <>
+                <Pressable
+                  onPress={() => onMoveToTeam(player, 'master', 'teamA')}
+                  style={[styles.sheetActionItem, { backgroundColor: cardBg, borderColor }]}
+                >
+                  <Ionicons name="arrow-forward" size={15} color={theme.primary} />
+                  <ThemedText style={[styles.sheetActionText, { color: theme.primary }]}>
+                    Assign to {labelA}
+                  </ThemedText>
+                </Pressable>
+                <Pressable
+                  onPress={() => onMoveToTeam(player, 'master', 'teamB')}
+                  style={[styles.sheetActionItem, { backgroundColor: cardBg, borderColor }]}
+                >
+                  <Ionicons name="arrow-forward" size={15} color={textSecondary} />
+                  <ThemedText style={[styles.sheetActionText, { color: textSecondary }]}>
+                    Assign to {labelB}
+                  </ThemedText>
+                </Pressable>
+              </>
+            )}
+
+            {/* Transfer to Other Team */}
             {bucketId !== 'master' && (
               <Pressable
                 onPress={() => onMoveToTeam(player, bucketId, otherBucketId)}
-                style={[styles.sheetActionItem, { backgroundColor: theme.surfaceLow }]}
+                style={[styles.sheetActionItem, { backgroundColor: cardBg, borderColor }]}
               >
-                <Ionicons name="swap-horizontal" size={16} color={theme.primary} />
+                <Ionicons name="swap-horizontal" size={15} color={theme.primary} />
                 <ThemedText style={[styles.sheetActionText, { color: theme.primary }]}>
                   Transfer to {otherTeamLabel}
                 </ThemedText>
@@ -1737,9 +1595,9 @@ function PlayerActionModal({
             {bucketId !== 'master' && (
               <Pressable
                 onPress={() => onRemoveFromTeam(player, bucketId)}
-                style={[styles.sheetActionItem, { backgroundColor: theme.surfaceLow }]}
+                style={[styles.sheetActionItem, { backgroundColor: cardBg, borderColor }]}
               >
-                <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                <Ionicons name="trash-outline" size={15} color="#EF4444" />
                 <ThemedText style={[styles.sheetActionText, { color: '#EF4444' }]}>
                   Remove from Team Squad
                 </ThemedText>
@@ -1758,31 +1616,35 @@ function RetireConfirmationModal({
   player,
   onClose,
   theme,
-  bubble,
-  bubbleText,
+  cardBg,
+  borderColor,
+  textPrimary,
+  textSecondary,
   onConfirmRetire,
 }: {
   visible: boolean;
   player: Player;
   onClose: () => void;
   theme: any;
-  bubble: string;
-  bubbleText: string;
+  cardBg: string;
+  borderColor: string;
+  textPrimary: string;
+  textSecondary: string;
   onConfirmRetire: (type: 'Retired Hurt' | 'Retired Out') => void;
 }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={[styles.retireModal, { backgroundColor: bubble }]} onPress={(e) => e.stopPropagation()}>
-          <View style={{ alignItems: 'center', marginBottom: 12 }}>
-            <View style={[styles.retireIconCircle, { backgroundColor: '#EF444418' }]}>
-              <Ionicons name="hand-left" size={24} color="#EF4444" />
+        <Pressable style={[styles.retireModal, { backgroundColor: cardBg, borderColor }]} onPress={(e) => e.stopPropagation()}>
+          <View style={{ alignItems: 'center', marginBottom: 14 }}>
+            <View style={[styles.retireIconCircle, { backgroundColor: theme.primary + '14' }]}>
+              <Ionicons name="hand-left-outline" size={22} color={theme.primary} />
             </View>
-            <ThemedText style={[styles.retireTitle, { color: bubbleText }]}>
+            <ThemedText style={[styles.retireTitle, { color: textPrimary }]}>
               Retire {player.name}
             </ThemedText>
-            <ThemedText style={[styles.retireSub, { color: theme.textSecondary }]}>
-              Choose the retirement status for this batsman:
+            <ThemedText style={[styles.retireSub, { color: textSecondary }]}>
+              Select retirement status for this batsman:
             </ThemedText>
           </View>
 
@@ -1791,20 +1653,20 @@ function RetireConfirmationModal({
             onPress={() => onConfirmRetire('Retired Hurt')}
             style={({ pressed }) => [
               styles.retireOptionCard,
-              { backgroundColor: '#F59E0B10', borderColor: '#F59E0B44', opacity: pressed ? 0.7 : 1 },
+              { backgroundColor: cardBg, borderColor, opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="medkit-outline" size={18} color="#F59E0B" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Ionicons name="medkit-outline" size={18} color={theme.primary} />
               <View style={{ flex: 1 }}>
-                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_700Bold', color: '#F59E0B' }}>
+                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: textPrimary }}>
                   Retired Hurt (Injured)
                 </ThemedText>
-                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: theme.textSecondary, marginTop: 1 }}>
-                  Not out. Player can return to bat later if needed.
+                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: textSecondary, marginTop: 1 }}>
+                  Eligible to return and bat again later.
                 </ThemedText>
               </View>
-              <Ionicons name="chevron-forward" size={14} color="#F59E0B" />
+              <Ionicons name="chevron-forward" size={14} color={textSecondary} />
             </View>
           </Pressable>
 
@@ -1813,26 +1675,25 @@ function RetireConfirmationModal({
             onPress={() => onConfirmRetire('Retired Out')}
             style={({ pressed }) => [
               styles.retireOptionCard,
-              { backgroundColor: '#EF444410', borderColor: '#EF444444', opacity: pressed ? 0.7 : 1 },
+              { backgroundColor: cardBg, borderColor, opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Ionicons name="exit-outline" size={18} color="#EF4444" />
               <View style={{ flex: 1 }}>
-                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>
+                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>
                   Retired Out (Dismissed)
                 </ThemedText>
-                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: theme.textSecondary, marginTop: 1 }}>
+                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: textSecondary, marginTop: 1 }}>
                   Permanent dismissal. Cannot bat again this innings.
                 </ThemedText>
               </View>
-              <Ionicons name="chevron-forward" size={14} color="#EF4444" />
+              <Ionicons name="chevron-forward" size={14} color={textSecondary} />
             </View>
           </Pressable>
 
-          {/* Cancel */}
-          <Pressable onPress={onClose} style={[styles.retireCancelBtn, { borderColor: theme.border }]}>
-            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
+          <Pressable onPress={onClose} style={[styles.retireCancelBtn, { borderColor }]}>
+            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: textSecondary }}>
               Cancel
             </ThemedText>
           </Pressable>
@@ -1859,7 +1720,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 9999,
     borderWidth: 1,
@@ -1870,13 +1731,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadows.level1,
+    borderWidth: 1,
   },
 
   // ── Legend ─────────────────────────────────────────────────────────────
   legend: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
     paddingHorizontal: Spacing.base,
     paddingBottom: Spacing.sm,
   },
@@ -1889,7 +1750,7 @@ const styles = StyleSheet.create({
     paddingLeft: 3,
     paddingRight: 8,
     paddingVertical: 3,
-    ...Shadows.level1,
+    borderWidth: 1,
   },
   legendCode: {
     minWidth: 22,
@@ -1899,138 +1760,137 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  legendCodeText: { fontFamily: 'Sora_600SemiBold', fontSize: 8.5, color: '#ffffff' },
-  legendName: { fontFamily: 'Sora_600SemiBold', fontSize: 10, flexShrink: 1 },
-  roleBadge: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginLeft: 'auto',
-  },
-  roleBadgeText: { fontFamily: 'Sora_700Bold', fontSize: 8.5 },
+  legendCodeText: { fontFamily: 'Sora_700Bold', fontSize: 9 },
+  legendName: { fontFamily: 'Sora_600SemiBold', fontSize: 10.5, flexShrink: 1 },
+  legendBadge: { marginLeft: 'auto' },
 
   scrollContent: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.lg },
 
-  // ── Zones ──────────────────────────────────────────────────────────────
-  zone: {
-    borderRadius: 16,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
+  // ── Zone Cards ─────────────────────────────────────────────────────────
+  zoneCard: {
+    borderRadius: 14,
+    padding: Spacing.sm,
     marginBottom: Spacing.md,
+    borderWidth: 1,
   },
-  zoneHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm, gap: 5 },
-  zoneDot: { width: 7, height: 7, borderRadius: 4 },
-  zoneTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 11.5, flexShrink: 1 },
-  zoneMeta: { fontFamily: 'Sora_500Medium', fontSize: 9.5, marginLeft: 'auto' },
+  zoneHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  zoneTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 12 },
+  zoneMeta: { fontFamily: 'Sora_500Medium', fontSize: 10 },
+  roleTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  roleTagText: { fontFamily: 'Sora_600SemiBold', fontSize: 9 },
 
   // ── Crease Active Bar ──────────────────────────────────────────────────
   creaseBar: {
-    borderRadius: 12,
-    padding: 8,
+    borderRadius: 10,
+    padding: 6,
     marginBottom: Spacing.sm,
-    ...Shadows.level1,
+    borderWidth: 1,
   },
   creaseSlot: {
     borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingVertical: 5,
   },
+  creaseSlotTitle: { fontFamily: 'Sora_700Bold', fontSize: 8.5, letterSpacing: 0.2 },
+  creaseSlotName: { fontFamily: 'Sora_600SemiBold', fontSize: 11, marginTop: 2 },
   creaseSwapBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  // ── Bubbles ────────────────────────────────────────────────────────────
+  // ── Chips ──────────────────────────────────────────────────────────────
   bubbleWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  bubble: {
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 9999,
     paddingVertical: 3,
     paddingLeft: 3,
-    paddingRight: 4,
+    paddingRight: 8,
     gap: 6,
-    ...Shadows.level1,
+    borderWidth: 1,
   },
-  avatar: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#00000010' },
-  bubbleName: { fontFamily: 'Sora_500Medium', fontSize: 11, letterSpacing: -0.1 },
-  bubbleRolePill: {
-    paddingHorizontal: 4,
-    paddingVertical: 1.5,
-    borderRadius: 4,
+  avatarSmall: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#00000010' },
+  chipName: { fontFamily: 'Sora_500Medium', fontSize: 11, letterSpacing: -0.1 },
+  chipRoleSub: { fontFamily: 'Sora_600SemiBold', fontSize: 8 },
+  chipRemoveBtn: { padding: 2, marginLeft: 2 },
+  quickAssignBtn: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 6,
+    borderWidth: 1,
   },
-  bubbleRolePillText: {
-    fontFamily: 'Sora_700Bold',
-    fontSize: 7.5,
-  },
-  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  actionBtn: {
-    minWidth: 21,
-    height: 21,
-    borderRadius: 11,
-    paddingHorizontal: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionText: { fontFamily: 'Sora_600SemiBold', fontSize: 8, color: '#ffffff' },
+  quickAssignText: { fontFamily: 'Sora_700Bold', fontSize: 8 },
   emptyLabel: {
     fontFamily: 'Sora_400Regular',
     fontSize: 10.5,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
     paddingHorizontal: 2,
   },
 
-  // ── Search / Add Bar ───────────────────────────────────────────────────
-  addRow: {
+  // ── Search Bar ─────────────────────────────────────────────────────────
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 9999,
-    paddingLeft: 12,
+    paddingLeft: 10,
     paddingRight: 3,
     paddingVertical: 3,
-    marginTop: Spacing.sm,
-    ...Shadows.level1,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
   },
-  addInput: { flex: 1, minWidth: 0, height: 30, fontFamily: 'Sora_500Medium', fontSize: 11.5 },
+  searchInput: { flex: 1, minWidth: 0, height: 28, fontFamily: 'Sora_500Medium', fontSize: 11 },
   addBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  warnRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, paddingHorizontal: 4 },
-  warnText: { fontFamily: 'Sora_600SemiBold', fontSize: 10.5, flexShrink: 1 },
+  warnRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, paddingHorizontal: 4 },
+  warnText: { fontFamily: 'Sora_600SemiBold', fontSize: 10, flexShrink: 1 },
 
   // ── Suggest Results ────────────────────────────────────────────────────
-  suggestList: { marginTop: 6, gap: 5 },
+  suggestList: { marginBottom: Spacing.sm, gap: 4 },
   suggestRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    borderRadius: 12,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
   },
-  suggestName: { fontFamily: 'Sora_600SemiBold', fontSize: 11.5 },
-  suggestMeta: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
+  suggestName: { fontFamily: 'Sora_600SemiBold', fontSize: 11 },
+  suggestMeta: { fontFamily: 'Sora_400Regular', fontSize: 9.5, marginTop: 1 },
 
   notFound: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderStyle: 'dashed',
-    paddingHorizontal: 11,
-    paddingVertical: 9,
-    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: Spacing.sm,
   },
-  notFoundText: { fontFamily: 'Sora_500Medium', fontSize: 11, flex: 1 },
+  notFoundText: { fontFamily: 'Sora_500Medium', fontSize: 10.5, flex: 1 },
 
   // ── Footer ─────────────────────────────────────────────────────────────
   footer: {
@@ -2040,7 +1900,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: '#00000010',
   },
   skipBtn: { paddingVertical: 10, paddingHorizontal: 8 },
   skipText: { fontFamily: 'Sora_600SemiBold', fontSize: 12 },
@@ -2050,9 +1909,8 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadows.level2,
   },
-  confirmText: { fontFamily: 'Sora_700Bold', fontSize: 12.5, color: '#ffffff' },
+  confirmText: { fontFamily: 'Sora_700Bold', fontSize: 12, color: '#ffffff' },
 
   ghost: {
     position: 'absolute',
@@ -2063,7 +1921,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    ...Shadows.level3,
+    borderWidth: 1,
+    ...Shadows.level2,
   },
 
   // ── Action Sheet Modal ─────────────────────────────────────────────────
@@ -2076,9 +1935,10 @@ const styles = StyleSheet.create({
   },
   actionSheet: {
     width: '100%',
-    maxWidth: 360,
+    maxWidth: 340,
     borderRadius: BorderRadius.xl,
     padding: Spacing.base,
+    borderWidth: 1,
     ...Shadows.level3,
   },
   actionSheetHeader: {
@@ -2087,42 +1947,43 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#00000010',
   },
-  actionSheetAvatar: { width: 36, height: 36, borderRadius: 18 },
+  actionSheetAvatar: { width: 34, height: 34, borderRadius: 17 },
   actionSheetName: { fontFamily: 'Sora_700Bold', fontSize: 13 },
-  actionSheetSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1 },
+  actionSheetSub: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
   actionSheetList: { marginTop: Spacing.sm, gap: 6 },
   sheetActionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 9,
     borderRadius: 10,
+    borderWidth: 1,
   },
   sheetActionText: { fontFamily: 'Sora_600SemiBold', fontSize: 11.5 },
 
   // ── Retire Modal ───────────────────────────────────────────────────────
   retireModal: {
     width: '100%',
-    maxWidth: 340,
+    maxWidth: 320,
     borderRadius: BorderRadius.xl,
     padding: Spacing.base,
+    borderWidth: 1,
     ...Shadows.level3,
   },
   retireIconCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
-  retireTitle: { fontFamily: 'Sora_700Bold', fontSize: 14.5, textAlign: 'center' },
-  retireSub: { fontFamily: 'Sora_400Regular', fontSize: 11, textAlign: 'center', marginTop: 3 },
+  retireTitle: { fontFamily: 'Sora_700Bold', fontSize: 14, textAlign: 'center' },
+  retireSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, textAlign: 'center', marginTop: 2 },
   retireOptionCard: {
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     padding: 10,
     marginBottom: 8,
@@ -2130,7 +1991,7 @@ const styles = StyleSheet.create({
   retireCancelBtn: {
     borderWidth: 1,
     borderRadius: 9999,
-    paddingVertical: 9,
+    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
