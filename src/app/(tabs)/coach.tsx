@@ -232,6 +232,15 @@ export default function CoachTab() {
       ageGroup: cls.ageGroup || 'All Ages',
       maxStudents: cls.maxStudents,
       isActive: isClassActive(cls),
+      // Carried through so the card can show real schedule detail instead of
+      // just a name and a price.
+      startDate: cls.startDate,
+      endDate: cls.endDate,
+      selectedDays: cls.selectedDays,
+      sessionTime: cls.sessionTime,
+      skillLevel: cls.skillLevel,
+      venue: cls.venue,
+      classDescription: cls.description,
       rating: 5.0,
       reviews: 0,
       rate: cls.feeAmount ? `₹${cls.feeAmount}/${cls.feeType === 'Per Session' ? 'sess' : 'mo'}` : 'Free',
@@ -1026,6 +1035,16 @@ export default function CoachTab() {
                     const capacity = parseInt(String(coach.maxStudents || ''), 10);
                     const seatsLeft = isNaN(capacity) ? null : Math.max(0, capacity - booked);
 
+                    // Arrays here can arrive as a list or a single value depending
+                    // on which form version wrote the record, so normalise both.
+                    const asList = (v: any) =>
+                      Array.isArray(v) ? v.filter(Boolean) : v ? [v] : [];
+                    const days = asList(coach.selectedDays);
+                    const sessions = asList(coach.sessionTime);
+                    const dateRange = [coach.startDate, coach.endDate]
+                      .filter(Boolean)
+                      .join(' – ');
+
                     return (
                       <WashCard
                         key={coach.id}
@@ -1039,9 +1058,18 @@ export default function CoachTab() {
                           { label: coach.classType, tone: 'warn' },
                           ...(coach.isActive ? [] : [{ label: 'Inactive', tone: 'danger' as const }]),
                         ]}
-                        description={[coach.ageGroup, coach.location, coach.rate]
-                          .filter(Boolean)
-                          .join(' · ')}
+                        description={coach.classDescription}
+                        meta={[
+                          { icon: 'calendar-outline', text: dateRange },
+                          { icon: 'repeat-outline', text: days.join(', ') },
+                          { icon: 'time-outline', text: sessions.join(' · ') },
+                          { icon: 'location-outline', text: coach.venue || coach.location },
+                          {
+                            icon: 'trending-up-outline',
+                            text: [coach.skillLevel, coach.ageGroup].filter(Boolean).join(' · '),
+                          },
+                          { icon: 'pricetag-outline', text: coach.rate },
+                        ]}
                         statLeft={`${booked} ${booked === 1 ? 'student' : 'students'} booked`}
                         statRight={
                           seatsLeft === null

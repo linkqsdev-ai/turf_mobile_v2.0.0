@@ -3249,8 +3249,8 @@ export default function CricketScoring({
       maidens: isMaiden ? (prev.maidens || 0) + 1 : (prev.maidens || 0),
     }));
 
-    // 6. Always show Next Bowler modal on over completion
-    setShowOverCompleteModal(true);
+    // 6. Always show unified squad modal on over completion
+    setShowPlayingXIModal(true);
   };
 
   const incrementBallCount = () => {
@@ -5806,130 +5806,6 @@ export default function CricketScoring({
           }
         }}
       />
-
-      {/* Over Completed / Change Bowler Modal */}
-      <Modal
-        visible={showOverCompleteModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowOverCompleteModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setShowOverCompleteModal(false)} />
-          <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-            <View style={styles.modalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#10B98115', justifyContent: 'center', alignItems: 'center' }}>
-                  <Ionicons name="checkmark-circle" size={22} color="#10B981" />
-                </View>
-                <View>
-                  <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                    Over Completed!
-                  </ThemedText>
-                  <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 1 }}>
-                    Batsmen have automatically swapped ends.
-                  </ThemedText>
-                </View>
-              </View>
-              <Pressable onPress={() => setShowOverCompleteModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={20} color={theme.text} />
-              </Pressable>
-            </View>
-
-            <View style={{ padding: Spacing.md, gap: Spacing.md }}>
-              <View>
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 8, fontFamily: 'Sora_500Medium' }}>
-                  SELECT NEXT BOWLER
-                </ThemedText>
-
-                {/* List of other bowlers on the bench */}
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
-                >
-                  {availableBenchBowlers.map((b, idx) => {
-                    const bName = typeof b === 'string' ? b : (b && b.name ? b.name : '');
-                    if (!bName) return null;
-                    const isQuotaFull = Boolean(b && typeof b !== 'string' && b.isQuotaFull);
-                    const bOvers = typeof b === 'string' ? 0 : (b.overs || 0);
-                    return (
-                      <Pressable
-                        key={`${bName}_${idx}`}
-                        disabled={isQuotaFull}
-                        onPress={() => {
-                          if (isQuotaFull) return;
-                          executeReplaceBowler(bName);
-                          setShowOverCompleteModal(false);
-                        }}
-                        style={({ pressed }) => [
-                          {
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 6,
-                            backgroundColor: isQuotaFull ? theme.surfaceLow + '66' : theme.surfaceLow,
-                            paddingHorizontal: 12,
-                            paddingVertical: 8,
-                            borderRadius: 20,
-                            borderWidth: 1,
-                            borderColor: isQuotaFull ? theme.outlineVariant + '22' : theme.outlineVariant + '33',
-                            opacity: isQuotaFull ? 0.45 : 1,
-                          },
-                          pressed && { opacity: 0.7 }
-                        ]}
-                      >
-                        <Ionicons name="shirt-outline" size={12} color={isQuotaFull ? theme.textSecondary : theme.primary} />
-                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: isQuotaFull ? theme.textSecondary : theme.text }}>
-                          {bName} {bOvers > 0 ? `(${bOvers} Ov)` : ''}
-                        </ThemedText>
-                        {isQuotaFull && (
-                          <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
-                            <ThemedText style={{ fontSize: 8, color: '#b45309', fontFamily: 'Sora_500Medium' }}>Quota Full</ThemedText>
-                          </View>
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                  {availableBenchBowlers.length === 0 && (
-                    <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontStyle: 'italic', paddingVertical: 8 }}>
-                      No bench bowlers available.
-                    </ThemedText>
-                  )}
-                </ScrollView>
-              </View>
-
-              <View>
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 6, fontFamily: 'Sora_500Medium' }}>
-                  OR ADD NEW CUSTOM BOWLER
-                </ThemedText>
-
-                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                  <TextInput
-                    style={[styles.modalInput, { flex: 1, color: theme.text, borderColor: theme.outlineVariant, marginBottom: 0 }]}
-                    value={customNewName}
-                    onChangeText={setCustomNewName}
-                    placeholder="Enter new bowler's name..."
-                    placeholderTextColor="#94a3b8"
-                  />
-                  <Pressable
-                    onPress={() => {
-                      if (!customNewName.trim()) {
-                        Alert.alert('Error', 'Please enter a bowler name.');
-                        return;
-                      }
-                      executeReplaceBowler(customNewName);
-                      setShowOverCompleteModal(false);
-                    }}
-                    style={[styles.addBtn, { backgroundColor: theme.primary, height: 40 }]}
-                  >
-                    <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Set Bowler</ThemedText>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Wicket Detail Modal — one tap for a normal dismissal, or record a run
           out with the runs completed and which batsman was out. */}

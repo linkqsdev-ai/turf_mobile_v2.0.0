@@ -94,6 +94,7 @@ export function WashCard({
   title,
   chips = [],
   description,
+  meta = [],
   statLeft,
   statRight,
   primary,
@@ -103,6 +104,9 @@ export function WashCard({
 }: WashCardProps) {
   const theme = useTheme();
   const wash = WASHES[Math.abs(washIndex) % WASHES.length];
+  // Callers pass rows unconditionally and let empty fields fall out here, so a
+  // class with no end date simply shows one fewer row rather than a blank one.
+  const metaRows = meta.filter((m) => !!m.text && String(m.text).trim().length > 0);
 
   return (
     <MotionView preset="fade-up" delay={delay} style={styles.outer}>
@@ -147,8 +151,29 @@ export function WashCard({
           </ThemedText>
         )}
 
+        {metaRows.length > 0 && (
+          <View style={styles.metaBlock}>
+            {metaRows.map((m, i) => (
+              <View key={`${m.icon}-${i}`} style={styles.metaRow}>
+                <Ionicons name={m.icon} size={14} color={theme.textSecondary} style={styles.metaIcon} />
+                <ThemedText
+                  style={[styles.metaText, { color: theme.textSecondary }]}
+                  numberOfLines={2}
+                >
+                  {m.text}
+                </ThemedText>
+              </View>
+            ))}
+          </View>
+        )}
+
         {(statLeft || statRight) && (
-          <View style={styles.statRow}>
+          <View
+            style={[
+              styles.statRow,
+              metaRows.length > 0 && { borderTopWidth: 1, borderTopColor: theme.outlineVariant + '55' },
+            ]}
+          >
             {!!statLeft && (
               <ThemedText style={[styles.statStrong, { color: theme.primary }]} numberOfLines={1}>
                 {statLeft}
@@ -248,7 +273,11 @@ const styles = StyleSheet.create({
     marginLeft: -44,
   },
   avatar: { width: '100%', height: '100%' },
-  headText: { flex: 1, marginLeft: -32 },
+  // No negative margin here. The avatar's `marginLeft: -44` means it consumes
+  // only (78 - 44) = 34px of flex width but still *paints* out to x=34, so the
+  // 12px row gap puts this column at x=46 — just clear of it. Pulling the
+  // column back any further slides the title underneath the avatar.
+  headText: { flex: 1, minWidth: 0 },
 
   // ── Type scale, matched to the Player Home Dashboard ──────────────────────
   // Medium at 15, not bold at 19: a card title is a nested heading.
@@ -257,12 +286,20 @@ const styles = StyleSheet.create({
   chip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full },
   chipText: { fontSize: 10.5, fontFamily: 'Sora_500Medium' },
   description: { fontSize: 12.5, lineHeight: 18, fontFamily: 'Sora_400Regular', marginTop: 14 },
+
+  metaBlock: { marginTop: 12, gap: 7 },
+  metaRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  // Nudged down so the icon sits on the text's optical centre, not its cap line.
+  metaIcon: { marginTop: 1.5 },
+  metaText: { flex: 1, fontSize: 12, lineHeight: 17, fontFamily: 'Sora_400Regular' },
+
   statRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    marginTop: 10,
+    marginTop: 12,
+    paddingTop: 11,
   },
   statStrong: { fontSize: 12, fontFamily: 'Sora_500Medium', flexShrink: 1 },
   statMuted: { fontSize: 11, fontFamily: 'Sora_400Regular' },

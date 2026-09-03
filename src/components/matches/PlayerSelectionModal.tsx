@@ -41,10 +41,10 @@ import { useMatchStore, useWalletStore } from '@/store/app-store';
 import { AddPlayerModal } from '@/components/scoring/squad-modals';
 import { registerFoFPlayer, searchFoFDirectory, getFoFConnection, loadFoFDatabase } from '@/services/fof-network';
 
-/** Wallet credits paid the first time a player is added with a mobile number. */
 const CREDIT_REWARD = 5;
 
 type BucketId = 'master' | 'teamA' | 'teamB';
+type DropTargetId = BucketId | 'striker' | 'nonStriker' | 'bowler';
 type Buckets = Record<BucketId, Player[]>;
 
 interface Rect {
@@ -54,8 +54,8 @@ interface Rect {
   height: number;
 }
 
-const GHOST_WIDTH = 160;
-const GHOST_HEIGHT = 40;
+const GHOST_WIDTH = 150;
+const GHOST_HEIGHT = 38;
 
 export interface BatsmanLiveStats {
   runs: number;
@@ -213,6 +213,8 @@ export function PlayerSelectionModal({
 
   const [currentBattingTeam, setCurrentBattingTeam] = useState<string>(propBattingTeam || labelA);
   const isTeamABatting = currentBattingTeam.trim().toLowerCase() === labelA.trim().toLowerCase();
+  const batTeamBucket: BucketId = isTeamABatting ? 'teamA' : 'teamB';
+  const bowlTeamBucket: BucketId = isTeamABatting ? 'teamB' : 'teamA';
 
   const [strikerName, setStrikerName] = useState<string>(activeStrikerName);
   const [nonStrikerName, setNonStrikerName] = useState<string>(activeNonStrikerName);
@@ -227,6 +229,7 @@ export function PlayerSelectionModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
+  const [activeDropZone, setActiveDropZone] = useState<DropTargetId | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [creditToast, setCreditToast] = useState<string | null>(null);
   const creditedPhones = useRef<Set<string>>(new Set());
@@ -268,22 +271,39 @@ export function PlayerSelectionModal({
   const dragY = useSharedValue(0);
   const ghostScale = useSharedValue(0.94);
 
-  const bucketRefs = useRef<Record<BucketId, View | null>>({ master: null, teamA: null, teamB: null });
-  const bucketRects = useRef<Partial<Record<BucketId, Rect>>>({});
+  const dropZoneRefs = useRef<Record<DropTargetId, View | null>>({
+    master: null,
+    teamA: null,
+    teamB: null,
+    striker: null,
+    nonStriker: null,
+    bowler: null,
+  });
+  const dropZoneRects = useRef<Partial<Record<DropTargetId, Rect>>>({});
 
-  const measureBuckets = useCallback(() => {
-    (Object.keys(bucketRefs.current) as BucketId[]).forEach((id) => {
-      const node = bucketRefs.current[id];
+  const measureDropZones = useCallback(() => {
+    (Object.keys(dropZoneRefs.current) as DropTargetId[]).forEach((id) => {
+      const node = dropZoneRefs.current[id];
       node?.measureInWindow((x, y, width, height) => {
-        bucketRects.current[id] = { x, y, width, height };
+        dropZoneRects.current[id] = { x, y, width, height };
       });
     });
   }, []);
 
-  const resolveDropTarget = useCallback((x: number, y: number): BucketId | null => {
-    const entries = Object.entries(bucketRects.current) as [BucketId, Rect][];
-    for (const [id, rect] of entries) {
-      if (x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height) {
+  const resolveDropTarget = useCallback((x: number, y: number): DropTargetId | null => {
+    // Specific slots first
+    const specificSlots: DropTargetId[] = ['striker', 'nonStriker', 'bowler'];
+    for (const id of specificSlots) {
+      const rect = dropZoneRects.current[id];
+      if (rect && x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height) {
+        return id;
+      }
+    }
+    // General team / pool buckets
+    const generalBuckets: DropTargetId[] = ['teamA', 'teamB', 'master'];
+    for (const id of generalBuckets) {
+      const rect = dropZoneRects.current[id];
+      if (rect && x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height) {
         return id;
       }
     }
@@ -299,24 +319,60 @@ export function PlayerSelectionModal({
       [to]: strictDedupe([...(prev[to] || []).filter((p) => p.name.trim().toLowerCase() !== playerKey), player]),
     }));
 
-    if (player.name === strikerName) setStrikerName('');
-    if (player.name === nonStrikerName) setNonStrikerName('');
-    if (player.name === bowlerName) setBowlerName('');
+    if (player.name.toLowerCase() === strikerName.toLowerCase()) setStrikerName('');
+    if (player.name.toLowerCase() === nonStrikerName.toLowerCase()) setNonStrikerName('');
+    if (player.name.toLowerCase() === bowlerName.toLowerCase()) setBowlerName('');
   }, [strikerName, nonStrikerName, bowlerName]);
 
   const handleDragStart = useCallback((player: Player, _from: BucketId) => {
-    measureBuckets();
+    measureDropZones();
     setDraggingPlayer(player);
     setScrollEnabled(false);
     ghostScale.value = withTiming(1, { duration: 120 });
-  }, [measureBuckets, ghostScale]);
+  }, [measureDropZones, ghostScale]);
+
+  const handleDragUpdate = useCallback((x: number, y: number) => {
+    const target = resolveDropTarget(x, y);
+    setActiveDropZone(target);
+  }, [resolveDropTarget]);
 
   const handleDragEnd = useCallback((player: Player, from: BucketId, x: number, y: number) => {
     const target = resolveDropTarget(x, y);
-    if (target) moveToBucket(player, from, target);
+    setActiveDropZone(null);
     setDraggingPlayer(null);
     setScrollEnabled(true);
-  }, [resolveDropTarget, moveToBucket]);
+
+    if (!target) return;
+
+    if (target === 'striker') {
+      // Ensure player is in batting team bucket
+      if (from !== batTeamBucket) {
+        moveToBucket(player, from, batTeamBucket);
+      }
+      setStrikerName(player.name);
+      if (nonStrikerName.toLowerCase() === player.name.toLowerCase()) setNonStrikerName('');
+      setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
+      if (onSetStriker) onSetStriker(player);
+    } else if (target === 'nonStriker') {
+      // Ensure player is in batting team bucket
+      if (from !== batTeamBucket) {
+        moveToBucket(player, from, batTeamBucket);
+      }
+      setNonStrikerName(player.name);
+      if (strikerName.toLowerCase() === player.name.toLowerCase()) setStrikerName('');
+      setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
+      if (onSetNonStriker) onSetNonStriker(player);
+    } else if (target === 'bowler') {
+      // Ensure player is in bowling team bucket
+      if (from !== bowlTeamBucket) {
+        moveToBucket(player, from, bowlTeamBucket);
+      }
+      setBowlerName(player.name);
+      if (onSetBowler) onSetBowler(player);
+    } else {
+      moveToBucket(player, from, target as BucketId);
+    }
+  }, [resolveDropTarget, batTeamBucket, bowlTeamBucket, nonStrikerName, strikerName, onSetStriker, onSetNonStriker, onSetBowler, moveToBucket]);
 
   const { teams: savedTeams } = useMatchStore();
   const { addWalletFunds } = useWalletStore();
@@ -368,7 +424,6 @@ export function PlayerSelectionModal({
         sport: 'Cricket 🏏',
       });
 
-      // Auto-close modal immediately
       setAddModalOpen(false);
       setSearchQuery('');
       setDuplicateWarning(null);
@@ -491,7 +546,6 @@ export function PlayerSelectionModal({
     if (nonStrikerName.toLowerCase() === player.name.toLowerCase()) {
       setNonStrikerName('');
     }
-    // Remove retired status so player can play again
     setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
     if (onSetStriker) onSetStriker(player);
   };
@@ -501,7 +555,6 @@ export function PlayerSelectionModal({
     if (strikerName.toLowerCase() === player.name.toLowerCase()) {
       setStrikerName('');
     }
-    // Remove retired status so player can play again
     setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
     if (onSetNonStriker) onSetNonStriker(player);
   };
@@ -581,11 +634,11 @@ export function PlayerSelectionModal({
             <View style={{ flex: 1 }}>
               <ThemedText style={[styles.title, { color: textPrimary }]}>Manage Squads</ThemedText>
               <ThemedText style={[styles.subtitle, { color: textSecondary }]} numberOfLines={1}>
-                Tap player for options · hold to drag
+                Drag & drop directly into slots or tap for options
               </ThemedText>
             </View>
 
-            {/* Subtle Swap Sides Toggle */}
+            {/* Swap Sides Toggle */}
             <Pressable
               onPress={handleSwapBatBowl}
               hitSlop={6}
@@ -607,7 +660,7 @@ export function PlayerSelectionModal({
             </Pressable>
           </View>
 
-          {/* Clean Legend Pill Overview with Team Mascot Logos */}
+          {/* Clean Legend Pill Overview */}
           <View style={styles.legend}>
             <LegendPill
               code={codeA}
@@ -638,19 +691,26 @@ export function PlayerSelectionModal({
           >
             {/* ── Available Pool Section ── */}
             <View
-              ref={(node) => { bucketRefs.current.master = node; }}
-              style={[styles.zoneCard, { backgroundColor: cardBg, borderColor }]}
+              ref={(node) => { dropZoneRefs.current.master = node; }}
+              style={[
+                styles.zoneCard,
+                {
+                  backgroundColor: cardBg,
+                  borderColor: activeDropZone === 'master' ? theme.primary : borderColor,
+                  borderWidth: activeDropZone === 'master' ? 1.5 : 1,
+                },
+              ]}
             >
               <View style={styles.zoneHeader}>
                 <ThemedText style={[styles.zoneTitle, { color: textPrimary }]}>
-                  Available Players
+                  Available Pool
                 </ThemedText>
                 <ThemedText style={[styles.zoneMeta, { color: textSecondary }]}>
                   {(buckets.master || []).length} unassigned
                 </ThemedText>
               </View>
 
-              {/* Clean Minimal Search Input */}
+              {/* Clean Search Input */}
               <View style={[styles.searchBar, { backgroundColor: zoneBg, borderColor }]}>
                 <Ionicons
                   name={queryLooksLikePhone ? 'call-outline' : 'search-outline'}
@@ -790,7 +850,7 @@ export function PlayerSelectionModal({
                   </Pressable>
                 )}
 
-              {/* Clean Chips in Pool */}
+              {/* Pool Chips */}
               <View style={styles.bubbleWrap}>
                 {displayedMaster.map((player) => (
                   <CleanPlayerChip
@@ -810,6 +870,7 @@ export function PlayerSelectionModal({
                     dragX={dragX}
                     dragY={dragY}
                     onDragStart={handleDragStart}
+                    onDragUpdate={handleDragUpdate}
                     onDragEnd={handleDragEnd}
                     isDragging={draggingPlayer?.id === player.id}
                   />
@@ -824,7 +885,10 @@ export function PlayerSelectionModal({
 
             {/* ── Team A Zone ── */}
             <TeamZoneCard
-              refNode={(node) => { bucketRefs.current.teamA = node; }}
+              refNode={(node) => { dropZoneRefs.current.teamA = node; }}
+              dropZoneRefs={dropZoneRefs}
+              activeDropZone={activeDropZone}
+              teamBucket="teamA"
               teamName={labelA}
               teamCode={codeA}
               teamMascot={teamAMascot}
@@ -852,13 +916,17 @@ export function PlayerSelectionModal({
               dragX={dragX}
               dragY={dragY}
               onDragStart={handleDragStart}
+              onDragUpdate={handleDragUpdate}
               onDragEnd={handleDragEnd}
               draggingId={draggingPlayer?.id ?? null}
             />
 
             {/* ── Team B Zone ── */}
             <TeamZoneCard
-              refNode={(node) => { bucketRefs.current.teamB = node; }}
+              refNode={(node) => { dropZoneRefs.current.teamB = node; }}
+              dropZoneRefs={dropZoneRefs}
+              activeDropZone={activeDropZone}
+              teamBucket="teamB"
               teamName={labelB}
               teamCode={codeB}
               teamMascot={teamBMascot}
@@ -886,6 +954,7 @@ export function PlayerSelectionModal({
               dragX={dragX}
               dragY={dragY}
               onDragStart={handleDragStart}
+              onDragUpdate={handleDragUpdate}
               onDragEnd={handleDragEnd}
               draggingId={draggingPlayer?.id ?? null}
             />
@@ -903,7 +972,7 @@ export function PlayerSelectionModal({
               style={[styles.confirmBtn, { backgroundColor: theme.primary }]}
             >
               <ThemedText style={styles.confirmText}>
-                {totalAssigned > 0 ? `Apply Squad Lineup (${totalAssigned})` : 'Continue'}
+                {totalAssigned > 0 ? `Apply Lineup (${totalAssigned})` : 'Continue'}
               </ThemedText>
             </Pressable>
           </View>
@@ -919,7 +988,7 @@ export function PlayerSelectionModal({
             onAdd={commitPlayer}
           />
 
-          {/* Unified Action Sheet */}
+          {/* Clean Unified Action Sheet (Cohesive Monochrome / Theme Palette) */}
           {selectedActionPlayer && (
             <PlayerActionModal
               visible={!!selectedActionPlayer}
@@ -927,9 +996,11 @@ export function PlayerSelectionModal({
               onClose={() => setSelectedActionPlayer(null)}
               theme={theme}
               cardBg={cardBg}
+              zoneBg={zoneBg}
               borderColor={borderColor}
               textPrimary={textPrimary}
               textSecondary={textSecondary}
+              textMuted={textMuted}
               isTeamABatting={isTeamABatting}
               labelA={labelA}
               labelB={labelB}
@@ -968,6 +1039,7 @@ export function PlayerSelectionModal({
               onClose={() => setRetireConfirmPlayer(null)}
               theme={theme}
               cardBg={cardBg}
+              zoneBg={zoneBg}
               borderColor={borderColor}
               textPrimary={textPrimary}
               textSecondary={textSecondary}
@@ -990,13 +1062,26 @@ export function PlayerSelectionModal({
   );
 }
 
+// ── Format Helper for Live Stats ────────────────────────────────────────────
+function formatBatStats(stat?: BatsmanLiveStats): string | null {
+  if (!stat || (stat.runs === 0 && stat.balls === 0)) return null;
+  return `${stat.runs} (${stat.balls}b) · 4s:${stat.fours} 6s:${stat.sixes} · SR ${stat.sr}`;
+}
+
+function formatBowlStats(stat?: BowlerLiveStats): string | null {
+  if (!stat || stat.overs === '0.0') return null;
+  return `${stat.overs} ov · ${stat.wickets}/${stat.runs} · Econ ${stat.econ}`;
+}
+
 // ── Team Zone Card ──────────────────────────────────────────────────────────
 function TeamZoneCard({
   refNode,
+  dropZoneRefs,
+  activeDropZone,
+  teamBucket,
   teamName,
   teamCode,
   teamMascot,
-  otherTeamCode,
   players,
   isBatting,
   strikerName,
@@ -1015,15 +1100,18 @@ function TeamZoneCard({
   onSwapStrike,
   onPlayerTap,
   onRemovePlayer,
-  onTransferPlayer,
   onRetirePlayer,
   dragX,
   dragY,
   onDragStart,
+  onDragUpdate,
   onDragEnd,
   draggingId,
 }: {
   refNode: (node: View | null) => void;
+  dropZoneRefs: React.MutableRefObject<Record<DropTargetId, View | null>>;
+  activeDropZone: DropTargetId | null;
+  teamBucket: BucketId;
   teamName: string;
   teamCode: string;
   teamMascot?: string;
@@ -1051,6 +1139,7 @@ function TeamZoneCard({
   dragX: SharedValue<number>;
   dragY: SharedValue<number>;
   onDragStart: (player: Player, from: BucketId) => void;
+  onDragUpdate: (x: number, y: number) => void;
   onDragEnd: (player: Player, from: BucketId, x: number, y: number) => void;
   draggingId: string | null;
 }) {
@@ -1064,12 +1153,26 @@ function TeamZoneCard({
   const nonStrikerStats = nonStrikerKey ? batsmenStats[nonStrikerKey] : undefined;
   const activeBowlerStats = bowlerKey ? bowlerStats[bowlerKey] : undefined;
 
+  const isZoneHovered = activeDropZone === teamBucket;
+  const isStrikerHovered = activeDropZone === 'striker';
+  const isNonStrikerHovered = activeDropZone === 'nonStriker';
+  const isBowlerHovered = activeDropZone === 'bowler';
+
   return (
-    <View ref={refNode} style={[styles.zoneCard, { backgroundColor: cardBg, borderColor }]}>
-      {/* Zone Header with Team Logo */}
+    <View
+      ref={refNode}
+      style={[
+        styles.zoneCard,
+        {
+          backgroundColor: cardBg,
+          borderColor: isZoneHovered ? theme.primary : borderColor,
+          borderWidth: isZoneHovered ? 1.5 : 1,
+        },
+      ]}
+    >
+      {/* Zone Header with Logo */}
       <View style={styles.zoneHeader}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1 }}>
-          {/* Mascot or Team Monogram Logo */}
           <View style={[styles.teamZoneLogoBox, { backgroundColor: zoneBg, borderColor }]}>
             {teamMascot ? (
               <Image source={getMascotImage(teamMascot)} style={styles.teamZoneLogoImg} contentFit="contain" />
@@ -1083,7 +1186,7 @@ function TeamZoneCard({
             {teamName}
           </ThemedText>
           <View style={[styles.roleTag, { backgroundColor: zoneBg, borderColor }]}>
-            <ThemedText style={[styles.roleTagText, { color: theme.primary }]}>
+            <ThemedText style={[styles.roleTagText, { color: textPrimary }]}>
               {isBatting ? '🏏 Batting' : '🎯 Bowling'}
             </ThemedText>
           </View>
@@ -1093,51 +1196,65 @@ function TeamZoneCard({
         </ThemedText>
       </View>
 
-      {/* Crease Active Slots (With Live Stats: R, B, 4s, 6s, SR / O, M, R, W, Econ) */}
+      {/* Crease Active Slots (Direct Drag & Drop Targets) */}
       <View style={[styles.creaseBar, { backgroundColor: zoneBg, borderColor }]}>
         {isBatting ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {/* Striker Slot */}
-            <Pressable
-              onPress={() => {
-                const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === strikerKey);
-                if (p) onPlayerTap(p);
-              }}
-              style={[styles.creaseSlot, { flex: 1, backgroundColor: cardBg, borderColor }]}
+            {/* Striker Slot Drop Target */}
+            <View
+              ref={(node) => { dropZoneRefs.current.striker = node; }}
+              style={{ flex: 1 }}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <ThemedText style={[styles.creaseSlotTitle, { color: theme.primary }]}>
-                  STRIKER (B1)
-                </ThemedText>
-                {strikerName ? (
-                  <Pressable
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === strikerKey);
-                      if (p) onRetirePlayer(p);
-                    }}
-                    hitSlop={4}
-                  >
-                    <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>
-                      Retire
-                    </ThemedText>
-                  </Pressable>
-                ) : null}
-              </View>
-              <ThemedText
-                style={[styles.creaseSlotName, { color: strikerName ? textPrimary : textMuted }]}
-                numberOfLines={1}
+              <Pressable
+                onPress={() => {
+                  const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === strikerKey);
+                  if (p) onPlayerTap(p);
+                }}
+                style={[
+                  styles.creaseSlot,
+                  {
+                    backgroundColor: cardBg,
+                    borderColor: isStrikerHovered ? theme.primary : borderColor,
+                    borderWidth: isStrikerHovered ? 1.5 : 1,
+                  },
+                ]}
               >
-                {strikerName || 'Select Striker'}
-              </ThemedText>
-              {strikerStats && (
-                <ThemedText style={[styles.creaseStatsText, { color: theme.primary }]} numberOfLines={1}>
-                  R: {strikerStats.runs} · B: {strikerStats.balls} · 4s: {strikerStats.fours} · 6s: {strikerStats.sixes} · SR: {strikerStats.sr}
+                <View style={styles.creaseSlotTopRow}>
+                  <ThemedText style={[styles.creaseSlotTitle, { color: theme.primary }]}>
+                    STRIKER (B1)
+                  </ThemedText>
+                  {strikerName ? (
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === strikerKey);
+                        if (p) onRetirePlayer(p);
+                      }}
+                      hitSlop={4}
+                    >
+                      <ThemedText style={styles.retireBtnText}>Retire</ThemedText>
+                    </Pressable>
+                  ) : null}
+                </View>
+                <ThemedText
+                  style={[styles.creaseSlotName, { color: strikerName ? textPrimary : textMuted }]}
+                  numberOfLines={1}
+                >
+                  {strikerName || 'Drop or Select Striker'}
                 </ThemedText>
-              )}
-            </Pressable>
+                {formatBatStats(strikerStats) ? (
+                  <ThemedText style={[styles.creaseStatsText, { color: textSecondary }]} numberOfLines={1}>
+                    {formatBatStats(strikerStats)}
+                  </ThemedText>
+                ) : (
+                  <ThemedText style={[styles.creaseStatsMuted, { color: textMuted }]} numberOfLines={1}>
+                    {strikerName ? 'On Strike' : 'Drop player here'}
+                  </ThemedText>
+                )}
+              </Pressable>
+            </View>
 
-            {/* Swap Strike */}
+            {/* Swap Strike Button */}
             <Pressable
               onPress={onSwapStrike}
               hitSlop={6}
@@ -1146,90 +1263,117 @@ function TeamZoneCard({
               <Ionicons name="swap-horizontal" size={14} color={theme.primary} />
             </Pressable>
 
-            {/* Non-Striker Slot */}
+            {/* Non-Striker Slot Drop Target */}
+            <View
+              ref={(node) => { dropZoneRefs.current.nonStriker = node; }}
+              style={{ flex: 1 }}
+            >
+              <Pressable
+                onPress={() => {
+                  const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === nonStrikerKey);
+                  if (p) onPlayerTap(p);
+                }}
+                style={[
+                  styles.creaseSlot,
+                  {
+                    backgroundColor: cardBg,
+                    borderColor: isNonStrikerHovered ? theme.primary : borderColor,
+                    borderWidth: isNonStrikerHovered ? 1.5 : 1,
+                  },
+                ]}
+              >
+                <View style={styles.creaseSlotTopRow}>
+                  <ThemedText style={[styles.creaseSlotTitle, { color: textSecondary }]}>
+                    NON-STRIKER (B2)
+                  </ThemedText>
+                  {nonStrikerName ? (
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === nonStrikerKey);
+                        if (p) onRetirePlayer(p);
+                      }}
+                      hitSlop={4}
+                    >
+                      <ThemedText style={styles.retireBtnText}>Retire</ThemedText>
+                    </Pressable>
+                  ) : null}
+                </View>
+                <ThemedText
+                  style={[styles.creaseSlotName, { color: nonStrikerName ? textPrimary : textMuted }]}
+                  numberOfLines={1}
+                >
+                  {nonStrikerName || 'Drop or Select Non-Striker'}
+                </ThemedText>
+                {formatBatStats(nonStrikerStats) ? (
+                  <ThemedText style={[styles.creaseStatsText, { color: textSecondary }]} numberOfLines={1}>
+                    {formatBatStats(nonStrikerStats)}
+                  </ThemedText>
+                ) : (
+                  <ThemedText style={[styles.creaseStatsMuted, { color: textMuted }]} numberOfLines={1}>
+                    {nonStrikerName ? 'Runner' : 'Drop player here'}
+                  </ThemedText>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          /* Active Bowler Drop Target */
+          <View ref={(node) => { dropZoneRefs.current.bowler = node; }}>
             <Pressable
               onPress={() => {
-                const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === nonStrikerKey);
+                const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === bowlerKey);
                 if (p) onPlayerTap(p);
               }}
-              style={[styles.creaseSlot, { flex: 1, backgroundColor: cardBg, borderColor }]}
+              style={[
+                styles.creaseSlot,
+                {
+                  backgroundColor: cardBg,
+                  borderColor: isBowlerHovered ? theme.primary : borderColor,
+                  borderWidth: isBowlerHovered ? 1.5 : 1,
+                },
+              ]}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <ThemedText style={[styles.creaseSlotTitle, { color: textSecondary }]}>
-                  NON-STRIKER (B2)
+              <View style={styles.creaseSlotTopRow}>
+                <ThemedText style={[styles.creaseSlotTitle, { color: theme.primary }]}>
+                  ACTIVE BOWLER
                 </ThemedText>
-                {nonStrikerName ? (
+                {bowlerName ? (
                   <Pressable
                     onPress={(e) => {
                       e.stopPropagation();
-                      const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === nonStrikerKey);
-                      if (p) onRetirePlayer(p);
+                      const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === bowlerKey);
+                      if (p) onPlayerTap(p);
                     }}
                     hitSlop={4}
                   >
-                    <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>
-                      Retire
+                    <ThemedText style={[styles.changeBtnText, { color: textSecondary }]}>
+                      Change
                     </ThemedText>
                   </Pressable>
                 ) : null}
               </View>
               <ThemedText
-                style={[styles.creaseSlotName, { color: nonStrikerName ? textPrimary : textMuted }]}
+                style={[styles.creaseSlotName, { color: bowlerName ? textPrimary : textMuted }]}
                 numberOfLines={1}
               >
-                {nonStrikerName || 'Select Non-Striker'}
+                {bowlerName || 'Drop or Select Bowler'}
               </ThemedText>
-              {nonStrikerStats && (
+              {formatBowlStats(activeBowlerStats) ? (
                 <ThemedText style={[styles.creaseStatsText, { color: textSecondary }]} numberOfLines={1}>
-                  R: {nonStrikerStats.runs} · B: {nonStrikerStats.balls} · 4s: {nonStrikerStats.fours} · 6s: {nonStrikerStats.sixes} · SR: {nonStrikerStats.sr}
+                  {formatBowlStats(activeBowlerStats)}
+                </ThemedText>
+              ) : (
+                <ThemedText style={[styles.creaseStatsMuted, { color: textMuted }]} numberOfLines={1}>
+                  {bowlerName ? 'Current Bowler' : 'Drop player here'}
                 </ThemedText>
               )}
             </Pressable>
           </View>
-        ) : (
-          /* Active Bowler Slot */
-          <Pressable
-            onPress={() => {
-              const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === bowlerKey);
-              if (p) onPlayerTap(p);
-            }}
-            style={[styles.creaseSlot, { backgroundColor: cardBg, borderColor }]}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <ThemedText style={[styles.creaseSlotTitle, { color: theme.primary }]}>
-                ACTIVE BOWLER
-              </ThemedText>
-              {bowlerName ? (
-                <Pressable
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === bowlerKey);
-                    if (p) onPlayerTap(p);
-                  }}
-                  hitSlop={4}
-                >
-                  <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: textSecondary }}>
-                    Change
-                  </ThemedText>
-                </Pressable>
-              ) : null}
-            </View>
-            <ThemedText
-              style={[styles.creaseSlotName, { color: bowlerName ? textPrimary : textMuted }]}
-              numberOfLines={1}
-            >
-              {bowlerName || 'Select Bowler'}
-            </ThemedText>
-            {activeBowlerStats && (
-              <ThemedText style={[styles.creaseStatsText, { color: theme.primary }]} numberOfLines={1}>
-                O: {activeBowlerStats.overs} · M: {activeBowlerStats.maidens} · R: {activeBowlerStats.runs} · W: {activeBowlerStats.wickets} · Econ: {activeBowlerStats.econ}
-              </ThemedText>
-            )}
-          </Pressable>
         )}
       </View>
 
-      {/* Squad Player Chips (Clean, Readable, with subtle stats subtext) */}
+      {/* Squad Player Chips */}
       <View style={styles.bubbleWrap}>
         {uniquePlayers.map((player) => {
           const pKey = player.name.trim().toLowerCase();
@@ -1245,22 +1389,22 @@ function TeamZoneCard({
           if (retRec) {
             roleLabel = retRec.type === 'Retired Hurt' ? 'Injured' : 'Retired';
           } else if (isStriker) {
-            roleLabel = bStat ? `Striker · ${bStat.runs}(${bStat.balls}b)` : 'Striker';
+            roleLabel = bStat && (bStat.runs > 0 || bStat.balls > 0) ? `Striker · ${bStat.runs}(${bStat.balls}b)` : 'Striker';
           } else if (isNonStriker) {
-            roleLabel = bStat ? `Non-Striker · ${bStat.runs}(${bStat.balls}b)` : 'Non-Striker';
+            roleLabel = bStat && (bStat.runs > 0 || bStat.balls > 0) ? `Non-Striker · ${bStat.runs}(${bStat.balls}b)` : 'Non-Striker';
           } else if (isBowler) {
-            roleLabel = bowlStat ? `Bowler · ${bowlStat.wickets}/${bowlStat.runs} (${bowlStat.overs})` : 'Bowler';
+            roleLabel = bowlStat && bowlStat.overs !== '0.0' ? `Bowler · ${bowlStat.wickets}/${bowlStat.runs}` : 'Bowler';
           } else if (bStat && (bStat.runs > 0 || bStat.balls > 0)) {
-            roleLabel = `${bStat.runs}(${bStat.balls}b) · SR ${bStat.sr}`;
+            roleLabel = `${bStat.runs}(${bStat.balls}b)`;
           } else if (bowlStat && bowlStat.overs !== '0.0') {
-            roleLabel = `${bowlStat.wickets}/${bowlStat.runs} (${bowlStat.overs} ov)`;
+            roleLabel = `${bowlStat.wickets}/${bowlStat.runs} (${bowlStat.overs})`;
           }
 
           return (
             <CleanPlayerChip
               key={player.id}
               player={player}
-              bucketId={teamCode === 'TA' ? 'teamA' : 'teamB'}
+              bucketId={teamBucket}
               cardBg={zoneBg}
               borderColor={borderColor}
               textPrimary={textPrimary}
@@ -1274,6 +1418,7 @@ function TeamZoneCard({
               dragX={dragX}
               dragY={dragY}
               onDragStart={onDragStart}
+              onDragUpdate={onDragUpdate}
               onDragEnd={onDragEnd}
               isDragging={draggingId === player.id}
             />
@@ -1310,6 +1455,7 @@ function CleanPlayerChip({
   dragX,
   dragY,
   onDragStart,
+  onDragUpdate,
   onDragEnd,
   isDragging,
 }: {
@@ -1332,13 +1478,14 @@ function CleanPlayerChip({
   dragX: SharedValue<number>;
   dragY: SharedValue<number>;
   onDragStart: (player: Player, from: BucketId) => void;
+  onDragUpdate: (x: number, y: number) => void;
   onDragEnd: (player: Player, from: BucketId, x: number, y: number) => void;
   isDragging: boolean;
 }) {
   const pan = useMemo(
     () =>
       Gesture.Pan()
-        .activateAfterLongPress(180)
+        .activateAfterLongPress(160)
         .onStart((e) => {
           dragX.value = e.absoluteX;
           dragY.value = e.absoluteY;
@@ -1347,6 +1494,7 @@ function CleanPlayerChip({
         .onUpdate((e) => {
           dragX.value = e.absoluteX;
           dragY.value = e.absoluteY;
+          runOnJS(onDragUpdate)(e.absoluteX, e.absoluteY);
         })
         .onEnd((e) => {
           runOnJS(onDragEnd)(player, bucketId, e.absoluteX, e.absoluteY);
@@ -1364,7 +1512,8 @@ function CleanPlayerChip({
           styles.chip,
           {
             backgroundColor: cardBg,
-            borderColor: isActiveRole ? theme.primary + '55' : borderColor,
+            borderColor: isActiveRole ? theme.primary : borderColor,
+            borderWidth: isActiveRole ? 1.5 : 1,
             opacity: isDragging ? 0 : pressed ? 0.8 : 1,
           },
         ]}
@@ -1387,7 +1536,6 @@ function CleanPlayerChip({
           )}
         </View>
 
-        {/* Quick Assign Buttons for Master Pool */}
         {isMaster && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 2 }}>
             <Pressable
@@ -1417,7 +1565,6 @@ function CleanPlayerChip({
           </View>
         )}
 
-        {/* Subtle Remove icon for Team Zones */}
         {!isMaster && onRemove && (
           <Pressable
             onPress={(e) => {
@@ -1476,16 +1623,18 @@ function LegendPill({
   );
 }
 
-// ── Player Action Sheet Modal ───────────────────────────────────────────────
+// ── Player Action Sheet Modal (Clean Monochrome / Unified Palette) ──────────
 function PlayerActionModal({
   visible,
   item,
   onClose,
   theme,
   cardBg,
+  zoneBg,
   borderColor,
   textPrimary,
   textSecondary,
+  textMuted,
   isTeamABatting,
   labelA,
   labelB,
@@ -1510,9 +1659,11 @@ function PlayerActionModal({
   onClose: () => void;
   theme: any;
   cardBg: string;
+  zoneBg: string;
   borderColor: string;
   textPrimary: string;
   textSecondary: string;
+  textMuted: string;
   isTeamABatting: boolean;
   labelA: string;
   labelB: string;
@@ -1556,7 +1707,7 @@ function PlayerActionModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
         <Pressable style={[styles.actionSheet, { backgroundColor: cardBg, borderColor }]} onPress={(e) => e.stopPropagation()}>
-          {/* Sheet Header */}
+          {/* Header */}
           <View style={[styles.actionSheetHeader, { borderBottomColor: borderColor }]}>
             <Image source={avatarSourceFor(player)} style={styles.actionSheetAvatar} contentFit="cover" />
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -1568,50 +1719,49 @@ function PlayerActionModal({
                 {conn.degreeBadgeText ? `· ${conn.degreeBadgeText}` : ''}
               </ThemedText>
             </View>
-            <Pressable onPress={onClose} hitSlop={8} style={[styles.closeBtn, { backgroundColor: cardBg, borderColor }]}>
+            <Pressable onPress={onClose} hitSlop={8} style={[styles.closeBtn, { backgroundColor: zoneBg, borderColor }]}>
               <Ionicons name="close" size={14} color={textPrimary} />
             </Pressable>
           </View>
 
-          {/* Stats Bar if player has match records */}
-          {bStat && (
-            <View style={[styles.actionSheetStatsBox, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '30' }]}>
-              <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: theme.primary }}>
-                🏏 BATTING STATS
+          {/* Unified Neutral Stats Box (Only rendered if actual figures exist) */}
+          {bStat && (bStat.runs > 0 || bStat.balls > 0) && (
+            <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor }]}>
+              <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: textSecondary }}>
+                BATTING STATS
               </ThemedText>
               <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
-                Runs: {bStat.runs} ({bStat.balls}b) · 4s: {bStat.fours} · 6s: {bStat.sixes} · SR: {bStat.sr}
+                {bStat.runs} runs ({bStat.balls}b) · 4s: {bStat.fours} · 6s: {bStat.sixes} · SR {bStat.sr}
               </ThemedText>
             </View>
           )}
 
-          {bowlStat && (
-            <View style={[styles.actionSheetStatsBox, { backgroundColor: '#10B98110', borderColor: '#10B98130' }]}>
-              <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: '#10B981' }}>
-                🎯 BOWLING STATS
+          {bowlStat && bowlStat.overs !== '0.0' && (
+            <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor }]}>
+              <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: textSecondary }}>
+                BOWLING STATS
               </ThemedText>
               <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
-                Overs: {bowlStat.overs} · Maidens: {bowlStat.maidens} · Runs: {bowlStat.runs} · Wickets: {bowlStat.wickets} · Econ: {bowlStat.econ}
+                {bowlStat.overs} overs · {bowlStat.maidens} maidens · {bowlStat.runs} runs · {bowlStat.wickets} wkts · Econ {bowlStat.econ}
               </ThemedText>
             </View>
           )}
 
-          {/* Clean Action Options */}
+          {/* Clean Action List with Consistent Styling */}
           <View style={styles.actionSheetList}>
             {isBattingTeam && (
               <>
-                {/* If retired, allow return to crease / bat again */}
                 {retRec && (
                   <Pressable
                     onPress={() => {
                       onUnretire(player);
                       onClose();
                     }}
-                    style={[styles.sheetActionItem, { backgroundColor: theme.primary + '14', borderColor: theme.primary + '44' }]}
+                    style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor: theme.primary }]}
                   >
-                    <Ionicons name="refresh" size={16} color={theme.primary} />
+                    <Ionicons name="refresh" size={15} color={theme.primary} />
                     <ThemedText style={[styles.sheetActionText, { color: theme.primary }]}>
-                      Return to Play / Resume Batting (Unretire)
+                      Resume Batting (Unretire)
                     </ThemedText>
                   </Pressable>
                 )}
@@ -1621,11 +1771,11 @@ function PlayerActionModal({
                     onSetStriker(player);
                     onClose();
                   }}
-                  style={[styles.sheetActionItem, { backgroundColor: isStriker ? theme.primary + '18' : cardBg, borderColor }]}
+                  style={[styles.sheetActionItem, { backgroundColor: isStriker ? theme.primary + '12' : zoneBg, borderColor }]}
                 >
                   <Ionicons name="flash-outline" size={15} color={theme.primary} />
                   <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    {isStriker ? 'Currently on Strike (Striker 🏏)' : 'Set as Striker (On Strike)'}
+                    {isStriker ? 'Currently on Strike (Striker)' : 'Set as Striker (B1)'}
                   </ThemedText>
                 </Pressable>
 
@@ -1634,11 +1784,11 @@ function PlayerActionModal({
                     onSetNonStriker(player);
                     onClose();
                   }}
-                  style={[styles.sheetActionItem, { backgroundColor: isNonStriker ? theme.primary + '18' : cardBg, borderColor }]}
+                  style={[styles.sheetActionItem, { backgroundColor: isNonStriker ? theme.primary + '12' : zoneBg, borderColor }]}
                 >
-                  <Ionicons name="walk-outline" size={15} color={textSecondary} />
+                  <Ionicons name="walk-outline" size={15} color={theme.primary} />
                   <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    {isNonStriker ? 'Currently Non-Striker (🏃)' : 'Set as Non-Striker (Runner)'}
+                    {isNonStriker ? 'Currently Non-Striker (Runner)' : 'Set as Non-Striker (B2)'}
                   </ThemedText>
                 </Pressable>
 
@@ -1648,7 +1798,7 @@ function PlayerActionModal({
                       onSwapStrike();
                       onClose();
                     }}
-                    style={[styles.sheetActionItem, { backgroundColor: cardBg, borderColor }]}
+                    style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
                   >
                     <Ionicons name="swap-horizontal" size={15} color={theme.primary} />
                     <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
@@ -1660,11 +1810,11 @@ function PlayerActionModal({
                 {(isStriker || isNonStriker) && !retRec && (
                   <Pressable
                     onPress={() => onRetireClick(player)}
-                    style={[styles.sheetActionItem, { backgroundColor: '#EF444410', borderColor: '#EF444433' }]}
+                    style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
                   >
                     <Ionicons name="hand-left-outline" size={15} color="#EF4444" />
                     <ThemedText style={[styles.sheetActionText, { color: '#EF4444' }]}>
-                      Retire Batsman (Hurt / Out)
+                      Retire Batsman
                     </ThemedText>
                   </Pressable>
                 )}
@@ -1678,11 +1828,11 @@ function PlayerActionModal({
                     onSetBowler(player);
                     onClose();
                   }}
-                  style={[styles.sheetActionItem, { backgroundColor: isBowler ? theme.primary + '18' : cardBg, borderColor }]}
+                  style={[styles.sheetActionItem, { backgroundColor: isBowler ? theme.primary + '12' : zoneBg, borderColor }]}
                 >
                   <Ionicons name="baseball-outline" size={15} color={theme.primary} />
                   <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    {isBowler ? 'Active Current Bowler 🎯' : 'Set as Current Bowler 🎯'}
+                    {isBowler ? 'Active Current Bowler' : 'Set as Current Bowler'}
                   </ThemedText>
                 </Pressable>
 
@@ -1692,7 +1842,7 @@ function PlayerActionModal({
                       onRetireBowler(player);
                       onClose();
                     }}
-                    style={[styles.sheetActionItem, { backgroundColor: '#EF444410', borderColor: '#EF444433' }]}
+                    style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
                   >
                     <Ionicons name="hand-left-outline" size={15} color="#EF4444" />
                     <ThemedText style={[styles.sheetActionText, { color: '#EF4444' }]}>
@@ -1703,52 +1853,49 @@ function PlayerActionModal({
               </>
             )}
 
-            {/* Quick Move to Team A / B */}
             {bucketId === 'master' && (
               <>
                 <Pressable
                   onPress={() => onMoveToTeam(player, 'master', 'teamA')}
-                  style={[styles.sheetActionItem, { backgroundColor: cardBg, borderColor }]}
+                  style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
                 >
                   <Ionicons name="arrow-forward" size={15} color={theme.primary} />
-                  <ThemedText style={[styles.sheetActionText, { color: theme.primary }]}>
+                  <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
                     Assign to {labelA}
                   </ThemedText>
                 </Pressable>
                 <Pressable
                   onPress={() => onMoveToTeam(player, 'master', 'teamB')}
-                  style={[styles.sheetActionItem, { backgroundColor: cardBg, borderColor }]}
+                  style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
                 >
-                  <Ionicons name="arrow-forward" size={15} color={textSecondary} />
-                  <ThemedText style={[styles.sheetActionText, { color: textSecondary }]}>
+                  <Ionicons name="arrow-forward" size={15} color={textPrimary} />
+                  <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
                     Assign to {labelB}
                   </ThemedText>
                 </Pressable>
               </>
             )}
 
-            {/* Transfer to Other Team */}
             {bucketId !== 'master' && (
               <Pressable
                 onPress={() => onMoveToTeam(player, bucketId, otherBucketId)}
-                style={[styles.sheetActionItem, { backgroundColor: cardBg, borderColor }]}
+                style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
               >
                 <Ionicons name="swap-horizontal" size={15} color={theme.primary} />
-                <ThemedText style={[styles.sheetActionText, { color: theme.primary }]}>
+                <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
                   Transfer to {otherTeamLabel}
                 </ThemedText>
               </Pressable>
             )}
 
-            {/* Remove from Squad */}
             {bucketId !== 'master' && (
               <Pressable
                 onPress={() => onRemoveFromTeam(player, bucketId)}
-                style={[styles.sheetActionItem, { backgroundColor: cardBg, borderColor }]}
+                style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
               >
                 <Ionicons name="trash-outline" size={15} color="#EF4444" />
                 <ThemedText style={[styles.sheetActionText, { color: '#EF4444' }]}>
-                  Remove from Team Squad
+                  Remove from Squad
                 </ThemedText>
               </Pressable>
             )}
@@ -1766,6 +1913,7 @@ function RetireConfirmationModal({
   onClose,
   theme,
   cardBg,
+  zoneBg,
   borderColor,
   textPrimary,
   textSecondary,
@@ -1776,6 +1924,7 @@ function RetireConfirmationModal({
   onClose: () => void;
   theme: any;
   cardBg: string;
+  zoneBg: string;
   borderColor: string;
   textPrimary: string;
   textSecondary: string;
@@ -1785,9 +1934,9 @@ function RetireConfirmationModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
         <Pressable style={[styles.retireModal, { backgroundColor: cardBg, borderColor }]} onPress={(e) => e.stopPropagation()}>
-          <View style={{ alignItems: 'center', marginBottom: 14 }}>
-            <View style={[styles.retireIconCircle, { backgroundColor: theme.primary + '14' }]}>
-              <Ionicons name="hand-left-outline" size={22} color={theme.primary} />
+          <View style={{ alignItems: 'center', marginBottom: 12 }}>
+            <View style={[styles.retireIconCircle, { backgroundColor: zoneBg, borderColor }]}>
+              <Ionicons name="hand-left-outline" size={20} color={theme.primary} />
             </View>
             <ThemedText style={[styles.retireTitle, { color: textPrimary }]}>
               Retire {player.name}
@@ -1797,21 +1946,20 @@ function RetireConfirmationModal({
             </ThemedText>
           </View>
 
-          {/* Option 1: Retired Hurt */}
           <Pressable
             onPress={() => onConfirmRetire('Retired Hurt')}
             style={({ pressed }) => [
               styles.retireOptionCard,
-              { backgroundColor: cardBg, borderColor, opacity: pressed ? 0.7 : 1 },
+              { backgroundColor: zoneBg, borderColor, opacity: pressed ? 0.7 : 1 },
             ]}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Ionicons name="medkit-outline" size={18} color={theme.primary} />
+              <Ionicons name="medkit-outline" size={17} color={theme.primary} />
               <View style={{ flex: 1 }}>
-                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: textPrimary }}>
+                <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: textPrimary }}>
                   Retired Hurt (Injured)
                 </ThemedText>
-                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: textSecondary, marginTop: 1 }}>
+                <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_400Regular', color: textSecondary, marginTop: 1 }}>
                   Eligible to return and bat again later.
                 </ThemedText>
               </View>
@@ -1819,21 +1967,20 @@ function RetireConfirmationModal({
             </View>
           </Pressable>
 
-          {/* Option 2: Retired Out */}
           <Pressable
             onPress={() => onConfirmRetire('Retired Out')}
             style={({ pressed }) => [
               styles.retireOptionCard,
-              { backgroundColor: cardBg, borderColor, opacity: pressed ? 0.7 : 1 },
+              { backgroundColor: zoneBg, borderColor, opacity: pressed ? 0.7 : 1 },
             ]}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Ionicons name="exit-outline" size={18} color="#EF4444" />
+              <Ionicons name="exit-outline" size={17} color="#EF4444" />
               <View style={{ flex: 1 }}>
-                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>
+                <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>
                   Retired Out (Dismissed)
                 </ThemedText>
-                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: textSecondary, marginTop: 1 }}>
+                <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_400Regular', color: textSecondary, marginTop: 1 }}>
                   Dismissed for this innings.
                 </ThemedText>
               </View>
@@ -1842,7 +1989,7 @@ function RetireConfirmationModal({
           </Pressable>
 
           <Pressable onPress={onClose} style={[styles.retireCancelBtn, { borderColor }]}>
-            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: textSecondary }}>
+            <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: textSecondary }}>
               Cancel
             </ThemedText>
           </Pressable>
@@ -1962,11 +2109,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingVertical: 6,
+    minHeight: 56,
+    justifyContent: 'center',
+  },
+  creaseSlotTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   creaseSlotTitle: { fontFamily: 'Sora_700Bold', fontSize: 8.5, letterSpacing: 0.2 },
-  creaseSlotName: { fontFamily: 'Sora_600SemiBold', fontSize: 11, marginTop: 2 },
-  creaseStatsText: { fontFamily: 'Sora_600SemiBold', fontSize: 8.5, marginTop: 2 },
+  creaseSlotName: { fontFamily: 'Sora_600SemiBold', fontSize: 11, marginTop: 1.5 },
+  creaseStatsText: { fontFamily: 'Sora_500Medium', fontSize: 8.5, marginTop: 1.5 },
+  creaseStatsMuted: { fontFamily: 'Sora_400Regular', fontSize: 8.5, marginTop: 1.5 },
+  retireBtnText: { fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#EF4444' },
+  changeBtnText: { fontSize: 8.5, fontFamily: 'Sora_600SemiBold' },
   creaseSwapBtn: {
     width: 26,
     height: 26,
@@ -2121,7 +2278,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginTop: Spacing.xs,
   },
-  actionSheetList: { marginTop: Spacing.sm, gap: 6 },
+  actionSheetList: { marginTop: Spacing.sm, gap: 5 },
   sheetActionItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2143,20 +2300,21 @@ const styles = StyleSheet.create({
     ...Shadows.level3,
   },
   retireIconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
+    borderWidth: 1,
   },
-  retireTitle: { fontFamily: 'Sora_700Bold', fontSize: 14, textAlign: 'center' },
-  retireSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, textAlign: 'center', marginTop: 2 },
+  retireTitle: { fontFamily: 'Sora_700Bold', fontSize: 13.5, textAlign: 'center' },
+  retireSub: { fontFamily: 'Sora_400Regular', fontSize: 10, textAlign: 'center', marginTop: 2 },
   retireOptionCard: {
     borderRadius: 10,
     borderWidth: 1,
-    padding: 10,
-    marginBottom: 8,
+    padding: 9,
+    marginBottom: 6,
   },
   retireCancelBtn: {
     borderWidth: 1,

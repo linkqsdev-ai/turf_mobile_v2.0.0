@@ -149,7 +149,17 @@ export default function TurfBookingsScreen() {
           ...(isToday && !isCancelled ? [{ label: 'Today', tone: 'info' as const }] : []),
           { label: b.bookingRef, tone: 'neutral' },
         ]}
-        description={`${b.dayLabel} · ${formatSlotsRange(b.slots)} · ${b.venueName}`}
+        meta={[
+          { icon: 'calendar-outline', text: b.dayLabel },
+          { icon: 'time-outline', text: formatSlotsRange(b.slots) },
+          { icon: 'location-outline', text: b.venueName },
+          { icon: 'call-outline', text: b.customerPhone },
+          { icon: 'card-outline', text: b.paymentMethod },
+        ]}
+        statLeft={`₹${b.totalAmount} total`}
+        statRight={
+          b.remaining > 0 ? `₹${b.advancePaid} paid · ₹${b.remaining} due` : 'Fully settled'
+        }
         primary={{
           icon: 'call',
           label: 'Call',
