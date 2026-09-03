@@ -3242,12 +3242,25 @@ export default function CricketScoring({
     setLastWasNoBall(false);
 
     // 5. Update current bowler overs — Fix #1: increment maidens if maiden over detected
-    setBowler(prev => ({
-      ...prev,
-      overs: (prev.overs || 0) + 1,
-      ballsInOver: 0,
-      maidens: isMaiden ? (prev.maidens || 0) + 1 : (prev.maidens || 0),
-    }));
+    setBowler(prev => {
+      const updated = {
+        ...prev,
+        overs: (prev.overs || 0) + 1,
+        ballsInOver: 0,
+        maidens: isMaiden ? (prev.maidens || 0) + 1 : (prev.maidens || 0),
+      };
+      if (updated.name && updated.name.trim()) {
+        const uKey = updated.name.trim().toLowerCase();
+        setOtherBowlers(oldList => {
+          const filtered = (oldList || []).filter(b => {
+            const n = typeof b === 'string' ? b : b?.name;
+            return n && n.trim().toLowerCase() !== uKey;
+          });
+          return [...filtered, updated];
+        });
+      }
+      return updated;
+    });
 
     // 6. Always show unified squad modal on over completion
     setShowPlayingXIModal(true);
