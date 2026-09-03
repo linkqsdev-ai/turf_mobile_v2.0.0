@@ -12,6 +12,8 @@
  *                                  └── [Asif: +91 98765 33333]
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 export type FoFDegree = 1 | 2 | 3 | 'outside';
 
 export interface FoFPlayer {
@@ -220,6 +222,43 @@ export const FOF_PLAYERS_DATABASE: FoFPlayer[] = [
   },
 ];
 
+// Storage Key for Persisted FoF Network Players
+const FOF_STORAGE_KEY = '@turf_fof_custom_players';
+
+// Immediately attempt to hydrate from AsyncStorage
+let isFoFHydrated = false;
+
+export async function loadFoFDatabase(): Promise<FoFPlayer[]> {
+  try {
+    const raw = await AsyncStorage.getItem(FOF_STORAGE_KEY);
+    if (raw) {
+      const stored: FoFPlayer[] = JSON.parse(raw);
+      if (Array.isArray(stored)) {
+        stored.forEach(sp => {
+          const spDigits = (sp.phone || '').replace(/\D/g, '').slice(-10);
+          const existingIdx = FOF_PLAYERS_DATABASE.findIndex(p => {
+            const pDigits = (p.phone || '').replace(/\D/g, '').slice(-10);
+            return (spDigits.length >= 10 && pDigits.length >= 10 && spDigits === pDigits) ||
+                   p.name.trim().toLowerCase() === sp.name.trim().toLowerCase();
+          });
+          if (existingIdx >= 0) {
+            FOF_PLAYERS_DATABASE[existingIdx] = { ...FOF_PLAYERS_DATABASE[existingIdx], ...sp };
+          } else {
+            FOF_PLAYERS_DATABASE.unshift(sp);
+          }
+        });
+      }
+    }
+    isFoFHydrated = true;
+  } catch (err) {
+    console.warn('Failed to load FoF database from storage', err);
+  }
+  return FOF_PLAYERS_DATABASE;
+}
+
+// Trigger background hydration
+loadFoFDatabase();
+
 /**
  * Resolve the 3-Chain Friend of Friend connection between You (Azar) and any target player
  * by Phone Number or Name.
@@ -227,15 +266,17 @@ export const FOF_PLAYERS_DATABASE: FoFPlayer[] = [
 export function getFoFConnection(targetQuery: string): FoFConnectionResult {
   const normalizedQuery = (targetQuery || '').trim().toLowerCase();
   const rawDigits = (targetQuery || '').replace(/[^0-9]/g, '');
+  const digits10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
 
   // Find player in database
   const targetPlayer = FOF_PLAYERS_DATABASE.find(p => {
-    const pDigits = p.phone.replace(/[^0-9]/g, '');
+    const pDigits = (p.phone || '').replace(/[^0-9]/g, '');
+    const pDigits10 = pDigits.length >= 10 ? pDigits.slice(-10) : pDigits;
     return (
       p.name.toLowerCase() === normalizedQuery ||
       p.name.toLowerCase().includes(normalizedQuery) ||
-      (rawDigits.length >= 4 && pDigits.includes(rawDigits)) ||
-      p.team.toLowerCase().includes(normalizedQuery)
+      (rawDigits.length >= 3 && (pDigits.includes(rawDigits) || pDigits10.includes(digits10))) ||
+      (p.team && p.team.toLowerCase().includes(normalizedQuery))
     );
   }) || {
     id: 'unknown',
@@ -452,39 +493,70 @@ export function registerFoFPlayer(player: {
   team?: string;
   sport?: string;
 }): FoFPlayer {
-  const normPhone = player.phone && player.phone.trim()
-    ? (player.phone.startsWith('+') ? player.phone.trim() : `+91 ${player.phone.replace(/\D/g, '').slice(-10)}`)
-    : `+91 98765 ${Math.floor(10000 + Math.random() * 90000)}`;
+  const trimmedName = (player.name || '').trim();
+  const rawDigits = (player.phone || '').replace(/\D/g, '');
+  const digits10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
 
-  const existing = FOF_PLAYERS_DATABASE.find(p => 
-    (player.phone && p.phone === normPhone) || p.name.toLowerCase() === player.name.trim().toLowerCase()
-  );
+  const normPhone = player.phone && digits10.length >= 10
+    ? `+91 ${digits10.slice(0, 5)} ${digits10.slice(5)}`
+    : (player.phone?.trim() || `+91 98765 ${Math.floor(10000 + Math.random() * 90000)}`);
+
+  const existing = FOF_PLAYERS_DATABASE.find(p => {
+    const pDigits = (p.phone || '').replace(/\D/g, '');
+    const pDigits10 = pDigits.length >= 10 ? pDigits.slice(-10) : pDigits;
+    return (digits10.length >= 10 && pDigits10 === digits10) ||
+           (trimmedName.length > 0 && p.name.trim().toLowerCase() === trimmedName.toLowerCase());
+  });
+
+  let resultPlayer: FoFPlayer;
 
   if (existing) {
-    if (player.phone) existing.phone = normPhone;
+    if (player.phone && digits10.length >= 10) existing.phone = normPhone;
     if (player.avatar) existing.avatar = player.avatar;
+    if (player.role) existing.role = player.role;
+    if (player.team) existing.team = player.team;
+    if (player.sport) existing.sport = player.sport;
     if (!existing.directFriends.includes(CURRENT_USER_NODE.phone)) {
       existing.directFriends.push(CURRENT_USER_NODE.phone);
     }
-    return existing;
+    resultPlayer = existing;
+  } else {
+    const newFoF: FoFPlayer = {
+      id: `fof-user-${Date.now()}-${Math.round(Math.random() * 1000)}`,
+      name: trimmedName || 'Player',
+      phone: normPhone,
+      avatar: player.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
+      role: player.role || 'Player • All-Rounder',
+      team: player.team || 'Local Club',
+      sport: player.sport || 'Cricket 🏏',
+      rating: 4.8,
+      winRate: 75,
+      location: 'Chennai Turf Network',
+      directFriends: [CURRENT_USER_NODE.phone], // Connected directly as 1st-degree friend to logged user (Azar)
+    };
+    FOF_PLAYERS_DATABASE.unshift(newFoF);
+    resultPlayer = newFoF;
   }
 
-  const newFoF: FoFPlayer = {
-    id: `fof-user-${Date.now()}`,
-    name: player.name.trim(),
-    phone: normPhone,
-    avatar: player.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
-    role: player.role || 'Player • All-Rounder',
-    team: player.team || 'Local Club',
-    sport: player.sport || 'Cricket 🏏',
-    rating: 4.8,
-    winRate: 75,
-    location: 'Chennai Turf Network',
-    directFriends: [CURRENT_USER_NODE.phone], // Connected directly as 1st-degree friend to logged user (Azar)
-  };
+  // Persist all custom registered players
+  try {
+    const custom = FOF_PLAYERS_DATABASE.filter(p => p.id.startsWith('fof-user-') || p.directFriends.includes(CURRENT_USER_NODE.phone));
+    AsyncStorage.setItem(FOF_STORAGE_KEY, JSON.stringify(custom)).catch(() => {});
+  } catch {}
 
-  FOF_PLAYERS_DATABASE.unshift(newFoF);
-  return newFoF;
+  return resultPlayer;
+}
+
+/**
+ * Bulk sync a list of players into the FoF Network under logged-in user (Azar).
+ */
+export function syncPlayersToFoF(players: Array<{ name: string; phone?: string; avatar?: string; role?: string; team?: string; sport?: string }>) {
+  if (!Array.isArray(players) || players.length === 0) return;
+  players.forEach(p => {
+    if (p && p.name && p.name.trim().length > 0) {
+      registerFoFPlayer(p);
+    }
+  });
 }
 
 /**
@@ -492,7 +564,8 @@ export function registerFoFPlayer(player: {
  */
 export function searchFoFDirectory(query: string, degreeFilter?: number): FoFPlayer[] {
   const q = (query || '').trim().toLowerCase();
-  const digits = q.replace(/[^0-9]/g, '');
+  const rawDigits = (query || '').replace(/[^0-9]/g, '');
+  const digits10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
 
   return FOF_PLAYERS_DATABASE.filter(player => {
     const conn = getFoFConnection(player.phone);
@@ -500,15 +573,17 @@ export function searchFoFDirectory(query: string, degreeFilter?: number): FoFPla
       return false;
     }
 
-    if (!q) return true;
+    if (!q && !rawDigits) return true;
 
-    const pDigits = player.phone.replace(/[^0-9]/g, '');
+    const pDigits = (player.phone || '').replace(/[^0-9]/g, '');
+    const pDigits10 = pDigits.length >= 10 ? pDigits.slice(-10) : pDigits;
+
     return (
       player.name.toLowerCase().includes(q) ||
-      player.team.toLowerCase().includes(q) ||
-      player.sport.toLowerCase().includes(q) ||
-      player.role.toLowerCase().includes(q) ||
-      (digits.length >= 3 && pDigits.includes(digits))
+      (player.team && player.team.toLowerCase().includes(q)) ||
+      (player.sport && player.sport.toLowerCase().includes(q)) ||
+      (player.role && player.role.toLowerCase().includes(q)) ||
+      (rawDigits.length >= 3 && (pDigits.includes(rawDigits) || pDigits10.includes(digits10) || digits10.includes(pDigits10)))
     );
   });
 }

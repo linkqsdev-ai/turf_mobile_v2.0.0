@@ -32,6 +32,7 @@ import { useTheme } from '@/hooks/use-theme';
 import {
   dedupePlayers,
   generatePlayerId,
+  getTwoLetterLogo,
   isUsablePhone,
   normalizePhone,
   playerIdentity,
@@ -39,7 +40,7 @@ import {
 } from '@/store/match-store';
 import { useMatchStore, useWalletStore } from '@/store/app-store';
 import { AddPlayerModal } from '@/components/scoring/squad-modals';
-import { registerFoFPlayer, searchFoFDirectory } from '@/services/fof-network';
+import { registerFoFPlayer, searchFoFDirectory, getFoFConnection, loadFoFDatabase } from '@/services/fof-network';
 
 /** Wallet credits paid the first time a player is added with a mobile number. */
 const CREDIT_REWARD = 5;
@@ -175,6 +176,7 @@ export function PlayerSelectionModal({
   // and so arrives here once per roster.
   useEffect(() => {
     if (visible) {
+      loadFoFDatabase().catch(() => {});
       const teamA = dedupePlayers(initialTeamA);
       const teamB = dedupePlayers(initialTeamB).filter(
         (p) => !teamA.some((a) => playerIdentity(a) === playerIdentity(p))
@@ -348,12 +350,12 @@ export function PlayerSelectionModal({
 
   /** 3. FoF Directory search results */
   const directoryResults = useMemo(() => {
-    if (queryClean.length < 3 && queryDigits.length < 3) return [];
+    if (queryClean.length < 2 && queryDigits.length < 3) return [];
     const savedIds = new Set(savedPlayerResults.map((p) => playerIdentity(p)));
     return searchFoFDirectory(searchQuery)
       .filter((p) => !isAlreadyIn({ name: p.name, phone: p.phone }))
       .filter((p) => !savedIds.has(playerIdentity({ name: p.name, phone: p.phone })))
-      .slice(0, 4);
+      .slice(0, 6);
   }, [searchQuery, queryClean, queryDigits, isAlreadyIn, savedPlayerResults]);
 
   /** Checks if an exact match exists in the match pool */
@@ -603,26 +605,41 @@ export function PlayerSelectionModal({
               {/* 3. Directory matches — tap to add straight into the pool. */}
               {directoryResults.length > 0 && (
                 <View style={styles.suggestList}>
-                  {directoryResults.map((s) => (
-                    <Pressable
-                      key={s.id}
-                      onPress={() => commitPlayer({ name: s.name, phone: s.phone })}
-                      style={({ pressed }) => [
-                        styles.suggestRow,
-                        { backgroundColor: bubble, opacity: pressed ? 0.7 : 1 },
-                      ]}
-                    >
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <ThemedText style={[styles.suggestName, { color: bubbleText }]} numberOfLines={1}>
-                          {s.name}
-                        </ThemedText>
-                        <ThemedText style={[styles.suggestMeta, { color: theme.textSecondary }]} numberOfLines={1}>
-                          {s.phone} · {s.team}
-                        </ThemedText>
-                      </View>
-                      <Ionicons name="add-circle" size={18} color={theme.primary} />
-                    </Pressable>
-                  ))}
+                  {directoryResults.map((s) => {
+                    const conn = getFoFConnection(s.phone);
+                    return (
+                      <Pressable
+                        key={s.id}
+                        onPress={() => commitPlayer({ name: s.name, phone: s.phone, avatarUrl: s.avatar })}
+                        style={({ pressed }) => [
+                          styles.suggestRow,
+                          { backgroundColor: bubble, opacity: pressed ? 0.7 : 1 },
+                        ]}
+                      >
+                        {s.avatar && (s.avatar.startsWith('http') || s.avatar.startsWith('data:') || s.avatar.startsWith('file:') || s.avatar.startsWith('blob:')) ? (
+                          <Image source={{ uri: s.avatar }} style={styles.avatar} contentFit="cover" />
+                        ) : (
+                          <View style={[styles.avatar, { backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center' }]}>
+                            <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                              {getTwoLetterLogo(s.name)}
+                            </ThemedText>
+                          </View>
+                        )}
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <ThemedText style={[styles.suggestName, { color: bubbleText }]} numberOfLines={1}>
+                            {s.name}
+                          </ThemedText>
+                          <ThemedText style={[styles.suggestMeta, { color: theme.textSecondary }]} numberOfLines={1}>
+                            {s.phone} · <ThemedText style={{ color: conn.badgeColor || theme.primary, fontFamily: 'Sora_600SemiBold' }}>{conn.degreeBadgeText}</ThemedText>
+                          </ThemedText>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.primary + '14', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                          <Ionicons name="add-circle" size={14} color={theme.primary} />
+                          <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>Add</ThemedText>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
                 </View>
               )}
 

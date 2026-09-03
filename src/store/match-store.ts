@@ -33,6 +33,16 @@ export function isUsablePhone(phone?: string | null): boolean {
   return normalizePhone(phone).length >= 10;
 }
 
+/** Returns 2-letter uppercase monogram initials for a person or team. */
+export function getTwoLetterLogo(name?: string | null): string {
+  if (!name || !name.trim()) return 'PL';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
 export interface Team {
   id: string;
   name: string;

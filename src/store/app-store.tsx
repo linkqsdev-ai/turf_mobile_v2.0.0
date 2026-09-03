@@ -24,6 +24,7 @@ import {
   countForClass,
   isClassLocked,
 } from './enrollment-store';
+import { syncPlayersToFoF, loadFoFDatabase, registerFoFPlayer } from '@/services/fof-network';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
 const KEYS = {
@@ -101,6 +102,13 @@ interface AppStoreContextType {
   updateClass: (id: string, params: any) => void;
   // Refuses to delete a class that already has enrolments; returns false then.
   deleteClass: (id: string) => boolean;
+  /**
+   * Soft delete. Deactivating hides a class from players but keeps the record
+   * and its enrolments intact, so a coach can never destroy a class students
+   * have paid for — and can put it back.
+   */
+  setClassActive: (id: string, active: boolean) => void;
+  isClassActive: (cls: any) => boolean;
 
   // Class enrolments — the record that locks a class against edit/delete
   enrollments: ClassEnrollment[];
@@ -216,6 +224,19 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           if (cappedTeams.some((t: Team, i: number) => t.isFavourite !== parsedTeams[i].isFavourite)) {
             AsyncStorage.setItem(KEYS.teams, JSON.stringify(cappedTeams));
           }
+          // Sync all team players into FoF network
+          parsedTeams.forEach((t: Team) => {
+            if (t.players && Array.isArray(t.players)) {
+              syncPlayersToFoF(t.players.map((p: any) => ({
+                name: p.name,
+                phone: p.phone,
+                avatar: p.avatarUrl || p.avatar,
+                role: p.position || 'Player',
+                team: t.name,
+                sport: t.sport || 'Cricket 🏏',
+              })));
+            }
+          });
         } else {
           const defaultTeams = [
             { id: 't1', name: 'Siva Team', sport: 'Cricket', mascot: 'lion', wins: 10, losses: 2, draws: 1, isFavourite: true, createdAt: new Date().toISOString(), players: [
@@ -239,7 +260,28 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           setTeams(defaultTeams);
           AsyncStorage.setItem(KEYS.teams, JSON.stringify(defaultTeams));
         }
-        if (m) setMatches(JSON.parse(m));
+        if (m) {
+          const parsedMatches = JSON.parse(m);
+          setMatches(parsedMatches);
+          // Sync match players into FoF network
+          if (Array.isArray(parsedMatches)) {
+            parsedMatches.forEach((match: Match) => {
+              [match.homeTeam, match.awayTeam].forEach(t => {
+                if (t && t.players && Array.isArray(t.players)) {
+                  syncPlayersToFoF(t.players.map((p: any) => ({
+                    name: p.name,
+                    phone: p.phone,
+                    avatar: p.avatarUrl || p.avatar,
+                    role: p.position || 'Player',
+                    team: t.name,
+                    sport: match.sport || 'Cricket 🏏',
+                  })));
+                }
+              });
+            });
+          }
+        }
+        await loadFoFDatabase();
         if (tu) setOwnedTurfs(JSON.parse(tu));
         if (cl) {
           const parsed = JSON.parse(cl);
@@ -353,6 +395,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       }
       const next = capFavourites(merged);
       AsyncStorage.setItem(KEYS.teams, JSON.stringify(next));
+      // Auto-register to FoF network
+      if (player && player.name) {
+        registerFoFPlayer({
+          name: player.name,
+          phone: player.phone,
+          avatar: player.avatarUrl || player.avatar,
+          role: player.position || 'Player',
+          team: teamName,
+        });
+      }
       return next;
     });
   }, []);
@@ -500,6 +552,23 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     return true;
   }, [enrollments]);
 
+  /**
+   * Classes created before this flag existed have no `isActive`, and must read
+   * as active — otherwise every existing class would silently vanish from
+   * players the moment this shipped.
+   */
+  const isClassActive = useCallback((cls: any) => cls?.isActive !== false, []);
+
+  const setClassActive = useCallback((id: string, active: boolean) => {
+    setClasses(prev => {
+      const next = prev.map(c =>
+        c.id === id ? { ...c, isActive: active, updatedAt: new Date().toISOString() } : c
+      );
+      AsyncStorage.setItem(KEYS.classes, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   // ── Class enrolment actions ─────────────────────────────────────────────────
   const enrollInClass = useCallback((params: Parameters<typeof createEnrollment>[0]) => {
     const record = createEnrollment(params);
@@ -632,7 +701,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       teams, addTeam, addPlayerToTeam, updateTeam, deleteTeam, toggleTeamFavourite, addPlayerToTeamById, removePlayerFromTeam, MAX_FAVOURITE_TEAMS,
       matches, addMatch, updateMatchScore, completeMatch,
       ownedTurfs, addTurf, updateTurf,
-      classes, addClass, updateClass, deleteClass,
+      classes, addClass, updateClass, deleteClass, setClassActive, isClassActive,
       enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
       walletBalance, addWalletFunds, deductWalletFunds,
       bids, addBid, removeBid,
@@ -673,11 +742,11 @@ export function useTurfStore() {
 
 export function useClassStore() {
   const {
-    classes, addClass, updateClass, deleteClass,
+    classes, addClass, updateClass, deleteClass, setClassActive, isClassActive,
     enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
   } = useAppStore();
   return {
-    classes, addClass, updateClass, deleteClass,
+    classes, addClass, updateClass, deleteClass, setClassActive, isClassActive,
     enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
   };
 }
