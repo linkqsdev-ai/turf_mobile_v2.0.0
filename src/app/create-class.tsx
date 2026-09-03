@@ -63,6 +63,11 @@ const CLASS_TYPES = ['Regular Class', 'Summer Camp', 'Weekend Clinic', 'Trial Se
 const AGE_GROUPS = ['U8', 'U12', 'U16', 'U19', 'Adults', 'All Ages'];
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+// Every time chip represents a session of this length; multiple chips mean
+// multiple sessions, not one longer block.
+const SESSION_SLOT_MINUTES = 60;
+const SESSION_SLOT_LABEL = `${SESSION_SLOT_MINUTES} min`;
+
 const SESSION_GROUPS = {
   'Morning Session': ['6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM'],
   'Noon Session': ['2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM'],
@@ -121,7 +126,9 @@ export default function CreateClassScreen() {
   const [endDate, setEndDate] = useState(getTodayDate());
   const [selectedDays, setSelectedDays] = useState<Record<string, boolean>>({});
   const [sessionTime, setSessionTime] = useState('');
-  const [sessionDuration, setSessionDuration] = useState('60 min');
+  // Each selectable time is one fixed-length session. Retained (not chosen) so
+  // the saved record and anything reading it keep working.
+  const [sessionDuration] = useState(SESSION_SLOT_LABEL);
   const [venue, setVenue] = useState('');
 
   // Step 3 — Publish & Vouchers
@@ -257,7 +264,6 @@ export default function CreateClassScreen() {
     if (draft.endDate) setEndDate(draft.endDate);
     if (draft.selectedDays) setSelectedDays(draft.selectedDays);
     if (draft.sessionTime) setSessionTime(draft.sessionTime);
-    if (draft.sessionDuration) setSessionDuration(draft.sessionDuration);
     if (draft.venue) setVenue(draft.venue);
     if (draft.feeType) setFeeType(draft.feeType);
     if (draft.feeAmount) setFeeAmount(draft.feeAmount);
@@ -300,7 +306,6 @@ export default function CreateClassScreen() {
         if (existing.endDate) setEndDate(existing.endDate);
         if (existing.selectedDays) setSelectedDays(existing.selectedDays);
         if (existing.sessionTime) setSessionTime(existing.sessionTime);
-        if (existing.sessionDuration) setSessionDuration(existing.sessionDuration);
         if (existing.venue) setVenue(existing.venue);
         if (existing.feeType) setFeeType(existing.feeType);
         if (existing.feeAmount) setFeeAmount(String(existing.feeAmount));
@@ -383,53 +388,35 @@ export default function CreateClassScreen() {
     return results.join(', ');
   };
 
-  const handleSelectSessionTime = (time: string, groupName: string) => {
-    if (sessionDuration === '120 min') {
-      const groupTimes = SESSION_GROUPS[groupName as keyof typeof SESSION_GROUPS] || [];
-      const idx = groupTimes.indexOf(time);
-      if (idx !== -1) {
-        let selectedSlots: string[];
-        if (idx < groupTimes.length - 1) {
-          selectedSlots = [groupTimes[idx], groupTimes[idx + 1]];
-        } else {
-          selectedSlots = [groupTimes[idx - 1], groupTimes[idx]];
-        }
-        setSessionTime(selectedSlots.join(', '));
-      } else {
-        setSessionTime(time);
-      }
-    } else {
-      // 60 min
-      setSessionTime(time);
-    }
+  /**
+   * Every listed time is one 60-minute session, and a coach may run several —
+   * a morning batch and an evening batch on the same days is normal. So this is
+   * a plain toggle with no cross-group restriction: tap to add, tap to remove.
+   *
+   * The stored value is kept in canonical clock order (morning → noon →
+   * evening) rather than tap order, so the summary and the saved record read
+   * sensibly however the coach clicked.
+   */
+  const handleSelectSessionTime = (time: string) => {
+    const selected = new Set(
+      sessionTime ? sessionTime.split(',').map(t => t.trim()).filter(Boolean) : []
+    );
+
+    if (selected.has(time)) selected.delete(time);
+    else selected.add(time);
+
+    const ordered = Object.values(SESSION_GROUPS)
+      .flat()
+      .filter(t => selected.has(t));
+
+    setSessionTime(ordered.join(', '));
   };
 
-  const handleDurationSelect = (dur: string) => {
-    setSessionDuration(dur);
-    if (dur === '120 min') {
-      if (sessionTime) {
-        const firstTime = sessionTime.split(',')[0].trim();
-        for (const [groupName, groupTimes] of Object.entries(SESSION_GROUPS)) {
-          const idx = groupTimes.indexOf(firstTime);
-          if (idx !== -1) {
-            if (idx < groupTimes.length - 1) {
-              setSessionTime([groupTimes[idx], groupTimes[idx + 1]].join(', '));
-            } else {
-              setSessionTime([groupTimes[idx - 1], groupTimes[idx]].join(', '));
-            }
-            return;
-          }
-        }
-      } else {
-        setSessionTime('6:00 AM, 7:00 AM');
-      }
-    } else {
-      // 60 min
-      if (sessionTime) {
-        setSessionTime(sessionTime.split(',')[0].trim());
-      }
-    }
-  };
+  /** How many separate sessions the coach has picked. */
+  const selectedSessionCount = React.useMemo(
+    () => (sessionTime ? sessionTime.split(',').filter(t => t.trim()).length : 0),
+    [sessionTime]
+  );
 
   const isSessionTimeSelected = (t: string) => {
     if (!sessionTime) return false;
@@ -1202,14 +1189,23 @@ export default function CreateClassScreen() {
         <View style={styles.fieldGroup}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <ThemedText style={styles.fieldLabel}>Session Time <ThemedText style={{ color: '#ef4444' }}>*</ThemedText></ThemedText>
+            <ThemedText style={{ fontSize: 10, color: theme.textSecondary, fontFamily: 'Sora_400Regular' }}>
+              Pick one or more
+            </ThemedText>
           </View>
           {sessionTime ? (
-            <View style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.md, marginBottom: 8, alignSelf: 'flex-start' }}>
+            <View style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 10, paddingVertical: 5, borderRadius: BorderRadius.md, marginBottom: 8, alignSelf: 'flex-start' }}>
               <ThemedText style={{ fontSize: 10.5, color: theme.primary, fontFamily: 'Sora_500Medium' }}>
-                Selected: {getFormattedSessionTime(sessionTime)}
+                {selectedSessionCount} session{selectedSessionCount === 1 ? '' : 's'} · {getFormattedSessionTime(sessionTime)}
               </ThemedText>
             </View>
-          ) : null}
+          ) : (
+            <View style={{ marginBottom: 8 }}>
+              <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, fontFamily: 'Sora_400Regular' }}>
+                Tap any times below — you can mix morning, noon and evening.
+              </ThemedText>
+            </View>
+          )}
           {Object.entries(SESSION_GROUPS).map(([groupName, times]) => (
             <View key={groupName} style={{ marginBottom: 8 }}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 4, textTransform: 'none', fontSize: 10.5 }]}>{groupName}</ThemedText>
@@ -1219,7 +1215,10 @@ export default function CreateClassScreen() {
                   return (
                     <Pressable
                       key={t}
-                      onPress={() => handleSelectSessionTime(t, groupName)}
+                      onPress={() => handleSelectSessionTime(t)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={`${t} ${groupName.replace(' Session', '')} session`}
                       style={[
                         styles.sessionChipNoScroll,
                         {
@@ -1242,24 +1241,9 @@ export default function CreateClassScreen() {
           ))}
         </View>
 
-        {/* Session Duration */}
-        <View style={styles.fieldGroup}>
-          <ThemedText style={styles.fieldLabel}>Session Duration</ThemedText>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
-            {DURATIONS.map(d => (
-              <Pressable
-                key={d}
-                onPress={() => handleDurationSelect(d)}
-                style={[
-                  styles.chip,
-                  { backgroundColor: sessionDuration === d ? theme.primary : theme.surfaceLow, borderColor: sessionDuration === d ? theme.primary : theme.outlineVariant + '44' }
-                ]}
-              >
-                <ThemedText style={[styles.chipText, { color: sessionDuration === d ? '#fff' : theme.textSecondary }]}>{d}</ThemedText>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
+        {/* Session Duration picker removed: each listed time IS a
+            SESSION_SLOT_MINUTES session, and picking several means several
+            sessions rather than one longer one. */}
 
         {/* Venue */}
         <View style={styles.fieldGroup}>

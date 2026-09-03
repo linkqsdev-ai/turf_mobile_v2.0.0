@@ -442,6 +442,52 @@ export function getTeamFoFConnections(teamNameOrQuery: string, fallbackCaptain?:
 }
 
 /**
+ * Register a player under the logged-in user to build the 3-Chain FoF network.
+ */
+export function registerFoFPlayer(player: {
+  name: string;
+  phone?: string;
+  avatar?: string;
+  role?: string;
+  team?: string;
+  sport?: string;
+}): FoFPlayer {
+  const normPhone = player.phone && player.phone.trim()
+    ? (player.phone.startsWith('+') ? player.phone.trim() : `+91 ${player.phone.replace(/\D/g, '').slice(-10)}`)
+    : `+91 98765 ${Math.floor(10000 + Math.random() * 90000)}`;
+
+  const existing = FOF_PLAYERS_DATABASE.find(p => 
+    (player.phone && p.phone === normPhone) || p.name.toLowerCase() === player.name.trim().toLowerCase()
+  );
+
+  if (existing) {
+    if (player.phone) existing.phone = normPhone;
+    if (player.avatar) existing.avatar = player.avatar;
+    if (!existing.directFriends.includes(CURRENT_USER_NODE.phone)) {
+      existing.directFriends.push(CURRENT_USER_NODE.phone);
+    }
+    return existing;
+  }
+
+  const newFoF: FoFPlayer = {
+    id: `fof-user-${Date.now()}`,
+    name: player.name.trim(),
+    phone: normPhone,
+    avatar: player.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
+    role: player.role || 'Player • All-Rounder',
+    team: player.team || 'Local Club',
+    sport: player.sport || 'Cricket 🏏',
+    rating: 4.8,
+    winRate: 75,
+    location: 'Chennai Turf Network',
+    directFriends: [CURRENT_USER_NODE.phone], // Connected directly as 1st-degree friend to logged user (Azar)
+  };
+
+  FOF_PLAYERS_DATABASE.unshift(newFoF);
+  return newFoF;
+}
+
+/**
  * Filter & Search FoF Players by Phone Number, Name, Sport, or Chain Degree.
  */
 export function searchFoFDirectory(query: string, degreeFilter?: number): FoFPlayer[] {

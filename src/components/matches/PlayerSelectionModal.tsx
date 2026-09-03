@@ -39,7 +39,7 @@ import {
 } from '@/store/match-store';
 import { useMatchStore, useWalletStore } from '@/store/app-store';
 import { AddPlayerModal } from '@/components/scoring/squad-modals';
-import { searchFoFDirectory } from '@/services/fof-network';
+import { registerFoFPlayer, searchFoFDirectory } from '@/services/fof-network';
 
 /** Wallet credits paid the first time a player is added with a mobile number. */
 const CREDIT_REWARD = 5;
@@ -272,6 +272,15 @@ export function PlayerSelectionModal({
         ...(avatarUrl ? { avatarUrl } : {}),
         ...(isUsablePhone(phone) ? { phone: normalizePhone(phone) } : {}),
       };
+
+      // Register player in FoF chain under logged-in user
+      registerFoFPlayer({
+        name: trimmed,
+        phone,
+        avatar: avatarUrl,
+        sport: 'Cricket 🏏',
+      });
+
       setBuckets((prev) => ({ ...prev, master: [...prev.master, player] }));
       setAddModalOpen(false);
       setSearchQuery('');
