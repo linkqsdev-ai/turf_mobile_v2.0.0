@@ -1449,7 +1449,7 @@ export default function CricketScoring({
         };
       });
     }
-  }, [bowler]);
+  }, [bowler.name, bowler.overs, bowler.ballsInOver, bowler.maidens, bowler.runs, bowler.wickets, bowler.avatar]);
 
   const { teams, addPlayerToTeam } = useMatchStore();
 
@@ -1861,35 +1861,52 @@ export default function CricketScoring({
 
     if (bowler && bowler.name && bowler.name.trim().length > 0) {
       const bNameLower = bowler.name.trim().toLowerCase();
+      const archived = inningsBowlersArchive[bNameLower];
       list.push({
         ...bowler,
-        overs: bowler.overs || 0,
-        ballsInOver: bowler.ballsInOver || 0,
-        maidens: bowler.maidens || 0,
-        runs: bowler.runs || 0,
-        wickets: bowler.wickets || 0,
+        overs: bowler.overs !== undefined ? bowler.overs : (archived?.overs || 0),
+        ballsInOver: bowler.ballsInOver !== undefined ? bowler.ballsInOver : (archived?.ballsInOver || 0),
+        maidens: bowler.maidens !== undefined ? bowler.maidens : (archived?.maidens || 0),
+        runs: bowler.runs !== undefined ? bowler.runs : (archived?.runs || 0),
+        wickets: bowler.wickets !== undefined ? bowler.wickets : (archived?.wickets || 0),
         active: true,
       });
       existingNames.add(bNameLower);
     }
-    otherBowlers.forEach(b => {
+    (otherBowlers || []).forEach(b => {
       const bName = typeof b === 'string' ? b : (b && b.name ? b.name : '');
       if (bName && bName.trim().length > 0) {
         const nameLower = bName.trim().toLowerCase();
         if (!existingNames.has(nameLower)) {
+          const archived = inningsBowlersArchive[nameLower];
+          const bObj = typeof b === 'string' ? { name: bName } : b;
           list.push({
-            ...(typeof b === 'string' ? { name: bName } : b),
-            overs: b.overs || 0,
-            ballsInOver: b.ballsInOver || 0,
-            maidens: b.maidens || 0,
-            runs: b.runs || 0,
-            wickets: b.wickets || 0,
+            ...bObj,
+            overs: (bObj.overs !== undefined && bObj.overs > 0) ? bObj.overs : (archived?.overs || 0),
+            ballsInOver: (bObj.ballsInOver !== undefined && bObj.ballsInOver > 0) ? bObj.ballsInOver : (archived?.ballsInOver || 0),
+            maidens: (bObj.maidens !== undefined && bObj.maidens > 0) ? bObj.maidens : (archived?.maidens || 0),
+            runs: (bObj.runs !== undefined && bObj.runs > 0) ? bObj.runs : (archived?.runs || 0),
+            wickets: (bObj.wickets !== undefined && bObj.wickets > 0) ? bObj.wickets : (archived?.wickets || 0),
             active: false,
           });
           existingNames.add(nameLower);
         }
       }
     });
+
+    Object.keys(inningsBowlersArchive || {}).forEach(nameLower => {
+      if (!existingNames.has(nameLower)) {
+        const archived = inningsBowlersArchive[nameLower];
+        if (archived && archived.name) {
+          list.push({
+            ...archived,
+            active: false,
+          });
+          existingNames.add(nameLower);
+        }
+      }
+    });
+
     return list;
   };
 

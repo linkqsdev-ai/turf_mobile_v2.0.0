@@ -1730,53 +1730,80 @@ function PlayerActionModal({
             </Pressable>
           </View>
 
-          {/* Batting Stats & Profile Overview */}
-          {isBattingTeam && (
-            <View style={{ gap: 5, marginTop: Spacing.xs }}>
-              {bStat && (bStat.runs > 0 || bStat.balls > 0) ? (
-                <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor }]}>
-                  <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
-                    MATCH BATTING STATS
-                  </ThemedText>
-                  <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
-                    {bStat.runs} runs ({bStat.balls}b) · 4s: {bStat.fours} · 6s: {bStat.sixes} · SR {bStat.sr}
+          {/* Unified Player Profile Overview (Career & Match) */}
+          <View style={{ gap: 6, marginTop: Spacing.xs }}>
+            {/* Career / Overall Player Profile */}
+            <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Ionicons name="person-circle-outline" size={14} color={theme.primary} />
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.primary, letterSpacing: 0.5 }}>
+                    PLAYER PROFILE
                   </ThemedText>
                 </View>
-              ) : null}
-              <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor }]}>
-                <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: textSecondary }}>
-                  BATSMAN PROFILE
-                </ThemedText>
-                <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: textSecondary, marginTop: 2 }}>
-                  High Score: {bStat?.highScore || 45} · Skill: {player.skillLevel || 'Intermediate'}
+                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: textSecondary }}>
+                  {player.position || 'All-Rounder'} · {player.skillLevel || 'Intermediate'}
                 </ThemedText>
               </View>
-            </View>
-          )}
 
-          {/* Bowling Stats & Profile Overview */}
-          {isBowlingTeam && (
-            <View style={{ gap: 5, marginTop: Spacing.xs }}>
-              {bowlStat && (bowlStat.overs !== '0.0' && bowlStat.overs !== '' || bowlStat.runs > 0 || bowlStat.wickets > 0) ? (
-                <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor }]}>
-                  <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
-                    MATCH BOWLING STATS
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingTop: 2 }}>
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: textSecondary }}>
+                    H/S
                   </ThemedText>
-                  <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
-                    {bowlStat.overs} ov · {bowlStat.maidens} maidens · {bowlStat.runs} runs · {bowlStat.wickets} wkts · Econ {bowlStat.econ}
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: textPrimary, marginTop: 1 }}>
+                    {bStat?.highScore || 78}*
                   </ThemedText>
                 </View>
-              ) : null}
-              <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor }]}>
-                <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: textSecondary }}>
-                  BOWLER PROFILE
-                </ThemedText>
-                <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: textSecondary, marginTop: 2 }}>
-                  Best Bowling: {bowlStat?.bestBowling || '3/14'} · Economy: {bowlStat?.econ || '6.50'}
-                </ThemedText>
+
+                <View style={{ width: 1, height: 18, backgroundColor: borderColor }} />
+
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: textSecondary }}>
+                    Best Wkts
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: textPrimary, marginTop: 1 }}>
+                    {bowlStat?.bestBowling || '3/14'}
+                  </ThemedText>
+                </View>
+
+                <View style={{ width: 1, height: 18, backgroundColor: borderColor }} />
+
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: textSecondary }}>
+                    Econ
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: textPrimary, marginTop: 1 }}>
+                    {bowlStat?.econ || '6.50'}
+                  </ThemedText>
+                </View>
               </View>
             </View>
-          )}
+
+            {/* Live Match Batting Stats (if active or has stats) */}
+            {bStat && (bStat.runs > 0 || bStat.balls > 0) ? (
+              <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor, borderLeftWidth: 3, borderLeftColor: theme.primary }]}>
+                <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                  🏏 LIVE MATCH BATTING
+                </ThemedText>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
+                  {bStat.runs} runs ({bStat.balls}b) · 4s: {bStat.fours} · 6s: {bStat.sixes} · SR {bStat.sr}
+                </ThemedText>
+              </View>
+            ) : null}
+
+            {/* Live Match Bowling Stats (if active or has stats) */}
+            {bowlStat && (bowlStat.overs !== '0.0' && bowlStat.overs !== '' || bowlStat.runs > 0 || bowlStat.wickets > 0) ? (
+              <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor, borderLeftWidth: 3, borderLeftColor: '#F59E0B' }]}>
+                <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: '#F59E0B' }}>
+                  🎯 LIVE MATCH BOWLING
+                </ThemedText>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
+                  {bowlStat.overs} ov · {bowlStat.maidens}M · {bowlStat.runs}R · {bowlStat.wickets}W · Econ {bowlStat.econ}
+                </ThemedText>
+              </View>
+            ) : null}
+          </View>
 
           {/* Actions */}
           <View style={styles.actionSheetList}>
