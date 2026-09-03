@@ -147,20 +147,6 @@ export default function CoachTab() {
   const { profile } = useUserProfile();
   const { classes, deleteClass, enrollmentCountForClass } = useClassStore();
 
-  /**
-   * Active bookings per turf, keyed by venue id. Built once for the list rather
-   * than filtered inside each card, so adding turfs stays O(bookings) instead of
-   * O(turfs x bookings).
-   */
-  const turfBookingCounts = React.useMemo(() => {
-    const counts: Record<string, number> = {};
-    (bookings || []).forEach(b => {
-      if (b.status === 'cancelled') return;
-      if (!b.venueId) return;
-      counts[b.venueId] = (counts[b.venueId] || 0) + 1;
-    });
-    return counts;
-  }, [bookings]);
 
   // Deleting is destructive and irreversible, so it always confirms. The store
   // re-checks enrolments itself, which is what actually guarantees a class with
@@ -189,6 +175,20 @@ export default function CoachTab() {
   }, [deleteClass]);
   const { ownedTurfs } = useTurfStore();
   const { bookings } = useBookings();
+  /**
+   * Active bookings per turf, keyed by venue id. Built once for the list rather
+   * than filtered inside each card, so adding turfs stays O(bookings) instead of
+   * O(turfs x bookings).
+   */
+  const turfBookingCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    (bookings || []).forEach(b => {
+      if (b.status === 'cancelled') return;
+      if (!b.venueId) return;
+      counts[b.venueId] = (counts[b.venueId] || 0) + 1;
+    });
+    return counts;
+  }, [bookings]);
   const [backendTurfs, setBackendTurfs] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [coinTossVisible, setCoinTossVisible] = useState(false);

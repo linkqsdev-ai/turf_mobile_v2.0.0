@@ -27,6 +27,8 @@ import { ScoreboardBoundaryWatermark } from '@/components/scoring/ScoreboardBoun
 import { saveMatchToOwnBoard } from '@/store/own-board-store';
 import { exportScoreSheetPDF } from '@/services/score-sheet-pdf';
 import { CoinTossModal } from '@/components/coin-toss-modal';
+import { PlayerSelectionModal } from '@/components/matches/PlayerSelectionModal';
+import { Player } from '@/store/match-store';
 import {
   ChangePlayerModal,
   EditPlayerModal,
@@ -1259,9 +1261,20 @@ export default function CricketScoring({
   // Innings & Target Chase State
   const [currentInnings, setCurrentInnings] = useState<1 | 2>(1);
   const [firstInningsScore, setFirstInningsScore] = useState<{ runs: number; wickets: number; overs: number; balls: number } | null>(null);
+  const [firstInningsScorecard, setFirstInningsScorecard] = useState<{
+    battingTeam: string;
+    bowlingTeam: string;
+    totalRuns: number;
+    totalWickets: number;
+    totalOvers: string;
+    batsmen: any[];
+    bowlers: any[];
+  } | null>(null);
+  const [viewingScorecardInnings, setViewingScorecardInnings] = useState<1 | 2>(1);
   const [battingTeamName, setBattingTeamName] = useState<string>(teamA);
   const [bowlingTeamName, setBowlingTeamName] = useState<string>(teamB);
 
+  const [showPlayingXIModal, setShowPlayingXIModal] = useState(false);
   const [showExtraModal, setShowExtraModal] = useState(false);
   const [activeExtraType, setActiveExtraType] = useState<'WD' | 'NB' | 'BYE' | 'LB' | null>(null);
   const [extraRunsInput, setExtraRunsInput] = useState<number>(0);
@@ -1482,13 +1495,24 @@ export default function CricketScoring({
         .map(db => db.name.trim().toLowerCase())
     );
 
+    // Opponent players in bowling squad must NEVER be suggested as batsmen!
+    const opponentNames = new Set(
+      [
+        bowler?.name,
+        ...otherBowlers.map(p => (typeof p === 'string' ? p : p?.name)),
+      ]
+        .filter(Boolean)
+        .map(n => n.trim().toLowerCase())
+    );
+
     const map = new Map<string, any>();
-    // 1. Yet to bat players
+    // 1. Yet to bat players in current batting squad
     for (const p of yetToBatBatsmen) {
       if (!p) continue;
       const bName = typeof p === 'string' ? p : (p.name || '');
       if (!bName) continue;
       const nameLower = bName.trim().toLowerCase();
+      if (opponentNames.has(nameLower)) continue; // Never suggest opponent players
       if (!activeNames.has(nameLower) && !permanentlyOutNames.has(nameLower) && !map.has(nameLower)) {
         const archived = inningsBatsmenArchive[nameLower];
         if (archived && (archived.runs > 0 || archived.balls > 0)) {
@@ -1507,9 +1531,10 @@ export default function CricketScoring({
         }
       }
     }
-    // 2. Previously batted players in innings archive who are not currently on pitch
+    // 2. Previously batted players in this innings who retired/stepped down but belong to batting squad
     for (const [nameKey, archived] of Object.entries(inningsBatsmenArchive)) {
       if (!archived || !archived.name) continue;
+      if (opponentNames.has(nameKey)) continue; // Never suggest opponent players
       if (!activeNames.has(nameKey) && !permanentlyOutNames.has(nameKey) && !map.has(nameKey)) {
         map.set(nameKey, {
           name: archived.name,
@@ -1524,7 +1549,86 @@ export default function CricketScoring({
       }
     }
     return Array.from(map.values());
-  }, [yetToBatBatsmen, batsmen, dismissedBatsmen, inningsBatsmenArchive]);
+  }, [yetToBatBatsmen, batsmen, dismissedBatsmen, inningsBatsmenArchive, otherBowlers, bowler]);
+
+  // Current playing pools for PlayerSelectionModal
+  const currentPoolA: Player[] = React.useMemo(() => {
+    const list: Player[] = [];
+    const seen = new Set<string>();
+    const teamAObj = teams.find(t => t.name.toLowerCase() === teamA.toLowerCase());
+    const isTeamABatting = (battingTeamName || teamA).trim().toLowerCase() === teamA.trim().toLowerCase();
+    const currentBatOrBowl = isTeamABatting
+      ? [...batsmen, ...dismissedBatsmen, ...yetToBatBatsmen]
+      : [bowler, ...otherBowlers];
+
+    currentBatOrBowl.forEach((p: any) => {
+      const pName = typeof p === 'string' ? p : p?.name;
+      if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
+        seen.add(pName.trim().toLowerCase());
+        list.push({
+          id: p.id || `ta_${pName}`,
+          name: pName.trim(),
+          position: p.position || p.role || 'Batsman',
+          skillLevel: p.skillLevel || 'Intermediate',
+          avatarUrl: p.avatarUrl || p.avatar,
+        });
+      }
+    });
+
+    (teamAObj?.players || []).forEach((p: any) => {
+      const pName = typeof p === 'string' ? p : p?.name;
+      if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
+        seen.add(pName.trim().toLowerCase());
+        list.push({
+          id: p.id || `ta_${pName}`,
+          name: pName.trim(),
+          position: p.position || p.role || 'Batsman',
+          skillLevel: p.skillLevel || 'Intermediate',
+          avatarUrl: p.avatarUrl || p.avatar,
+        });
+      }
+    });
+    return list;
+  }, [teamA, battingTeamName, batsmen, dismissedBatsmen, yetToBatBatsmen, bowler, otherBowlers, teams]);
+
+  const currentPoolB: Player[] = React.useMemo(() => {
+    const list: Player[] = [];
+    const seen = new Set<string>();
+    const teamBObj = teams.find(t => t.name.toLowerCase() === teamB.toLowerCase());
+    const isTeamBBatting = (battingTeamName || teamA).trim().toLowerCase() === teamB.trim().toLowerCase();
+    const currentBatOrBowl = isTeamBBatting
+      ? [...batsmen, ...dismissedBatsmen, ...yetToBatBatsmen]
+      : [bowler, ...otherBowlers];
+
+    currentBatOrBowl.forEach((p: any) => {
+      const pName = typeof p === 'string' ? p : p?.name;
+      if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
+        seen.add(pName.trim().toLowerCase());
+        list.push({
+          id: p.id || `tb_${pName}`,
+          name: pName.trim(),
+          position: p.position || p.role || 'Bowler',
+          skillLevel: p.skillLevel || 'Intermediate',
+          avatarUrl: p.avatarUrl || p.avatar,
+        });
+      }
+    });
+
+    (teamBObj?.players || []).forEach((p: any) => {
+      const pName = typeof p === 'string' ? p : p?.name;
+      if (pName && pName.trim() && !seen.has(pName.trim().toLowerCase())) {
+        seen.add(pName.trim().toLowerCase());
+        list.push({
+          id: p.id || `tb_${pName}`,
+          name: pName.trim(),
+          position: p.position || p.role || 'Bowler',
+          skillLevel: p.skillLevel || 'Intermediate',
+          avatarUrl: p.avatarUrl || p.avatar,
+        });
+      }
+    });
+    return list;
+  }, [teamB, battingTeamName, batsmen, dismissedBatsmen, yetToBatBatsmen, bowler, otherBowlers, teams]);
 
   // Computed bench bowlers (strictly excluding current active bowler, active batsmen, dismissed batsmen, and identifying quota full)
   const availableBenchBowlers = React.useMemo(() => {
@@ -2819,7 +2923,18 @@ export default function CricketScoring({
     if (endedInnings === 1) {
       const firstScore = { runs: currentRuns, wickets: currentWickets, overs: finalOvers, balls: currentBalls };
       setFirstInningsScore(firstScore);
+      setFirstInningsScorecard({
+        battingTeam: battingTeamName || teamA,
+        bowlingTeam: bowlingTeamName || teamB,
+        totalRuns: currentRuns,
+        totalWickets: currentWickets,
+        totalOvers: `${finalOvers}.${currentBalls}`,
+        batsmen: getFullBatsmenScorecard(),
+        bowlers: getFullBowlerScorecard(),
+      });
       setCurrentInnings(2);
+      setViewingScorecardInnings(2);
+      setInningsBatsmenArchive({});
 
       // Immediately swap teams & position (Batting Team -> Bowling Team, Bowling Team -> Batting Team)
       const newBatting = bowlingTeamName || teamB;
@@ -4150,7 +4265,7 @@ export default function CricketScoring({
           <View style={{ paddingHorizontal: Spacing.containerMargin, gap: Spacing.md, marginTop: Spacing.sm }}>
             {/* Full Team Playing Squad Management Header Bar (Perfect Alignment & Squad Text Only) */}
             <Pressable
-              onPress={() => setShowFullSquadModal(true)}
+              onPress={() => setShowPlayingXIModal(true)}
               style={{
                 flexDirection: 'row',
                 justifyContent: 'space-between',
@@ -4166,7 +4281,7 @@ export default function CricketScoring({
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 6 }}>
                 <Ionicons name="people" size={16} color={theme.primary} />
                 <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text }} numberOfLines={1}>
-                  Squad ({teamA})
+                  Squad ({currentInnings === 1 ? (battingTeamName || teamA) : (battingTeamName || teamB)})
                 </ThemedText>
               </View>
               <View
@@ -4187,7 +4302,61 @@ export default function CricketScoring({
               </View>
             </Pressable>
 
-            {/* Segment Selector Switcher */}
+            {/* 1st Innings / 2nd Innings Tabs Switcher */}
+            <View style={{ flexDirection: 'row', backgroundColor: theme.surfaceLow, padding: 4, borderRadius: 12, width: '100%', gap: 4 }}>
+              <Pressable
+                onPress={() => setViewingScorecardInnings(1)}
+                style={[
+                  { flex: 1, paddingVertical: 8, paddingHorizontal: 6, alignItems: 'center', borderRadius: 9 },
+                  viewingScorecardInnings === 1 && { backgroundColor: theme.surfaceLowest, ...Shadows.level1 },
+                ]}
+              >
+                <ThemedText
+                  style={{
+                    fontSize: 12,
+                    fontFamily: viewingScorecardInnings === 1 ? 'Sora_700Bold' : 'Sora_500Medium',
+                    color: viewingScorecardInnings === 1 ? theme.primary : theme.textSecondary,
+                  }}
+                  numberOfLines={1}
+                >
+                  1st Innings {firstInningsScore ? `(${firstInningsScore.runs}/${firstInningsScore.wickets})` : currentInnings === 1 ? `(${runs}/${wickets})` : ''}
+                </ThemedText>
+                <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginTop: 1 }} numberOfLines={1}>
+                  {currentInnings === 1 ? (battingTeamName || teamA) : (firstInningsScorecard?.battingTeam || teamA)}
+                </ThemedText>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  if (currentInnings === 2 || firstInningsScore) {
+                    setViewingScorecardInnings(2);
+                  } else {
+                    Alert.alert('2nd Innings', '2nd Innings has not started yet.');
+                  }
+                }}
+                style={[
+                  { flex: 1, paddingVertical: 8, paddingHorizontal: 6, alignItems: 'center', borderRadius: 9 },
+                  viewingScorecardInnings === 2 && { backgroundColor: theme.surfaceLowest, ...Shadows.level1 },
+                ]}
+              >
+                <ThemedText
+                  style={{
+                    fontSize: 12,
+                    fontFamily: viewingScorecardInnings === 2 ? 'Sora_700Bold' : 'Sora_500Medium',
+                    color: viewingScorecardInnings === 2 ? theme.primary : theme.textSecondary,
+                    opacity: (currentInnings === 2 || firstInningsScore) ? 1 : 0.6,
+                  }}
+                  numberOfLines={1}
+                >
+                  2nd Innings {currentInnings === 2 ? `(${runs}/${wickets})` : '(Yet to Bat)'}
+                </ThemedText>
+                <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginTop: 1, opacity: (currentInnings === 2 || firstInningsScore) ? 1 : 0.6 }} numberOfLines={1}>
+                  {currentInnings === 2 ? (battingTeamName || teamB) : (bowlingTeamName || teamB)}
+                </ThemedText>
+              </Pressable>
+            </View>
+
+            {/* Segment Selector Switcher (Batsmen / Bowlers) */}
             <View style={{ flexDirection: 'row', backgroundColor: theme.surfaceLow, padding: 4, borderRadius: 10, width: '100%', marginBottom: 4 }}>
               <Pressable
                 onPress={() => setScorecardTab('batsmen')}
@@ -4208,187 +4377,243 @@ export default function CricketScoring({
             </View>
 
             {/* Full Batsmen Scorecard */}
-            {scorecardTab === 'batsmen' && (
-              <View style={{ gap: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 }}>
-                  <Ionicons name="stats-chart-outline" size={16} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                    Batsmen Scorecard
-                  </ThemedText>
-                </View>
+            {scorecardTab === 'batsmen' && (() => {
+              const displayedBatsmen =
+                viewingScorecardInnings === currentInnings
+                  ? getFullBatsmenScorecard()
+                  : viewingScorecardInnings === 1
+                  ? (firstInningsScorecard?.batsmen || [])
+                  : [];
 
-                {/* Sub-Header Row */}
-                <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '70', borderRadius: 8, borderBottomWidth: 0, borderLeftWidth: 4, borderLeftColor: 'transparent' }]}>
-                  <View style={styles.batsmanNameCell}>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>Batsman</ThemedText>
-                  </View>
-                  <View style={styles.batStatsCells}>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>R</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>B</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>4s</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>6s</ThemedText></View>
-                    <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium', textAlign: 'center' }}>SR</ThemedText></View>
-                  </View>
-                </View>
+              const teamTitle =
+                viewingScorecardInnings === currentInnings
+                  ? (battingTeamName || (currentInnings === 1 ? teamA : teamB))
+                  : viewingScorecardInnings === 1
+                  ? (firstInningsScorecard?.battingTeam || teamA)
+                  : (bowlingTeamName || teamB);
 
-                {getFullBatsmenScorecard().length === 0 ? (
-                  <View style={{ paddingVertical: 20, alignItems: 'center', justifyContent: 'center' }}>
-                    <ThemedText style={{ fontSize: 12, color: theme.textSecondary, fontFamily: 'Sora_500Medium', marginBottom: 8 }}>
-                      No active batsmen assigned yet.
-                    </ThemedText>
-                    <Pressable
-                      onPress={() => setShowFullSquadModal(true)}
-                      style={{ backgroundColor: theme.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BorderRadius.full }}
-                    >
-                      <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_500Medium' }}>
-                        + Assign Squad Batsmen
+              return (
+                <View style={{ gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="stats-chart-outline" size={16} color={theme.primary} />
+                      <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                        Batsmen ({teamTitle})
                       </ThemedText>
-                    </Pressable>
+                    </View>
+                    <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
+                      {viewingScorecardInnings === 1 ? '1st' : '2nd'} Innings
+                    </ThemedText>
                   </View>
-                ) : (
-                  getFullBatsmenScorecard().map((b, idx) => {
-                    const sr = (b.balls && b.balls > 0) ? ((b.runs / b.balls) * 100).toFixed(1) : (b.runs !== undefined ? '0.0' : '-');
-                    return (
-                      <View
-                        key={idx}
-                        style={[
-                          styles.tableRow,
-                          { paddingVertical: 10, borderLeftWidth: 4, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '15' },
-                          b.active
-                            ? { backgroundColor: theme.secondaryContainer + '1a', borderLeftColor: theme.secondaryContainer, borderRadius: 8, borderBottomWidth: 0 }
-                            : { borderLeftColor: 'transparent' },
-                        ]}
-                      >
-                        <View style={[styles.batsmanNameCell, { gap: 8 }]}>
-                          <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
-                            <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_500Medium' }}>
-                              {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
-                            </ThemedText>
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                              <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text, flexShrink: 1 }}>
-                                {b.name}
+
+                  {/* Sub-Header Row */}
+                  <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '70', borderRadius: 8, borderBottomWidth: 0, borderLeftWidth: 4, borderLeftColor: 'transparent' }]}>
+                    <View style={styles.batsmanNameCell}>
+                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>Batsman</ThemedText>
+                    </View>
+                    <View style={styles.batStatsCells}>
+                      <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>R</ThemedText></View>
+                      <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>B</ThemedText></View>
+                      <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>4s</ThemedText></View>
+                      <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>6s</ThemedText></View>
+                      <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium', textAlign: 'center' }}>SR</ThemedText></View>
+                    </View>
+                  </View>
+
+                  {displayedBatsmen.length === 0 ? (
+                    <View style={{ paddingVertical: 20, alignItems: 'center', justifyContent: 'center' }}>
+                      <ThemedText style={{ fontSize: 12, color: theme.textSecondary, fontFamily: 'Sora_500Medium', marginBottom: 8 }}>
+                        {viewingScorecardInnings === 2 && currentInnings === 1
+                          ? '2nd Innings has not started yet.'
+                          : 'No active batsmen assigned yet.'}
+                      </ThemedText>
+                      {viewingScorecardInnings === currentInnings && (
+                        <Pressable
+                          onPress={() => setShowPlayingXIModal(true)}
+                          style={{ backgroundColor: theme.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BorderRadius.full }}
+                        >
+                          <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_500Medium' }}>
+                            + Assign Squad Batsmen
+                          </ThemedText>
+                        </Pressable>
+                      )}
+                    </View>
+                  ) : (
+                    displayedBatsmen.map((b, idx) => {
+                      const sr = (b.balls && b.balls > 0) ? ((b.runs / b.balls) * 100).toFixed(1) : (b.runs !== undefined ? '0.0' : '-');
+                      return (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.tableRow,
+                            { paddingVertical: 10, borderLeftWidth: 4, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '15' },
+                            b.active
+                              ? { backgroundColor: theme.secondaryContainer + '1a', borderLeftColor: theme.secondaryContainer, borderRadius: 8, borderBottomWidth: 0 }
+                              : { borderLeftColor: 'transparent' },
+                          ]}
+                        >
+                          <View style={[styles.batsmanNameCell, { gap: 8 }]}>
+                            <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
+                              <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_500Medium' }}>
+                                {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
                               </ThemedText>
-                              {b.active && (
-                                <Ionicons name="star" size={8} color={theme.error} style={{ marginLeft: 3 }} />
-                              )}
                             </View>
-                            <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginTop: 1 }}>
-                              {b.status || 'not out'}
-                            </ThemedText>
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text, flexShrink: 1 }}>
+                                  {b.name}
+                                </ThemedText>
+                                {b.active && (
+                                  <Ionicons name="star" size={8} color={theme.error} style={{ marginLeft: 3 }} />
+                                )}
+                              </View>
+                              <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginTop: 1 }}>
+                                {b.status || (b.outInfo ? b.outInfo : 'not out')}
+                              </ThemedText>
+                            </View>
+                          </View>
+                          <View style={styles.batStatsCells}>
+                            <View style={styles.statCell}>
+                              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>{b.runs !== undefined ? b.runs : '-'}</ThemedText>
+                            </View>
+                            <View style={styles.statCell}>
+                              <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.balls !== undefined ? b.balls : '-'}</ThemedText>
+                            </View>
+                            <View style={styles.statCell}>
+                              <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.fours !== undefined ? b.fours : '-'}</ThemedText>
+                            </View>
+                            <View style={styles.statCell}>
+                              <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.sixes !== undefined ? b.sixes : '-'}</ThemedText>
+                            </View>
+                            <View style={[styles.statCell, { width: 50 }]}>
+                              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>{sr}</ThemedText>
+                            </View>
                           </View>
                         </View>
-                        <View style={styles.batStatsCells}>
-                          <View style={styles.statCell}>
-                            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>{b.runs !== undefined ? b.runs : '-'}</ThemedText>
-                          </View>
-                          <View style={styles.statCell}>
-                            <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.balls !== undefined ? b.balls : '-'}</ThemedText>
-                          </View>
-                          <View style={styles.statCell}>
-                            <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.fours !== undefined ? b.fours : '-'}</ThemedText>
-                          </View>
-                          <View style={styles.statCell}>
-                            <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.sixes !== undefined ? b.sixes : '-'}</ThemedText>
-                          </View>
-                          <View style={[styles.statCell, { width: 50 }]}>
-                            <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>{sr}</ThemedText>
-                          </View>
-                        </View>
-                      </View>
-                    );
-                  })
-                )}
-              </View>
-            )}
+                      );
+                    })
+                  )}
+                </View>
+              );
+            })()}
 
             {/* Full Bowler Scorecard */}
-            {scorecardTab === 'bowlers' && (
-              <View style={{ gap: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 }}>
-                  <Ionicons name="analytics-outline" size={16} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                    Bowlers Scorecard
-                  </ThemedText>
-                </View>
+            {scorecardTab === 'bowlers' && (() => {
+              const displayedBowlers =
+                viewingScorecardInnings === currentInnings
+                  ? getFullBowlerScorecard()
+                  : viewingScorecardInnings === 1
+                  ? (firstInningsScorecard?.bowlers || [])
+                  : [];
 
-                {/* Sub-Header Row */}
-                <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '70', borderRadius: 8, borderBottomWidth: 0, borderLeftWidth: 4, borderLeftColor: 'transparent' }]}>
-                  <View style={styles.batsmanNameCell}>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>Bowler</ThemedText>
-                  </View>
-                  <View style={styles.batStatsCells}>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>O</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>M</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>R</ThemedText></View>
-                    <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>W</ThemedText></View>
-                    <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium', textAlign: 'center' }}>ECON</ThemedText></View>
-                  </View>
-                </View>
+              const teamTitle =
+                viewingScorecardInnings === currentInnings
+                  ? (bowlingTeamName || (currentInnings === 1 ? teamB : teamA))
+                  : viewingScorecardInnings === 1
+                  ? (firstInningsScorecard?.bowlingTeam || teamB)
+                  : (battingTeamName || teamA);
 
-                {getFullBowlerScorecard().map((b, idx) => {
-                  const bowlerOvers = b.overs || 0;
-                  const bowlerBallsInOver = b.ballsInOver || 0;
-                  const totalBalls = bowlerOvers * 6 + bowlerBallsInOver;
-                  const econ = totalBalls > 0 ? ((b.runs / (totalBalls / 6))).toFixed(2) : '0.00';
-                  const oversDisplay = `${bowlerOvers}.${bowlerBallsInOver}`;
-
-                  return (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.tableRow,
-                        { paddingVertical: 10, borderLeftWidth: 4, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '15' },
-                        b.active
-                          ? { backgroundColor: theme.secondaryContainer + '1a', borderLeftColor: theme.secondaryContainer, borderRadius: 8, borderBottomWidth: 0 }
-                          : { borderLeftColor: 'transparent' },
-                      ]}
-                    >
-                      <View style={[styles.batsmanNameCell, { gap: 8 }]}>
-                        <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
-                          <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_500Medium' }}>
-                            {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
-                          </ThemedText>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text, flexShrink: 1 }}>
-                              {b.name}
-                            </ThemedText>
-                            {b.active && (
-                              <Ionicons name="star" size={8} color={theme.error} style={{ marginLeft: 3 }} />
-                            )}
-                          </View>
-                          {b.active && (
-                            <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginTop: 1 }}>
-                              bowling
-                            </ThemedText>
-                          )}
-                        </View>
-                      </View>
-                      <View style={styles.batStatsCells}>
-                        <View style={styles.statCell}>
-                          <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>{oversDisplay}</ThemedText>
-                        </View>
-                        <View style={styles.statCell}>
-                          <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.maidens}</ThemedText>
-                        </View>
-                        <View style={styles.statCell}>
-                          <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.runs}</ThemedText>
-                        </View>
-                        <View style={styles.statCell}>
-                          <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>{b.wickets}</ThemedText>
-                        </View>
-                        <View style={[styles.statCell, { width: 50 }]}>
-                          <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>{econ}</ThemedText>
-                        </View>
-                      </View>
+              return (
+                <View style={{ gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="analytics-outline" size={16} color={theme.primary} />
+                      <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                        Bowlers ({teamTitle})
+                      </ThemedText>
                     </View>
-                  );
-                })}
-              </View>
-            )}
+                    <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
+                      {viewingScorecardInnings === 1 ? '1st' : '2nd'} Innings
+                    </ThemedText>
+                  </View>
+
+                  {/* Sub-Header Row */}
+                  <View style={[styles.tableRow, { paddingVertical: 6, backgroundColor: theme.surfaceLow + '70', borderRadius: 8, borderBottomWidth: 0, borderLeftWidth: 4, borderLeftColor: 'transparent' }]}>
+                    <View style={styles.batsmanNameCell}>
+                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>Bowler</ThemedText>
+                    </View>
+                    <View style={styles.batStatsCells}>
+                      <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>O</ThemedText></View>
+                      <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>M</ThemedText></View>
+                      <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>R</ThemedText></View>
+                      <View style={styles.statCell}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>W</ThemedText></View>
+                      <View style={[styles.statCell, { width: 50 }]}><ThemedText type="labelSm" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium', textAlign: 'center' }}>ECON</ThemedText></View>
+                    </View>
+                  </View>
+
+                  {displayedBowlers.length === 0 ? (
+                    <View style={{ paddingVertical: 20, alignItems: 'center', justifyContent: 'center' }}>
+                      <ThemedText style={{ fontSize: 12, color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
+                        {viewingScorecardInnings === 2 && currentInnings === 1
+                          ? '2nd Innings has not started yet.'
+                          : 'No bowler data recorded yet.'}
+                      </ThemedText>
+                    </View>
+                  ) : (
+                    displayedBowlers.map((b, idx) => {
+                      const bowlerOvers = b.overs || 0;
+                      const bowlerBallsInOver = b.ballsInOver || 0;
+                      const totalBalls = bowlerOvers * 6 + bowlerBallsInOver;
+                      const econ = totalBalls > 0 ? ((b.runs / (totalBalls / 6))).toFixed(2) : '0.00';
+                      const oversDisplay = `${bowlerOvers}.${bowlerBallsInOver}`;
+
+                      return (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.tableRow,
+                            { paddingVertical: 10, borderLeftWidth: 4, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '15' },
+                            b.active
+                              ? { backgroundColor: theme.secondaryContainer + '1a', borderLeftColor: theme.secondaryContainer, borderRadius: 8, borderBottomWidth: 0 }
+                              : { borderLeftColor: 'transparent' },
+                          ]}
+                        >
+                          <View style={[styles.batsmanNameCell, { gap: 8 }]}>
+                            <View style={[styles.playerAvatar, { backgroundColor: theme.primary + '15' }]}>
+                              <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_500Medium' }}>
+                                {b.name ? b.name.trim().charAt(0).toUpperCase() : 'P'}
+                              </ThemedText>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <ThemedText numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text, flexShrink: 1 }}>
+                                  {b.name}
+                                </ThemedText>
+                                {b.active && (
+                                  <Ionicons name="star" size={8} color={theme.error} style={{ marginLeft: 3 }} />
+                                )}
+                              </View>
+                              {b.active && (
+                                <ThemedText style={{ fontSize: 9, color: theme.textSecondary, marginTop: 1 }}>
+                                  bowling
+                                </ThemedText>
+                              )}
+                            </View>
+                          </View>
+                          <View style={styles.batStatsCells}>
+                            <View style={styles.statCell}>
+                              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>{oversDisplay}</ThemedText>
+                            </View>
+                            <View style={styles.statCell}>
+                              <ThemedText style={{ fontSize: 12, color: theme.textSecondary }}>{b.maidens || 0}</ThemedText>
+                            </View>
+                            <View style={styles.statCell}>
+                              <ThemedText style={{ fontSize: 12, color: theme.text }}>{b.runs || 0}</ThemedText>
+                            </View>
+                            <View style={styles.statCell}>
+                              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>{b.wickets || 0}</ThemedText>
+                            </View>
+                            <View style={[styles.statCell, { width: 50 }]}>
+                              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>{econ}</ThemedText>
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })
+                  )}
+                </View>
+              );
+            })()}
 
             {/* 📄 Download Score Sheet PDF Button */}
             <Pressable
@@ -8488,6 +8713,45 @@ export default function CricketScoring({
           setBatsmen(prev => prev.map((b, i) => (i === slot ? { ...b, name: updated.name } : b)));
           if (slot === 0) setB1Name(updated.name);
           else if (slot === 1) setB2Name(updated.name);
+        }}
+      />
+
+      {/* ── Select Playing XI Screen (unified squad manager) ── */}
+      <PlayerSelectionModal
+        visible={showPlayingXIModal}
+        teamAName={teamA}
+        teamBName={teamB}
+        initialPool={[]}
+        initialTeamA={currentPoolA}
+        initialTeamB={currentPoolB}
+        onClose={() => setShowPlayingXIModal(false)}
+        onSkip={() => setShowPlayingXIModal(false)}
+        onConfirm={(teamAPlayers, teamBPlayers) => {
+          const batTeamName = (battingTeamName || teamA).trim().toLowerCase();
+          const isTeamABatting = batTeamName === teamA.trim().toLowerCase();
+          const currentBatList = isTeamABatting ? teamAPlayers : teamBPlayers;
+          const currentBowlList = isTeamABatting ? teamBPlayers : teamAPlayers;
+
+          const activeBatNames = new Set(
+            batsmen.map(b => (b && b.name ? b.name.trim().toLowerCase() : '')).filter(Boolean)
+          );
+          const activeBowlerName = bowler?.name ? bowler.name.trim().toLowerCase() : '';
+
+          const dismissedNames = new Set(
+            dismissedBatsmen.map(d => (d && d.name ? d.name.trim().toLowerCase() : '')).filter(Boolean)
+          );
+
+          const newYetToBat = currentBatList.filter(
+            p => p.name && !activeBatNames.has(p.name.trim().toLowerCase()) && !dismissedNames.has(p.name.trim().toLowerCase())
+          );
+          setYetToBatBatsmen(newYetToBat);
+
+          const newOtherBowlers = currentBowlList.filter(
+            p => p.name && p.name.trim().toLowerCase() !== activeBowlerName
+          );
+          setOtherBowlers(newOtherBowlers);
+
+          setShowPlayingXIModal(false);
         }}
       />
     </View>
