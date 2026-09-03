@@ -1435,15 +1435,20 @@ export default function CricketScoring({
       const key = bowler.name.trim().toLowerCase();
       setInningsBowlersArchive(prev => {
         const existing = prev[key];
+        const newOvers = bowler.overs !== undefined ? Math.max(bowler.overs, existing?.overs ?? 0) : (existing?.overs ?? 0);
+        const newBalls = bowler.ballsInOver !== undefined ? bowler.ballsInOver : (existing?.ballsInOver ?? 0);
+        const newMaidens = bowler.maidens !== undefined ? Math.max(bowler.maidens, existing?.maidens ?? 0) : (existing?.maidens ?? 0);
+        const newRuns = bowler.runs !== undefined ? Math.max(bowler.runs, existing?.runs ?? 0) : (existing?.runs ?? 0);
+        const newWickets = bowler.wickets !== undefined ? Math.max(bowler.wickets, existing?.wickets ?? 0) : (existing?.wickets ?? 0);
         return {
           ...prev,
           [key]: {
             name: bowler.name.trim(),
-            overs: bowler.overs !== undefined ? bowler.overs : (existing?.overs ?? 0),
-            ballsInOver: bowler.ballsInOver !== undefined ? bowler.ballsInOver : (existing?.ballsInOver ?? 0),
-            maidens: bowler.maidens !== undefined ? bowler.maidens : (existing?.maidens ?? 0),
-            runs: bowler.runs !== undefined ? bowler.runs : (existing?.runs ?? 0),
-            wickets: bowler.wickets !== undefined ? bowler.wickets : (existing?.wickets ?? 0),
+            overs: newOvers,
+            ballsInOver: newBalls,
+            maidens: newMaidens,
+            runs: newRuns,
+            wickets: newWickets,
             avatar: bowler.avatar || existing?.avatar,
           },
         };
@@ -2642,11 +2647,32 @@ export default function CricketScoring({
       );
 
       // Update bowler runs/balls
+      const updatedBowlerRuns = (bowler.runs || 0) + runVal;
+      const updatedBowlerBalls = (bowler.ballsInOver || 0) + 1;
       setBowler(prev => ({
         ...prev,
         ballsInOver: prev.ballsInOver + 1,
-        runs: prev.runs + runVal,
+        runs: (prev.runs || 0) + runVal,
       }));
+
+      if (bowler.name && bowler.name.trim()) {
+        const bKey = bowler.name.trim().toLowerCase();
+        setInningsBowlersArchive(prev => {
+          const ex = prev[bKey];
+          return {
+            ...prev,
+            [bKey]: {
+              name: bowler.name.trim(),
+              overs: bowler.overs !== undefined ? Math.max(bowler.overs, ex?.overs ?? 0) : (ex?.overs ?? 0),
+              ballsInOver: updatedBowlerBalls,
+              maidens: bowler.maidens !== undefined ? Math.max(bowler.maidens, ex?.maidens ?? 0) : (ex?.maidens ?? 0),
+              runs: Math.max(updatedBowlerRuns, ex?.runs ?? 0),
+              wickets: bowler.wickets !== undefined ? Math.max(bowler.wickets, ex?.wickets ?? 0) : (ex?.wickets ?? 0),
+              avatar: bowler.avatar || ex?.avatar,
+            },
+          };
+        });
+      }
 
       // Add to current over log
       setOverLog(prev => [...prev, runVal.toString()]);
@@ -2773,14 +2799,36 @@ export default function CricketScoring({
         setB2Sixes('0');
       }
 
+      const updatedWicketBowlerRuns = (bowler.runs || 0) + runsCompleted;
+      const updatedWicketBowlerBalls = (bowler.ballsInOver || 0) + 1;
+      const updatedWicketBowlerWkts = (bowler.wickets || 0) + (creditBowler ? 1 : 0);
       setBowler(prev => ({
         ...prev,
         ballsInOver: prev.ballsInOver + 1,
         // Runs conceded still count against the bowler even on a run out.
-        runs: prev.runs + runsCompleted,
+        runs: (prev.runs || 0) + runsCompleted,
         // Run outs & retirements are not the bowler's wicket.
-        wickets: creditBowler ? prev.wickets + 1 : prev.wickets,
+        wickets: creditBowler ? (prev.wickets || 0) + 1 : (prev.wickets || 0),
       }));
+
+      if (bowler.name && bowler.name.trim()) {
+        const bKey = bowler.name.trim().toLowerCase();
+        setInningsBowlersArchive(prev => {
+          const ex = prev[bKey];
+          return {
+            ...prev,
+            [bKey]: {
+              name: bowler.name.trim(),
+              overs: bowler.overs !== undefined ? Math.max(bowler.overs, ex?.overs ?? 0) : (ex?.overs ?? 0),
+              ballsInOver: updatedWicketBowlerBalls,
+              maidens: bowler.maidens !== undefined ? Math.max(bowler.maidens, ex?.maidens ?? 0) : (ex?.maidens ?? 0),
+              runs: Math.max(updatedWicketBowlerRuns, ex?.runs ?? 0),
+              wickets: Math.max(updatedWicketBowlerWkts, ex?.wickets ?? 0),
+              avatar: bowler.avatar || ex?.avatar,
+            },
+          };
+        });
+      }
 
       if (newWickets >= 10) {
         // Fix #4: Don't call incrementBallCount after innings ends (avoids double-increment)
@@ -2905,11 +2953,32 @@ export default function CricketScoring({
       setLastWasNoBall(false);
     }
 
+    const updatedExtraBowlerRuns = (bowler.runs || 0) + runCount;
+    const updatedExtraBowlerBalls = isLegal ? (bowler.ballsInOver || 0) + 1 : (bowler.ballsInOver || 0);
     setBowler(prev => ({
       ...prev,
-      runs: prev.runs + runCount,
-      ballsInOver: isLegal ? prev.ballsInOver + 1 : prev.ballsInOver,
+      runs: (prev.runs || 0) + runCount,
+      ballsInOver: isLegal ? (prev.ballsInOver || 0) + 1 : (prev.ballsInOver || 0),
     }));
+
+    if (bowler.name && bowler.name.trim()) {
+      const bKey = bowler.name.trim().toLowerCase();
+      setInningsBowlersArchive(prev => {
+        const ex = prev[bKey];
+        return {
+          ...prev,
+          [bKey]: {
+            name: bowler.name.trim(),
+            overs: bowler.overs !== undefined ? Math.max(bowler.overs, ex?.overs ?? 0) : (ex?.overs ?? 0),
+            ballsInOver: updatedExtraBowlerBalls,
+            maidens: bowler.maidens !== undefined ? Math.max(bowler.maidens, ex?.maidens ?? 0) : (ex?.maidens ?? 0),
+            runs: Math.max(updatedExtraBowlerRuns, ex?.runs ?? 0),
+            wickets: bowler.wickets !== undefined ? Math.max(bowler.wickets, ex?.wickets ?? 0) : (ex?.wickets ?? 0),
+            avatar: bowler.avatar || ex?.avatar,
+          },
+        };
+      });
+    }
 
     // Balls faced counts legal deliveries only. Byes and leg byes are legal, so
     // they count; wides and no-balls are not, so they don't — but on a no-ball
@@ -3317,6 +3386,14 @@ export default function CricketScoring({
           });
           return [...filtered, updated];
         });
+        setInningsBowlersArchive(arc => ({
+          ...arc,
+          [uKey]: {
+            ...updated,
+            runs: Math.max(updated.runs || 0, arc[uKey]?.runs ?? 0),
+            wickets: Math.max(updated.wickets || 0, arc[uKey]?.wickets ?? 0),
+          },
+        }));
       }
       return updated;
     });
