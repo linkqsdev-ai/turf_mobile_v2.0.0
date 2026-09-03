@@ -133,6 +133,11 @@ export default function SettingsScreen() {
    */
   const role = profile.role || 'Player';
   const isTurfOwner = role === 'Owner' || role === 'Super Admin';
+  /**
+   * Everyone who can receive money: owners, coaches and organizers all get paid
+   * through the same payee profile. Players never do, so the whole section —
+   * bank details, PAN, GST — stays hidden from them.
+   */
   const isPayee = isTurfOwner || role === 'Coach' || role === 'Organizer';
 
   // Mirrors payout-settings' own storage, read-only, so this screen can report
@@ -347,22 +352,15 @@ export default function SettingsScreen() {
             <LinkRow theme={theme} icon="calendar-outline" title="Booking History" subtitle="View active, completed & cancelled reservations" onPress={() => router.push('/booking-history')} />
             <Divider theme={theme} />
             <LinkRow theme={theme} icon="wallet-outline" title="My Sports Wallet" subtitle={`Balance: ₹${walletBalance.toFixed(2)}`} onPress={() => router.push('/wallet')} />
-            {/* Coaches and organizers are paid through the same payee profile,
-                so they keep these rows. Owners get the richer section below
-                instead, and Players — who are never paid — see neither. */}
-            {isPayee && !isTurfOwner && (
-              <>
-                <Divider theme={theme} />
-                <LinkRow theme={theme} icon="cash-outline" title="Earnings & Payments" subtitle="Payment status, escrow and statements" onPress={() => router.push('/owner-earnings')} />
-                <Divider theme={theme} />
-                <LinkRow theme={theme} icon="card-outline" title="Payout & Tax Details" subtitle="Address, GST and how you get paid" onPress={() => router.push('/payout-settings')} />
-              </>
-            )}
           </SectionCard>
 
-          {/* ── Turf owner only ────────────────────────────────────────────── */}
-          {isTurfOwner && (
-            <SectionCard title="TURF OWNER" icon="business-outline" theme={theme}>
+          {/* ── Payees only: owner, coach, organizer (never a player) ──────── */}
+          {isPayee && (
+            <SectionCard
+              title={isTurfOwner ? 'TURF OWNER' : 'PAYMENTS & PAYOUTS'}
+              icon="business-outline"
+              theme={theme}
+            >
               {/* Status first: an owner whose details are incomplete is not
                   getting paid, and that should be the first thing they see. */}
               <View
@@ -410,13 +408,15 @@ export default function SettingsScreen() {
               <LinkRow
                 theme={theme}
                 icon="business-outline"
-                title="Turf Owner Details"
+                title={isTurfOwner ? 'Turf Owner Details' : 'Your Details'}
                 subtitle={
                   payeeProfile?.legalName
                     ? `${payeeProfile.legalName}${payeeProfile.gstin ? ` · GST ${payeeProfile.gstin}` : ''}`
                     : 'Legal name, address, PAN and GST'
                 }
-                onPress={() => router.push('/payout-settings')}
+                onPress={() =>
+                  router.push({ pathname: '/payout-settings', params: { section: 'identity' } })
+                }
               />
               <Divider theme={theme} />
               <LinkRow
@@ -424,7 +424,9 @@ export default function SettingsScreen() {
                 icon="card-outline"
                 title="Payment Details"
                 subtitle={payoutTargetLabel}
-                onPress={() => router.push('/payout-settings')}
+                onPress={() =>
+                  router.push({ pathname: '/payout-settings', params: { section: 'payment' } })
+                }
               />
               <Divider theme={theme} />
               <LinkRow
@@ -434,14 +436,18 @@ export default function SettingsScreen() {
                 subtitle="Settlements, escrow status and statements"
                 onPress={() => router.push('/owner-earnings')}
               />
-              <Divider theme={theme} />
-              <LinkRow
-                theme={theme}
-                icon="calendar-outline"
-                title="Turf Bookings"
-                subtitle="Who has booked your venues"
-                onPress={() => router.push('/turf-bookings')}
-              />
+              {isTurfOwner && (
+                <>
+                  <Divider theme={theme} />
+                  <LinkRow
+                    theme={theme}
+                    icon="calendar-outline"
+                    title="Turf Bookings"
+                    subtitle="Who has booked your venues"
+                    onPress={() => router.push('/turf-bookings')}
+                  />
+                </>
+              )}
             </SectionCard>
           )}
 

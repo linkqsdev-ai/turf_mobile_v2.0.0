@@ -1128,6 +1128,7 @@ export default function CricketScoring({
   const [showOverCompleteModal, setShowOverCompleteModal] = useState(false);
   const [showVictoryModal, setShowVictoryModal] = useState(false);
   const [matchVictoryData, setMatchVictoryData] = useState<any>(null);
+  const [showRematchSquadChoiceModal, setShowRematchSquadChoiceModal] = useState(false);
 
   // 🪙 Rematch 3D Coin Flip Toss States
   const [showRematchTossModal, setShowRematchTossModal] = useState(false);
@@ -2967,11 +2968,11 @@ export default function CricketScoring({
       if (nextBowlSquad) setOtherBowlers(nextBowlSquad);
 
       const target = firstScore.runs + 1;
-      const maxOvers = parseInt(totalOvers) || 20;
+      const maxOvers = parseInt(currentTotalOvers || totalOvers) || 20;
 
       Alert.alert(
         '🏏 1st Innings Completed!',
-        `${battingTeamName} scored ${firstScore.runs}/${firstScore.wickets} in ${finalOvers} overs.\n\n${newBatting} needs ${target} runs to win off ${maxOvers} overs!`,
+        `${battingTeamName || teamA} scored ${firstScore.runs}/${firstScore.wickets} in ${finalOvers}.${currentBalls} overs.\n\n${newBatting} needs ${target} runs to win off ${maxOvers} overs!`,
         [
           {
             text: 'Setup 2nd Innings Players',
@@ -3016,14 +3017,17 @@ export default function CricketScoring({
         motmStat = `${bowler.wickets} wickets (${bowler.runs} runs)`;
       }
 
+      const firstTeamName = firstInningsScorecard?.battingTeam || (battingTeamName === teamA ? teamB : teamA);
+      const secondTeamName = battingTeamName || (firstTeamName === teamA ? teamB : teamA);
+
       const victoryObj = {
         winnerName,
         winMargin,
         target,
-        firstInningsTeam: teamA,
+        firstInningsTeam: firstTeamName,
         firstInningsScore: `${firstInningsScore?.runs || 0}/${firstInningsScore?.wickets || 0}`,
         firstInningsOvers: `${firstInningsScore?.overs || 0}.${firstInningsScore?.balls || 0}`,
-        secondInningsTeam: battingTeamName,
+        secondInningsTeam: secondTeamName,
         secondInningsScore: `${currentRuns}/${currentWickets}`,
         secondInningsOvers: `${finalOvers}.${currentBalls}`,
         motmName,
@@ -3082,7 +3086,7 @@ export default function CricketScoring({
     }
   };
 
-  const handleRematchSameTeams = () => {
+  const resetMatchScoringState = () => {
     setRuns(0);
     setWickets(0);
     setOvers(0);
@@ -3090,18 +3094,32 @@ export default function CricketScoring({
     setOverLog([]);
     setHistory([]);
     setCurrentInnings(1);
+    setViewingScorecardInnings(1);
     setFirstInningsScore(null);
-
+    setFirstInningsScorecard(null);
+    setInnings2ScoreRecord(null);
+    setIsInningsOver(false);
     setBatsmen([]);
     setBowler({ name: '', overs: 0, ballsInOver: 0, maidens: 0, runs: 0, wickets: 0 });
     setDismissedBatsmen([]);
+    setInningsBatsmenArchive({});
+    setMatchVictoryData(null);
+    setShowVictoryModal(false);
+    setShowRematchSquadChoiceModal(false);
+  };
 
+  const handleRematchSameSquad = () => {
+    resetMatchScoringState();
     setRematchTossWinner(teamA);
     setRematchTossDecision('Bat');
     setCoinSide(null);
-
-    setShowVictoryModal(false);
     setShowRematchTossModal(true);
+  };
+
+  const handleRematchNewSquad = () => {
+    setShowRematchSquadChoiceModal(false);
+    setShowVictoryModal(false);
+    setShowPlayingXIModal(true);
   };
 
   const confirmRematchToss = () => {
@@ -3178,7 +3196,7 @@ export default function CricketScoring({
         maidens: isFinalMaiden ? (prev.maidens || 0) + 1 : (prev.maidens || 0),
       }));
       setIsInningsOver(true);
-      handleInningsEnd(currentInnings, nextOvers);
+      handleInningsEnd(currentInnings, nextOvers, undefined, undefined, 0);
       return;
     }
 
@@ -7952,10 +7970,13 @@ export default function CricketScoring({
             {/* Action Buttons */}
             <View style={{ gap: 10, width: '100%' }}>
               <Pressable
-                onPress={handleRematchSameTeams}
+                onPress={() => {
+                  setShowVictoryModal(false);
+                  setShowRematchSquadChoiceModal(true);
+                }}
                 style={({ pressed }) => [{ width: '100%', paddingVertical: 12, borderRadius: 10, backgroundColor: '#F59E0B', alignItems: 'center' }, pressed && { opacity: 0.85 }]}
               >
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: '#ffffff' }}>
+                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
                   🔄 Rematch (Start New Match with Same Teams)
                 </ThemedText>
               </Pressable>
@@ -7985,6 +8006,190 @@ export default function CricketScoring({
                   </ThemedText>
                 </Pressable>
               </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 👥 REMATCH SQUAD SELECTION MODAL (POPUP 2: SAME SQUAD vs NEW SQUAD) */}
+      <Modal
+        visible={showRematchSquadChoiceModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRematchSquadChoiceModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: theme.surfaceLowest,
+                borderColor: theme.outlineVariant + '33',
+                borderWidth: 1.5,
+                borderRadius: 24,
+                width: '92%',
+                maxWidth: 440,
+                alignSelf: 'center',
+                padding: 0,
+                overflow: 'hidden',
+                ...Shadows.level3,
+              },
+            ]}
+          >
+            {/* Header */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                borderBottomWidth: 1,
+                borderBottomColor: theme.outlineVariant + '22',
+                backgroundColor: theme.surfaceLowest,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <View
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 12,
+                    backgroundColor: theme.primary + '18',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Ionicons name="people" size={20} color={theme.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_700Bold', fontSize: 16 }}>
+                    Rematch Squad Setup
+                  </ThemedText>
+                  <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontFamily: 'Sora_400Regular', marginTop: 1 }}>
+                    Choose squad configuration for {teamA} vs {teamB}
+                  </ThemedText>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => setShowRematchSquadChoiceModal(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: theme.surfaceLow,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <Ionicons name="close" size={18} color={theme.text} />
+              </Pressable>
+            </View>
+
+            {/* Body Options */}
+            <View style={{ padding: 16, gap: 14 }}>
+              {/* Option 1: Same Squad */}
+              <Pressable
+                onPress={handleRematchSameSquad}
+                style={({ pressed }) => [{
+                  backgroundColor: theme.surfaceLow,
+                  borderRadius: 16,
+                  borderWidth: 1.5,
+                  borderColor: theme.primary + '55',
+                  padding: 16,
+                  opacity: pressed ? 0.85 : 1,
+                }]}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#10B98118', justifyContent: 'center', alignItems: 'center' }}>
+                      <Ionicons name="shield-checkmark" size={18} color="#10B981" />
+                    </View>
+                    <ThemedText style={{ fontSize: 15, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                      Same Squad
+                    </ThemedText>
+                  </View>
+                  <View style={{ backgroundColor: '#10B98118', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: '#10B981' }}>
+                      ⚡ FAST START
+                    </ThemedText>
+                  </View>
+                </View>
+                <ThemedText style={{ fontSize: 11.5, color: theme.textSecondary, fontFamily: 'Sora_400Regular', lineHeight: 17, marginBottom: 12 }}>
+                  Keep all existing players for {teamA} and {teamB}. Proceed directly to the coin toss & 1st innings setup.
+                </ThemedText>
+                <View style={{ backgroundColor: theme.primary, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}>
+                  <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
+                    Continue with Same Squad
+                  </ThemedText>
+                </View>
+              </Pressable>
+
+              {/* Option 2: New Squad */}
+              <Pressable
+                onPress={handleRematchNewSquad}
+                style={({ pressed }) => [{
+                  backgroundColor: theme.surfaceLow,
+                  borderRadius: 16,
+                  borderWidth: 1.5,
+                  borderColor: theme.outlineVariant + '44',
+                  padding: 16,
+                  opacity: pressed ? 0.85 : 1,
+                }]}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center' }}>
+                      <Ionicons name="person-add" size={18} color={theme.primary} />
+                    </View>
+                    <ThemedText style={{ fontSize: 15, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                      New Squad
+                    </ThemedText>
+                  </View>
+                  <View style={{ backgroundColor: theme.primary + '18', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                      ✨ SELECT XI
+                    </ThemedText>
+                  </View>
+                </View>
+                <ThemedText style={{ fontSize: 11.5, color: theme.textSecondary, fontFamily: 'Sora_400Regular', lineHeight: 17, marginBottom: 12 }}>
+                  Open the Select Playing XI screen to re-select, draft, substitute or add new players before starting the match.
+                </ThemedText>
+                <View style={{ backgroundColor: theme.surfaceLowest, borderWidth: 1.2, borderColor: theme.primary, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}>
+                  <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
+                    Choose / Modify Playing XI
+                  </ThemedText>
+                </View>
+              </Pressable>
+            </View>
+
+            {/* Footer */}
+            <View
+              style={{
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderTopWidth: 1,
+                borderTopColor: theme.outlineVariant + '22',
+                backgroundColor: theme.surfaceLowest,
+              }}
+            >
+              <Pressable
+                onPress={() => setShowRematchSquadChoiceModal(false)}
+                style={({ pressed }) => [{
+                  height: 42,
+                  borderRadius: 10,
+                  borderWidth: 1.2,
+                  borderColor: theme.outlineVariant + '55',
+                  backgroundColor: theme.surfaceLow,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  opacity: pressed ? 0.8 : 1,
+                }]}
+              >
+                <ThemedText style={{ color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', fontSize: 12.5 }}>
+                  Cancel
+                </ThemedText>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -8691,10 +8896,26 @@ export default function CricketScoring({
         onClose={() => setShowPlayingXIModal(false)}
         onSkip={() => setShowPlayingXIModal(false)}
         onConfirm={(teamAPlayers, teamBPlayers) => {
+          const isRematch = matchVictoryData !== null || firstInningsScore !== null;
+          if (isRematch) {
+            resetMatchScoringState();
+          }
+
           const batTeamName = (battingTeamName || teamA).trim().toLowerCase();
           const isTeamABatting = batTeamName === teamA.trim().toLowerCase();
           const currentBatList = isTeamABatting ? teamAPlayers : teamBPlayers;
           const currentBowlList = isTeamABatting ? teamBPlayers : teamAPlayers;
+
+          if (isRematch) {
+            setYetToBatBatsmen(currentBatList);
+            setOtherBowlers(currentBowlList);
+            setShowPlayingXIModal(false);
+            setRematchTossWinner(teamA);
+            setRematchTossDecision('Bat');
+            setCoinSide(null);
+            setShowRematchTossModal(true);
+            return;
+          }
 
           const activeBatNames = new Set(
             batsmen.map(b => (b && b.name ? b.name.trim().toLowerCase() : '')).filter(Boolean)

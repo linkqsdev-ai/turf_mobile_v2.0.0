@@ -22,7 +22,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
@@ -56,6 +56,18 @@ export default function PayoutSettingsScreen() {
   const theme = useTheme();
   const type = useTypeRamp();
   const router = useRouter();
+  /**
+   * Which half of the payee profile to edit. Both halves write the SAME
+   * stored profile — splitting the *form*, not the record, so a bank
+   * account can never diverge between two screens.
+   *   identity — who you are: role, legal name, address, PAN, GST
+   *   payment  — where money goes: method, bank/UPI, the payout split
+   * Omitted (e.g. from the admin hub) shows everything, as before.
+   */
+  const params = useLocalSearchParams<{ section?: string }>();
+  const section = params.section === 'identity' || params.section === 'payment' ? params.section : 'all';
+  const showIdentity = section === 'all' || section === 'identity';
+  const showPayment = section === 'all' || section === 'payment';
   const { showSuccess, showWarning } = useToast();
 
   const [role, setRole] = useState<PayeeRole>('owner');
@@ -208,7 +220,13 @@ export default function PayoutSettingsScreen() {
           >
             <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
-          <ThemedText style={[type.title, { color: theme.text }]}>Payout & Tax Details</ThemedText>
+          <ThemedText style={[type.title, { color: theme.text }]}>
+            {section === 'identity'
+              ? 'Owner Details'
+              : section === 'payment'
+                ? 'Payment Details'
+                : 'Payout & Tax Details'}
+          </ThemedText>
           <View style={styles.backBtn} />
         </View>
 
@@ -240,6 +258,8 @@ export default function PayoutSettingsScreen() {
             </View>
           </View>
 
+          {showIdentity && (
+          <>
           {/* Role */}
           <SectionTitle>I AM A</SectionTitle>
           <View style={styles.roleRow}>
@@ -297,6 +317,11 @@ export default function PayoutSettingsScreen() {
             </View>
           )}
 
+          </>
+          )}
+
+          {showPayment && (
+          <>
           {/* Payment method */}
           <SectionTitle>HOW YOU GET PAID</SectionTitle>
           <View style={styles.roleRow}>
@@ -367,10 +392,16 @@ export default function PayoutSettingsScreen() {
               are not reimbursed.
             </ThemedText>
           </View>
+          </>
+          )}
 
           <Pressable onPress={handleSave} style={[styles.saveBtn, { backgroundColor: theme.primary }]}>
             <ThemedText style={[type.bodyStrong, { color: '#ffffff' }]}>
-              {saved ? 'Update payout details' : 'Save payout details'}
+              {section === 'identity'
+                ? saved ? 'Update owner details' : 'Save owner details'
+                : section === 'payment'
+                  ? saved ? 'Update payment details' : 'Save payment details'
+                  : saved ? 'Update payout details' : 'Save payout details'}
             </ThemedText>
           </Pressable>
         </ScrollView>
