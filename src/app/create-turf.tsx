@@ -21,7 +21,7 @@ import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { SPORTS_LIST } from '@/constants/sports';
 import { useTheme } from '@/hooks/use-theme';
-import { useTurfStore, useOfferStore } from '@/store/app-store';
+import { useTurfStore, useOfferStore, useBookings } from '@/store/app-store';
 import { OfferDiscountType } from '@/store/offer-store';
 import { getCurrentGPSLocation, cleanLocation } from '@/utils/location';
 import { turfApi } from '@/services/turf-api';
@@ -187,6 +187,16 @@ export default function CreateTurfScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const params = useLocalSearchParams<{ editId?: string }>();
   const { addTurf, updateTurf, ownedTurfs } = useTurfStore();
+  const { bookings } = useBookings();
+  // Live count for the header badge, so an owner sees at a glance that slots
+  // have been taken without opening the list.
+  const turfBookingCount = React.useMemo(() => {
+    if (!params.editId) return 0;
+    return (bookings || []).filter(
+      b => b.venueId === params.editId && b.status !== 'cancelled'
+    ).length;
+  }, [bookings, params.editId]);
+
   const { offers, addOffer, updateOffer, deleteOffer, isOfferCodeAvailable, offersLoading } =
     useOfferStore();
 
@@ -2051,6 +2061,32 @@ export default function CreateTurfScreen() {
           <ThemedText style={[styles.headerTitle, { color: theme.text }]}>
             {params.editId ? 'Manage Pitch' : currentStep === PUBLISH_STEP ? 'Preview & Publish' : 'Create Turf'}
           </ThemedText>
+
+          {/* Bookings taken at this turf. Only meaningful once the turf exists,
+              so it appears while managing a pitch rather than creating one. */}
+          {!!params.editId && (
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/turf-bookings',
+                  params: { turfId: params.editId!, turfName: turfName || '' },
+                })
+              }
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="View bookings for this turf"
+              style={[styles.headerActionBtn, { borderColor: theme.outlineVariant + '55', backgroundColor: theme.surfaceLowest }]}
+            >
+              <Ionicons name="calendar-outline" size={18} color={theme.primary} />
+              {turfBookingCount > 0 && (
+                <View style={[styles.headerActionDot, { backgroundColor: theme.primary }]}>
+                  <ThemedText style={styles.headerActionDotText}>
+                    {turfBookingCount > 9 ? '9+' : turfBookingCount}
+                  </ThemedText>
+                </View>
+              )}
+            </Pressable>
+          )}
         </View>
 
         {/* Step Tracker */}
@@ -2143,6 +2179,29 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.containerMargin, paddingVertical: Spacing.sm, zIndex: 10 },
   backBtn: { padding: 4 },
   headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 17, flex: 1, marginLeft: 10 },
+  headerActionBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerActionDot: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  headerActionDotText: { color: '#ffffff', fontSize: 9, fontFamily: 'Sora_700Bold' },
   progressTrackerCard: {
     marginHorizontal: Spacing.containerMargin,
     marginTop: Spacing.sm,

@@ -529,22 +529,7 @@ export function QuickMatchTab({
     spinCoin();
   };
 
-  const handleStartMatch = () => {
-    if (!validateTeamsAndMatch()) {
-      Alert.alert('Validation Error', 'Please specify valid team names and overs before starting.');
-      return;
-    }
-
-    if (!tossResult) {
-      Alert.alert('Toss Required', 'Please tap "Toss the Coin" to determine the toss winner first.');
-      return;
-    }
-
-    if (!tossDecision) {
-      Alert.alert('Decision Required', 'Please select whether the toss winner chooses to Bat or Bowl.');
-      return;
-    }
-
+  const proceedToScoring = (teamA: Player[] = teamALineup, teamB: Player[] = teamBLineup) => {
     const winner = tossResult === tossCall ? tossCaller : (tossCaller === 'A' ? 'B' : 'A');
     const tossWinnerName = winner === 'A' ? teamAName.trim() : teamBName.trim();
 
@@ -552,8 +537,8 @@ export function QuickMatchTab({
     // rather than A/B, because the console re-resolves squads on every innings
     // swap and would otherwise hand the wrong list to the wrong side.
     const lineup: Record<string, Player[]> = {};
-    if (teamALineup.length > 0) lineup[teamAName.trim().toLowerCase()] = teamALineup;
-    if (teamBLineup.length > 0) lineup[teamBName.trim().toLowerCase()] = teamBLineup;
+    if (teamA.length > 0) lineup[teamAName.trim().toLowerCase()] = teamA;
+    if (teamB.length > 0) lineup[teamBName.trim().toLowerCase()] = teamB;
 
     router.push({
       pathname: '/scoring',
@@ -570,6 +555,26 @@ export function QuickMatchTab({
         ...(Object.keys(lineup).length > 0 ? { lineup: JSON.stringify(lineup) } : {}),
       },
     });
+  };
+
+  const handleStartMatch = () => {
+    if (!validateTeamsAndMatch()) {
+      Alert.alert('Validation Error', 'Please specify valid team names and overs before starting.');
+      return;
+    }
+
+    if (!tossResult) {
+      Alert.alert('Toss Required', 'Please tap "Toss the Coin" to determine the toss winner first.');
+      return;
+    }
+
+    if (!tossDecision) {
+      Alert.alert('Decision Required', 'Please select whether the toss winner chooses to Bat or Bowl.');
+      return;
+    }
+
+    // Automatically show Select Playing XI when clicking Start the Match
+    setIsPlayerSelectionOpen(true);
   };
 
   const isTeamAValid = Boolean(teamAName && teamAName.trim().length > 0);
@@ -2115,13 +2120,18 @@ export function QuickMatchTab({
         initialPool={draftPlayerPool}
         initialTeamA={teamALineup}
         initialTeamB={teamBLineup}
-        onSkip={() => setIsPlayerSelectionOpen(false)}
+        onClose={() => setIsPlayerSelectionOpen(false)}
+        onSkip={() => {
+          setIsPlayerSelectionOpen(false);
+          proceedToScoring([], []);
+        }}
         onConfirm={(teamA, teamB, unassigned) => {
           setTeamALineup(teamA);
           setTeamBLineup(teamB);
           setPlayerPool([...teamA, ...teamB, ...unassigned]);
           setLineupConfigured(teamA.length > 0 || teamB.length > 0);
           setIsPlayerSelectionOpen(false);
+          proceedToScoring(teamA, teamB);
         }}
       />
     </View>

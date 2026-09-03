@@ -96,12 +96,21 @@ const shortCode = (name: string, fallback: string): string => {
 };
 
 /**
- * Players rarely carry their own `avatarUrl` in a quick match, so fall back to
- * a preset portrait chosen deterministically from the player id — each player
- * then keeps the same face across re-renders and team moves.
+ * Players can have custom uploaded photos or fallback to preset portraits.
  */
 const avatarSourceFor = (player: Player) => {
-  if (player.avatarUrl) return getAvatarSource(player.avatarUrl);
+  if (player.avatarUrl) {
+    if (
+      player.avatarUrl.startsWith('http') ||
+      player.avatarUrl.startsWith('file:') ||
+      player.avatarUrl.startsWith('blob:') ||
+      player.avatarUrl.startsWith('data:') ||
+      player.avatarUrl.includes('/')
+    ) {
+      return { uri: player.avatarUrl };
+    }
+    return getAvatarSource(player.avatarUrl);
+  }
   let hash = 0;
   for (let i = 0; i < player.id.length; i++) {
     hash = (hash * 31 + player.id.charCodeAt(i)) >>> 0;
@@ -117,6 +126,7 @@ export interface PlayerSelectionModalProps {
   initialPool?: Player[];
   initialTeamA?: Player[];
   initialTeamB?: Player[];
+  onClose?: () => void;
   onSkip: () => void;
   onConfirm: (teamA: Player[], teamB: Player[], unassigned: Player[]) => void;
 }
@@ -128,9 +138,11 @@ export function PlayerSelectionModal({
   initialPool = [],
   initialTeamA = [],
   initialTeamB = [],
+  onClose,
   onSkip,
   onConfirm,
 }: PlayerSelectionModalProps) {
+  const handleClose = onClose || onSkip;
   const { theme, canvas, zone, bubble, bubbleText } = usePalette();
   const accentA = theme.primary;
   const accentB = '#E08A3C';
@@ -434,7 +446,7 @@ export function PlayerSelectionModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onSkip} statusBarTranslucent>
+    <Modal visible={visible} animationType="slide" onRequestClose={handleClose} statusBarTranslucent>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaView style={[styles.container, { backgroundColor: canvas }]} edges={['top', 'bottom']}>
           {/* Header */}
@@ -446,7 +458,7 @@ export function PlayerSelectionModal({
               </ThemedText>
             </View>
             <Pressable
-              onPress={onSkip}
+              onPress={handleClose}
               hitSlop={8}
               accessibilityLabel="Close"
               style={[styles.closeBtn, { backgroundColor: bubble }]}
@@ -690,7 +702,7 @@ export function PlayerSelectionModal({
               style={[styles.confirmBtn, { backgroundColor: theme.primary }]}
             >
               <ThemedText style={styles.confirmText}>
-                {totalAssigned > 0 ? `Confirm Lineup (${totalAssigned})` : 'Confirm Lineup'}
+                {totalAssigned > 0 ? `Continue to Match (${totalAssigned})` : 'Continue to Match'}
               </ThemedText>
             </Pressable>
           </View>

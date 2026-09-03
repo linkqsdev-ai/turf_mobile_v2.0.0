@@ -33,6 +33,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '@/components/themed-text';
 import { MotionView } from '@/components/motion';
@@ -72,8 +73,19 @@ export function normalizePlayer(entry: unknown): SquadPlayer | null {
   return null;
 }
 
-const avatarFor = (player: SquadPlayer) => {
-  if (player.avatarUrl) return getAvatarSource(player.avatarUrl);
+export const avatarFor = (player: SquadPlayer) => {
+  if (player.avatarUrl) {
+    if (
+      player.avatarUrl.startsWith('http') ||
+      player.avatarUrl.startsWith('file:') ||
+      player.avatarUrl.startsWith('blob:') ||
+      player.avatarUrl.startsWith('data:') ||
+      player.avatarUrl.includes('/')
+    ) {
+      return { uri: player.avatarUrl };
+    }
+    return getAvatarSource(player.avatarUrl);
+  }
   const key = player.id || player.name;
   let hash = 0;
   for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
@@ -113,8 +125,8 @@ function SquadModalShell({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.overlay}>
-        {/* Tapping the scrim dismisses, matching the app's other sheets. */}
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Dismiss" />
+        {/* Scrim is locked: only the close icon and cancel button dismiss the modal */}
+        <View style={StyleSheet.absoluteFill} />
         {/* MotionView routes to Framer Motion + GSAP on web and Moti/Reanimated
             on native, so the entrance is identical on both without importing a
             DOM-only animation library into a shared component. */}
@@ -468,15 +480,38 @@ export function EditPlayerModal({ visible, onClose, player, onSave }: EditPlayer
   const [role, setRole] = useState<string>(SQUAD_ROLES[0]);
   const [jersey, setJersey] = useState('');
   const [avatarKey, setAvatarKey] = useState<string | undefined>(undefined);
+  const [customImageUri, setCustomImageUri] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible && player) {
       setName(player.name || '');
       setRole(player.role && SQUAD_ROLES.includes(player.role as any) ? player.role : SQUAD_ROLES[0]);
       setJersey(player.jerseyNumber !== undefined ? String(player.jerseyNumber) : '');
-      setAvatarKey(player.avatarUrl);
+      if (player.avatarUrl && (player.avatarUrl.startsWith('http') || player.avatarUrl.startsWith('file:') || player.avatarUrl.startsWith('blob:') || player.avatarUrl.startsWith('data:') || player.avatarUrl.includes('/'))) {
+        setCustomImageUri(player.avatarUrl);
+        setAvatarKey(undefined);
+      } else {
+        setCustomImageUri(null);
+        setAvatarKey(player.avatarUrl);
+      }
     }
   }, [visible, player]);
+
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets && result.assets[0]?.uri) {
+        setCustomImageUri(result.assets[0].uri);
+      }
+    } catch (err) {
+      console.warn('Image picker error:', err);
+    }
+  };
 
   const trimmed = name.trim();
 
@@ -496,27 +531,56 @@ export function EditPlayerModal({ visible, onClose, player, onSave }: EditPlayer
           name: trimmed,
           role,
           jerseyNumber: jersey.trim() ? jersey.trim() : undefined,
-          avatarUrl: avatarKey,
+          avatarUrl: customImageUri || avatarKey,
         });
       }}
     >
-      <SectionLabel>NAME</SectionLabel>
-      <TextInput
-        value={name}
-        onChangeText={setName}
-        placeholder="Player name"
-        placeholderTextColor={theme.placeholder}
-        style={[
-          styles.input,
-          type.body,
-          { color: theme.text, backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
-          Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
-        ]}
-      />
+      {/* Avatar preview with camera button + name */}
+      <View style={styles.identityRow}>
+        <Pressable onPress={handlePickImage} style={{ position: 'relative' }}>
+          <Image
+            source={customImageUri ? { uri: customImageUri } : getAvatarSource(avatarKey || AVATAR_KEYS[0])}
+            style={styles.identityAvatar}
+            contentFit="cover"
+          />
+          <View
+            style={{
+              position: 'absolute',
+              bottom: -2,
+              right: -2,
+              backgroundColor: theme.primary,
+              width: 18,
+              height: 18,
+              borderRadius: 9,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1.5,
+              borderColor: theme.surfaceLowest,
+            }}
+          >
+            <Ionicons name="camera" size={10} color="#ffffff" />
+          </View>
+        </Pressable>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <SectionLabel>NAME</SectionLabel>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Player name"
+            placeholderTextColor={theme.placeholder}
+            style={[
+              styles.input,
+              type.body,
+              { color: theme.text, backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+              Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
+            ]}
+          />
+        </View>
+      </View>
 
       <SectionLabel>ROLE</SectionLabel>
       <View style={styles.chipWrap}>
-        {SQUAD_ROLES.map(r => {
+        {SQUAD_ROLES.map((r) => {
           const on = role === r;
           return (
             <Pressable
@@ -551,12 +615,40 @@ export function EditPlayerModal({ visible, onClose, player, onSave }: EditPlayer
         ]}
       />
 
-      <SectionLabel>AVATAR</SectionLabel>
-      <View style={styles.avatarGrid}>
-        {AVATAR_KEYS.slice(0, 12).map(key => {
-          const on = avatarKey === key;
+      <SectionLabel>CHOOSE AVATAR OR UPLOAD PHOTO</SectionLabel>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.avatarStrip}>
+        {/* Upload Custom Photo button */}
+        <Pressable
+          onPress={handlePickImage}
+          style={[
+            styles.avatarChoice,
+            {
+              borderColor: customImageUri ? theme.primary : theme.outlineVariant + '66',
+              borderWidth: customImageUri ? 2 : 1,
+              borderStyle: customImageUri ? 'solid' : 'dashed',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: customImageUri ? 'transparent' : theme.surfaceLow,
+            },
+          ]}
+        >
+          {customImageUri ? (
+            <Image source={{ uri: customImageUri }} style={{ width: '100%', height: '100%', borderRadius: 16 }} contentFit="cover" />
+          ) : (
+            <Ionicons name="camera-outline" size={14} color={theme.primary} />
+          )}
+        </Pressable>
+
+        {AVATAR_KEYS.slice(0, 12).map((key) => {
+          const on = !customImageUri && avatarKey === key;
           return (
-            <Pressable key={key} onPress={() => setAvatarKey(key)}>
+            <Pressable
+              key={key}
+              onPress={() => {
+                setCustomImageUri(null);
+                setAvatarKey(key);
+              }}
+            >
               <Image
                 source={getAvatarSource(key)}
                 style={[
@@ -568,7 +660,7 @@ export function EditPlayerModal({ visible, onClose, player, onSave }: EditPlayer
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
     </SquadModalShell>
   );
 }
@@ -598,7 +690,7 @@ export interface AddPlayerModalProps {
 }
 
 /**
- * Create-only with integrated OTP verification for mobile numbers.
+ * Create-only with integrated custom photo upload & OTP verification.
  */
 export function AddPlayerModal({
   visible,
@@ -615,6 +707,7 @@ export function AddPlayerModal({
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [avatarKey, setAvatarKey] = useState<string>(AVATAR_KEYS[0]);
+  const [customImageUri, setCustomImageUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // ── OTP Verification State ──
@@ -633,6 +726,7 @@ export function AddPlayerModal({
       setName(initialName);
       setPhone(initialPhone);
       setAvatarKey(AVATAR_KEYS[0]);
+      setCustomImageUri(null);
       setError(null);
       setOtpStage('idle');
       setGeneratedOtp('');
@@ -656,6 +750,22 @@ export function AddPlayerModal({
       return () => clearTimeout(timer);
     }
   }, [resendTimer]);
+
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets && result.assets[0]?.uri) {
+        setCustomImageUri(result.assets[0].uri);
+      }
+    } catch (err) {
+      console.warn('Image picker error:', err);
+    }
+  };
 
   const isTaken = useMemo(() => {
     const taken = new Set(existing.map(playerIdentity));
@@ -722,7 +832,7 @@ export function AddPlayerModal({
     onAdd({
       name: trimmedName,
       phone: phoneOk ? normalizePhone(phone) : undefined,
-      avatarUrl: avatarKey,
+      avatarUrl: customImageUri || avatarKey,
       isVerified: otpStage === 'verified',
     });
   };
@@ -733,14 +843,37 @@ export function AddPlayerModal({
       onClose={onClose}
       icon="person-add"
       title="Add Player"
-      subtitle="Name them, pick an avatar, and verify mobile number"
+      subtitle="Name them, pick or upload an avatar, and verify mobile number"
       primaryLabel="Add Player"
       primaryEnabled={canAdd}
       onPrimary={submit}
     >
-      {/* Avatar + name side by side, so the identity reads as one unit. */}
+      {/* Avatar + name side by side, with camera picker button */}
       <View style={styles.identityRow}>
-        <Image source={getAvatarSource(avatarKey)} style={styles.identityAvatar} contentFit="cover" />
+        <Pressable onPress={handlePickImage} style={{ position: 'relative' }}>
+          <Image
+            source={customImageUri ? { uri: customImageUri } : getAvatarSource(avatarKey)}
+            style={styles.identityAvatar}
+            contentFit="cover"
+          />
+          <View
+            style={{
+              position: 'absolute',
+              bottom: -2,
+              right: -2,
+              backgroundColor: theme.primary,
+              width: 18,
+              height: 18,
+              borderRadius: 9,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1.5,
+              borderColor: theme.surfaceLowest,
+            }}
+          >
+            <Ionicons name="camera" size={10} color="#ffffff" />
+          </View>
+        </Pressable>
         <View style={{ flex: 1, minWidth: 0 }}>
           <SectionLabel>NAME</SectionLabel>
           <TextInput
@@ -759,12 +892,40 @@ export function AddPlayerModal({
         </View>
       </View>
 
-      <SectionLabel>CHOOSE AVATAR</SectionLabel>
+      <SectionLabel>CHOOSE AVATAR OR UPLOAD PHOTO</SectionLabel>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.avatarStrip}>
-        {AVATAR_KEYS.slice(0, 12).map(key => {
-          const on = avatarKey === key;
+        {/* Upload Custom Photo button */}
+        <Pressable
+          onPress={handlePickImage}
+          style={[
+            styles.avatarChoice,
+            {
+              borderColor: customImageUri ? theme.primary : theme.outlineVariant + '66',
+              borderWidth: customImageUri ? 2 : 1,
+              borderStyle: customImageUri ? 'solid' : 'dashed',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: customImageUri ? 'transparent' : theme.surfaceLow,
+            },
+          ]}
+        >
+          {customImageUri ? (
+            <Image source={{ uri: customImageUri }} style={{ width: '100%', height: '100%', borderRadius: 16 }} contentFit="cover" />
+          ) : (
+            <Ionicons name="camera-outline" size={14} color={theme.primary} />
+          )}
+        </Pressable>
+
+        {AVATAR_KEYS.slice(0, 12).map((key) => {
+          const on = !customImageUri && avatarKey === key;
           return (
-            <Pressable key={key} onPress={() => setAvatarKey(key)}>
+            <Pressable
+              key={key}
+              onPress={() => {
+                setCustomImageUri(null);
+                setAvatarKey(key);
+              }}
+            >
               <Image
                 source={getAvatarSource(key)}
                 style={[

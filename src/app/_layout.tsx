@@ -245,6 +245,20 @@ function RootNavigation() {
           presentation: 'card'
         }}
       />
+      <Stack.Screen
+        name="turf-bookings"
+        options={{
+          animation: 'slide_from_right',
+          presentation: 'card'
+        }}
+      />
+      <Stack.Screen
+        name="booking-history"
+        options={{
+          animation: 'slide_from_right',
+          presentation: 'card'
+        }}
+      />
     </Stack>
   );
 }

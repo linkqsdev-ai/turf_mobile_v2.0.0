@@ -16,6 +16,15 @@ export interface Booking {
   advancePaid: number;
   remaining: number;
   paymentMethod: string;
+
+  // ── Who booked ────────────────────────────────────────────────────────────
+  // Captured at booking time so a turf owner can see and contact the customer.
+  // Snapshotted rather than joined by id: the owner needs the name and number
+  // that were given when the slot was taken, even if that profile later changes.
+  customerName?: string;
+  customerPhone?: string;
+  customerAvatar?: string;
+
   coachAdded: boolean;
   recordingAdded: boolean;
   status: 'confirmed' | 'pending' | 'cancelled' | 'completed';

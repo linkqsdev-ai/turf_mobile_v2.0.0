@@ -19,6 +19,7 @@ import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useToast } from '@/context/ToastContext';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { useNotifications } from '@/context/NotificationContext';
 import { PromoBanner } from '@/components/promo-banner';
 import { useBookings, useWalletStore, useClassStore, useTurfStore, useOfferStore } from '@/store/app-store';
@@ -113,6 +114,7 @@ export default function BookingConfigurationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string; name?: string; price?: string; date?: string; coupon?: string }>();
   const { bookings, addBooking } = useBookings();
+  const { profile } = useUserProfile();
   const { walletBalance, addWalletFunds, deductWalletFunds } = useWalletStore();
   const { classes } = useClassStore();
   const { ownedTurfs } = useTurfStore();
@@ -451,6 +453,10 @@ export default function BookingConfigurationScreen() {
       advancePaid: finalPayable,
       remaining: remainingAmount,
       paymentMethod: finalPayable === 0 ? 'wallet' : paymentMethod,
+      // Stamp who booked, so the turf owner can identify and contact them.
+      customerName: profile.name,
+      customerPhone: profile.phone,
+      customerAvatar: typeof profile.avatarUrl === 'string' ? profile.avatarUrl : undefined,
       coachAdded,
       recordingAdded,
     });
