@@ -37,7 +37,7 @@ import {
   playerIdentity,
   type Player,
 } from '@/store/match-store';
-import { useWalletStore } from '@/store/app-store';
+import { useMatchStore, useWalletStore } from '@/store/app-store';
 import { AddPlayerModal } from '@/components/scoring/squad-modals';
 import { searchFoFDirectory } from '@/services/fof-network';
 
@@ -155,7 +155,6 @@ export function PlayerSelectionModal({
   const [creditToast, setCreditToast] = useState<string | null>(null);
   /** Numbers already paid out this session — the bonus is once per number. */
   const creditedPhones = useRef<Set<string>>(new Set());
-  const { addWalletFunds } = useWalletStore();
 
   // Re-seed whenever the sheet is (re)opened, so a cancelled session doesn't
   // leak into the next one. Everything is deduped by person (not id) and the
@@ -227,6 +226,9 @@ export function PlayerSelectionModal({
     setScrollEnabled(true);
   }, [resolveDropTarget, moveToBucket]);
 
+  const { teams: savedTeams } = useMatchStore();
+  const { addWalletFunds } = useWalletStore();
+
   const everyone = useMemo(
     () => [...buckets.master, ...buckets.teamA, ...buckets.teamB],
     [buckets]
@@ -241,9 +243,9 @@ export function PlayerSelectionModal({
     [everyone]
   );
 
-  /** Adds a player and, when a usable mobile is supplied, pays the 5-credit bonus. */
+  /** Adds a player and pays the 5-credit wallet coins bonus. */
   const commitPlayer = useCallback(
-    ({ name, phone, avatarUrl }: { name: string; phone?: string; avatarUrl?: string }) => {
+    ({ name, phone, avatarUrl, isVerified }: { name: string; phone?: string; avatarUrl?: string; isVerified?: boolean }) => {
       const trimmed = name.trim();
       if (!trimmed) return;
       if (isAlreadyIn({ name: trimmed, phone })) {
@@ -263,34 +265,95 @@ export function PlayerSelectionModal({
       setSearchQuery('');
       setDuplicateWarning(null);
 
-      // The incentive is paid once per number, so re-adding the same person
-      // after removing them can't farm credits.
-      if (isUsablePhone(phone)) {
-        const key = normalizePhone(phone);
+      // Reward 5 wallet coins for adding player with phone or verification
+      if (isUsablePhone(phone) || isVerified) {
+        const key = phone ? normalizePhone(phone) : `name:${trimmed.toLowerCase()}`;
         if (!creditedPhones.current.has(key)) {
           creditedPhones.current.add(key);
           addWalletFunds(CREDIT_REWARD);
-          setCreditToast(`+${CREDIT_REWARD} credits for adding a mobile number`);
+          setCreditToast(`🎉 +${CREDIT_REWARD} Wallet coins added to your wallet!`);
+          setTimeout(() => setCreditToast(null), 5000);
         }
       }
     },
     [isAlreadyIn, addWalletFunds]
   );
 
-  const queryLooksLikePhone = searchQuery.replace(/\D/g, '').length >= 6;
+  const queryClean = searchQuery.trim().toLowerCase();
+  const queryDigits = searchQuery.replace(/\D/g, '');
+  const queryLooksLikePhone = queryDigits.length >= 6;
 
-  /**
-   * Directory lookup lives here rather than in the popup: searching is how you
-   * find someone who already exists, and the popup's only job is creating
-   * someone who doesn't. Matches on phone digits (3+) as well as name.
-   */
-  const searchResults = useMemo(() => {
-    const q = searchQuery.trim();
-    if (q.length < 3) return [];
-    return searchFoFDirectory(q)
-      .filter((p) => !isAlreadyIn({ name: p.name, phone: p.phone }))
+  /** 1. Current match players matching the query */
+  const matchPlayerResults = useMemo(() => {
+    if (queryClean.length < 2 && queryDigits.length < 3) return [];
+    const results: { player: Player; location: BucketId; locationLabel: string }[] = [];
+
+    buckets.master.forEach((p) => {
+      const pDigits = p.phone ? normalizePhone(p.phone) : '';
+      if (p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits))) {
+        results.push({ player: p, location: 'master', locationLabel: 'Available Pool' });
+      }
+    });
+    buckets.teamA.forEach((p) => {
+      const pDigits = p.phone ? normalizePhone(p.phone) : '';
+      if (p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits))) {
+        results.push({ player: p, location: 'teamA', locationLabel: labelA });
+      }
+    });
+    buckets.teamB.forEach((p) => {
+      const pDigits = p.phone ? normalizePhone(p.phone) : '';
+      if (p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits))) {
+        results.push({ player: p, location: 'teamB', locationLabel: labelB });
+      }
+    });
+    return results;
+  }, [buckets, queryClean, queryDigits, labelA, labelB]);
+
+  /** 2. Saved Team Players (from useMatchStore) matching query but not in match yet */
+  const savedPlayerResults = useMemo(() => {
+    if (queryClean.length < 2 && queryDigits.length < 3) return [];
+    const allSavedPlayers: Player[] = [];
+    savedTeams.forEach((t) => {
+      t.players.forEach((p) => allSavedPlayers.push(p));
+    });
+    return dedupePlayers(allSavedPlayers)
+      .filter((p) => !isAlreadyIn(p))
+      .filter((p) => {
+        const pDigits = p.phone ? normalizePhone(p.phone) : '';
+        return p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits));
+      })
       .slice(0, 4);
-  }, [searchQuery, isAlreadyIn]);
+  }, [savedTeams, queryClean, queryDigits, isAlreadyIn]);
+
+  /** 3. FoF Directory search results */
+  const directoryResults = useMemo(() => {
+    if (queryClean.length < 3 && queryDigits.length < 3) return [];
+    const savedIds = new Set(savedPlayerResults.map((p) => playerIdentity(p)));
+    return searchFoFDirectory(searchQuery)
+      .filter((p) => !isAlreadyIn({ name: p.name, phone: p.phone }))
+      .filter((p) => !savedIds.has(playerIdentity({ name: p.name, phone: p.phone })))
+      .slice(0, 4);
+  }, [searchQuery, queryClean, queryDigits, isAlreadyIn, savedPlayerResults]);
+
+  /** Checks if an exact match exists in the match pool */
+  const exactMatchInPool = useMemo(() => {
+    if (!queryClean && !queryDigits) return null;
+    return everyone.find((p) => {
+      const pDigits = p.phone ? normalizePhone(p.phone) : '';
+      if (queryDigits.length >= 10 && pDigits === queryDigits) return true;
+      if (queryClean.length >= 2 && p.name.toLowerCase() === queryClean) return true;
+      return false;
+    });
+  }, [everyone, queryClean, queryDigits]);
+
+  /** Filter Available Players list when searching */
+  const displayedMaster = useMemo(() => {
+    if (!queryClean && !queryDigits) return buckets.master;
+    return buckets.master.filter((p) => {
+      const pDigits = p.phone ? normalizePhone(p.phone) : '';
+      return p.name.toLowerCase().includes(queryClean) || (queryDigits.length >= 3 && pDigits.includes(queryDigits));
+    });
+  }, [buckets.master, queryClean, queryDigits]);
 
   /** Opens the create-only popup, carrying whatever was typed into the search. */
   const openAddPlayer = useCallback((seed: string) => {
@@ -410,8 +473,8 @@ export function PlayerSelectionModal({
               id="master"
               title="Available Players"
               meta={`${buckets.master.length} unassigned`}
-              players={buckets.master}
-              emptyLabel="No players yet — add one below."
+              players={displayedMaster}
+              emptyLabel={searchQuery.trim() ? "No matching available players found." : "No players yet — add one below."}
             >
               {/* Finding an existing player happens HERE. The Add Player popup
                   is create-only; it opens (pre-filled) when nothing matches. */}
@@ -442,10 +505,84 @@ export function PlayerSelectionModal({
                 </Pressable>
               </View>
 
-              {/* Directory matches — tap to add straight into the pool. */}
-              {searchResults.length > 0 && (
+              {/* 1. Players in current match matching query */}
+              {matchPlayerResults.length > 0 && searchQuery.trim().length > 0 && (
                 <View style={styles.suggestList}>
-                  {searchResults.map((s) => (
+                  {matchPlayerResults.map(({ player: p, location, locationLabel }) => (
+                    <View
+                      key={p.id}
+                      style={[styles.suggestRow, { backgroundColor: bubble }]}
+                    >
+                      <Image source={avatarSourceFor(p)} style={styles.avatar} contentFit="cover" />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <ThemedText style={[styles.suggestName, { color: bubbleText }]} numberOfLines={1}>
+                          {p.name}
+                        </ThemedText>
+                        <ThemedText style={[styles.suggestMeta, { color: theme.textSecondary }]} numberOfLines={1}>
+                          {p.phone || 'No phone'} · <ThemedText style={{ color: location === 'master' ? theme.primary : accentA, fontFamily: 'Sora_600SemiBold' }}>{locationLabel}</ThemedText>
+                        </ThemedText>
+                      </View>
+                      <View style={styles.actionRow}>
+                        {actionsFor(p, location).map((action) => (
+                          <Pressable
+                            key={action.key}
+                            onPress={action.onPress}
+                            hitSlop={5}
+                            accessibilityLabel={action.hint}
+                            style={({ pressed }) => [
+                              styles.actionBtn,
+                              {
+                                backgroundColor: action.icon ? 'transparent' : action.color,
+                                borderColor: action.color + (action.icon ? '66' : '00'),
+                                borderWidth: action.icon ? 1 : 0,
+                                opacity: pressed ? 0.6 : 1,
+                              },
+                            ]}
+                          >
+                            {action.icon ? (
+                              <Ionicons name={action.icon} size={11} color={action.color} />
+                            ) : (
+                              <ThemedText style={styles.actionText}>{action.label}</ThemedText>
+                            )}
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* 2. Saved Team Roster matches */}
+              {savedPlayerResults.length > 0 && (
+                <View style={styles.suggestList}>
+                  {savedPlayerResults.map((s) => (
+                    <Pressable
+                      key={s.id}
+                      onPress={() => commitPlayer({ name: s.name, phone: s.phone, avatarUrl: s.avatarUrl })}
+                      style={({ pressed }) => [
+                        styles.suggestRow,
+                        { backgroundColor: bubble, opacity: pressed ? 0.7 : 1 },
+                      ]}
+                    >
+                      <Image source={avatarSourceFor(s)} style={styles.avatar} contentFit="cover" />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <ThemedText style={[styles.suggestName, { color: bubbleText }]} numberOfLines={1}>
+                          {s.name}
+                        </ThemedText>
+                        <ThemedText style={[styles.suggestMeta, { color: theme.textSecondary }]} numberOfLines={1}>
+                          {s.phone || 'Saved Player'} · Tap to Add
+                        </ThemedText>
+                      </View>
+                      <Ionicons name="add-circle" size={18} color={theme.primary} />
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+
+              {/* 3. Directory matches — tap to add straight into the pool. */}
+              {directoryResults.length > 0 && (
+                <View style={styles.suggestList}>
+                  {directoryResults.map((s) => (
                     <Pressable
                       key={s.id}
                       onPress={() => commitPlayer({ name: s.name, phone: s.phone })}
@@ -468,24 +605,38 @@ export function PlayerSelectionModal({
                 </View>
               )}
 
-              {/* Nothing matched — hand the query to the create popup. */}
-              {searchQuery.trim().length >= 3 && searchResults.length === 0 && (
-                <Pressable
-                  onPress={() => openAddPlayer(searchQuery)}
-                  style={({ pressed }) => [
-                    styles.notFound,
-                    { borderColor: theme.primary + '55', opacity: pressed ? 0.75 : 1 },
-                  ]}
-                >
-                  <Ionicons name="person-add" size={14} color={theme.primary} />
-                  <ThemedText style={[styles.notFoundText, { color: theme.primary }]} numberOfLines={1}>
-                    {queryLooksLikePhone
-                      ? `Add a player with ${searchQuery.trim()}`
-                      : `Add “${searchQuery.trim()}” as a new player`}
+              {/* Exact match info notification */}
+              {exactMatchInPool && (
+                <View style={styles.warnRow}>
+                  <Ionicons name="checkmark-circle" size={12} color={theme.primary} />
+                  <ThemedText style={[styles.warnText, { color: theme.primary }]}>
+                    {`${exactMatchInPool.name}${exactMatchInPool.phone ? ` (${exactMatchInPool.phone})` : ''} is already in the match.`}
                   </ThemedText>
-                  <Ionicons name="arrow-forward" size={14} color={theme.primary} />
-                </Pressable>
+                </View>
               )}
+
+              {/* Nothing matched anywhere — allow adding new player. */}
+              {searchQuery.trim().length >= 3 &&
+                !exactMatchInPool &&
+                matchPlayerResults.length === 0 &&
+                savedPlayerResults.length === 0 &&
+                directoryResults.length === 0 && (
+                  <Pressable
+                    onPress={() => openAddPlayer(searchQuery)}
+                    style={({ pressed }) => [
+                      styles.notFound,
+                      { borderColor: theme.primary + '55', opacity: pressed ? 0.75 : 1 },
+                    ]}
+                  >
+                    <Ionicons name="person-add" size={14} color={theme.primary} />
+                    <ThemedText style={[styles.notFoundText, { color: theme.primary }]} numberOfLines={1}>
+                      {queryLooksLikePhone
+                        ? `Add a player with ${searchQuery.trim()}`
+                        : `Add “${searchQuery.trim()}” as a new player`}
+                    </ThemedText>
+                    <Ionicons name="arrow-forward" size={14} color={theme.primary} />
+                  </Pressable>
+                )}
 
               {creditToast && (
                 <View style={styles.warnRow}>

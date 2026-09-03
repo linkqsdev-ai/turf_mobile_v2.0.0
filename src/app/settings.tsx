@@ -303,6 +303,8 @@ export default function SettingsScreen() {
             <Divider theme={theme} />
             {/* Reachable from Settings rather than only the owner hub, because
                 coaches and organizers get paid through the same profile. */}
+            <LinkRow theme={theme} icon="cash-outline" title="Earnings & Payments" subtitle="Payment status, escrow and statements" onPress={() => router.push('/owner-earnings')} />
+            <Divider theme={theme} />
             <LinkRow theme={theme} icon="card-outline" title="Payout & Tax Details" subtitle="Address, GST and how you get paid" onPress={() => router.push('/payout-settings')} />
           </SectionCard>
 

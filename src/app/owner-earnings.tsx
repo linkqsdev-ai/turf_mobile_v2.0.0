@@ -22,7 +22,7 @@ import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useTypeRamp } from '@/lib/typography';
 import { useToast } from '@/context/ToastContext';
-import { useBookingStore } from '@/store/app-store';
+import { useBookings } from '@/store/app-store';
 import {
   HOLD_PERIOD_HOURS,
   computeSettlement,
@@ -33,8 +33,17 @@ import {
 } from '@/lib/settlement';
 import { exportInvoicePDF, invoiceNumberFor } from '@/services/payout-invoice';
 import { type PayeeProfile } from '@/store/payout-store';
+import { type Booking } from '@/store/booking-store';
 
 const PROFILE_KEY = '@turf_payout_profile';
+
+interface EarningRow {
+  booking: Booking;
+  settlement: ReturnType<typeof computeSettlement>;
+  status: PayoutStatus;
+}
+
+interface Totals { inEscrow: number; crediting: number; credited: number }
 
 const STATUS_META: Record<string, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
   held: { label: 'In escrow', color: '#E08A3C', icon: 'time-outline' },
@@ -51,7 +60,7 @@ export default function OwnerEarningsScreen() {
   const type = useTypeRamp();
   const router = useRouter();
   const { showSuccess, showWarning } = useToast();
-  const { bookings } = useBookingStore();
+  const { bookings } = useBookings();
 
   const [profile, setProfile] = useState<PayeeProfile | null>(null);
   // Ticks the countdown so a row flips from "In escrow" to "Crediting" while
@@ -76,8 +85,8 @@ export default function OwnerEarningsScreen() {
 
   const rows = useMemo(() => {
     return (bookings || [])
-      .filter((b) => b.status !== 'cancelled')
-      .map((b) => {
+      .filter((b: Booking) => b.status !== 'cancelled')
+      .map((b: Booking) => {
         const slotCount = b.slots?.length || 1;
         const settlement = computeSettlement({
           slotCount,
@@ -86,12 +95,12 @@ export default function OwnerEarningsScreen() {
         const status: PayoutStatus = escrowStatus(b.createdAt, null, now);
         return { booking: b, settlement, status };
       })
-      .sort((a, b) => (a.booking.createdAt < b.booking.createdAt ? 1 : -1));
+      .sort((a: EarningRow, b: EarningRow) => (a.booking.createdAt < b.booking.createdAt ? 1 : -1));
   }, [bookings, now]);
 
   const totals = useMemo(() => {
     return rows.reduce(
-      (acc, r) => {
+      (acc: Totals, r: EarningRow) => {
         if (r.status === 'held') acc.inEscrow = money(acc.inEscrow + r.settlement.ownerPayout);
         else if (r.status === 'paid') acc.credited = money(acc.credited + r.settlement.ownerPayout);
         else acc.crediting = money(acc.crediting + r.settlement.ownerPayout);
@@ -101,7 +110,7 @@ export default function OwnerEarningsScreen() {
     );
   }, [rows]);
 
-  const handleInvoice = async (row: (typeof rows)[number]) => {
+  const handleInvoice = async (row: EarningRow) => {
     if (!profile) {
       showWarning('Add your payout details first', 'A statement needs your billing address and GSTIN.');
       router.push('/payout-settings');

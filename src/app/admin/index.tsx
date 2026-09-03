@@ -10,6 +10,7 @@ import { useTokens } from '@/hooks/use-scheme';
 const ITEMS: { title: string; desc: string; icon: keyof typeof Ionicons.glyphMap; href: string }[] = [
   { title: 'Create turf & slots', desc: 'Add a venue and configure its weekly availability grid', icon: 'add-circle-outline', href: '/admin/create-turf' },
   { title: 'Turf analytics', desc: 'Revenue, occupancy and demand by sport', icon: 'bar-chart-outline', href: '/admin/dashboard' },
+  { title: 'Earnings & payments', desc: 'Payment status, escrow countdown and statements', icon: 'cash-outline', href: '/owner-earnings' },
   { title: 'Payout & tax details', desc: 'Address, GST and how you get paid', icon: 'card-outline', href: '/payout-settings' },
 ];
 

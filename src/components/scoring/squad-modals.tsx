@@ -581,6 +581,7 @@ export interface AddPlayerDraft {
   name: string;
   phone?: string;
   avatarUrl?: string;
+  isVerified?: boolean;
 }
 
 export interface AddPlayerModalProps {
@@ -597,9 +598,7 @@ export interface AddPlayerModalProps {
 }
 
 /**
- * Create-only. Finding an existing player is the search box's job in the picker
- * that opens this — by the time this popup is up, the decision to create
- * somebody new has already been made, so there is nothing to search here.
+ * Create-only with integrated OTP verification for mobile numbers.
  */
 export function AddPlayerModal({
   visible,
@@ -617,6 +616,15 @@ export function AddPlayerModal({
   const [phone, setPhone] = useState('');
   const [avatarKey, setAvatarKey] = useState<string>(AVATAR_KEYS[0]);
   const [error, setError] = useState<string | null>(null);
+
+  // ── OTP Verification State ──
+  const [otpStage, setOtpStage] = useState<'idle' | 'sent' | 'verified'>('idle');
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [otpInput, setOtpInput] = useState('');
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpInfo, setOtpInfo] = useState<string | null>(null);
+  const [resendTimer, setResendTimer] = useState(0);
+
   const nameRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
 
@@ -626,6 +634,12 @@ export function AddPlayerModal({
       setPhone(initialPhone);
       setAvatarKey(AVATAR_KEYS[0]);
       setError(null);
+      setOtpStage('idle');
+      setGeneratedOtp('');
+      setOtpInput('');
+      setOtpError(null);
+      setOtpInfo(null);
+      setResendTimer(0);
       // Focus whichever field the picker's search did NOT already fill.
       requestAnimationFrame(() => {
         if (initialName && !initialPhone) phoneRef.current?.focus();
@@ -635,25 +649,81 @@ export function AddPlayerModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendTimer]);
+
   const isTaken = useMemo(() => {
     const taken = new Set(existing.map(playerIdentity));
     return (candidate: { name: string; phone?: string }) => taken.has(playerIdentity(candidate));
   }, [existing]);
 
   const trimmedName = name.trim();
-  const phoneOk = isUsablePhone(phone);
+  const phoneDigits = phone.replace(/\D/g, '');
+  const phoneOk = phoneDigits.length >= 10;
   const canAdd = trimmedName.length > 0;
+
+  const handlePhoneChange = (t: string) => {
+    const cleaned = t.replace(/[^0-9+ ]/g, '').slice(0, 16);
+    setPhone(cleaned);
+    if (error) setError(null);
+    if (otpStage !== 'idle') {
+      setOtpStage('idle');
+      setGeneratedOtp('');
+      setOtpInput('');
+      setOtpError(null);
+      setOtpInfo(null);
+    }
+  };
+
+  const handleSendOtp = () => {
+    if (!phoneOk) {
+      setError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    setGeneratedOtp(code);
+    setOtpStage('sent');
+    setOtpInput('');
+    setOtpError(null);
+    setOtpInfo(`Demo OTP sent: ${code} (or use 123456)`);
+    setResendTimer(30);
+  };
+
+  const handleVerifyOtp = () => {
+    if (otpInput.length !== 6) {
+      setOtpError('Please enter 6-digit OTP');
+      return;
+    }
+    if (otpInput !== generatedOtp && otpInput !== '123456') {
+      setOtpError('Invalid OTP code. Please try again.');
+      return;
+    }
+    setOtpStage('verified');
+    setOtpError(null);
+    setOtpInfo('Mobile number verified successfully! +5 Wallet coins ready.');
+  };
 
   const submit = () => {
     if (!canAdd) return;
-    if (isTaken({ name: trimmedName, phone })) {
+    if (isTaken({ name: trimmedName, phone: phoneOk ? phone : undefined })) {
       setError(`${trimmedName} is already in this match`);
       return;
     }
+    if (phone.trim().length > 0 && phoneOk && otpStage !== 'verified') {
+      setError('Please verify the mobile number via OTP first.');
+      return;
+    }
+
     onAdd({
       name: trimmedName,
       phone: phoneOk ? normalizePhone(phone) : undefined,
       avatarUrl: avatarKey,
+      isVerified: otpStage === 'verified',
     });
   };
 
@@ -663,7 +733,7 @@ export function AddPlayerModal({
       onClose={onClose}
       icon="person-add"
       title="Add Player"
-      subtitle="Name them, pick a look, and add a mobile number"
+      subtitle="Name them, pick an avatar, and verify mobile number"
       primaryLabel="Add Player"
       primaryEnabled={canAdd}
       onPrimary={submit}
@@ -708,25 +778,31 @@ export function AddPlayerModal({
         })}
       </ScrollView>
 
-      <SectionLabel>MOBILE NUMBER (OPTIONAL)</SectionLabel>
+      <SectionLabel>MOBILE NUMBER & OTP VERIFICATION</SectionLabel>
       <View
         style={[
           styles.search,
           {
             backgroundColor: theme.surfaceLow,
-            borderColor: phoneOk ? theme.primary : theme.outlineVariant + '44',
+            borderColor: otpStage === 'verified' ? '#10B981' : (phoneOk ? theme.primary : theme.outlineVariant + '44'),
             marginBottom: 0,
+            paddingRight: 6,
           },
         ]}
       >
-        <Ionicons name="call-outline" size={14} color={phoneOk ? theme.primary : theme.textSecondary} />
+        <Ionicons
+          name="call-outline"
+          size={14}
+          color={otpStage === 'verified' ? '#10B981' : (phoneOk ? theme.primary : theme.textSecondary)}
+        />
         <TextInput
           ref={phoneRef}
           value={phone}
-          onChangeText={(t) => setPhone(t.replace(/[^0-9+ ]/g, '').slice(0, 16))}
-          placeholder="e.g. 98765 43210"
+          onChangeText={handlePhoneChange}
+          placeholder="10-digit mobile number"
           keyboardType="phone-pad"
           placeholderTextColor={theme.placeholder}
+          editable={otpStage !== 'verified'}
           style={[
             styles.searchInput,
             type.body,
@@ -734,32 +810,97 @@ export function AddPlayerModal({
             Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
           ]}
         />
-        {phoneOk && <Ionicons name="checkmark-circle" size={16} color={theme.primary} />}
+        {otpStage === 'verified' ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10B98118', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+            <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+            <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#10B981' }}>Verified</ThemedText>
+          </View>
+        ) : phoneOk ? (
+          <Pressable
+            onPress={handleSendOtp}
+            disabled={resendTimer > 0}
+            style={{ backgroundColor: theme.primary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 }}
+          >
+            <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
+              {otpStage === 'sent' ? (resendTimer > 0 ? `Resend (${resendTimer}s)` : 'Resend') : 'Send OTP'}
+            </ThemedText>
+          </Pressable>
+        ) : null}
       </View>
 
-      {/* Credit incentive — the reason a number is worth giving. */}
+      {/* OTP Input Block when OTP is Sent */}
+      {otpStage === 'sent' && (
+        <View style={{ marginTop: 8, backgroundColor: theme.surfaceLow, borderRadius: 8, padding: 10, borderWidth: 1, borderColor: theme.primary + '44' }}>
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <TextInput
+              value={otpInput}
+              onChangeText={(t) => { setOtpInput(t.replace(/\D/g, '').slice(0, 6)); setOtpError(null); }}
+              placeholder="Enter 6-digit OTP"
+              placeholderTextColor={theme.placeholder}
+              keyboardType="number-pad"
+              maxLength={6}
+              autoFocus
+              style={[
+                styles.input,
+                type.body,
+                { flex: 1, height: 38, color: theme.text, backgroundColor: theme.surfaceLowest, borderColor: otpError ? '#ef4444' : theme.outlineVariant + '44', paddingHorizontal: 10 },
+                Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
+              ]}
+            />
+            <Pressable
+              onPress={handleVerifyOtp}
+              style={{ backgroundColor: '#10B981', paddingHorizontal: 14, height: 38, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }}
+            >
+              <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: '#ffffff' }}>
+                Verify
+              </ThemedText>
+            </Pressable>
+          </View>
+          {otpInfo && !otpError && (
+            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: theme.primary, marginTop: 4 }}>
+              {otpInfo}
+            </ThemedText>
+          )}
+          {otpError && (
+            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: '#ef4444', marginTop: 4 }}>
+              {otpError}
+            </ThemedText>
+          )}
+        </View>
+      )}
+
+      {/* General Form Error */}
+      {error && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
+          <Ionicons name="alert-circle" size={13} color="#ef4444" />
+          <ThemedText style={{ fontSize: 11, color: '#ef4444' }}>{error}</ThemedText>
+        </View>
+      )}
+
+      {/* Credit incentive banner */}
       <View
         style={[
           styles.creditBanner,
           {
-            backgroundColor: phoneOk ? '#10B98114' : theme.primary + '10',
-            borderColor: phoneOk ? '#10B98155' : theme.primary + '33',
+            backgroundColor: otpStage === 'verified' ? '#10B98114' : theme.primary + '10',
+            borderColor: otpStage === 'verified' ? '#10B98155' : theme.primary + '33',
+            marginTop: 10,
           },
         ]}
       >
         <Ionicons
-          name={phoneOk ? 'checkmark-circle' : 'gift'}
-          size={14}
-          color={phoneOk ? '#10B981' : theme.primary}
+          name={otpStage === 'verified' ? 'checkmark-circle' : 'gift'}
+          size={16}
+          color={otpStage === 'verified' ? '#10B981' : theme.primary}
         />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <ThemedText style={[type.micro, { color: phoneOk ? '#10B981' : theme.primary, fontFamily: 'Sora_700Bold' }]}>
-            {phoneOk
-              ? `${creditReward} credits unlocked`
-              : `Get ${creditReward} credits upon entering your mobile number`}
+          <ThemedText style={[type.micro, { color: otpStage === 'verified' ? '#10B981' : theme.primary, fontFamily: 'Sora_700Bold' }]}>
+            {otpStage === 'verified'
+              ? `🎉 ${creditReward} Wallet Coins will be added upon saving!`
+              : `Earn +${creditReward} Wallet Coins by verifying mobile number`}
           </ThemedText>
           <ThemedText style={[type.micro, { color: theme.textSecondary, marginTop: 1 }]}>
-            Syncs the squad, keeps score history, and connects friends of friends.
+            Syncs match stats, squad records, and connects your player network.
           </ThemedText>
         </View>
       </View>
