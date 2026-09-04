@@ -275,12 +275,15 @@ export default function TabLayout() {
           tabBarLabel: ({ focused }) => <TabLabel label="Connect" focused={focused} />,
         }}
       />
+      {/* Organizer's create surface. Mirrors how the Owner's tab becomes
+          "Add Turf" — the trophy already belongs to the Cups tab, so this uses
+          an explicit add glyph rather than a second trophy. */}
       <Tabs.Screen
         name="club"
         options={{
           href: role === 'Organizer' || isSuperAdmin ? undefined : null,
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="shield-checkmark" />,
-          tabBarLabel: ({ focused }) => <TabLabel label="Club" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} lib="mc" name="tournament" />,
+          tabBarLabel: ({ focused }) => <TabLabel label="Host" focused={focused} />,
         }}
       />
       <Tabs.Screen

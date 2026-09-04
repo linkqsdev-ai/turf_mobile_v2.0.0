@@ -113,13 +113,17 @@ export function dedupePlayers<T extends Pick<Player, 'id' | 'name'> & { phone?: 
   const seenIds = new Set<string>();
   const seenPeople = new Set<string>();
   const out: T[] = [];
-  for (const p of players) {
-    if (!p || !p.name || !p.name.trim()) continue;
+  for (const raw of players) {
+    if (!raw || !raw.name || !raw.name.trim()) continue;
+    const p = {
+      ...raw,
+      id: raw.id || generatePlayerId(),
+    };
     const identity = playerIdentity(p);
     if (seenIds.has(p.id) || seenPeople.has(identity)) continue;
     seenIds.add(p.id);
     seenPeople.add(identity);
-    out.push(p);
+    out.push(p as T);
   }
   return out;
 }

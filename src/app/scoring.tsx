@@ -160,6 +160,10 @@ export default function LiveScoringScreen() {
     totalOvers?: string; autoWide?: string; autoNoBall?: string; allowByes?: string;
     /** JSON map of lowercased team name -> selected Playing XI. */
     lineup?: string;
+    /** JSON array of unassigned / pool players chosen pre-match. */
+    pool?: string;
+    tossWinner?: string;
+    decision?: string;
   }>();
 
   const rawSport = Array.isArray(params.sport) ? params.sport[0] : params.sport;
@@ -201,9 +205,11 @@ export default function LiveScoringScreen() {
         return (
           <CricketScoring
             matchId={params.matchId} teamA={params.teamA} teamB={params.teamB}
+            tossWinner={params.tossWinner} decision={params.decision}
             totalOvers={params.totalOvers} autoWide={params.autoWide}
             autoNoBall={params.autoNoBall} allowByes={params.allowByes}
             lineup={params.lineup}
+            pool={params.pool}
           />
         );
     }
@@ -494,45 +500,65 @@ export default function LiveScoringScreen() {
                           <Pressable
                             onPress={async () => {
                               try {
+                                const inn1OvsParts = (match.innings1.overs || '0.0').toString().split('.');
+                                const inn1Ovs = parseInt(inn1OvsParts[0] || '0', 10);
+                                const inn1Balls = parseInt(inn1OvsParts[1] || '0', 10);
+                                const inn1ScoreParts = (match.innings1.score || '0/0').toString().split('/');
+                                const inn1Runs = parseInt(inn1ScoreParts[0] || '0', 10);
+                                const inn1Wkts = parseInt(inn1ScoreParts[1] || '0', 10);
+
+                                const inn2OvsParts = (match.innings2?.overs || '0.0').toString().split('.');
+                                const inn2Ovs = parseInt(inn2OvsParts[0] || '0', 10);
+                                const inn2Balls = parseInt(inn2OvsParts[1] || '0', 10);
+                                const inn2ScoreParts = (match.innings2?.score || '0/0').toString().split('/');
+                                const inn2Runs = parseInt(inn2ScoreParts[0] || '0', 10);
+                                const inn2Wkts = parseInt(inn2ScoreParts[1] || '0', 10);
+
                                 await exportScoreSheetPDF({
-                                  matchId: `MTH-${idx + 101}`,
-                                  sport: 'T20 Cricket Match (8 Overs)',
+                                  matchId: match.id || `MTH-${idx + 101}`,
+                                  sport: 'Cricket Match',
                                   venueName: 'Emerald Green Arena Pitch 1',
                                   venueAddress: 'Trichy Bypass Road, Tiruchirappalli',
                                   contactNumber: '+91 98765 43210',
                                   date: new Date(match.completedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-                                  time: '06:30 PM',
-                                  teamA: {
-                                    name: match.innings1.team,
-                                    captain: match.motmName + ' (C)',
-                                    score: parseInt(match.innings1.score.split('/')[0] || '120', 10),
-                                    wickets: parseInt(match.innings1.score.split('/')[1] || '4', 10),
-                                    overs: parseFloat(match.innings1.overs || '8.0'),
-                                    balls: 0,
-                                    batsmen: [
-                                      { name: match.motmName, runs: 64, balls: 22, fours: 6, sixes: 4, status: 'not out' },
-                                      { name: 'Antony', runs: 32, balls: 14, fours: 3, sixes: 1, status: 'c & b' },
-                                      { name: 'Kavin', runs: 18, balls: 9, fours: 2, sixes: 1, status: 'not out' },
-                                    ],
-                                    bowlers: [
-                                      { name: 'Sri Bowler', overs: 2.0, maidens: 0, runs: 18, wickets: 2 },
-                                      { name: 'Siva Bowler', overs: 2.0, maidens: 0, runs: 24, wickets: 1 },
-                                    ]
+                                  time: new Date(match.completedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                                  innings1: {
+                                    teamName: match.innings1.team,
+                                    score: inn1Runs,
+                                    wickets: inn1Wkts,
+                                    overs: inn1Ovs,
+                                    balls: inn1Balls,
+                                    runRate: parseFloat((inn1Runs / (inn1Ovs + inn1Balls / 6 || 1)).toFixed(2)),
+                                    batsmen: (match.innings1.batsmen && match.innings1.batsmen.length > 0)
+                                      ? match.innings1.batsmen
+                                      : [
+                                          { name: match.motmName, runs: 64, balls: 22, fours: 6, sixes: 4, status: 'not out' },
+                                          { name: 'Antony', runs: 32, balls: 14, fours: 3, sixes: 1, status: 'c & b' },
+                                          { name: 'Kavin', runs: 18, balls: 9, fours: 2, sixes: 1, status: 'not out' },
+                                        ],
+                                    bowlers: (match.innings1.bowlers && match.innings1.bowlers.length > 0)
+                                      ? match.innings1.bowlers
+                                      : [
+                                          { name: 'Sri Bowler', overs: 2.0, maidens: 0, runs: 18, wickets: 2 },
+                                          { name: 'Siva Bowler', overs: 2.0, maidens: 0, runs: 24, wickets: 1 },
+                                        ],
                                   },
-                                  teamB: {
-                                    name: match.innings2.team,
-                                    captain: 'Dinesh (C)',
-                                    score: parseInt(match.innings2.score.split('/')[0] || '106', 10),
-                                    wickets: parseInt(match.innings2.score.split('/')[1] || '6', 10),
-                                    overs: parseFloat(match.innings2.overs || '8.0'),
-                                    balls: 0,
-                                  },
+                                  innings2: match.innings2 ? {
+                                    teamName: match.innings2.team,
+                                    score: inn2Runs,
+                                    wickets: inn2Wkts,
+                                    overs: inn2Ovs,
+                                    balls: inn2Balls,
+                                    runRate: parseFloat((inn2Runs / (inn2Ovs + inn2Balls / 6 || 1)).toFixed(2)),
+                                    batsmen: match.innings2.batsmen || [],
+                                    bowlers: match.innings2.bowlers || [],
+                                  } : undefined,
                                   winner: match.winner,
                                   winMargin: match.winMargin,
-                                  mvpPlayer: match.motmName,
-                                  mvpPerformance: match.motmStat,
+                                  motmName: match.motmName,
+                                  motmStat: match.motmStat,
                                   tossWinner: match.innings1.team,
-                                  tossDecision: 'bat first',
+                                  tossDecision: 'Bat',
                                 });
                               } catch (e: any) {
                                 Alert.alert('Export Error', e.message || 'Could not export score sheet');

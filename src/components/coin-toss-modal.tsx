@@ -101,7 +101,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
   const [teamBError, setTeamBError] = useState('');
 
   // Rules & Overs
-  const [totalOversInput, setTotalOversInput] = useState('20');
+  const [totalOversInput, setTotalOversInput] = useState('5');
   const [isCustomOversSelected, setIsCustomOversSelected] = useState(false);
   const [customOversValue, setCustomOversValue] = useState('');
   const [autoWideRule, setAutoWideRule] = useState(true);
@@ -497,7 +497,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
         teamB: teamBName.trim(),
         tossWinner: tossWinnerName.trim(),
         decision: tossDecision,
-        totalOvers: totalOversInput.trim() || '20',
+        totalOvers: totalOversInput.trim() || '5',
         autoWide: autoWideRule ? '1' : '0',
         autoNoBall: autoNoBallRule ? '1' : '0',
         allowByes: allowByesRule ? '1' : '0',

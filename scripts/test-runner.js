@@ -37,6 +37,12 @@ if (typeof runCricketEngineTests === 'function') {
   failures += (result && result.failed) || 0;
 }
 
+const { runBookingRescheduleTests } = require('../src/__tests__/booking-reschedule.test.ts');
+if (typeof runBookingRescheduleTests === 'function') {
+  const result = runBookingRescheduleTests();
+  failures += (result && result.failed) || 0;
+}
+
 // A red suite must fail the command, or CI and pre-commit hooks will pass over it.
 if (failures > 0) {
   console.error(`\n${failures} test(s) failed.`);

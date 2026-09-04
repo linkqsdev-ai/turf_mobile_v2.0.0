@@ -20,6 +20,17 @@ export interface ClassEnrollment {
   createdAt: string;
 }
 
+/**
+ * Outcome of an enrolment attempt.
+ *
+ * Enrolling can legitimately fail — the class filled up between the player
+ * opening the form and submitting it — so the caller has to be told rather
+ * than shown an unconditional "Enrollment Confirmed".
+ */
+export type EnrollmentResult =
+  | { ok: true; record: ClassEnrollment }
+  | { ok: false; reason: 'class_full'; capacity: number; taken: number };
+
 export function createEnrollment(
   params: Omit<ClassEnrollment, 'id' | 'createdAt'>
 ): ClassEnrollment {

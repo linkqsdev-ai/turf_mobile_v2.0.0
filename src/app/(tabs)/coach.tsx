@@ -20,6 +20,7 @@ import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useUserProfile, getShortLocation } from '@/hooks/use-user-profile';
 import { getAvatarSource } from '@/constants/avatars';
 import { RecordCard } from '@/components/record-card';
@@ -147,6 +148,8 @@ const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function CoachTab() {
   const theme = useTheme();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const router = useRouter();
   const { profile } = useUserProfile();
   const { classes, deleteClass, enrollmentCountForClass, isClassActive } = useClassStore();
@@ -672,13 +675,18 @@ export default function CoachTab() {
                             </View>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                                <View style={{ width: 5.5, height: 5.5, borderRadius: 3, backgroundColor: '#10b981' }} />
+                                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981' }} />
                                 <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_400Regular', color: theme.textSecondary }}>
                                   Available
                                 </ThemedText>
                               </View>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                                <View style={{ width: 5.5, height: 5.5, borderRadius: 3, backgroundColor: '#8b5cf6' }} />
+                                <LinearGradient
+                                  colors={['#f43f5e', '#f97316']}
+                                  start={{ x: 0, y: 0 }}
+                                  end={{ x: 0, y: 1 }}
+                                  style={{ width: 6, height: 6, borderRadius: 3 }}
+                                />
                                 <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_400Regular', color: theme.textSecondary }}>
                                   Booked
                                 </ThemedText>
@@ -686,7 +694,7 @@ export default function CoachTab() {
                             </View>
                           </View>
 
-                          {/* 7 Day Non-Scrolling Fixed Grid */}
+                          {/* 7 Day Non-Scrolling Fixed Grid with Booked-Differentiated Coral-Orange Gradients */}
                           <View style={{ flexDirection: 'row', gap: 4, marginTop: 1 }}>
                             {Array.from({ length: 7 }, (_, i) => {
                               const d = new Date();
@@ -696,63 +704,125 @@ export default function CoachTab() {
                               const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
                               const dateNum = d.getDate();
 
+                              const totalBkd = metrics.totalBooked || 0;
+                              const totalAvail = metrics.totalAvailable || 0;
+                              const totalCfg = metrics.totalConfigured || (totalBkd + totalAvail) || 1;
+                              const bookedPct = Math.round((totalBkd / totalCfg) * 100);
+
+                              // Dynamic gradient & accent palette based on booked ratio with Coral-Rose to Orange Gradient
+                              let cardGradColors: readonly [string, string];
+                              let cardBorderColor: string;
+                              let headerColor: string;
+                              let dateColor: string;
+                              let availColor: string;
+                              let bkdColor: string;
+                              let isSolidGradient = false;
+
+                              if (totalAvail === 0 && totalBkd > 0) {
+                                // 100% Sold Out / Fully Booked: Solid vibrant coral-to-orange vertical gradient (exact match to image)
+                                cardGradColors = ['#f43f5e', '#f97316'] as const;
+                                cardBorderColor = '#e11d48';
+                                headerColor = '#ffffff';
+                                dateColor = '#ffffff';
+                                availColor = 'rgba(255, 255, 255, 0.9)';
+                                bkdColor = '#ffffff';
+                                isSolidGradient = true;
+                              } else if (bookedPct >= 60) {
+                                // High Occupancy (>=60% booked): Rich coral-orange gradient
+                                cardGradColors = isDark ? ['#9f123938', '#9a341228'] as const : ['#ffe4e6', '#ffedd5'] as const;
+                                cardBorderColor = isToday ? theme.primary : '#f43f5ea0';
+                                headerColor = isToday ? theme.primary : '#e11d48';
+                                dateColor = theme.text;
+                                availColor = '#059669';
+                                bkdColor = '#e11d48';
+                              } else if (bookedPct > 0) {
+                                // Partially Booked (1-59% booked): Soft coral-orange gradient
+                                cardGradColors = isDark ? ['#88133722', '#7c2d1218'] as const : ['#fff1f2', '#fff7ed'] as const;
+                                cardBorderColor = isToday ? theme.primary : '#fb923c70';
+                                headerColor = isToday ? theme.primary : '#ea580c';
+                                dateColor = theme.text;
+                                availColor = '#059669';
+                                bkdColor = '#ea580c';
+                              } else {
+                                // 100% Available (0% booked): Fresh subtle emerald tint
+                                cardGradColors = isToday
+                                  ? [theme.primary + '18', '#10b98110'] as const
+                                  : (isDark ? ['#064e3b18', '#022c2210'] as const : ['#ffffff', '#f0fdf4'] as const);
+                                cardBorderColor = isToday ? theme.primary : '#10b98144';
+                                headerColor = isToday ? theme.primary : theme.textSecondary;
+                                dateColor = theme.text;
+                                availColor = '#059669';
+                                bkdColor = theme.textSecondary + '77';
+                              }
+
                               return (
-                                <View
+                                <LinearGradient
                                   key={i}
+                                  colors={cardGradColors as any}
+                                  start={{ x: 0, y: 0 }}
+                                  end={{ x: 0, y: 1 }}
                                   style={{
                                     flex: 1,
-                                    backgroundColor: isToday ? theme.primary + '0c' : theme.surfaceLowest,
                                     borderRadius: 6,
                                     paddingVertical: 5,
                                     paddingHorizontal: 1,
                                     borderWidth: 1,
-                                    borderColor: isToday ? theme.primary + '60' : theme.outlineVariant + '22',
+                                    borderColor: cardBorderColor,
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
+                                    overflow: 'hidden',
                                   }}
                                 >
                                   {/* Day & Date Header */}
                                   <View style={{ alignItems: 'center' }}>
-                                    <ThemedText style={{ fontSize: 7.5, fontFamily: isToday ? 'Sora_600SemiBold' : 'Sora_500Medium', color: isToday ? theme.primary : theme.textSecondary }}>
+                                    <ThemedText style={{ fontSize: 7.5, fontFamily: isToday ? 'Sora_600SemiBold' : 'Sora_500Medium', color: headerColor }}>
                                       {isToday ? 'TODAY' : dayName.toUpperCase()}
                                     </ThemedText>
-                                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: theme.text, marginTop: 0.5 }}>
+                                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: dateColor, marginTop: 0.5 }}>
                                       {dateNum}
                                     </ThemedText>
                                   </View>
 
                                   {/* Mini 2-part colored progress bar */}
-                                  <View style={{ width: '84%', height: 2.5, borderRadius: 1.5, backgroundColor: theme.outlineVariant + '28', overflow: 'hidden', flexDirection: 'row', marginVertical: 3 }}>
-                                    {metrics.totalBooked > 0 && (
-                                      <View
-                                        style={{
-                                          height: '100%',
-                                          width: `${Math.min(100, Math.round((metrics.totalBooked / metrics.totalConfigured) * 100))}%`,
-                                          backgroundColor: '#8b5cf6',
-                                        }}
-                                      />
-                                    )}
-                                    {metrics.totalAvailable > 0 && (
-                                      <View
-                                        style={{
-                                          height: '100%',
-                                          flex: 1,
-                                          backgroundColor: '#10b981',
-                                        }}
-                                      />
+                                  <View style={{ width: '84%', height: 2.5, borderRadius: 1.5, backgroundColor: isSolidGradient ? 'rgba(255, 255, 255, 0.4)' : theme.outlineVariant + '28', overflow: 'hidden', flexDirection: 'row', marginVertical: 3 }}>
+                                    {isSolidGradient ? (
+                                      <View style={{ height: '100%', width: '100%', backgroundColor: '#ffffff' }} />
+                                    ) : (
+                                      <>
+                                        {metrics.totalBooked > 0 && (
+                                          <LinearGradient
+                                            colors={['#f43f5e', '#f97316']}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={{
+                                              height: '100%',
+                                              width: `${Math.min(100, Math.round((metrics.totalBooked / metrics.totalConfigured) * 100))}%`,
+                                            }}
+                                          />
+                                        )}
+                                        {metrics.totalAvailable > 0 && (
+                                          <View
+                                            style={{
+                                              height: '100%',
+                                              flex: 1,
+                                              backgroundColor: '#10b981',
+                                            }}
+                                          />
+                                        )}
+                                      </>
                                     )}
                                   </View>
 
                                   {/* Available & Booked slot counts */}
                                   <View style={{ alignItems: 'center', gap: 0.5 }}>
-                                    <ThemedText style={{ fontSize: 8, color: '#059669', fontFamily: 'Sora_600SemiBold' }}>
-                                      {metrics.totalAvailable} <ThemedText style={{ fontSize: 6.5, color: '#059669', fontFamily: 'Sora_400Regular' }}>avail</ThemedText>
+                                    <ThemedText style={{ fontSize: 8, color: availColor, fontFamily: 'Sora_600SemiBold' }}>
+                                      {metrics.totalAvailable} <ThemedText style={{ fontSize: 6.5, color: availColor, fontFamily: 'Sora_400Regular' }}>avail</ThemedText>
                                     </ThemedText>
-                                    <ThemedText style={{ fontSize: 7.5, color: metrics.totalBooked > 0 ? '#7c3aed' : theme.textSecondary + '77', fontFamily: 'Sora_500Medium' }}>
-                                      {metrics.totalBooked} <ThemedText style={{ fontSize: 6.5, color: theme.textSecondary + '77', fontFamily: 'Sora_400Regular' }}>bkd</ThemedText>
+                                    <ThemedText style={{ fontSize: 7.5, color: bkdColor, fontFamily: isSolidGradient ? 'Sora_600SemiBold' : 'Sora_500Medium' }}>
+                                      {metrics.totalBooked} <ThemedText style={{ fontSize: 6.5, color: bkdColor, fontFamily: 'Sora_400Regular' }}>bkd</ThemedText>
                                     </ThemedText>
                                   </View>
-                                </View>
+                                </LinearGradient>
                               );
                             })}
                           </View>

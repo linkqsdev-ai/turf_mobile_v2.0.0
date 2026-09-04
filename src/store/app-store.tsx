@@ -6,8 +6,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Booking, createBooking } from './booking-store';
-import { PublishedTournament, TournamentRegistration, createRegistration } from './tournament-store';
+import { Booking, RescheduleResult, createBooking, findSlotClashes } from './booking-store';
+import { PublishedTournament, TournamentRegistration, createRegistration, canTransitionTournament } from './tournament-store';
 import { Team, Player, Match, createTeam, createMatch } from './match-store';
 import { PublishedTurf, createTurf } from './turf-store';
 import {
@@ -20,6 +20,7 @@ import {
 } from './offer-store';
 import {
   ClassEnrollment,
+  EnrollmentResult,
   createEnrollment,
   countForClass,
   isClassLocked,
@@ -64,13 +65,30 @@ interface AppStoreContextType {
   bookings: Booking[];
   addBooking: (params: Omit<Booking, 'id' | 'bookingRef' | 'createdAt' | 'status'>) => Booking;
   cancelBooking: (id: string) => void;
+  /** Move a booking to new slots, refusing times another booking already holds. */
+  rescheduleBooking: (
+    id: string,
+    next: { date: string; dayLabel: string; slots: string[] }
+  ) => RescheduleResult;
 
   // Tournaments
   publishedTournaments: PublishedTournament[];
   addTournament: (t: PublishedTournament) => void;
+  /** Edit a published tournament in place. `id` and `createdAt` are immutable. */
+  updateTournament: (id: string, patch: Partial<Omit<PublishedTournament, 'id' | 'createdAt'>>) => void;
+  /** Remove a tournament and every registration attached to it. */
+  deleteTournament: (id: string) => void;
+  /** Move a tournament along its lifecycle, rejecting illegal jumps. */
+  setTournamentStatus: (id: string, status: PublishedTournament['status']) => boolean;
   updateTournamentTeamsCount: (id: string, delta: number) => void;
   registrations: TournamentRegistration[];
   registerForTournament: (params: Omit<TournamentRegistration, 'id' | 'registeredAt'>) => TournamentRegistration;
+  /** Organizer's approve/reject decision on a pending registration. */
+  decideRegistration: (registrationId: string, status: 'confirmed' | 'rejected') => void;
+  /** A team pulls out — frees its slot back to the pool. */
+  withdrawRegistration: (registrationId: string) => void;
+  /** Records money collected against a registration. */
+  setRegistrationPayment: (registrationId: string, paymentStatus: TournamentRegistration['paymentStatus']) => void;
 
   // Teams
   teams: Team[];
@@ -112,7 +130,8 @@ interface AppStoreContextType {
 
   // Class enrolments — the record that locks a class against edit/delete
   enrollments: ClassEnrollment[];
-  enrollInClass: (params: Parameters<typeof createEnrollment>[0]) => ClassEnrollment;
+  // Refuses to exceed the class's declared capacity; see EnrollmentResult.
+  enrollInClass: (params: Parameters<typeof createEnrollment>[0]) => EnrollmentResult;
   enrollmentCountForClass: (classId: string) => number;
   isClassEditable: (classId: string) => boolean;
 
@@ -316,6 +335,54 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     return booking;
   }, []);
 
+  /**
+   * Move a booking to a new date/slots.
+   *
+   * Cancelling was previously the only way out of a booking, which pushed
+   * players into cancel-and-rebook — losing the slot to someone else in
+   * between, and (before the refund path existed) their advance with it.
+   *
+   * The replacement slots are checked against every other live booking at the
+   * same venue, and the booking being moved is excluded from that check so a
+   * partial change (same slots, new date, or vice versa) isn't blocked by
+   * itself. Cancelled and completed bookings never hold a slot.
+   */
+  const rescheduleBooking = useCallback(
+    (
+      id: string,
+      next: { date: string; dayLabel: string; slots: string[] }
+    ): RescheduleResult => {
+      const booking = bookings.find(b => b.id === id);
+      if (!booking) return { ok: false, reason: 'not_found' };
+      if (booking.status === 'cancelled') return { ok: false, reason: 'cancelled' };
+      if (booking.status === 'completed') return { ok: false, reason: 'completed' };
+      if (next.slots.length === 0) return { ok: false, reason: 'no_slots' };
+
+      const clashes = findSlotClashes(
+        bookings,
+        id,
+        booking.venueId,
+        next.date,
+        next.slots
+      );
+      if (clashes.length > 0) {
+        return { ok: false, reason: 'slot_taken', clashes };
+      }
+
+      setBookings(prev => {
+        const updated = prev.map(b =>
+          b.id === id
+            ? { ...b, date: next.date, dayLabel: next.dayLabel, slots: next.slots }
+            : b
+        );
+        AsyncStorage.setItem(KEYS.bookings, JSON.stringify(updated));
+        return updated;
+      });
+      return { ok: true };
+    },
+    [bookings]
+  );
+
   const cancelBooking = useCallback((id: string) => {
     setBookings(prev => {
       const next = prev.map(b => b.id === id ? { ...b, status: 'cancelled' as const } : b);
@@ -341,6 +408,40 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateTournament = useCallback(
+    (id: string, patch: Partial<Omit<PublishedTournament, 'id' | 'createdAt'>>) => {
+      setPublishedTournaments(prev => {
+        const next = prev.map(t => (t.id === id ? { ...t, ...patch, id: t.id, createdAt: t.createdAt } : t));
+        AsyncStorage.setItem(KEYS.tournaments, JSON.stringify(next));
+        return next;
+      });
+    },
+    []
+  );
+
+  const deleteTournament = useCallback((id: string) => {
+    setPublishedTournaments(prev => {
+      const next = prev.filter(t => t.id !== id);
+      AsyncStorage.setItem(KEYS.tournaments, JSON.stringify(next));
+      return next;
+    });
+    // Registrations would otherwise be orphaned against a tournament that no
+    // longer exists, and would keep showing in a team's "my tournaments".
+    setRegistrations(prev => {
+      const next = prev.filter(r => r.tournamentId !== id);
+      AsyncStorage.setItem(KEYS.registrations, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const setTournamentStatus = useCallback((id: string, status: PublishedTournament['status']) => {
+    if (!canTransitionTournament(publishedTournaments.find(t => t.id === id)?.status, status)) {
+      return false;
+    }
+    updateTournament(id, { status });
+    return true;
+  }, [publishedTournaments, updateTournament]);
+
   const registerForTournament = useCallback((params: Omit<TournamentRegistration, 'id' | 'registeredAt'>) => {
     const reg = createRegistration(params);
     setRegistrations(prev => {
@@ -351,6 +452,45 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     updateTournamentTeamsCount(params.tournamentId, 1);
     return reg;
   }, [updateTournamentTeamsCount]);
+
+  const decideRegistration = useCallback((registrationId: string, status: 'confirmed' | 'rejected') => {
+    let rejectedTournamentId: string | null = null;
+    setRegistrations(prev => {
+      const next = prev.map(r => {
+        if (r.id !== registrationId) return r;
+        // A rejection frees the slot the registration was holding.
+        if (status === 'rejected' && r.status !== 'rejected') rejectedTournamentId = r.tournamentId;
+        return { ...r, status };
+      });
+      AsyncStorage.setItem(KEYS.registrations, JSON.stringify(next));
+      return next;
+    });
+    if (rejectedTournamentId) updateTournamentTeamsCount(rejectedTournamentId, -1);
+  }, [updateTournamentTeamsCount]);
+
+  const withdrawRegistration = useCallback((registrationId: string) => {
+    let freedTournamentId: string | null = null;
+    setRegistrations(prev => {
+      const target = prev.find(r => r.id === registrationId);
+      // Only a registration that still holds a slot gives one back.
+      if (target && target.status !== 'rejected') freedTournamentId = target.tournamentId;
+      const next = prev.filter(r => r.id !== registrationId);
+      AsyncStorage.setItem(KEYS.registrations, JSON.stringify(next));
+      return next;
+    });
+    if (freedTournamentId) updateTournamentTeamsCount(freedTournamentId, -1);
+  }, [updateTournamentTeamsCount]);
+
+  const setRegistrationPayment = useCallback(
+    (registrationId: string, paymentStatus: TournamentRegistration['paymentStatus']) => {
+      setRegistrations(prev => {
+        const next = prev.map(r => (r.id === registrationId ? { ...r, paymentStatus } : r));
+        AsyncStorage.setItem(KEYS.registrations, JSON.stringify(next));
+        return next;
+      });
+    },
+    []
+  );
 
   // ── Team actions ────────────────────────────────────────────────────────────
   const addTeam = useCallback((params: Omit<Team, 'id' | 'wins' | 'losses' | 'draws' | 'createdAt'>) => {
@@ -570,15 +710,36 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── Class enrolment actions ─────────────────────────────────────────────────
-  const enrollInClass = useCallback((params: Parameters<typeof createEnrollment>[0]) => {
-    const record = createEnrollment(params);
-    setEnrollments(prev => {
-      const next = [record, ...prev];
-      AsyncStorage.setItem(KEYS.enrollments, JSON.stringify(next));
-      return next;
-    });
-    return record;
-  }, []);
+  /**
+   * Enrol a student, refusing to exceed the class's declared capacity.
+   *
+   * This previously appended unconditionally, so a class advertising 20 seats
+   * would happily take a 21st booking. Capacity is read from the class record
+   * rather than trusted from the caller, and a class with no `maxStudents` set
+   * is treated as uncapped (the field is optional in the create form).
+   */
+  const enrollInClass = useCallback(
+    (params: Parameters<typeof createEnrollment>[0]): EnrollmentResult => {
+      const cls = classes.find((c: any) => c.id === params.classId);
+      const capacity = parseInt(String(cls?.maxStudents ?? ''), 10);
+
+      if (!isNaN(capacity) && capacity > 0) {
+        const taken = enrollments.filter(e => e.classId === params.classId).length;
+        if (taken >= capacity) {
+          return { ok: false, reason: 'class_full', capacity, taken };
+        }
+      }
+
+      const record = createEnrollment(params);
+      setEnrollments(prev => {
+        const next = [record, ...prev];
+        AsyncStorage.setItem(KEYS.enrollments, JSON.stringify(next));
+        return next;
+      });
+      return { ok: true, record };
+    },
+    [classes, enrollments]
+  );
 
   const enrollmentCountForClass = useCallback(
     (classId: string) => countForClass(enrollments, classId),
@@ -695,9 +856,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppStoreContext.Provider value={{
-      bookings, addBooking, cancelBooking,
-      publishedTournaments, addTournament, updateTournamentTeamsCount,
-      registrations, registerForTournament,
+      bookings, addBooking, cancelBooking, rescheduleBooking,
+      publishedTournaments, addTournament, updateTournament, deleteTournament,
+      setTournamentStatus, updateTournamentTeamsCount,
+      registrations, registerForTournament, decideRegistration,
+      withdrawRegistration, setRegistrationPayment,
       teams, addTeam, addPlayerToTeam, updateTeam, deleteTeam, toggleTeamFavourite, addPlayerToTeamById, removePlayerFromTeam, MAX_FAVOURITE_TEAMS,
       matches, addMatch, updateMatchScore, completeMatch,
       ownedTurfs, addTurf, updateTurf,
@@ -721,13 +884,23 @@ export function useAppStore() {
 }
 
 export function useBookings() {
-  const { bookings, addBooking, cancelBooking } = useAppStore();
-  return { bookings, addBooking, cancelBooking };
+  const { bookings, addBooking, cancelBooking, rescheduleBooking } = useAppStore();
+  return { bookings, addBooking, cancelBooking, rescheduleBooking };
 }
 
 export function useTournamentStore() {
-  const { publishedTournaments, addTournament, registrations, registerForTournament, updateTournamentTeamsCount } = useAppStore();
-  return { publishedTournaments, addTournament, registrations, registerForTournament, updateTournamentTeamsCount };
+  const {
+    publishedTournaments, addTournament, updateTournament, deleteTournament,
+    setTournamentStatus, updateTournamentTeamsCount,
+    registrations, registerForTournament, decideRegistration,
+    withdrawRegistration, setRegistrationPayment,
+  } = useAppStore();
+  return {
+    publishedTournaments, addTournament, updateTournament, deleteTournament,
+    setTournamentStatus, updateTournamentTeamsCount,
+    registrations, registerForTournament, decideRegistration,
+    withdrawRegistration, setRegistrationPayment,
+  };
 }
 
 export function useMatchStore() {

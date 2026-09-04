@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -16,16 +16,32 @@ import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useTournamentStore } from '@/store/app-store';
 
-const TABS = [
-  'Overview',
-  'Teams',
-  'Fixtures',
-  'Standings',
-  'Live Matches',
-  'Stats',
-  'Sponsors',
-  'Media'
+/**
+ * All seven fit on one row without scrolling, so nothing is hidden off-screen.
+ * "Live Matches" is shortened to "Live" to buy the room.
+ *
+ * Standings is disabled until the bracket produces results — with no fixtures
+ * played there is nothing to rank, and it sits last for the same reason.
+ */
+/** A small visual anchor per sport, in place of a per-team crest we don't store. */
+const TEAM_BADGE: Record<string, string> = {
+  Football: '⚽', Cricket: '🏏', Tennis: '🎾', Basketball: '🏀', Volleyball: '🏐',
+};
+
+const REG_TINT: Record<string, string> = {
+  pending: '#E08A3C', confirmed: '#10B981', rejected: '#EF4444',
+};
+
+const TABS: { key: string; label: string; disabled?: boolean }[] = [
+  { key: 'Overview', label: 'Overview' },
+  { key: 'Teams', label: 'Teams' },
+  { key: 'Fixtures', label: 'Fixtures' },
+  { key: 'Live Matches', label: 'Live' },
+  { key: 'Sponsors', label: 'Sponsors' },
+  { key: 'Media', label: 'Media' },
+  { key: 'Standings', label: 'Standings', disabled: true },
 ];
 
 export default function TournamentDetailsScreen() {
@@ -63,9 +79,50 @@ export default function TournamentDetailsScreen() {
   };
 
   // Mock Info based on params or default
-  const tournamentName = (params.name as string) || 'London Cup 2026';
-  const tournamentSport = (params.sport as string) || 'Football';
-  const tournamentPrize = (params.prize as string) || '₹2,500';
+  /**
+   * The real record, looked up by id. This screen previously rendered purely
+   * from nav params with hard-coded metrics ("12/16 teams", "32 matches"),
+   * so a freshly published cup with zero teams still advertised a full draw.
+   * Params remain the fallback for links that predate the store.
+   */
+  const { publishedTournaments, registrations } = useTournamentStore();
+  const tournament = useMemo(
+    () => (publishedTournaments || []).find((t: any) => t.id === params.id),
+    [publishedTournaments, params.id]
+  );
+
+  const tournamentName = tournament?.name || (params.name as string) || 'London Cup 2026';
+  const tournamentSport = tournament?.sport || (params.sport as string) || 'Football';
+  const tournamentPrize =
+    tournament?.prizePoolAmount
+      ? `₹${Number(tournament.prizePoolAmount).toLocaleString('en-IN')}`
+      : tournament?.prizePool || (params.prize as string) || '₹2,500';
+
+  /** Registrations attached to this tournament, newest first. */
+  const registeredTeams = useMemo(
+    () => (registrations || []).filter((r: any) => r.tournamentId === params.id),
+    [registrations, params.id]
+  );
+
+  // Prefer the actual registration count over the denormalised counter, which
+  // can drift if a write fails midway.
+  const tournamentRules: string[] = Array.isArray(tournament?.rules) ? tournament!.rules! : [];
+  const tournamentMedia: string[] = Array.isArray(tournament?.mediaImages) ? tournament!.mediaImages! : [];
+
+  const teamsCount = registeredTeams.length || tournament?.teamsCount || 0;
+  const maxTeams = tournament?.maxTeams ?? 16;
+
+  /**
+   * A knockout of N teams plays N-1 matches; a round-robin plays N*(N-1)/2.
+   * With no teams yet there are no matches — which is the honest answer, and
+   * what the hard-coded 32 was hiding.
+   */
+  const matchCount = useMemo(() => {
+    if (teamsCount < 2) return 0;
+    return (tournament?.type || '').toLowerCase().includes('league')
+      ? (teamsCount * (teamsCount - 1)) / 2
+      : teamsCount - 1;
+  }, [teamsCount, tournament]);
 
   // Sub-renders for each tab
   const renderOverview = () => (
@@ -84,15 +141,9 @@ export default function TournamentDetailsScreen() {
       </View>
 
       <ThemedText type="headlineSm" style={[styles.sectionHeader, { marginTop: Spacing.lg }]}>Tournament Rules</ThemedText>
+      {/* The rules the organizer actually ticked when publishing. */}
       <View style={[styles.rulesList, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-        {[
-          'Teams must report 15 mins before kick-off.',
-          'Standard FIFA rules apply for 11v11 matches.',
-          'Match length is 90 mins (45 mins each half).',
-          'A maximum of 5 substitutions are allowed per game.',
-          'Shin guards are mandatory for all players.',
-          'Organizer decisions are final and binding.'
-        ].map((rule, idx) => (
+        {(tournamentRules.length > 0 ? tournamentRules : ['No specific rules have been published for this tournament.']).map((rule, idx) => (
           <View key={idx} style={styles.ruleItem}>
             <Ionicons name="checkmark-circle" size={16} color={theme.secondaryContainer} style={{ marginRight: 8, marginTop: 2 }} />
             <ThemedText type="bodySm" style={{ color: theme.text, flex: 1 }}>{rule}</ThemedText>
@@ -115,7 +166,7 @@ export default function TournamentDetailsScreen() {
   const renderTeams = () => (
     <View style={styles.tabContent}>
       <View style={styles.rowBetween}>
-        <ThemedText type="headlineSm" style={styles.sectionHeader}>Registered Teams (12)</ThemedText>
+        <ThemedText type="headlineSm" style={styles.sectionHeader}>Registered Teams ({teamsCount})</ThemedText>
         <Pressable 
           style={[styles.manageBtn, { borderColor: theme.outlineVariant }]}
           onPress={() => router.push('/team-management')}
@@ -123,26 +174,36 @@ export default function TournamentDetailsScreen() {
           <ThemedText type="labelSm" style={{ color: theme.text }}>Manage Teams</ThemedText>
         </Pressable>
       </View>
-      <View style={styles.teamsGrid}>
-        {[
-          { name: 'Red Devils FC', logo: '⚽', matches: 3, manager: 'John Doe' },
-          { name: 'Apex Warriors', logo: '🏆', matches: 3, manager: 'Alex Smith' },
-          { name: 'Blue Tigers', logo: '🐯', matches: 3, manager: 'Marcus Vance' },
-          { name: 'Strikers City', logo: '⚡', matches: 3, manager: 'Leo Carter' },
-          { name: 'London United', logo: '🦁', matches: 3, manager: 'Rob Miller' },
-          { name: 'Titans CC', logo: '🛡️', matches: 3, manager: 'Sam Wilson' },
-        ].map((team, idx) => (
-          <View key={idx} style={[styles.teamCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-            <ThemedText style={styles.teamLogo}>{team.logo}</ThemedText>
-            <ThemedText type="bodySm" style={{ fontWeight: '500', marginTop: 8, color: theme.text }} numberOfLines={1}>
-              {team.name}
-            </ThemedText>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10, marginTop: 2 }}>
-              Manager: {team.manager}
-            </ThemedText>
-          </View>
-        ))}
-      </View>
+      {/* Real registrations for this tournament. Previously six mock teams
+          rendered here regardless, so a cup with "Registered Teams (0)" still
+          listed a full draw. */}
+      {registeredTeams.length === 0 ? (
+        <View style={[styles.emptyTeams, { borderColor: theme.outlineVariant + '55' }]}>
+          <Ionicons name="people-outline" size={22} color={theme.textSecondary} />
+          <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center' }}>
+            No teams have registered yet.
+          </ThemedText>
+          <ThemedText type="labelSm" style={{ color: theme.textSecondary, textAlign: 'center', fontSize: 10 }}>
+            Registrations will appear here as soon as a team signs up.
+          </ThemedText>
+        </View>
+      ) : (
+        <View style={styles.teamsGrid}>
+          {registeredTeams.map((reg) => (
+            <View key={reg.id} style={[styles.teamCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+              <ThemedText style={styles.teamLogo}>{TEAM_BADGE[reg.sport] || '🏅'}</ThemedText>
+              <ThemedText type="bodySm" style={{ fontWeight: '500', marginTop: 8, color: theme.text }} numberOfLines={1}>
+                {reg.teamName}
+              </ThemedText>
+              <View style={[styles.regStatusPill, { backgroundColor: (REG_TINT[reg.status] || '#6B7280') + '1F' }]}>
+                <ThemedText type="labelSm" style={{ color: REG_TINT[reg.status] || '#6B7280', fontSize: 9 }}>
+                  {reg.status === 'pending' ? 'Awaiting approval' : reg.status === 'confirmed' ? 'Confirmed' : 'Rejected'}
+                </ThemedText>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 
@@ -339,21 +400,26 @@ export default function TournamentDetailsScreen() {
   const renderMedia = () => (
     <View style={styles.tabContent}>
       <ThemedText type="headlineSm" style={styles.sectionHeader}>Highlights & Photos</ThemedText>
-      <View style={styles.mediaGrid}>
-        {[
-          require('@/assets/images/illustrations/football_player.png'),
-          require('@/assets/images/illustrations/cricket_player.png'),
-          require('@/assets/images/illustrations/basketball_player.png'),
-          require('@/assets/images/illustrations/tennis_player.png'),
-        ].map((url, idx) => (
-          <Pressable key={idx} style={styles.mediaFrame} onPress={() => triggerToast('Opening full-screen photo...')}>
-            <Image source={typeof url === 'string' ? { uri: url } : url} style={styles.mediaImage} contentFit="cover" />
-            <View style={styles.playOverlay}>
-              <Ionicons name="camera" size={24} color="#ffffff" />
-            </View>
-          </Pressable>
-        ))}
-      </View>
+      {/* Photos the organizer uploaded at publish time. */}
+      {tournamentMedia.length === 0 ? (
+        <View style={[styles.emptyTeams, { borderColor: theme.outlineVariant + '55' }]}>
+          <Ionicons name="images-outline" size={22} color={theme.textSecondary} />
+          <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center' }}>
+            No photos yet.
+          </ThemedText>
+          <ThemedText type="labelSm" style={{ color: theme.textSecondary, textAlign: 'center', fontSize: 10 }}>
+            The organizer can add match photos from the tournament editor.
+          </ThemedText>
+        </View>
+      ) : (
+        <View style={styles.mediaGrid}>
+          {tournamentMedia.map((uri, idx) => (
+            <Pressable key={`${uri}-${idx}`} style={styles.mediaFrame} onPress={() => triggerToast('Opening full-screen photo...')}>
+              <Image source={{ uri }} style={styles.mediaImage} contentFit="cover" />
+            </Pressable>
+          ))}
+        </View>
+      )}
     </View>
   );
 
@@ -409,45 +475,50 @@ export default function TournamentDetailsScreen() {
           <View style={styles.metricsGrid}>
             <View style={[styles.metricCard, { backgroundColor: theme.surfaceLow }]}>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Teams</ThemedText>
-              <ThemedText type="headlineMd" style={{ color: theme.text }}>12/16</ThemedText>
+              <ThemedText type="headlineMd" numberOfLines={1} style={{ color: theme.text }}>{teamsCount}/{maxTeams}</ThemedText>
             </View>
             <View style={[styles.metricCard, { backgroundColor: theme.surfaceLow }]}>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Prize</ThemedText>
-              <ThemedText type="headlineMd" style={{ color: theme.secondaryContainer }}>{tournamentPrize}</ThemedText>
+              <ThemedText type="headlineMd" numberOfLines={1} adjustsFontSizeToFit style={{ color: theme.secondaryContainer, textAlign: 'center' }}>{tournamentPrize}</ThemedText>
             </View>
             <View style={[styles.metricCard, { backgroundColor: theme.surfaceLow }]}>
               <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Matches</ThemedText>
-              <ThemedText type="headlineMd" style={{ color: theme.text }}>32</ThemedText>
+              <ThemedText type="headlineMd" numberOfLines={1} style={{ color: theme.text }}>{matchCount}</ThemedText>
             </View>
           </View>
 
-          {/* Segmented Horizontal Tab Bar */}
+          {/* Segmented Tab Bar — every tab visible, no horizontal scroll */}
           <View style={styles.tabsSection}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
+            <View style={styles.tabsRow}>
               {TABS.map((tab) => {
-                const isActive = activeTab === tab;
+                const isActive = activeTab === tab.key;
                 return (
                   <Pressable
-                     key={tab}
-                     onPress={() => setActiveTab(tab)}
+                     key={tab.key}
+                     disabled={tab.disabled}
+                     accessibilityState={{ disabled: !!tab.disabled, selected: isActive }}
+                     onPress={() => { if (!tab.disabled) setActiveTab(tab.key); }}
                      style={[
                        styles.tabPill,
-                       isActive && { backgroundColor: theme.primary }
+                       isActive && { backgroundColor: theme.primary },
+                       tab.disabled && { opacity: 0.4 },
                      ]}
                   >
                     <ThemedText
-                      type="labelSm"
+                      numberOfLines={1}
                       style={{
+                        fontSize: 10,
+                        textAlign: 'center',
+                        fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_500Medium',
                         color: isActive ? '#ffffff' : theme.textSecondary,
-                        fontWeight: isActive ? '700' : '500',
                       }}
                     >
-                      {tab}
+                      {tab.label}
                     </ThemedText>
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </View>
           </View>
 
           {/* Tab Sub-View Render */}
@@ -535,9 +606,17 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    padding: 12,
+    // minWidth:0 lets a long prize string shrink instead of stretching its
+    // card, which is what pushed the three cards out of alignment; the fixed
+    // height keeps all three level whatever their content.
+    minWidth: 0,
+    height: 62,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: BorderRadius.xl,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
   },
   tabsSection: {
     marginTop: Spacing.md,
@@ -545,14 +624,21 @@ const styles = StyleSheet.create({
     borderBottomColor: '#0000000a',
     paddingBottom: 8,
   },
-  tabsScroll: {
-    paddingHorizontal: Spacing.containerMargin,
-    gap: 6,
+  // flex:1 per tab distributes the row evenly; minWidth:0 lets the longer
+  // labels shrink rather than forcing the row wider than the screen.
+  tabsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.sm,
+    gap: 2,
   },
   tabPill: {
-    paddingHorizontal: 16,
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 4,
     paddingVertical: 8,
     borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabContent: {
     paddingHorizontal: Spacing.containerMargin,
@@ -595,6 +681,16 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     borderWidth: 1,
   },
+  emptyTeams: {
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    paddingVertical: 28,
+    paddingHorizontal: Spacing.base,
+    alignItems: 'center',
+    gap: 6,
+  },
+  regStatusPill: { marginTop: 6, paddingHorizontal: 8, paddingVertical: 2, borderRadius: BorderRadius.full },
   teamsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -437,8 +437,10 @@ export default function BookingConfigurationScreen() {
       deductWalletFunds(walletDeduction);
     }
 
-    // Add ₹100 Cashback reward to wallet balance
-    addWalletFunds(100);
+    // No cashback is credited here. This previously granted a flat ₹100 on
+    // every booking with no funding source and no cap, so book-and-cancel
+    // minted unlimited balance. A real cashback scheme has to be issued
+    // against settled money, not created at checkout.
 
     // Save booking to global store
     const booking = addBooking({
@@ -1427,15 +1429,10 @@ export default function BookingConfigurationScreen() {
                     <ThemedText style={{ color: '#ef4444', fontSize: 10, marginTop: 6 }}>{couponError}</ThemedText>
                   )}
 
-                  {/* Cashback Offer banner */}
-                  {cashbackOffer && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#eff6ff', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginTop: 8 }}>
-                      <Ionicons name="wallet" size={14} color="#2563eb" />
-                      <ThemedText style={{ color: '#1d4ed8', fontSize: 10, fontFamily: 'Sora_500Medium', flex: 1 }}>
-                        🎉 Cashback ₹{cashbackOffer.cashback} will be credited to your wallet after booking!
-                      </ThemedText>
-                    </View>
-                  )}
+                  {/* The cashback banner that stood here promised a credit the
+                      app never paid: checkout minted a flat ₹100 regardless of
+                      the coupon's stated value, and that mint has been removed.
+                      Re-add this only alongside a real cashback ledger. */}
 
                   {/* Available turf offers & voucher codes */}
                   {!couponApplied && (

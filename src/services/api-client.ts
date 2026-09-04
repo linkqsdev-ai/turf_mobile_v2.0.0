@@ -25,6 +25,7 @@ function getCandidateBaseUrls(): string[] {
     if (devMachineIp) {
       urls.push(`http://${devMachineIp}:5070/api`);
     }
+    urls.push('http://192.168.1.43:5070/api');
     urls.push('http://192.168.1.38:5070/api');
     urls.push('http://192.168.1.12:5070/api');
   }

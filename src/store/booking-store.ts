@@ -3,6 +3,52 @@
  * Manages all booking-related state: history, active bookings, drafts.
  */
 
+/**
+ * A booking only holds its slots while it is live. Cancelled and completed
+ * bookings release them, so they must never block a reschedule.
+ */
+export function holdsSlots(status: Booking['status']): boolean {
+  return status !== 'cancelled' && status !== 'completed';
+}
+
+/**
+ * Slots in `wanted` that another live booking already holds at the same venue
+ * on the same date. `excludeId` is the booking being moved — without it a
+ * booking would collide with its own current slots and could never be edited.
+ *
+ * Extracted from the store so the rule is testable on its own; the store is a
+ * React provider and its callbacks can't be exercised directly.
+ */
+export function findSlotClashes(
+  all: Booking[],
+  excludeId: string,
+  venueId: string,
+  date: string,
+  wanted: string[]
+): string[] {
+  const taken = all
+    .filter(
+      b =>
+        b.id !== excludeId &&
+        b.venueId === venueId &&
+        b.date === date &&
+        holdsSlots(b.status)
+    )
+    .flatMap(b => b.slots);
+
+  return [...new Set(wanted.filter(s => taken.includes(s)))];
+}
+
+/**
+ * Outcome of a reschedule attempt. Rescheduling can fail for reasons the
+ * player needs spelled out — chiefly that someone else holds the new slot —
+ * so the caller is handed the clashing times rather than a bare false.
+ */
+export type RescheduleResult =
+  | { ok: true }
+  | { ok: false; reason: 'not_found' | 'cancelled' | 'completed' | 'no_slots' }
+  | { ok: false; reason: 'slot_taken'; clashes: string[] };
+
 export interface Booking {
   id: string;
   venueId: string;

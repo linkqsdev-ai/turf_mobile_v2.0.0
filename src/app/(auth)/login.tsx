@@ -23,6 +23,7 @@ import { apiClient, setAuthToken } from '@/services/api-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useToast } from '@/context/ToastContext';
+import { formatPhoneNumber, cleanPhoneDigits, getPhoneValidationError, isValidMobile } from '@/utils/phone-utils';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -112,9 +113,10 @@ export default function LoginScreen() {
 
   const handleSendOtp = async (overridePhone?: string | any) => {
     const targetPhone = typeof overridePhone === 'string' ? overridePhone : phone;
-    const cleanPhone = targetPhone.replace(/[^0-9]/g, '');
-    if (cleanPhone.length < 10) {
-      setErrorMessage('Please enter a valid 10-digit mobile number.');
+    const cleanPhone = cleanPhoneDigits(targetPhone);
+    const valErr = getPhoneValidationError(cleanPhone, true);
+    if (valErr) {
+      setErrorMessage(valErr);
       return;
     }
     setErrorMessage(null);
@@ -399,12 +401,12 @@ export default function LoginScreen() {
                       <Ionicons name="call-outline" size={18} color={isPhoneFocused ? ACCENT : TEXT_MID} style={styles.inputIcon} />
                       <TextInput
                         style={styles.input}
-                        placeholder="Enter 10-digit mobile number"
+                        placeholder="98765 43210"
                         placeholderTextColor="#94a3b8"
                         value={phone}
-                        onChangeText={(t) => setPhone(t.replace(/[^0-9]/g, ''))}
+                        onChangeText={(t) => setPhone(formatPhoneNumber(t))}
                         keyboardType="phone-pad"
-                        maxLength={10}
+                        maxLength={11}
                         onFocus={() => setIsPhoneFocused(true)}
                         onBlur={() => setIsPhoneFocused(false)}
                       />
@@ -412,9 +414,9 @@ export default function LoginScreen() {
 
                     {/* Send OTP CTA */}
                     <Pressable
-                      style={[styles.ctaButton, isLoading && { opacity: 0.75 }]}
+                      style={[styles.ctaButton, (!isValidMobile(phone) || isLoading) && { opacity: 0.75 }]}
                       onPress={handleSendOtp}
-                      disabled={isLoading}
+                      disabled={!isValidMobile(phone) || isLoading}
                     >
                       {isLoading
                         ? <ActivityIndicator size="small" color="#fff" />
@@ -429,7 +431,7 @@ export default function LoginScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
                         <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
                         <ThemedText style={styles.sentPhoneText}>
-                          OTP sent to <ThemedText style={{ fontFamily: 'Sora_500Medium', color: TEXT_DARK }}>+91 {phone}</ThemedText>
+                          OTP sent to <ThemedText style={{ fontFamily: 'Sora_500Medium', color: TEXT_DARK }}>+91 {formatPhoneNumber(phone)}</ThemedText>
                         </ThemedText>
                       </View>
                       <Pressable onPress={() => { setOtpStage('phone'); setOtpCode(''); setErrorMessage(null); }}>

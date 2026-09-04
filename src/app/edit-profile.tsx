@@ -19,9 +19,11 @@ import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { apiClient } from '@/services/api-client';
 import { useUserProfile, UserProfile } from '@/hooks/use-user-profile';
 import { AVATAR_IMAGES, AVATAR_KEYS, getAvatarSource } from '@/constants/avatars';
 import { getCurrentGPSLocation } from '@/utils/location';
+import { formatPhoneNumber, cleanPhoneDigits, getPhoneValidationError } from '@/utils/phone-utils';
 
 const SKILL_LEVELS: NonNullable<UserProfile['skillLevel']>[] = ['Beginner', 'Intermediate', 'Advanced', 'Pro'];
 
@@ -102,7 +104,7 @@ export default function EditProfileScreen() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       if (Platform.OS === 'web') {
         alert('Full Name is required.');
@@ -112,13 +114,25 @@ export default function EditProfileScreen() {
       return;
     }
 
+    if (phone.trim()) {
+      const phoneErr = getPhoneValidationError(phone, false);
+      if (phoneErr) {
+        if (Platform.OS === 'web') {
+          alert(phoneErr);
+        } else {
+          Alert.alert('Invalid Mobile Number', phoneErr);
+        }
+        return;
+      }
+    }
+
     const parsedJersey = jerseyNumber.trim() ? parseInt(jerseyNumber.trim(), 10) : undefined;
 
     updateProfile({
       avatarUrl,
       name,
       email: email.trim(),
-      phone: phone.trim(),
+      phone: phone.trim() ? formatPhoneNumber(phone) : '',
       position,
       location,
       bio,
@@ -128,6 +142,31 @@ export default function EditProfileScreen() {
       skillLevel,
       role,
     });
+
+    // Push the fields the server actually models. Everything else here
+    // (position, bio, preferred foot, jersey number, skill level, role) has no
+    // column on the User table, and `avatarUrl` is skipped because the app
+    // stores preset keys like "avatar_1" while PUT /auth/me requires a URL.
+    //
+    // A failure is reported rather than swallowed: silently keeping edits on
+    // one device is how the profile silently stopped following the user.
+    try {
+      await apiClient.put('/auth/me', {
+        name: name.trim(),
+        ...(phone.trim() ? { phone: formatPhoneNumber(phone) } : {}),
+        ...(location.trim() ? { location: location.trim() } : {}),
+      });
+    } catch (err: any) {
+      const msg =
+        'Saved on this device, but syncing to your account failed' +
+        (err?.message ? `: ${err.message}` : '.') +
+        ' Your changes may not appear on other devices.';
+      if (Platform.OS === 'web') {
+        alert(msg);
+      } else {
+        Alert.alert('Profile not synced', msg);
+      }
+    }
 
     if (Platform.OS === 'web') {
       alert('Your player profile details have been successfully saved.');
@@ -242,10 +281,11 @@ export default function EditProfileScreen() {
                 <ThemedText type="labelMd" style={styles.inputLabel}>PHONE NUMBER</ThemedText>
                 <TextInput
                   value={phone}
-                  onChangeText={(t) => setPhone(t.replace(/[^0-9+\s-]/g, ''))}
+                  onChangeText={(t) => setPhone(formatPhoneNumber(t))}
                   keyboardType="phone-pad"
+                  maxLength={11}
                   style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
-                  placeholder="10-digit mobile number"
+                  placeholder="98765 43210"
                   placeholderTextColor="#94a3b8"
                 />
               </View>

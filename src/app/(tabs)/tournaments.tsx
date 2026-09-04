@@ -155,7 +155,6 @@ export default function TournamentsScreen() {
   const [coinTossVisible, setCoinTossVisible] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [sortBy, setSortBy] = useState('Date'); // 'Date' or 'Prize'
-  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(['t1']);
   const [failedImageIds, setFailedImageIds] = useState<string[]>([]);
 
   const simulateLoading = false;
@@ -185,15 +184,6 @@ export default function TournamentsScreen() {
   const handleProfilePress = () => router.push('/profile');
   const handleNetworkPress = () => router.push('/(tabs)/network');
 
-  const toggleBookmark = (id: string) => {
-    if (bookmarkedIds.includes(id)) {
-      setBookmarkedIds(bookmarkedIds.filter(item => item !== id));
-      triggerToast('Removed from bookmarks');
-    } else {
-      setBookmarkedIds([...bookmarkedIds, id]);
-      triggerToast('Tournament bookmarked!');
-    }
-  };
 
   const handleShare = (name: string) => {
     triggerToast(`Shared tournament: ${name}`);
@@ -241,7 +231,6 @@ export default function TournamentsScreen() {
       (selectedStatus === 'Registering' && t.status === 'Registering') ||
       (selectedStatus === 'Ongoing' && t.status === 'Ongoing') ||
       (selectedStatus === 'Finished' && t.status === 'Finished') ||
-      (selectedStatus === 'Bookmarked' && bookmarkedIds.includes(t.id)) ||
       (selectedStatus === 'Upcoming' && t.status === 'Upcoming');
 
     return matchesSearch && matchesSport && matchesStatus;
@@ -353,7 +342,7 @@ export default function TournamentsScreen() {
               contentContainerStyle={styles.statusScrollContainer}
               style={styles.statusScrollView}
             >
-              {['All', 'Registering', 'Ongoing', 'Finished', 'Bookmarked', 'Upcoming'].map((status) => {
+              {['All', 'Registering', 'Ongoing', 'Finished', 'Upcoming'].map((status) => {
                 const isSelected = selectedStatus === status;
                 return (
                   <Pressable
@@ -471,7 +460,6 @@ export default function TournamentsScreen() {
                 // List / Grid Render
                 <View style={viewMode === 'grid' ? styles.gridContainer : styles.listContainer}>
                   {filteredTournaments.map((t) => {
-                    const isBookmarked = bookmarkedIds.includes(t.id);
                     const progress = t.maxTeams > 0 ? (t.teamsCount / t.maxTeams) : 0;
                     const progressPercent = `${Math.min(progress * 100, 100)}%` as DimensionValue;
 
@@ -576,16 +564,19 @@ export default function TournamentsScreen() {
                               <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 6.5, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>Prize Pool</ThemedText>
                               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 1 }}>
                                 <Image source={require('@/assets/images/illustrations/wallet_blue.png')} style={{ width: 13, height: 13 }} contentFit="contain" />
-                                <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium', textAlign: 'center', fontSize: 12 }}>
-                                  {t.prizePool}
+                                {/* The stored label is free text ("₹2,500 + Gold
+                                    Trophy") and wrapped to three lines in this
+                                    narrow column. Show the parsed amount, which
+                                    always fits on one line. */}
+                                <ThemedText
+                                  type="bodyMd"
+                                  numberOfLines={1}
+                                  style={{ color: theme.secondary, fontFamily: 'Sora_500Medium', textAlign: 'center', fontSize: 12, flexShrink: 1 }}
+                                >
+                                  {t.prizePoolAmount ? `₹${Number(t.prizePoolAmount).toLocaleString('en-IN')}` : t.prizePool}
                                 </ThemedText>
                               </View>
                             </View>
-
-                            {/* MIDDLE: Bookmark Icon ONLY (Share icon removed) */}
-                            <Pressable style={styles.ticketActionBtn} onPress={() => toggleBookmark(t.id)}>
-                              <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={18} color={isBookmarked ? '#5D68E8' : theme.textSecondary} />
-                            </Pressable>
 
                             {/* BOTTOM: Register Button */}
                             <Pressable
@@ -627,12 +618,6 @@ export default function TournamentsScreen() {
                               contentFit="cover"
                               onError={() => setFailedImageIds(prev => [...prev, t.id])}
                             />
-                            {/* Quick Actions (Bookmark ONLY) */}
-                            <View style={{ position: 'absolute', top: 6, right: 6 }}>
-                              <Pressable style={styles.ticketActionBtnCircle} onPress={() => toggleBookmark(t.id)}>
-                                <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={12} color={isBookmarked ? '#5D68E8' : '#ffffff'} />
-                              </Pressable>
-                            </View>
                           </View>
 
                           {/* Details */}

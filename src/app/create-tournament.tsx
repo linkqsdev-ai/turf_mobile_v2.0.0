@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -13,7 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -23,7 +24,16 @@ import { useTheme } from '@/hooks/use-theme';
 import { SPORTS_LIST } from '@/constants/sports';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTournamentStore } from '@/store/app-store';
-import { generateTournamentId } from '@/store/tournament-store';
+import { generateTournamentId, rulePresetsForSport } from '@/store/tournament-store';
+import { useUserProfile } from '@/hooks/use-user-profile';
+
+/** Where saved tournament drafts persist between sessions. */
+const DRAFTS_KEY = '@turf_tournament_drafts';
+
+// Step-tracker geometry, matching Create Turf so both wizards read identically.
+const STEP_CIRCLE = 26;
+const STEP_LABEL_LINE = 12;
+const STEP_CONNECTOR_H = 1.5;
 
 const STEPS = [
   { title: 'Basic', icon: 'information-circle-outline' },
@@ -34,11 +44,52 @@ const STEPS = [
   { title: 'Prizes', icon: 'trophy-outline' },
 ];
 
+/**
+ * Digits only, capped at 10, grouped 5+5 — "98765 43210".
+ * Mirrors formatPhoneNumber in create-turf so both wizards store the same shape.
+ */
+function formatPhone(value: string): string {
+  const digits = String(value || '').replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 5) return digits;
+  return `${digits.slice(0, 5)} ${digits.slice(5)}`;
+}
+
+/** An Indian mobile is exactly 10 digits and never starts 0-5. */
+function isValidPhone(value: string): boolean {
+  const digits = String(value || '').replace(/\D/g, '');
+  return /^[6-9][0-9]{9}$/.test(digits);
+}
+
+/**
+ * Pulls the first number out of a free-text money field.
+ * "₹2,500 + Gold Trophy" -> 2500 · "150" -> 150 · "" / "TBD" -> 0
+ */
+function parseAmount(value?: string): number {
+  const match = (value || '').replace(/,/g, '').match(/\d+(\.\d+)?/);
+  return match ? Math.round(parseFloat(match[0])) : 0;
+}
+
+/** Keeps exactly one ₹ on the display label, whatever the user typed. */
+function formatPrizeLabel(value?: string): string {
+  const v = (value || '').trim();
+  if (!v) return 'TBD';
+  return v.startsWith('₹') ? v : `₹${v}`;
+}
+
 export default function CreateTournamentScreen() {
   const theme = useTheme();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
-  const { addTournament } = useTournamentStore();
+  const { addTournament, updateTournament, publishedTournaments } = useTournamentStore();
+  const { profile } = useUserProfile();
+  /** Phone is the canonical identity elsewhere in the app; email/name back it up. */
+  const ownerKey = (profile?.phone || '').replace(/\D/g, '').slice(-10)
+    || (profile?.email || '').trim().toLowerCase()
+    || (profile?.name || '').trim().toLowerCase();
+  /** Present when the organizer opened this wizard to fix a published cup. */
+  const params = useLocalSearchParams<{ editId?: string }>();
+  const editId = typeof params.editId === 'string' ? params.editId : undefined;
+  const isEditing = Boolean(editId);
 
   // Cover Presets for Tournament Sample Image
   const COVER_PRESETS = [
@@ -127,17 +178,23 @@ export default function CreateTournamentScreen() {
     tournEnd: '2026-07-15',
     
     // Section 3: Venue
-    selectedGround: 'Elms Field Ground A',
-    address: 'Elms Road, London SE1',
-    latLng: '51.5074° N, 0.1278° W',
+    selectedGround: '',
+    address: '',
+    latLng: '',
     
     // Section 4: Rules
     matchDuration: '90 Mins',
     teamSize: '11 players',
-    overs: 'N/A',
+    overs: '',
     pointSystem: '3 pts Win, 1 pt Draw, 0 pts Loss',
+    // Ticked rules, plus any the organizer wrote themselves.
+    rules: [] as string[],
+    customRules: [] as string[],
+    // Gallery images shown under the tournament's Media tab.
+    mediaImages: [] as string[],
     
     // Section 5: Fees
+    maxTeams: '16',
     entryFee: '₹150',
     registrationFee: '₹25',
     deposit: '₹50',
@@ -148,12 +205,95 @@ export default function CreateTournamentScreen() {
     mvpPrize: '₹200 + Boot Trophy',
   });
 
+  // Restore any drafts this device saved earlier.
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(DRAFTS_KEY);
+        if (!raw) return;
+        const stored = JSON.parse(raw);
+        if (Array.isArray(stored) && stored.length > 0) {
+          setDrafts(prev => {
+            const seenIds = new Set(stored.map((d: any) => d.id));
+            return [...stored, ...prev.filter((d: any) => !seenIds.has(d.id))];
+          });
+        }
+      } catch {
+        // A corrupt draft blob shouldn't stop the wizard opening.
+      }
+    })();
+  }, []);
+
+  // Load the tournament being edited into the form. Only the fields the
+  // record actually carries are overwritten, so a cup published before the
+  // model was extended keeps the wizard's defaults rather than blanking out.
+  useEffect(() => {
+    if (!editId) return;
+    const t = publishedTournaments.find((x: any) => x.id === editId);
+    if (!t) return;
+    setForm(prev => ({
+      ...prev,
+      name: t.name ?? prev.name,
+      description: t.description ?? prev.description,
+      sportType: t.sport ?? prev.sportType,
+      tournamentType: t.type ?? prev.tournamentType,
+      organizerName: t.organizerName ?? prev.organizerName,
+      organizerContact: t.organizerContact ?? prev.organizerContact,
+      regStart: t.regStart ?? prev.regStart,
+      regEnd: t.regEnd ?? prev.regEnd,
+      tournStart: t.startDate ?? prev.tournStart,
+      tournEnd: t.endDate ?? prev.tournEnd,
+      selectedGround: t.location ?? prev.selectedGround,
+      address: t.venueAddress ?? prev.address,
+      matchDuration: t.matchDuration ?? prev.matchDuration,
+      teamSize: t.teamSize ?? prev.teamSize,
+      overs: t.overs ?? prev.overs,
+      pointSystem: t.pointSystem ?? prev.pointSystem,
+      maxTeams: t.maxTeams != null ? String(t.maxTeams) : prev.maxTeams,
+      entryFee: t.entryFee != null ? `₹${t.entryFee}` : prev.entryFee,
+      registrationFee: t.registrationFee ?? prev.registrationFee,
+      deposit: t.deposit ?? prev.deposit,
+      winnerPrize: t.winnerPrize ?? t.prizePool ?? prev.winnerPrize,
+      runnerPrize: t.runnerPrize ?? prev.runnerPrize,
+      mvpPrize: t.mvpPrize ?? prev.mvpPrize,
+      banner: t.banner ?? prev.banner,
+      rules: Array.isArray(t.rules) ? t.rules : prev.rules,
+      // Anything ticked that isn't a preset for this sport must have been the
+      // organizer's own rule, so it belongs back in the custom list.
+      customRules: Array.isArray(t.rules)
+        ? t.rules.filter((r: string) => !rulePresetsForSport(t.sport || '').includes(r))
+        : prev.customRules,
+      mediaImages: Array.isArray(t.mediaImages) ? t.mediaImages : prev.mediaImages,
+    }));
+
+    // Rebuild the photo grid exactly as it was saved, so an edit that touches
+    // nothing else re-publishes the same cover.
+    if (Array.isArray(t.coverImages)) {
+      const slots = [0, 1, 2].map(i => (t.coverImages as (string | null)[])[i] ?? null);
+      setTournamentImages(slots);
+      const pinned = typeof t.coverIndex === 'number' && slots[t.coverIndex] ? t.coverIndex : slots.findIndex(Boolean);
+      setPinnedIndex(pinned === -1 ? 0 : pinned);
+    }
+    if (t.banner && typeof t.banner === 'object' && 'uri' in t.banner) {
+      setCustomImageUri((t.banner as { uri: string }).uri);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId, publishedTournaments.length]);
+
   // Action feedback toasts
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const toastOpacity = useState(new Animated.Value(0))[0];
 
   // Custom cover image & date picker states
   const [customImageUri, setCustomImageUri] = useState<string | null>(null);
+  /**
+   * Three photo slots, mirroring create-turf. Positions are meaningful — a
+   * `null` is an empty slot, not a missing photo — so the grid stays stable
+   * while the organizer swaps individual images around.
+   */
+  const [tournamentImages, setTournamentImages] = useState<(string | null)[]>([null, null, null]);
+  const [pinnedIndex, setPinnedIndex] = useState<number>(0);
+  const [customRuleText, setCustomRuleText] = useState('');
   const [datePickerField, setDatePickerField] = useState<'regStart' | 'regEnd' | 'tournStart' | 'tournEnd' | null>(null);
   const [pickerDate, setPickerDate] = useState(new Date(2026, 5, 23));
 
@@ -178,6 +318,126 @@ export default function CreateTournamentScreen() {
     }
   };
 
+  /** Fills one of the three cover slots from the photo library. */
+  const pickSlotImage = async (slotIndex: number) => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      triggerToast('Photo permission is needed to add images');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.9,
+    });
+    if (result.canceled) return;
+    const uri = result.assets[0]?.uri;
+    if (!uri) return;
+
+    setTournamentImages(prev => {
+      const next = [...prev];
+      next[slotIndex] = uri;
+      // Pin the first photo added, so a cover always exists without the
+      // organizer having to think about it.
+      if (!prev.some(Boolean) || !prev[pinnedIndex]) {
+        setPinnedIndex(slotIndex);
+        setCustomImageUri(uri);
+        setForm(f => ({ ...f, banner: { uri } }));
+      }
+      return next;
+    });
+  };
+
+  const removeSlotImage = (slotIndex: number) => {
+    setTournamentImages(prev => {
+      const next = [...prev];
+      next[slotIndex] = null;
+      if (pinnedIndex === slotIndex) {
+        // Fall back to whatever photo is still there; if none, the preset
+        // cover takes over again.
+        const remaining = next.findIndex(Boolean);
+        setPinnedIndex(remaining === -1 ? 0 : remaining);
+        const fallback = remaining === -1 ? null : next[remaining];
+        setCustomImageUri(fallback);
+        setForm(f => ({ ...f, banner: fallback ? { uri: fallback } : COVER_PRESETS[0].source }));
+      }
+      return next;
+    });
+  };
+
+  const pinSlotImage = (slotIndex: number) => {
+    const uri = tournamentImages[slotIndex];
+    if (!uri) return;
+    setPinnedIndex(slotIndex);
+    setCustomImageUri(uri);
+    setForm(prev => ({ ...prev, banner: { uri } }));
+  };
+
+  /** Presets follow the sport, so switching sport re-offers the right list. */
+  const rulePresets = rulePresetsForSport(form.sportType);
+
+  const toggleRule = (rule: string) => {
+    setForm(prev => ({
+      ...prev,
+      rules: prev.rules.includes(rule)
+        ? prev.rules.filter(r => r !== rule)
+        : [...prev.rules, rule],
+    }));
+  };
+
+  const addCustomRule = () => {
+    const text = customRuleText.trim();
+    if (!text) return;
+    if ([...form.rules, ...form.customRules].includes(text)) {
+      triggerToast('That rule is already on the list');
+      return;
+    }
+    // A custom rule is added already ticked — writing it *is* the decision to
+    // include it, so making the organizer tick it again would be busywork.
+    setForm(prev => ({
+      ...prev,
+      customRules: [...prev.customRules, text],
+      rules: [...prev.rules, text],
+    }));
+    setCustomRuleText('');
+  };
+
+  const removeCustomRule = (rule: string) => {
+    setForm(prev => ({
+      ...prev,
+      customRules: prev.customRules.filter(r => r !== rule),
+      rules: prev.rules.filter(r => r !== rule),
+    }));
+  };
+
+  /** Adds one or more photos to the tournament gallery. */
+  const pickMediaImages = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      triggerToast('Photo permission is needed to add images');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: 8,
+      quality: 0.9,
+    });
+    if (result.canceled) return;
+    const uris = (result.assets || []).map(a => a.uri).filter(Boolean);
+    setForm(prev => {
+      // De-duplicate: re-picking the same photo shouldn't add it twice.
+      const merged = [...prev.mediaImages, ...uris.filter(u => !prev.mediaImages.includes(u))];
+      return { ...prev, mediaImages: merged.slice(0, 12) };
+    });
+    triggerToast(`${uris.length} image${uris.length === 1 ? '' : 's'} added`);
+  };
+
+  const removeMediaImage = (uri: string) => {
+    setForm(prev => ({ ...prev, mediaImages: prev.mediaImages.filter(u => u !== uri) }));
+  };
+
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
     Animated.sequence([
@@ -195,7 +455,106 @@ export default function CreateTournamentScreen() {
     ]).start(() => setToastMsg(null));
   };
 
+  /**
+   * Per-step required fields. Create Turf gates each step this way; without it
+   * a tournament could be published with no name, no organizer and no venue,
+   * and the broken record only surfaced on the public listing.
+   *
+   * Dates and fees ship with sensible defaults, so those steps validate on
+   * ordering/sanity rather than presence.
+   */
+  /**
+   * The first problem with the current step, or null when it is complete.
+   *
+   * Returning the reason (rather than a bare boolean) lets one source of truth
+   * drive three things at once: whether the button is enabled, what the toast
+   * says if someone taps anyway, and which inline error is shown. Previously
+   * validation only ran on tap, so the button always looked available and the
+   * form could be walked through end-to-end while empty.
+   */
+  const stepIssue = (step: number): string | null => {
+    if (step === 0) {
+      if (!form.name.trim()) return 'Tournament name is required';
+      if (!form.organizerName.trim()) return 'Organizer name is required';
+      if (!form.organizerContact.trim()) return 'Organizer contact is required';
+      if (!isValidPhone(form.organizerContact)) return 'Enter a valid 10-digit mobile number';
+      return null;
+    }
+    if (step === 1) {
+      const regS = new Date(form.regStart).getTime();
+      const regE = new Date(form.regEnd).getTime();
+      const tS = new Date(form.tournStart).getTime();
+      const tE = new Date(form.tournEnd).getTime();
+      if (![regS, regE, tS, tE].every(Number.isFinite)) return 'All four dates are required';
+      if (regE < regS) return 'Registration must close after it opens';
+      if (tE < tS) return 'Tournament must end after it starts';
+      // Teams cannot register once play has begun.
+      if (tS < regS) return 'Tournament cannot start before registration opens';
+      return null;
+    }
+    if (step === 2) {
+      if (!form.selectedGround.trim()) return 'Pick a venue for the tournament';
+      return null;
+    }
+    if (step === 3) {
+      // Only cricket needs an over count; other sports have no equivalent.
+      if (form.sportType === 'Cricket' && !form.overs.trim()) return 'Overs per innings is required for cricket';
+      return null;
+    }
+    if (step === 4) {
+      if (parseAmount(form.entryFee) <= 0) return 'Entry fee is required';
+      return null;
+    }
+    if (step === 5) {
+      if (!form.winnerPrize.trim()) return 'A winner prize is required';
+      return null;
+    }
+    return null;
+  };
+
+  /**
+   * Earliest date the field currently being picked may take. Enforced in the
+   * calendar itself so an invalid ordering can never be *selected* — catching
+   * it afterwards with a toast left the user staring at a date they had
+   * already chosen, wondering which one was wrong.
+   *
+   *   regEnd     >= regStart      registration can't close before it opens
+   *   tournStart >= regStart      teams must be able to register before play
+   *   tournEnd   >= tournStart    a cup can't end before it begins
+   */
+  const minDateForField = (field: typeof datePickerField): string | null => {
+    if (field === 'regEnd') return form.regStart || null;
+    if (field === 'tournStart') return form.regStart || null;
+    if (field === 'tournEnd') return form.tournStart || null;
+    return null;
+  };
+
+  /** ISO yyyy-mm-dd strings compare correctly lexicographically. */
+  const isDateDisabled = (iso: string): boolean => {
+    const min = minDateForField(datePickerField);
+    return !!min && iso < min;
+  };
+
+  const currentIssue = stepIssue(currentStep);
+  const canAdvance = currentIssue === null;
+
+  /** Inline error under the contact field, shown only once something is typed. */
+  const contactError =
+    form.organizerContact.trim() && !isValidPhone(form.organizerContact)
+      ? 'Enter a valid 10-digit mobile number'
+      : '';
+
+  const validateStep = (step: number): boolean => {
+    const issue = stepIssue(step);
+    if (issue) {
+      triggerToast(issue);
+      return false;
+    }
+    return true;
+  };
+
   const handleNext = () => {
+    if (!validateStep(currentStep)) return;
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -213,14 +572,33 @@ export default function CreateTournamentScreen() {
     }
   };
 
+  /**
+   * Drafts live in AsyncStorage, not just component state. Previously the UI
+   * promised "Save Draft ... to keep it here" while holding them in useState,
+   * so every draft vanished on reload.
+   */
+  const persistDrafts = (next: any[]) => {
+    AsyncStorage.setItem(DRAFTS_KEY, JSON.stringify(next)).catch(() => {
+      triggerToast('Could not save the draft to this device');
+    });
+  };
+
   const handleSaveDraft = () => {
     const draftId = `draft-${Date.now()}`;
     const newDraft = {
       ...form,
+      // A require()'d image is an opaque asset id that will not survive a
+      // reload, so drafts keep only serialisable fields.
+      banner: undefined,
       id: draftId,
-      name: form.name || 'Untitled Draft'
+      name: form.name || 'Untitled Draft',
+      savedAt: new Date().toISOString(),
     };
-    setDrafts(prev => [newDraft, ...prev]);
+    setDrafts(prev => {
+      const next = [newDraft, ...prev];
+      persistDrafts(next);
+      return next;
+    });
     triggerToast('Draft saved successfully!');
   };
 
@@ -231,11 +609,26 @@ export default function CreateTournamentScreen() {
   };
 
   const handleDeleteDraft = (id: string) => {
-    setDrafts(prev => prev.filter(d => d.id !== id));
+    setDrafts(prev => {
+      const next = prev.filter(d => d.id !== id);
+      persistDrafts(next);
+      return next;
+    });
     triggerToast('Draft deleted.');
   };
 
   const handlePublish = () => {
+    // Re-check every step, not just this one: a user can jump backwards and
+    // clear a required field on an earlier step before hitting publish.
+    for (let i = 0; i < STEPS.length; i++) {
+      const issue = stepIssue(i);
+      if (issue) {
+        triggerToast(issue);
+        setCurrentStep(i);
+        return;
+      }
+    }
+
     // Validation check
     if (!form.name.trim()) {
       triggerToast('Tournament name is required.');
@@ -258,22 +651,61 @@ export default function CreateTournamentScreen() {
       return;
     }
 
-    // Save to global tournament store
-    addTournament({
-      id: generateTournamentId(),
+    // The full wizard answer set. Everything the organizer typed is stored,
+    // not just the fields the public card shows, so reopening this wizard to
+    // edit round-trips instead of resetting the untracked fields.
+    const record = {
       name: form.name,
       sport: form.sportType || 'Football',
       type: form.tournamentType || 'Knockout',
       location: form.selectedGround || 'TBD',
       startDate: form.tournStart || '',
       endDate: form.tournEnd || '',
-      prizePool: form.winnerPrize ? `₹${form.winnerPrize}` : 'TBD',
-      prizePoolAmount: parseInt(form.winnerPrize || '0', 10),
-      entryFee: parseInt(form.entryFee || '0', 10),
-      maxTeams: 16,
-      teamsCount: 0,
+      prizePool: formatPrizeLabel(form.winnerPrize),
+      prizePoolAmount: parseAmount(form.winnerPrize),
+      entryFee: parseAmount(form.entryFee),
+      maxTeams: Math.max(2, parseAmount(form.maxTeams) || 16),
       banner: form.banner || null,
       organizerName: form.organizerName,
+      description: form.description,
+      organizerContact: form.organizerContact,
+      regStart: form.regStart,
+      regEnd: form.regEnd,
+      venueAddress: form.address,
+      matchDuration: form.matchDuration,
+      teamSize: form.teamSize,
+      overs: form.overs,
+      pointSystem: form.pointSystem,
+      registrationFee: form.registrationFee,
+      deposit: form.deposit,
+      winnerPrize: form.winnerPrize,
+      runnerPrize: form.runnerPrize,
+      mvpPrize: form.mvpPrize,
+      rules: form.rules,
+      mediaImages: form.mediaImages,
+      coverImages: tournamentImages,
+      coverIndex: pinnedIndex,
+    };
+
+    if (isEditing && editId) {
+      // teamsCount and status are owned by the registration/lifecycle flows —
+      // an edit must not reset a cup that already has teams in it.
+      updateTournament(editId, record);
+      triggerToast('Tournament updated!');
+      setTimeout(() => {
+        if (router.canGoBack()) router.back();
+        else router.replace('/(tabs)/tournaments');
+      }, 1200);
+      return;
+    }
+
+    addTournament({
+      ...record,
+      // Stamped once, from the signed-in profile. Deliberately absent from the
+      // edit patch above so renaming the organizer can never change ownership.
+      organizerId: ownerKey,
+      id: generateTournamentId(),
+      teamsCount: 0,
       status: 'Registering',
       createdAt: new Date().toISOString(),
     });
@@ -293,13 +725,15 @@ export default function CreateTournamentScreen() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // Step render functions
+  const hasSlotPhotos = tournamentImages.some(Boolean);
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
         return (
           <View style={styles.stepFormContainer}>
             <View style={styles.inputGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Tournament name *</ThemedText>
+              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Tournament name <ThemedText style={styles.requiredStar}>*</ThemedText></ThemedText>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'name' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. London Summer Slam"
@@ -327,46 +761,102 @@ export default function CreateTournamentScreen() {
             </View>
 
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Tournament cover image</ThemedText>
-              <ScrollView 
-                horizontal 
+              <View style={styles.labelRow}>
+                <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Tournament photos</ThemedText>
+                <ThemedText style={[styles.fieldLabelSub, { color: theme.textSecondary }]}>
+                  Tap 📌 to set Cover
+                </ThemedText>
+              </View>
+
+              <View style={styles.threeImageGrid}>
+                {tournamentImages.map((img, idx) => {
+                  const isCover = pinnedIndex === idx && !!img;
+                  if (img) {
+                    return (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.imageCardSlot,
+                          { borderColor: isCover ? theme.primary : '#00000022' },
+                          isCover && { borderWidth: 2 },
+                        ]}
+                      >
+                        <Image source={{ uri: img }} style={styles.imagePreviewFull} contentFit="cover" />
+
+                        {isCover && (
+                          <View style={[styles.pinnedCoverBadge, { backgroundColor: theme.primary }]}>
+                            <Ionicons name="pin" size={10} color="#ffffff" style={{ marginRight: 2 }} />
+                            <ThemedText style={styles.pinnedCoverBadgeText}>Cover</ThemedText>
+                          </View>
+                        )}
+
+                        {/* Icon-only actions: a text label made this row wider
+                            than the slot and clipped the delete button. */}
+                        <View style={styles.imageSlotActionOverlay}>
+                          <Pressable
+                            onPress={() => pinSlotImage(idx)}
+                            hitSlop={6}
+                            accessibilityLabel="Set as cover photo"
+                            style={[
+                              styles.pinIconButton,
+                              { backgroundColor: isCover ? theme.primary : 'rgba(0,0,0,0.65)' },
+                            ]}
+                          >
+                            <Ionicons name={isCover ? 'pin' : 'pin-outline'} size={12} color="#ffffff" />
+                          </Pressable>
+
+                          <Pressable
+                            onPress={() => removeSlotImage(idx)}
+                            hitSlop={6}
+                            accessibilityLabel="Remove photo"
+                            style={[styles.deleteIconButton, { backgroundColor: '#ef4444cc' }]}
+                          >
+                            <Ionicons name="trash-outline" size={12} color="#ffffff" />
+                          </Pressable>
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  return (
+                    <Pressable
+                      key={idx}
+                      onPress={() => pickSlotImage(idx)}
+                      style={[
+                        styles.imageCardSlot,
+                        styles.imageCardPlaceholder,
+                        { backgroundColor: theme.surfaceLow, borderColor: '#00000022' },
+                      ]}
+                    >
+                      <View style={[styles.uploadIconCircle, { backgroundColor: theme.primary + '16' }]}>
+                        <Ionicons name="camera-outline" size={20} color={theme.primary} />
+                      </View>
+                      <ThemedText style={[styles.uploadSlotTitle, { color: theme.primary }]}>Upload</ThemedText>
+                      <ThemedText style={[styles.uploadSlotSub, { color: theme.textSecondary }]}>Photo {idx + 1}</ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Presets remain as the no-photo fallback: a cup published from
+                  a desk still needs a cover. Selecting one un-pins the photos. */}
+              <ThemedText style={[styles.fieldLabelSub, { color: theme.textSecondary, marginTop: 12 }]}>
+                {hasSlotPhotos ? 'Or use a preset cover instead' : 'No photo? Pick a preset cover'}
+              </ThemedText>
+              <ScrollView
+                horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
               >
-                {/* Custom Image Upload Option */}
-                <Pressable
-                  onPress={pickCoverImage}
-                  style={[
-                    styles.coverPresetCard,
-                    { 
-                      borderColor: (typeof form.banner === 'object' && form.banner && 'uri' in form.banner) ? theme.primary : '#00000033', 
-                      backgroundColor: theme.surfaceLow 
-                    }
-                  ]}
-                >
-                  {customImageUri ? (
-                    <Image source={{ uri: customImageUri }} style={styles.coverPresetThumb} contentFit="cover" />
-                  ) : (
-                    <View style={[styles.coverPresetThumb, { backgroundColor: theme.surfaceLow, justifyContent: 'center', alignItems: 'center' }]}>
-                      <Ionicons name="cloud-upload-outline" size={18} color={theme.textSecondary} />
-                    </View>
-                  )}
-                  <ThemedText style={[styles.coverPresetLabel, { color: (typeof form.banner === 'object' && form.banner && 'uri' in form.banner) ? theme.primary : theme.textSecondary }]} numberOfLines={1}>
-                    {customImageUri ? 'Custom Cover' : 'Upload custom'}
-                  </ThemedText>
-                  {(typeof form.banner === 'object' && form.banner && 'uri' in form.banner) && (
-                    <View style={[styles.coverPresetCheck, { backgroundColor: theme.primary }]}>
-                      <Ionicons name="checkmark" size={10} color="#ffffff" />
-                    </View>
-                  )}
-                </Pressable>
-
                 {COVER_PRESETS.map((preset) => {
                   const isSelected = form.banner === preset.source;
                   return (
                     <Pressable
                       key={preset.name}
-                      onPress={() => updateField('banner', preset.source)}
+                      onPress={() => {
+                        updateField('banner', preset.source);
+                        setCustomImageUri(null);
+                      }}
                       style={[
                         styles.coverPresetCard,
                         { borderColor: isSelected ? theme.primary : '#00000033', backgroundColor: theme.surfaceLow }
@@ -451,7 +941,7 @@ export default function CreateTournamentScreen() {
             </View>
 
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Organizer name *</ThemedText>
+              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Organizer name <ThemedText style={styles.requiredStar}>*</ThemedText></ThemedText>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'organizerName' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. Apex Sports Club"
@@ -464,23 +954,32 @@ export default function CreateTournamentScreen() {
             </View>
 
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Organizer contact</ThemedText>
-              <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'organizerContact' ? theme.primary : '#00000033' }]}
-                placeholder="e.g. +44 7900 000000"
-                placeholderTextColor={theme.textSecondary + '80'}
-                keyboardType="phone-pad"
-                value={form.organizerContact}
-                onChangeText={(v) => {
-                  // Strip all non-numeric characters except +, spaces, dashes, parentheses
-                  const cleaned = v.replace(/[^0-9+\s\-()]/g, '');
-                  updateField('organizerContact', cleaned);
-                }}
-                onFocus={() => setFocusedField('organizerContact')}
-                onBlur={() => setFocusedField(null)}
-              />
-              {form.organizerContact !== '' && form.organizerContact.replace(/[^0-9]/g, '').length < 7 && (
-                <ThemedText style={{ color: '#ef4444', fontSize: 11, marginTop: 3 }}>Enter a valid phone number (min 7 digits)</ThemedText>
+              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+                Organizer contact <ThemedText style={styles.requiredStar}>*</ThemedText>
+              </ThemedText>
+              {/* Fixed +91 country code with a formatted, hard-capped 10-digit
+                  field — the same control Create Turf uses. The old free-text
+                  input accepted "+", spaces, dashes and brackets in any
+                  quantity, so "((((" passed the "non-empty" check and a
+                  25-digit string was storable. */}
+              <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: contactError ? '#ef4444' : focusedField === 'organizerContact' ? theme.primary : '#00000033' }]}>
+                <View style={[styles.countryCodeBadge, { backgroundColor: theme.primary + '18' }]}>
+                  <ThemedText style={[styles.countryCodeText, { color: theme.primary }]}>+91</ThemedText>
+                </View>
+                <TextInput
+                  style={[styles.inputRowInner, { color: theme.text }]}
+                  placeholder="98765 43210"
+                  placeholderTextColor={theme.textSecondary + '80'}
+                  keyboardType="phone-pad"
+                  maxLength={11}
+                  value={form.organizerContact}
+                  onChangeText={(v) => updateField('organizerContact', formatPhone(v))}
+                  onFocus={() => setFocusedField('organizerContact')}
+                  onBlur={() => setFocusedField(null)}
+                />
+              </View>
+              {!!contactError && (
+                <ThemedText style={styles.errorText}>{contactError}</ThemedText>
               )}
             </View>
           </View>
@@ -638,16 +1137,26 @@ export default function CreateTournamentScreen() {
             </View>
 
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Overs / format rules (if cricket)</ThemedText>
-              <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'overs' ? theme.primary : '#00000033' }]}
-                placeholder="e.g. 20 Overs, Max 4 overs per bowler"
-                placeholderTextColor={theme.textSecondary + '80'}
-                value={form.overs}
-                onChangeText={(v) => updateField('overs', v)}
-                onFocus={() => setFocusedField('overs')}
-                onBlur={() => setFocusedField(null)}
-              />
+              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+                Overs per innings {form.sportType === 'Cricket' ? <ThemedText style={styles.requiredStar}>*</ThemedText> : '(cricket only)'}
+              </ThemedText>
+              {/* Digits only: an over count is a number, and the free-text
+                  field previously accepted "dkfjdljfd" and defaulted to "N/A",
+                  which then had to be parsed downstream. */}
+              <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: focusedField === 'overs' ? theme.primary : '#00000033' }]}>
+                <TextInput
+                  style={[styles.inputRowInner, { color: theme.text }]}
+                  placeholder="20"
+                  placeholderTextColor={theme.textSecondary + '80'}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  value={form.overs}
+                  onChangeText={(v) => updateField('overs', v.replace(/\D/g, '').slice(0, 3))}
+                  onFocus={() => setFocusedField('overs')}
+                  onBlur={() => setFocusedField(null)}
+                />
+                <ThemedText style={{ color: theme.textSecondary, fontFamily: 'Sora_400Regular', fontSize: 11 }}>overs</ThemedText>
+              </View>
             </View>
 
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
@@ -662,13 +1171,103 @@ export default function CreateTournamentScreen() {
                 onBlur={() => setFocusedField(null)}
               />
             </View>
+
+            {/* Tournament rules — tick the ones that apply. The preset list
+                follows the sport, so cricket gets its own conditions. */}
+            <View style={[styles.inputGroup, { marginTop: 20 }]}>
+              <View style={styles.labelRowBetween}>
+                <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 0 }]}>
+                  Match rules ({form.rules.length} selected)
+                </ThemedText>
+                <Pressable
+                  onPress={() =>
+                    setForm(prev => ({
+                      ...prev,
+                      rules: prev.rules.length === rulePresets.length + prev.customRules.length
+                        ? []
+                        : [...rulePresets, ...prev.customRules],
+                    }))
+                  }
+                >
+                  <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_500Medium', fontSize: 11 }}>
+                    {form.rules.length > 0 ? 'Clear all' : 'Select all'}
+                  </ThemedText>
+                </Pressable>
+              </View>
+
+              {rulePresets.map((rule) => {
+                const checked = form.rules.includes(rule);
+                return (
+                  <Pressable
+                    key={rule}
+                    onPress={() => toggleRule(rule)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked }}
+                    style={[
+                      styles.ruleRow,
+                      { borderColor: checked ? theme.primary + '55' : '#00000018', backgroundColor: checked ? theme.primary + '0D' : theme.surfaceLow },
+                    ]}
+                  >
+                    <View style={[styles.ruleCheckbox, { borderColor: checked ? theme.primary : theme.outlineVariant, backgroundColor: checked ? theme.primary : 'transparent' }]}>
+                      {checked && <Ionicons name="checkmark" size={11} color="#ffffff" />}
+                    </View>
+                    <ThemedText style={[styles.ruleText, { color: checked ? theme.text : theme.textSecondary }]}>
+                      {rule}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+
+              {/* Organizer's own rules, listed with the same checkbox affordance. */}
+              {form.customRules.map((rule) => {
+                const checked = form.rules.includes(rule);
+                return (
+                  <View
+                    key={rule}
+                    style={[styles.ruleRow, { borderColor: theme.primary + '55', backgroundColor: theme.primary + '0D' }]}
+                  >
+                    <Pressable onPress={() => toggleRule(rule)} accessibilityRole="checkbox" accessibilityState={{ checked }}>
+                      <View style={[styles.ruleCheckbox, { borderColor: checked ? theme.primary : theme.outlineVariant, backgroundColor: checked ? theme.primary : 'transparent' }]}>
+                        {checked && <Ionicons name="checkmark" size={11} color="#ffffff" />}
+                      </View>
+                    </Pressable>
+                    <ThemedText style={[styles.ruleText, { color: theme.text }]}>{rule}</ThemedText>
+                    <Pressable onPress={() => removeCustomRule(rule)} hitSlop={8} accessibilityLabel="Remove rule">
+                      <Ionicons name="close-circle" size={15} color={theme.textSecondary} />
+                    </Pressable>
+                  </View>
+                );
+              })}
+
+              <View style={[styles.inputRow, { marginTop: 10, backgroundColor: theme.surfaceLow, borderColor: focusedField === 'customRule' ? theme.primary : '#00000033' }]}>
+                <TextInput
+                  style={[styles.inputRowInner, { color: theme.text }]}
+                  placeholder="Add your own rule"
+                  placeholderTextColor={theme.textSecondary + '80'}
+                  value={customRuleText}
+                  onChangeText={setCustomRuleText}
+                  onSubmitEditing={addCustomRule}
+                  returnKeyType="done"
+                  onFocus={() => setFocusedField('customRule')}
+                  onBlur={() => setFocusedField(null)}
+                />
+                <Pressable
+                  onPress={addCustomRule}
+                  disabled={!customRuleText.trim()}
+                  accessibilityLabel="Add custom rule"
+                  style={[styles.ruleAddBtn, { backgroundColor: customRuleText.trim() ? theme.primary : theme.outlineVariant }]}
+                >
+                  <Ionicons name="add" size={15} color="#ffffff" />
+                </Pressable>
+              </View>
+            </View>
           </View>
         );
       case 4:
         return (
           <View style={styles.stepFormContainer}>
             <View style={styles.inputGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Entry fee (per team)</ThemedText>
+              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Entry fee (per team) <ThemedText style={styles.requiredStar}>*</ThemedText></ThemedText>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'entryFee' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. ₹150"
@@ -711,8 +1310,49 @@ export default function CreateTournamentScreen() {
       case 5:
         return (
           <View style={styles.stepFormContainer}>
+            {/* Gallery — multi-select upload; these appear under the
+                tournament's Media tab once published. */}
+            <View style={[styles.inputGroup, { marginBottom: 20 }]}>
+              <View style={styles.labelRowBetween}>
+                <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 0 }]}>
+                  Media gallery ({form.mediaImages.length}/12)
+                </ThemedText>
+                <Pressable onPress={pickMediaImages} accessibilityLabel="Add media images">
+                  <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_500Medium', fontSize: 11 }}>+ Add photos</ThemedText>
+                </Pressable>
+              </View>
+
+              {form.mediaImages.length === 0 ? (
+                <Pressable
+                  onPress={pickMediaImages}
+                  style={[styles.mediaEmpty, { borderColor: theme.outlineVariant + '66' }]}
+                >
+                  <Ionicons name="images-outline" size={20} color={theme.textSecondary} />
+                  <ThemedText style={{ color: theme.textSecondary, fontFamily: 'Sora_400Regular', fontSize: 11 }}>
+                    Upload match photos — you can pick several at once
+                  </ThemedText>
+                </Pressable>
+              ) : (
+                <View style={styles.mediaThumbGrid}>
+                  {form.mediaImages.map((uri) => (
+                    <View key={uri} style={styles.mediaThumbWrap}>
+                      <Image source={{ uri }} style={styles.mediaThumb} contentFit="cover" />
+                      <Pressable
+                        onPress={() => removeMediaImage(uri)}
+                        hitSlop={6}
+                        accessibilityLabel="Remove image"
+                        style={styles.mediaThumbRemove}
+                      >
+                        <Ionicons name="close" size={11} color="#ffffff" />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
             <View style={styles.inputGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>First prize (winner)</ThemedText>
+              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>First prize (winner) <ThemedText style={styles.requiredStar}>*</ThemedText></ThemedText>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'winnerPrize' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. ₹2,500 + Cup"
@@ -812,7 +1452,7 @@ export default function CreateTournamentScreen() {
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </Pressable>
           <ThemedText type="headlineMd" style={{ color: theme.text, flex: 1, marginLeft: 12 }}>
-            Create Tournament
+            {isEditing ? 'Edit Tournament' : 'Create Tournament'}
           </ThemedText>
           
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 0 }}>
@@ -826,47 +1466,58 @@ export default function CreateTournamentScreen() {
           </View>
         </View>
 
-        {/* Horizontal Wizard Progress Tracker - Premium Compact Design */}
+        {/* Step Tracker — same pattern as Create Turf: every step is named
+            under its own circle, evenly spaced, and a forward jump is gated on
+            the current step validating. */}
         <View style={styles.progressTrackerCard}>
-          <View style={styles.wizardContainer}>
+          <View style={styles.stepRow}>
             {STEPS.map((step, idx) => {
               const isActive = idx === currentStep;
-              const isPassed = idx < currentStep;
+              const isDone = idx < currentStep;
               return (
                 <React.Fragment key={step.title}>
-                  <Pressable 
-                    onPress={() => setCurrentStep(idx)}
-                    style={styles.wizardStepCompact}
+                  <Pressable
+                    onPress={() => {
+                      if (idx < currentStep) {
+                        setCurrentStep(idx);
+                      } else if (idx > currentStep) {
+                        if (!validateStep(currentStep)) return;
+                        setCurrentStep(idx);
+                      }
+                    }}
+                    style={styles.stepItem}
                   >
                     <View style={[
-                      styles.wizardIconCircle,
-                      { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant },
-                      isPassed && { backgroundColor: theme.primary, borderColor: theme.primary },
-                      isActive && { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
+                      styles.stepCircle,
+                      isDone
+                        ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                        : isActive
+                          ? { backgroundColor: theme.primary + '20', borderColor: theme.primary }
+                          : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '55' },
                     ]}>
-                      <Ionicons 
-                        name={(isPassed ? 'checkmark' : step.icon) as any} 
-                        size={14} 
-                        color={isActive ? '#ffffff' : isPassed ? '#ffffff' : theme.textSecondary} 
-                      />
+                      {isDone
+                        ? <Ionicons name="checkmark" size={12} color="#fff" />
+                        : <Ionicons name={step.icon as any} size={12} color={isActive ? theme.primary : theme.textSecondary} />}
+                    </View>
+                    <View style={styles.stepLabelBox}>
+                      <ThemedText
+                        numberOfLines={2}
+                        style={[styles.stepLabel, {
+                          color: isActive ? theme.primary : isDone ? theme.text : theme.textSecondary,
+                          fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_500Medium',
+                        }]}
+                      >
+                        {step.title}
+                      </ThemedText>
                     </View>
                   </Pressable>
                   {idx < STEPS.length - 1 && (
-                    <View style={[
-                      styles.wizardLineCompact, 
-                      { backgroundColor: isPassed ? theme.primary : theme.outlineVariant }
-                    ]} />
+                    <View style={[styles.stepConnector, { backgroundColor: isDone ? theme.primary : theme.outlineVariant + '33' }]} />
                   )}
                 </React.Fragment>
               );
             })}
           </View>
-          <ThemedText 
-            type="labelSm" 
-            style={[styles.wizardActiveLabel, { color: theme.text }]}
-          >
-            {`Step ${currentStep + 1} of 6: ${STEPS[currentStep].title}`}
-          </ThemedText>
         </View>
 
         {/* Wizard Form Area */}
@@ -966,21 +1617,52 @@ export default function CreateTournamentScreen() {
         <View style={[styles.footer, { borderTopColor: theme.outlineVariant + '33' }]}>
           {currentStep > 0 && (
             <Pressable style={[styles.footerBackBtn, { borderColor: theme.outlineVariant }]} onPress={handleBack}>
-              <ThemedText type="labelSm" style={{ color: theme.text }}>Back</ThemedText>
+              <Ionicons name="chevron-back" size={16} color={theme.text} />
+              <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 13, marginLeft: 4 }}>Back</ThemedText>
             </Pressable>
           )}
-          
-          <View style={{ flex: 1 }} />
 
+          {/* Disabled until the current step's mandatory fields are satisfied.
+              `accessibilityState` keeps screen readers in step with the visual
+              state, and the tap handler still runs so the toast can explain
+              WHY it is disabled rather than the button silently doing nothing. */}
           {currentStep < STEPS.length - 1 ? (
-            <Pressable style={[styles.footerNextBtn, { backgroundColor: theme.primary }]} onPress={handleNext}>
-              <ThemedText type="labelSm" style={{ color: '#ffffff' }}>Next Step</ThemedText>
-              <Ionicons name="arrow-forward" size={14} color="#ffffff" style={{ marginLeft: 4 }} />
+            <Pressable
+              accessibilityState={{ disabled: !canAdvance }}
+              style={[
+                styles.footerNextBtn,
+                {
+                  backgroundColor: canAdvance ? theme.primary : theme.outlineVariant,
+                  opacity: canAdvance ? 1 : 0.7,
+                  // Full width on step 1 where there is no Back button, then a
+                  // 1:2 split alongside it — the Create Turf behaviour.
+                  flex: currentStep > 0 ? 2 : undefined,
+                  width: currentStep === 0 ? '100%' : undefined,
+                  marginLeft: currentStep > 0 ? Spacing.sm : 0,
+                },
+              ]}
+              onPress={handleNext}
+            >
+              <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 13, marginRight: 4 }}>Next</ThemedText>
+              <Ionicons name={canAdvance ? 'chevron-forward' : 'lock-closed'} size={16} color="#ffffff" />
             </Pressable>
           ) : (
-            <Pressable style={[styles.footerNextBtn, { backgroundColor: theme.secondaryContainer }]} onPress={handlePublish}>
-              <Ionicons name="cloud-upload-outline" size={16} color="#ffffff" style={{ marginRight: 4 }} />
-              <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '500' }}>Publish Tournament</ThemedText>
+            <Pressable
+              accessibilityState={{ disabled: !canAdvance }}
+              style={[
+                styles.footerNextBtn,
+                {
+                  backgroundColor: canAdvance ? '#10b981' : theme.outlineVariant,
+                  opacity: canAdvance ? 1 : 0.7,
+                  marginLeft: Spacing.sm,
+                },
+              ]}
+              onPress={handlePublish}
+            >
+              <Ionicons name={canAdvance ? 'cloud-upload-outline' : 'lock-closed'} size={18} color="#ffffff" style={{ marginRight: 6 }} />
+              <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 14 }}>
+                {isEditing ? 'Save Changes' : 'Publish Tournament'}
+              </ThemedText>
             </Pressable>
           )}
         </View>
@@ -1084,6 +1766,9 @@ export default function CreateTournamentScreen() {
                 {datePickerField === 'tournStart' && 'Tournament start'}
                 {datePickerField === 'tournEnd' && 'Tournament end'}
               </ThemedText>
+              <ThemedText style={{ color: theme.textSecondary, fontSize: 10, fontFamily: 'Sora_400Regular', marginLeft: 6 }}>
+                {minDateForField(datePickerField) ? `on or after ${minDateForField(datePickerField)}` : ''}
+              </ThemedText>
               <Pressable style={styles.modalCloseBtn} onPress={() => setDatePickerField(null)}>
                 <Ionicons name="close" size={20} color={theme.text} />
               </Pressable>
@@ -1142,11 +1827,14 @@ export default function CreateTournamentScreen() {
                       
                       const cellDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(cell.day).padStart(2, '0')}`;
                       const isSelected = datePickerField && form[datePickerField] === cellDateStr;
-                      
+                      const disabled = isDateDisabled(cellDateStr);
+
                       return (
                         <Pressable
                           key={cIdx}
+                          disabled={disabled}
                           onPress={() => {
+                            if (disabled) return;
                             if (datePickerField) {
                               updateField(datePickerField, cellDateStr);
                             }
@@ -1154,7 +1842,10 @@ export default function CreateTournamentScreen() {
                           }}
                           style={[
                             { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-                            isSelected && { backgroundColor: theme.primary }
+                            isSelected && { backgroundColor: theme.primary },
+                            // Dimmed so the unavailable range is visible, not
+                            // just silently unresponsive.
+                            disabled && { opacity: 0.28 },
                           ]}
                         >
                           <ThemedText style={{ color: isSelected ? '#ffffff' : theme.text, fontSize: 13, fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_400Regular' }}>
@@ -1189,7 +1880,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.containerMargin,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
     zIndex: 10,
   },
   backBtn: {
@@ -1219,31 +1910,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  wizardContainer: {
-    flexDirection: 'row',
+  // Steps share the row evenly (flex: 1) so the circles sit at regular
+  // intervals no matter how wide each label is — six steps otherwise drift.
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  stepItem: { flex: 1, alignItems: 'center', gap: 4 },
+  stepCircle: {
+    width: STEP_CIRCLE,
+    height: STEP_CIRCLE,
+    borderRadius: STEP_CIRCLE / 2,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
   },
-  wizardStepCompact: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  wizardIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  wizardLineCompact: {
-    flex: 1,
-    height: 2,
-    maxHeight: 2,
-    minWidth: 10,
-    maxWidth: 30,
-    marginHorizontal: 4,
+  // Fixed two-line box keeps every circle on the same baseline even when one
+  // label wraps and the others don't.
+  stepLabelBox: { height: STEP_LABEL_LINE * 2, justifyContent: 'flex-start' },
+  stepLabel: { fontSize: 9, letterSpacing: 0.2, lineHeight: STEP_LABEL_LINE, textAlign: 'center' },
+  // Derived from the circle geometry rather than eyeballed.
+  stepConnector: {
+    width: 10,
+    height: STEP_CONNECTOR_H,
+    marginTop: STEP_CIRCLE / 2 - STEP_CONNECTOR_H / 2,
+    marginHorizontal: 1,
   },
   wizardActiveLabel: {
     marginTop: 8,
@@ -1263,7 +1951,9 @@ const styles = StyleSheet.create({
   formCard: {
     backgroundColor: '#ffffff',
     borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
+    // Spacing.md, matching Create Turf — Spacing.lg left noticeably more
+    // gutter inside the card than the turf wizard's equivalent.
+    padding: Spacing.md,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -1292,12 +1982,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Sora_400Regular',
   },
   textArea: {
+    height: 84,
     borderWidth: 1,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 12,
-    fontSize: 14,
-    fontFamily: 'Sora_400Regular',
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.sm,
+    paddingTop: Spacing.sm,
+    fontSize: 13,
+    fontFamily: 'Sora_500Medium',
     textAlignVertical: 'top',
   },
   rowBetween: {
@@ -1361,18 +2052,24 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderTopWidth: 1,
   },
+  // Same geometry as Create Turf: a fixed 44pt bar split 1:2, with the xl
+  // radius rather than a pill, so both wizards' footers read identically.
   footerBackBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderRadius: BorderRadius.full,
+    flex: 1,
+    flexDirection: 'row',
+    height: 44,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footerNextBtn: {
+    flex: 2,
     flexDirection: 'row',
+    height: 44,
+    borderRadius: BorderRadius.xl,
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.full,
+    justifyContent: 'center',
   },
   toastContainer: {
     position: 'absolute',
@@ -1475,16 +2172,54 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 12,
+    fontSize: 11,
+    letterSpacing: 0.2,
+    marginBottom: Spacing.xs,
+    color: '#81919c',
+  },
+  // Phone row + required/error affordances, matching Create Turf.
+  mediaEmpty: {
+    borderWidth: 1.5, borderStyle: 'dashed', borderRadius: BorderRadius.md,
+    paddingVertical: 22, alignItems: 'center', gap: 6,
+  },
+  mediaThumbGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  mediaThumbWrap: { position: 'relative' },
+  mediaThumb: { width: 72, height: 72, borderRadius: BorderRadius.md, backgroundColor: '#00000010' },
+  mediaThumbRemove: {
+    position: 'absolute', top: -5, right: -5,
+    width: 19, height: 19, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  labelRowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.xs },
+  ruleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
     marginBottom: 6,
   },
+  ruleCheckbox: {
+    width: 17, height: 17, borderRadius: 5, borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ruleText: { flex: 1, minWidth: 0, fontFamily: 'Sora_400Regular', fontSize: 11.5, lineHeight: 16 },
+  ruleAddBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  inputRow: { height: 42, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.sm, borderWidth: 1, flexDirection: 'row', alignItems: 'center' },
+  countryCodeBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 8 },
+  countryCodeText: { fontSize: 13, fontFamily: 'Sora_500Medium' },
+  inputRowInner: { flex: 1, fontSize: 13, fontFamily: 'Sora_500Medium' },
+  requiredStar: { color: '#ef4444', fontFamily: 'Sora_500Medium' },
+  errorText: { color: '#ef4444', fontSize: 11, fontFamily: 'Sora_500Medium', marginTop: 4 },
   input: {
-    height: 46,
-    borderRadius: BorderRadius.lg,
+    height: 42,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    fontFamily: 'Sora_400Regular',
-    fontSize: 12.5,
+    paddingHorizontal: Spacing.sm,
+    fontFamily: 'Sora_500Medium',
+    fontSize: 13,
   },
   sportList: {
     flexDirection: 'row',
@@ -1510,6 +2245,95 @@ const styles = StyleSheet.create({
     fontFamily: 'Sora_500Medium',
     fontSize: 10,
     marginLeft: 4,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  fieldLabelSub: {
+    fontSize: 10.5,
+    fontFamily: 'Sora_400Regular',
+  },
+  threeImageGrid: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 6,
+  },
+  imageCardSlot: {
+    flex: 1,
+    // Without this a child's intrinsic width can push the row past the card,
+    // clipping the third slot off the right edge on narrow screens.
+    minWidth: 0,
+    height: 96,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  imagePreviewFull: {
+    width: '100%',
+    height: '100%',
+  },
+  pinnedCoverBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+    borderRadius: 4,
+  },
+  pinnedCoverBadgeText: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontFamily: 'Sora_500Medium',
+  },
+  imageSlotActionOverlay: {
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+    right: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pinIconButton: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 4,
+  },
+  deleteIconButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageCardPlaceholder: {
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+  },
+  uploadIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadSlotTitle: {
+    fontSize: 10.5,
+    fontFamily: 'Sora_500Medium',
+  },
+  uploadSlotSub: {
+    fontSize: 9.5,
+    fontFamily: 'Sora_400Regular',
   },
   coverPresetCard: {
     width: 100,

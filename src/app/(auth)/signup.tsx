@@ -43,12 +43,7 @@ const roleOptions: { key: 'Player' | 'Coach' | 'Owner'; label: string; desc: str
   { key: 'Owner',  label: 'Owner',  desc: 'List & manage your turfs',       icon: 'business-outline' },
 ];
 
-// Formats a raw digit string as "XXXXX XXXXX" (10-digit mobile number)
-const formatPhone = (val: string): string => {
-  const digits = val.replace(/\D/g, '').slice(0, 10);
-  if (digits.length <= 5) return digits;
-  return `${digits.slice(0, 5)} ${digits.slice(5)}`;
-};
+import { formatPhoneNumber, cleanPhoneDigits, isValidMobile, getPhoneValidationError } from '@/utils/phone-utils';
 
 const generateOtpCode = (): string => String(Math.floor(100000 + Math.random() * 900000));
 
@@ -79,8 +74,8 @@ export default function SignUpScreen() {
   const [otpSentAt, setOtpSentAt] = useState<number | null>(null);
   const [resendTimer, setResendTimer] = useState(0);
 
-  const phoneDigits = phone.replace(/\D/g, '');
-  const isPhoneValid = phoneDigits.length === 10;
+  const phoneDigits = cleanPhoneDigits(phone);
+  const isPhoneValid = isValidMobile(phone);
 
   const passwordChecks = {
     length:  password.length >= 8 && password.length <= 12,
@@ -135,12 +130,16 @@ export default function SignUpScreen() {
   };
 
   const handlePhoneChange = (t: string) => {
-    setPhone(formatPhone(t));
+    setPhone(formatPhoneNumber(t));
     if (otpStage !== 'idle') resetOtp();
   };
 
   const handleSendOtp = () => {
-    if (!isPhoneValid) return;
+    const valErr = getPhoneValidationError(phone, true);
+    if (valErr) {
+      setErrorMessage(valErr);
+      return;
+    }
     const code = generateOtpCode();
     setGeneratedOtp(code);
     setOtpStage('sent');

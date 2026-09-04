@@ -22,6 +22,7 @@ import { GradientContainer } from '@/components/gradient-container';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useWalletStore, useOfferStore } from '@/store/app-store';
+import { paymentApi, PaymentsUnavailableError } from '@/services/payment-api';
 import { useToast } from '@/context/ToastContext';
 import {
   VOUCHERS,
@@ -65,6 +66,7 @@ export default function WalletScreen() {
 
   // Top Up Modal State
   const [topUpModalVisible, setTopUpModalVisible] = useState(false);
+  const [isToppingUp, setIsToppingUp] = useState(false);
   const [customAmount, setCustomAmount] = useState('200');
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'netbanking'>('upi');
 
@@ -84,25 +86,45 @@ export default function WalletScreen() {
     ]).start(() => setToastMsg(null));
   };
 
-  const handleTopUp = (amountToAdd: number) => {
+  /**
+   * Top up the wallet.
+   *
+   * This used to call `addWalletFunds` directly, so tapping "Add money"
+   * credited the balance without charging anything. Money may only enter the
+   * wallet against a payment the server has verified, so the credit now happens
+   * after `paymentApi`, never before it.
+   */
+  const handleTopUp = async (amountToAdd: number) => {
     if (isNaN(amountToAdd) || amountToAdd <= 0) {
       showError('Please enter a valid amount');
       triggerToast('⚠️ Please enter a valid amount');
       return;
     }
-    addWalletFunds(amountToAdd);
-    const newTx: Transaction = {
-      id: `tx-${Date.now()}`,
-      title: `Wallet Top-up via ${paymentMethod.toUpperCase()}`,
-      type: 'credit',
-      amount: amountToAdd,
-      date: 'Just Now',
-      category: 'Topup',
-    };
-    setTransactions([newTx, ...transactions]);
-    setTopUpModalVisible(false);
-    showSuccess(`🎉 ₹${amountToAdd} successfully added to your wallet!`);
-    triggerToast(`🎉 ₹${amountToAdd} added to wallet!`);
+    if (isToppingUp) return;
+
+    setIsToppingUp(true);
+    try {
+      const order = await paymentApi.createOrder('wallet_topup', undefined, amountToAdd);
+
+      // Checkout itself is not wired up yet, so stop here rather than crediting
+      // an order nobody has paid. The balance moves only once the gateway
+      // returns a signature and /payments/verify accepts it.
+      setTopUpModalVisible(false);
+      showError(
+        'Payment not completed',
+        `Order ${order.orderId} was created for ₹${amountToAdd}, but checkout is not connected yet. ` +
+          'Your wallet has not been credited and you have not been charged.'
+      );
+    } catch (err: any) {
+      setTopUpModalVisible(false);
+      if (err instanceof PaymentsUnavailableError) {
+        showError('Payments unavailable', err.message);
+      } else {
+        showError('Top-up failed', err?.message || 'Could not reach the payment service.');
+      }
+    } finally {
+      setIsToppingUp(false);
+    }
   };
 
   const handleApplyPromoCode = () => {

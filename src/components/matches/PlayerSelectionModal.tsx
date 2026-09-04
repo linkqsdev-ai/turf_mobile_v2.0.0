@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Modal,
   Platform,
   Pressable,
@@ -11,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Gesture,
   GestureDetector,
@@ -79,11 +81,23 @@ export const strictDedupe = (list: Player[]): Player[] => {
   if (!Array.isArray(list)) return [];
   const seen = new Set<string>();
   const out: Player[] = [];
-  for (const p of list) {
-    if (!p || !p.name || !p.name.trim()) continue;
-    const key = p.name.trim().toLowerCase();
+  for (const raw of list) {
+    if (!raw) continue;
+    const name = typeof raw === 'string' ? raw : raw.name;
+    if (!name || !name.trim()) continue;
+    const key = name.trim().toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
+    const p: Player = typeof raw === 'string' ? {
+      id: generatePlayerId(),
+      name: name.trim(),
+      skillLevel: 'Intermediate',
+      position: 'All-Rounder',
+    } : {
+      ...raw,
+      id: raw.id || generatePlayerId(),
+      name: name.trim(),
+    };
     out.push(p);
   }
   return out;
@@ -103,6 +117,9 @@ function usePalette() {
     textPrimary: isDark ? theme.text : '#0F172A',
     textSecondary: isDark ? theme.textSecondary : '#64748B',
     textMuted: isDark ? '#64748B' : '#94A3B8',
+    goldenGrad: isDark
+      ? (['#261D0A', '#161A26', '#0F172A'] as const)
+      : (['#FDE68A', '#FEF3C7', '#FFFDF8', '#FFFFFF'] as const),
   };
 }
 
@@ -114,6 +131,7 @@ const shortCode = (name: string, fallback: string): string => {
 };
 
 const avatarSourceFor = (player: Player) => {
+  if (!player) return getAvatarSource(AVATAR_KEYS[0]);
   if (player.avatarUrl) {
     if (
       player.avatarUrl.startsWith('http') ||
@@ -126,9 +144,10 @@ const avatarSourceFor = (player: Player) => {
     }
     return getAvatarSource(player.avatarUrl);
   }
+  const str = String(player.id || player.name || 'player');
   let hash = 0;
-  for (let i = 0; i < player.id.length; i++) {
-    hash = (hash * 31 + player.id.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
   }
   return getAvatarSource(AVATAR_KEYS[hash % AVATAR_KEYS.length]);
 };
@@ -172,6 +191,8 @@ export interface PlayerSelectionModalProps {
   onSetNonStriker?: (player: Player) => void;
   onSetBowler?: (player: Player) => void;
   onRetireBowler?: (player: Player) => void;
+  lastOverBowlerName?: string;
+  maxOversPerBowler?: number | string;
 }
 
 export function PlayerSelectionModal({
@@ -186,6 +207,8 @@ export function PlayerSelectionModal({
   activeStrikerName = '',
   activeNonStrikerName = '',
   activeBowlerName = '',
+  lastOverBowlerName = '',
+  maxOversPerBowler = Infinity,
   batsmenStats = {},
   bowlerStats = {},
   dismissedPlayers = [],
@@ -202,9 +225,11 @@ export function PlayerSelectionModal({
   onSetBowler,
   onRetireBowler,
 }: PlayerSelectionModalProps) {
-  const { theme, canvas, cardBg, zoneBg, borderColor, textPrimary, textSecondary, textMuted } = usePalette();
+  const { theme, canvas, cardBg, zoneBg, borderColor, textPrimary, textSecondary, textMuted, goldenGrad } = usePalette();
 
   const isInitialSetupMode = isInitialSetup ?? (!propBattingTeam && !activeStrikerName && !activeBowlerName);
+
+  const maxBowlerLimit = maxOversPerBowler === 'unlimited' ? Infinity : (typeof maxOversPerBowler === 'number' ? maxOversPerBowler : (parseInt(String(maxOversPerBowler || '')) || Infinity));
 
   const labelA = (teamAName || '').trim() || 'Team A';
   const labelB = (teamBName || '').trim() || 'Team B';
@@ -274,10 +299,15 @@ export function PlayerSelectionModal({
                d.status !== 'Retired Hurt' && d.status !== 'Retired Not Out' && d.dismissalType !== 'retired_hurt'
       );
 
+      // Check bowler quota limit
+      const bStat = bowlerStats[activeBowlerName.trim().toLowerCase()];
+      const bOvs = bStat ? parseInt((bStat.overs || '0').split('.')[0], 10) : 0;
+      const bQuotaReached = maxBowlerLimit < Infinity && bOvs >= maxBowlerLimit;
+
       // Only assign striker/nonStriker if they belong to batting team or squad is empty
       const sValid = !sOut && (batSquad.length === 0 || batSquad.some((p) => p.name.trim().toLowerCase() === activeStrikerName.trim().toLowerCase()));
       const nsValid = !nsOut && (batSquad.length === 0 || batSquad.some((p) => p.name.trim().toLowerCase() === activeNonStrikerName.trim().toLowerCase()));
-      const bowlValid = bowlSquad.length === 0 || bowlSquad.some((p) => p.name.trim().toLowerCase() === activeBowlerName.trim().toLowerCase());
+      const bowlValid = !bQuotaReached && (bowlSquad.length === 0 || bowlSquad.some((p) => p.name.trim().toLowerCase() === activeBowlerName.trim().toLowerCase()));
 
       setStrikerName(sValid ? activeStrikerName : '');
       setNonStrikerName(
@@ -353,14 +383,41 @@ export function PlayerSelectionModal({
     });
   }, []);
 
-  const resolveDropTarget = useCallback((x: number, y: number): DropTargetId | null => {
-    const specificSlots: DropTargetId[] = ['striker', 'nonStriker', 'bowler'];
-    for (const id of specificSlots) {
-      const rect = dropZoneRects.current[id];
-      if (rect && x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height) {
-        return id;
+  const resolveDropTarget = useCallback((x: number, y: number, fromBucket?: BucketId): DropTargetId | null => {
+    if (!isInitialSetupMode) {
+      // 1. In-match: Specific crease slots have highest priority
+      const specificSlots: DropTargetId[] = ['striker', 'nonStriker', 'bowler'];
+      for (const id of specificSlots) {
+        const rect = dropZoneRects.current[id];
+        if (rect) {
+          const padX = 18;
+          const padY = 18;
+          if (
+            x >= rect.x - padX &&
+            x <= rect.x + rect.width + padX &&
+            y >= rect.y - padY &&
+            y <= rect.y + rect.height + padY
+          ) {
+            return id;
+          }
+        }
       }
+
+      // 2. In-match: Only allow dropping onto team cards if dragging from 'master' (unassigned bench pool)
+      // When dragging from teamA or teamB, do NOT treat other team's card as a drop zone (prevents accidental team hopping)
+      if (fromBucket === 'master') {
+        const generalBuckets: DropTargetId[] = ['teamA', 'teamB'];
+        for (const id of generalBuckets) {
+          const rect = dropZoneRects.current[id];
+          if (rect && x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height) {
+            return id;
+          }
+        }
+      }
+      return null;
     }
+
+    // Initial setup mode: Allow organizing across teamA, teamB, master
     const generalBuckets: DropTargetId[] = ['teamA', 'teamB', 'master'];
     for (const id of generalBuckets) {
       const rect = dropZoneRects.current[id];
@@ -369,7 +426,7 @@ export function PlayerSelectionModal({
       }
     }
     return null;
-  }, []);
+  }, [isInitialSetupMode]);
 
   const moveToBucket = useCallback((player: Player, from: BucketId, to: BucketId) => {
     if (from === to || !player || !player.name) return;
@@ -389,6 +446,133 @@ export function PlayerSelectionModal({
     }
   }, [strikerName, nonStrikerName, bowlerName, batTeamBucket, bowlTeamBucket]);
 
+  const handleSwapBatBowl = () => {
+    setCurrentBattingTeam((prev) => (prev === labelA ? labelB : labelA));
+  };
+
+  const handleSwapStrike = () => {
+    const oldStriker = strikerName;
+    setStrikerName(nonStrikerName);
+    setNonStrikerName(oldStriker);
+    if (onSwapStrike) onSwapStrike();
+  };
+
+  const handleSetStriker = (player: Player) => {
+    const outInfo = isPlayerPermanentlyOut(player.name);
+    if (outInfo.isOut) {
+      setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot bat!`);
+      return;
+    }
+    const pKey = player.name.trim().toLowerCase();
+    setStrikerName(player.name);
+    // Strictly clear non-striker if same player
+    if (nonStrikerName.toLowerCase() === pKey) {
+      setNonStrikerName('');
+    }
+    setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== pKey));
+
+    // Ensure player is placed inside the batting team bucket and removed from master & bowling team
+    setBuckets((prev) => ({
+      master: (prev.master || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+      teamA: isTeamABatting
+        ? strictDedupe([...(prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
+        : (prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+      teamB: !isTeamABatting
+        ? strictDedupe([...(prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
+        : (prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+    }));
+
+    if (onSetStriker) onSetStriker(player);
+  };
+
+  const handleSetNonStriker = (player: Player) => {
+    const outInfo = isPlayerPermanentlyOut(player.name);
+    if (outInfo.isOut) {
+      setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot bat!`);
+      return;
+    }
+    const pKey = player.name.trim().toLowerCase();
+    setNonStrikerName(player.name);
+    // Strictly clear striker if same player
+    if (strikerName.toLowerCase() === pKey) {
+      setStrikerName('');
+    }
+    setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== pKey));
+
+    // Ensure player is placed inside the batting team bucket and removed from master & bowling team
+    setBuckets((prev) => ({
+      master: (prev.master || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+      teamA: isTeamABatting
+        ? strictDedupe([...(prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
+        : (prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+      teamB: !isTeamABatting
+        ? strictDedupe([...(prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
+        : (prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+    }));
+
+    if (onSetNonStriker) onSetNonStriker(player);
+  };
+
+  const handleSetBowler = (player: Player) => {
+    if (lastOverBowlerName && player.name.trim().toLowerCase() === lastOverBowlerName.trim().toLowerCase()) {
+      setDuplicateWarning(`⛔ ${player.name} bowled the previous over and cannot bowl consecutive overs!`);
+      Alert.alert(
+        'Consecutive Over Not Allowed',
+        `${player.name} bowled the previous over. By cricket rules, the same bowler cannot bowl two consecutive overs. Please select a different bowler.`
+      );
+      return;
+    }
+    const pKey = player.name.trim().toLowerCase();
+    setBowlerName(player.name);
+
+    // Ensure player is placed inside the bowling team bucket and removed from master & batting team
+    setBuckets((prev) => ({
+      master: (prev.master || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+      teamA: !isTeamABatting
+        ? strictDedupe([...(prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
+        : (prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+      teamB: isTeamABatting
+        ? strictDedupe([...(prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
+        : (prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
+    }));
+
+    if (onSetBowler) onSetBowler(player);
+  };
+
+  const handleRetireBowler = (player: Player) => {
+    if (bowlerName.toLowerCase() === player.name.toLowerCase()) {
+      setBowlerName('');
+    }
+    if (onRetireBowler) onRetireBowler(player);
+  };
+
+  const handleExecuteRetire = (player: Player, type: 'Retired Hurt' | 'Retired Out') => {
+    setRetiredPlayers((prev) => [
+      ...prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()),
+      { name: player.name, type },
+    ]);
+    if (strikerName.toLowerCase() === player.name.toLowerCase()) {
+      setStrikerName('');
+    }
+    if (nonStrikerName.toLowerCase() === player.name.toLowerCase()) {
+      setNonStrikerName('');
+    }
+    if (onRetireBatsman) onRetireBatsman(player, type);
+    setRetireConfirmPlayer(null);
+    setSelectedActionPlayer(null);
+  };
+
+  const handleUnretire = (player: Player) => {
+    setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
+    if (!strikerName) {
+      setStrikerName(player.name);
+      if (onSetStriker) onSetStriker(player);
+    } else if (!nonStrikerName && strikerName.toLowerCase() !== player.name.toLowerCase()) {
+      setNonStrikerName(player.name);
+      if (onSetNonStriker) onSetNonStriker(player);
+    }
+  };
+
   const handleDragStart = useCallback((player: Player, _from: BucketId) => {
     measureDropZones();
     setDraggingPlayer(player);
@@ -396,13 +580,13 @@ export function PlayerSelectionModal({
     ghostScale.value = withTiming(1, { duration: 100 });
   }, [measureDropZones, ghostScale]);
 
-  const handleDragUpdate = useCallback((x: number, y: number) => {
-    const target = resolveDropTarget(x, y);
+  const handleDragUpdate = useCallback((x: number, y: number, from?: BucketId) => {
+    const target = resolveDropTarget(x, y, from);
     setActiveDropZone(target);
   }, [resolveDropTarget]);
 
   const handleDragEnd = useCallback((player: Player, from: BucketId, x: number, y: number) => {
-    const target = resolveDropTarget(x, y);
+    const target = resolveDropTarget(x, y, from);
     setActiveDropZone(null);
     setDraggingPlayer(null);
     setScrollEnabled(true);
@@ -415,38 +599,54 @@ export function PlayerSelectionModal({
         setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot bat again in this innings!`);
         return;
       }
-      if (from !== batTeamBucket) {
-        moveToBucket(player, from, batTeamBucket);
+      if (from === bowlTeamBucket) {
+        const bowlTeamTitle = bowlTeamBucket === 'teamA' ? labelA : labelB;
+        setDuplicateWarning(`⛔ ${player.name} belongs to Bowling Team (${bowlTeamTitle}) and cannot be placed in Batting slots.`);
+        return;
       }
-      setStrikerName(player.name);
-      // Strictly prevent duplicate assignment across ends
-      if (nonStrikerName.toLowerCase() === player.name.toLowerCase()) setNonStrikerName('');
-      setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
-      if (onSetStriker) onSetStriker(player);
+      if (from === 'master') {
+        moveToBucket(player, 'master', batTeamBucket);
+      }
+      handleSetStriker(player);
     } else if (target === 'nonStriker') {
       const outInfo = isPlayerPermanentlyOut(player.name);
       if (outInfo.isOut) {
         setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot bat again in this innings!`);
         return;
       }
-      if (from !== batTeamBucket) {
-        moveToBucket(player, from, batTeamBucket);
+      if (from === bowlTeamBucket) {
+        const bowlTeamTitle = bowlTeamBucket === 'teamA' ? labelA : labelB;
+        setDuplicateWarning(`⛔ ${player.name} belongs to Bowling Team (${bowlTeamTitle}) and cannot be placed in Batting slots.`);
+        return;
       }
-      setNonStrikerName(player.name);
-      // Strictly prevent duplicate assignment across ends
-      if (strikerName.toLowerCase() === player.name.toLowerCase()) setStrikerName('');
-      setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
-      if (onSetNonStriker) onSetNonStriker(player);
+      if (from === 'master') {
+        moveToBucket(player, 'master', batTeamBucket);
+      }
+      handleSetNonStriker(player);
     } else if (target === 'bowler') {
-      if (from !== bowlTeamBucket) {
-        moveToBucket(player, from, bowlTeamBucket);
+      if (lastOverBowlerName && player.name.trim().toLowerCase() === lastOverBowlerName.trim().toLowerCase()) {
+        setDuplicateWarning(`⛔ ${player.name} bowled the previous over and cannot bowl consecutive overs!`);
+        Alert.alert(
+          'Consecutive Over Not Allowed',
+          `${player.name} bowled the previous over. By cricket rules, the same bowler cannot bowl two consecutive overs. Please select a different bowler.`
+        );
+        return;
       }
-      setBowlerName(player.name);
-      if (onSetBowler) onSetBowler(player);
+      if (from === batTeamBucket) {
+        const batTeamTitle = batTeamBucket === 'teamA' ? labelA : labelB;
+        setDuplicateWarning(`⛔ ${player.name} belongs to Batting Team (${batTeamTitle}) and cannot bowl.`);
+        return;
+      }
+      if (from === 'master') {
+        moveToBucket(player, 'master', bowlTeamBucket);
+      }
+      handleSetBowler(player);
     } else {
-      moveToBucket(player, from, target as BucketId);
+      if (isInitialSetupMode || from === 'master') {
+        moveToBucket(player, from, target as BucketId);
+      }
     }
-  }, [resolveDropTarget, isPlayerPermanentlyOut, batTeamBucket, bowlTeamBucket, nonStrikerName, strikerName, onSetStriker, onSetNonStriker, onSetBowler, moveToBucket]);
+  }, [resolveDropTarget, isPlayerPermanentlyOut, batTeamBucket, bowlTeamBucket, labelA, labelB, lastOverBowlerName, isInitialSetupMode, handleSetStriker, handleSetNonStriker, handleSetBowler, moveToBucket]);
 
   const { teams: savedTeams } = useMatchStore();
   const { addWalletFunds } = useWalletStore();
@@ -615,125 +815,6 @@ export function PlayerSelectionModal({
     setAddModalOpen(true);
   }, []);
 
-  const handleSwapBatBowl = () => {
-    setCurrentBattingTeam((prev) => (prev === labelA ? labelB : labelA));
-  };
-
-  const handleSwapStrike = () => {
-    const oldStriker = strikerName;
-    setStrikerName(nonStrikerName);
-    setNonStrikerName(oldStriker);
-    if (onSwapStrike) onSwapStrike();
-  };
-
-  const handleSetStriker = (player: Player) => {
-    const outInfo = isPlayerPermanentlyOut(player.name);
-    if (outInfo.isOut) {
-      setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot bat!`);
-      return;
-    }
-    const pKey = player.name.trim().toLowerCase();
-    setStrikerName(player.name);
-    // Strictly clear non-striker if same player
-    if (nonStrikerName.toLowerCase() === pKey) {
-      setNonStrikerName('');
-    }
-    setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== pKey));
-
-    // Ensure player is placed inside the batting team bucket and removed from master & bowling team
-    setBuckets((prev) => ({
-      master: (prev.master || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
-      teamA: isTeamABatting
-        ? strictDedupe([...(prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
-        : (prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
-      teamB: !isTeamABatting
-        ? strictDedupe([...(prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
-        : (prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
-    }));
-
-    if (onSetStriker) onSetStriker(player);
-  };
-
-  const handleSetNonStriker = (player: Player) => {
-    const outInfo = isPlayerPermanentlyOut(player.name);
-    if (outInfo.isOut) {
-      setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot bat!`);
-      return;
-    }
-    const pKey = player.name.trim().toLowerCase();
-    setNonStrikerName(player.name);
-    // Strictly clear striker if same player
-    if (strikerName.toLowerCase() === pKey) {
-      setStrikerName('');
-    }
-    setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== pKey));
-
-    // Ensure player is placed inside the batting team bucket and removed from master & bowling team
-    setBuckets((prev) => ({
-      master: (prev.master || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
-      teamA: isTeamABatting
-        ? strictDedupe([...(prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
-        : (prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
-      teamB: !isTeamABatting
-        ? strictDedupe([...(prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
-        : (prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
-    }));
-
-    if (onSetNonStriker) onSetNonStriker(player);
-  };
-
-  const handleSetBowler = (player: Player) => {
-    const pKey = player.name.trim().toLowerCase();
-    setBowlerName(player.name);
-
-    // Ensure player is placed inside the bowling team bucket and removed from master & batting team
-    setBuckets((prev) => ({
-      master: (prev.master || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
-      teamA: !isTeamABatting
-        ? strictDedupe([...(prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
-        : (prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
-      teamB: isTeamABatting
-        ? strictDedupe([...(prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey), player])
-        : (prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== pKey),
-    }));
-
-    if (onSetBowler) onSetBowler(player);
-  };
-
-  const handleRetireBowler = (player: Player) => {
-    if (bowlerName.toLowerCase() === player.name.toLowerCase()) {
-      setBowlerName('');
-    }
-    if (onRetireBowler) onRetireBowler(player);
-  };
-
-  const handleExecuteRetire = (player: Player, type: 'Retired Hurt' | 'Retired Out') => {
-    setRetiredPlayers((prev) => [
-      ...prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()),
-      { name: player.name, type },
-    ]);
-    if (strikerName.toLowerCase() === player.name.toLowerCase()) {
-      setStrikerName('');
-    }
-    if (nonStrikerName.toLowerCase() === player.name.toLowerCase()) {
-      setNonStrikerName('');
-    }
-    if (onRetireBatsman) onRetireBatsman(player, type);
-    setRetireConfirmPlayer(null);
-    setSelectedActionPlayer(null);
-  };
-
-  const handleUnretire = (player: Player) => {
-    setRetiredPlayers((prev) => prev.filter((r) => r.name.toLowerCase() !== player.name.toLowerCase()));
-    if (!strikerName) {
-      setStrikerName(player.name);
-      if (onSetStriker) onSetStriker(player);
-    } else if (!nonStrikerName && strikerName.toLowerCase() !== player.name.toLowerCase()) {
-      setNonStrikerName(player.name);
-      if (onSetNonStriker) onSetNonStriker(player);
-    }
-  };
-
   const ghostStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: dragX.value - GHOST_WIDTH / 2 },
@@ -748,7 +829,7 @@ export function PlayerSelectionModal({
     const sOut = isPlayerPermanentlyOut(strikerName);
     const nsOut = isPlayerPermanentlyOut(nonStrikerName);
     const validStriker = sOut.isOut ? '' : strikerName;
-    const validNonStriker = nsOut.isOut ? '' : nonStrikerName;
+    const validNonStriker = (nsOut.isOut || (validStriker && nonStrikerName.trim().toLowerCase() === validStriker.trim().toLowerCase())) ? '' : nonStrikerName;
 
     onConfirm(buckets.teamA, buckets.teamB, buckets.master, {
       strikerName: validStriker,
@@ -769,7 +850,13 @@ export function PlayerSelectionModal({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose} statusBarTranslucent>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaView style={[styles.container, { backgroundColor: canvas }]} edges={['top', 'bottom']}>
+        <LinearGradient
+          colors={goldenGrad as any}
+          start={{ x: 0.5, y: 1 }}
+          end={{ x: 0.5, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]} edges={['top', 'bottom']}>
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
@@ -1140,9 +1227,11 @@ export function PlayerSelectionModal({
               players={buckets.teamA}
               isBatting={isTeamABatting}
               isInitialSetup={isInitialSetupMode}
+              maxBowlerLimit={maxBowlerLimit}
               strikerName={strikerName}
               nonStrikerName={nonStrikerName}
               bowlerName={bowlerName}
+              lastOverBowlerName={lastOverBowlerName}
               batsmenStats={batsmenStats}
               bowlerStats={bowlerStats}
               retiredPlayers={retiredPlayers}
@@ -1180,9 +1269,11 @@ export function PlayerSelectionModal({
               players={buckets.teamB}
               isBatting={!isTeamABatting}
               isInitialSetup={isInitialSetupMode}
+              maxBowlerLimit={maxBowlerLimit}
               strikerName={strikerName}
               nonStrikerName={nonStrikerName}
               bowlerName={bowlerName}
+              lastOverBowlerName={lastOverBowlerName}
               batsmenStats={batsmenStats}
               bowlerStats={bowlerStats}
               retiredPlayers={retiredPlayers}
@@ -1257,11 +1348,13 @@ export function PlayerSelectionModal({
               textMuted={textMuted}
               isInitialSetup={isInitialSetupMode}
               isTeamABatting={isTeamABatting}
+              maxBowlerLimit={maxBowlerLimit}
               labelA={labelA}
               labelB={labelB}
               strikerName={strikerName}
               nonStrikerName={nonStrikerName}
               bowlerName={bowlerName}
+              lastOverBowlerName={lastOverBowlerName}
               batsmenStats={batsmenStats}
               bowlerStats={bowlerStats}
               retiredPlayers={retiredPlayers}
@@ -1341,9 +1434,11 @@ function TeamZoneCard({
   players,
   isBatting,
   isInitialSetup,
+  maxBowlerLimit,
   strikerName,
   nonStrikerName,
   bowlerName,
+  lastOverBowlerName,
   batsmenStats,
   bowlerStats,
   retiredPlayers,
@@ -1358,7 +1453,9 @@ function TeamZoneCard({
   onSwapStrike,
   onPlayerTap,
   onRemovePlayer,
+  onTransferPlayer,
   onRetirePlayer,
+  otherTeamCode,
   dragX,
   dragY,
   onDragStart,
@@ -1377,9 +1474,11 @@ function TeamZoneCard({
   players: Player[];
   isBatting: boolean;
   isInitialSetup?: boolean;
+  maxBowlerLimit?: number;
   strikerName: string;
   nonStrikerName: string;
   bowlerName: string;
+  lastOverBowlerName?: string;
   batsmenStats: Record<string, BatsmanLiveStats>;
   bowlerStats: Record<string, BowlerLiveStats>;
   retiredPlayers: { name: string; type: 'Retired Hurt' | 'Retired Out' }[];
@@ -1406,7 +1505,9 @@ function TeamZoneCard({
   const uniquePlayers = useMemo(() => strictDedupe(players), [players]);
 
   const strikerKey = (strikerName || '').trim().toLowerCase();
-  const nonStrikerKey = (nonStrikerName || '').trim().toLowerCase();
+  const rawNonStrikerKey = (nonStrikerName || '').trim().toLowerCase();
+  const nonStrikerKey = (strikerKey && rawNonStrikerKey === strikerKey) ? '' : rawNonStrikerKey;
+  const effectiveNonStrikerName = (strikerKey && rawNonStrikerKey === strikerKey) ? '' : nonStrikerName;
   const bowlerKey = (bowlerName || '').trim().toLowerCase();
 
   const strikerStats = strikerKey ? batsmenStats[strikerKey] : undefined;
@@ -1445,222 +1546,235 @@ function TeamZoneCard({
           <ThemedText style={[styles.zoneTitle, { color: textPrimary }]} numberOfLines={1}>
             {teamName}
           </ThemedText>
-          <View style={[styles.roleTag, { backgroundColor: zoneBg, borderColor }]}>
-            <ThemedText style={[styles.roleTagText, { color: textPrimary }]}>
-              {isBatting ? '🏏 Batting' : '🎯 Bowling'}
-            </ThemedText>
-          </View>
+          {!isInitialSetup && (
+            <View style={[styles.roleTag, { backgroundColor: zoneBg, borderColor }]}>
+              <ThemedText style={[styles.roleTagText, { color: textPrimary }]}>
+                {isBatting ? '🏏 Batting' : '🎯 Bowling'}
+              </ThemedText>
+            </View>
+          )}
         </View>
         <ThemedText style={[styles.zoneMeta, { color: textSecondary }]}>
           {uniquePlayers.length} player{uniquePlayers.length === 1 ? '' : 's'}
         </ThemedText>
       </View>
 
-      {/* Crease Active Slots (Direct Drag & Drop Targets - No B1/B2 abbreviation) */}
-      <View style={[styles.creaseBar, { backgroundColor: zoneBg, borderColor }]}>
-        {isBatting ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {/* Striker Slot Drop Target */}
-            <View
-              ref={(node) => { dropZoneRefs.current.striker = node; }}
-              style={{ flex: 1 }}
-            >
+      {/* Crease Active Slots (Direct Drag & Drop Targets - In-Match Squad Management Only) */}
+      {!isInitialSetup && (
+        <View style={[styles.creaseBar, { backgroundColor: zoneBg, borderColor }]}>
+          {isBatting ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {/* Striker Slot Drop Target */}
+              <View
+                ref={(node) => { dropZoneRefs.current.striker = node; }}
+                style={{ flex: 1 }}
+              >
+                <Pressable
+                  onPress={() => {
+                    const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === strikerKey);
+                    if (p) onPlayerTap(p);
+                  }}
+                  style={[
+                    styles.creaseSlot,
+                    {
+                      backgroundColor: cardBg,
+                      borderColor: isStrikerHovered ? theme.primary : borderColor,
+                      borderWidth: isStrikerHovered ? 1.5 : 1,
+                    },
+                  ]}
+                >
+                  <View style={styles.creaseSlotTopRow}>
+                    <ThemedText style={[styles.creaseSlotTitle, { color: theme.primary }]}>
+                      STRIKER
+                    </ThemedText>
+                    {strikerName ? (
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === strikerKey);
+                          if (p) onRetirePlayer(p);
+                        }}
+                        hitSlop={4}
+                      >
+                        <ThemedText style={styles.retireBtnText}>Retire</ThemedText>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                  <ThemedText
+                    style={[styles.creaseSlotName, { color: strikerName ? textPrimary : textMuted }]}
+                    numberOfLines={1}
+                  >
+                    {strikerName || 'Drop Striker'}
+                  </ThemedText>
+                  {formatBatStats(strikerStats) ? (
+                    <ThemedText style={[styles.creaseStatsText, { color: textSecondary }]} numberOfLines={1}>
+                      {formatBatStats(strikerStats)}
+                    </ThemedText>
+                  ) : (
+                    <ThemedText style={[styles.creaseStatsMuted, { color: textMuted }]} numberOfLines={1}>
+                      {strikerName ? 'On Strike' : 'Drop player here'}
+                    </ThemedText>
+                  )}
+                </Pressable>
+              </View>
+
+              {/* Swap Strike Button */}
+              <Pressable
+                onPress={onSwapStrike}
+                hitSlop={6}
+                style={[styles.creaseSwapBtn, { backgroundColor: cardBg, borderColor }]}
+              >
+                <Ionicons name="swap-horizontal" size={14} color={theme.primary} />
+              </Pressable>
+
+              {/* Non-Striker Slot Drop Target */}
+              <View
+                ref={(node) => { dropZoneRefs.current.nonStriker = node; }}
+                style={{ flex: 1 }}
+              >
+                <Pressable
+                  onPress={() => {
+                    const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === nonStrikerKey);
+                    if (p) onPlayerTap(p);
+                  }}
+                  style={[
+                    styles.creaseSlot,
+                    {
+                      backgroundColor: cardBg,
+                      borderColor: isNonStrikerHovered ? theme.primary : borderColor,
+                      borderWidth: isNonStrikerHovered ? 1.5 : 1,
+                    },
+                  ]}
+                >
+                  <View style={styles.creaseSlotTopRow}>
+                    <ThemedText style={[styles.creaseSlotTitle, { color: textSecondary }]}>
+                      NON-STRIKER
+                    </ThemedText>
+                    {effectiveNonStrikerName ? (
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === nonStrikerKey);
+                          if (p) onRetirePlayer(p);
+                        }}
+                        hitSlop={4}
+                      >
+                        <ThemedText style={styles.retireBtnText}>Retire</ThemedText>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                  <ThemedText
+                    style={[styles.creaseSlotName, { color: effectiveNonStrikerName ? textPrimary : textMuted }]}
+                    numberOfLines={1}
+                  >
+                    {effectiveNonStrikerName || 'Drop Non-Striker'}
+                  </ThemedText>
+                  {formatBatStats(nonStrikerStats) ? (
+                    <ThemedText style={[styles.creaseStatsText, { color: textSecondary }]} numberOfLines={1}>
+                      {formatBatStats(nonStrikerStats)}
+                    </ThemedText>
+                  ) : (
+                    <ThemedText style={[styles.creaseStatsMuted, { color: textMuted }]} numberOfLines={1}>
+                      {effectiveNonStrikerName ? 'Runner' : 'Drop player here'}
+                    </ThemedText>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            /* Active Bowler Drop Target */
+            <View ref={(node) => { dropZoneRefs.current.bowler = node; }}>
               <Pressable
                 onPress={() => {
-                  const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === strikerKey);
+                  const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === bowlerKey);
                   if (p) onPlayerTap(p);
                 }}
                 style={[
                   styles.creaseSlot,
                   {
                     backgroundColor: cardBg,
-                    borderColor: isStrikerHovered ? theme.primary : borderColor,
-                    borderWidth: isStrikerHovered ? 1.5 : 1,
+                    borderColor: isBowlerHovered ? theme.primary : borderColor,
+                    borderWidth: isBowlerHovered ? 1.5 : 1,
                   },
                 ]}
               >
                 <View style={styles.creaseSlotTopRow}>
                   <ThemedText style={[styles.creaseSlotTitle, { color: theme.primary }]}>
-                    STRIKER
+                    ACTIVE BOWLER
                   </ThemedText>
-                  {strikerName ? (
+                  {bowlerName ? (
                     <Pressable
                       onPress={(e) => {
                         e.stopPropagation();
-                        const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === strikerKey);
-                        if (p) onRetirePlayer(p);
+                        const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === bowlerKey);
+                        if (p) onPlayerTap(p);
                       }}
                       hitSlop={4}
                     >
-                      <ThemedText style={styles.retireBtnText}>Retire</ThemedText>
+                      <ThemedText style={[styles.changeBtnText, { color: textSecondary }]}>
+                        Change
+                      </ThemedText>
                     </Pressable>
                   ) : null}
                 </View>
                 <ThemedText
-                  style={[styles.creaseSlotName, { color: strikerName ? textPrimary : textMuted }]}
+                  style={[styles.creaseSlotName, { color: bowlerName ? textPrimary : textMuted }]}
                   numberOfLines={1}
                 >
-                  {strikerName || 'Drop Striker'}
+                  {bowlerName || 'Drop Bowler'}
                 </ThemedText>
-                {formatBatStats(strikerStats) ? (
+                {formatBowlStats(activeBowlerStats) ? (
                   <ThemedText style={[styles.creaseStatsText, { color: textSecondary }]} numberOfLines={1}>
-                    {formatBatStats(strikerStats)}
+                    {formatBowlStats(activeBowlerStats)}
                   </ThemedText>
                 ) : (
                   <ThemedText style={[styles.creaseStatsMuted, { color: textMuted }]} numberOfLines={1}>
-                    {strikerName ? 'On Strike' : 'Drop player here'}
+                    {bowlerName ? 'Current Bowler' : 'Drop player here'}
                   </ThemedText>
                 )}
               </Pressable>
             </View>
-
-            {/* Swap Strike Button */}
-            <Pressable
-              onPress={onSwapStrike}
-              hitSlop={6}
-              style={[styles.creaseSwapBtn, { backgroundColor: cardBg, borderColor }]}
-            >
-              <Ionicons name="swap-horizontal" size={14} color={theme.primary} />
-            </Pressable>
-
-            {/* Non-Striker Slot Drop Target */}
-            <View
-              ref={(node) => { dropZoneRefs.current.nonStriker = node; }}
-              style={{ flex: 1 }}
-            >
-              <Pressable
-                onPress={() => {
-                  const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === nonStrikerKey);
-                  if (p) onPlayerTap(p);
-                }}
-                style={[
-                  styles.creaseSlot,
-                  {
-                    backgroundColor: cardBg,
-                    borderColor: isNonStrikerHovered ? theme.primary : borderColor,
-                    borderWidth: isNonStrikerHovered ? 1.5 : 1,
-                  },
-                ]}
-              >
-                <View style={styles.creaseSlotTopRow}>
-                  <ThemedText style={[styles.creaseSlotTitle, { color: textSecondary }]}>
-                    NON-STRIKER
-                  </ThemedText>
-                  {nonStrikerName ? (
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === nonStrikerKey);
-                        if (p) onRetirePlayer(p);
-                      }}
-                      hitSlop={4}
-                    >
-                      <ThemedText style={styles.retireBtnText}>Retire</ThemedText>
-                    </Pressable>
-                  ) : null}
-                </View>
-                <ThemedText
-                  style={[styles.creaseSlotName, { color: nonStrikerName ? textPrimary : textMuted }]}
-                  numberOfLines={1}
-                >
-                  {nonStrikerName || 'Drop Non-Striker'}
-                </ThemedText>
-                {formatBatStats(nonStrikerStats) ? (
-                  <ThemedText style={[styles.creaseStatsText, { color: textSecondary }]} numberOfLines={1}>
-                    {formatBatStats(nonStrikerStats)}
-                  </ThemedText>
-                ) : (
-                  <ThemedText style={[styles.creaseStatsMuted, { color: textMuted }]} numberOfLines={1}>
-                    {nonStrikerName ? 'Runner' : 'Drop player here'}
-                  </ThemedText>
-                )}
-              </Pressable>
-            </View>
-          </View>
-        ) : (
-          /* Active Bowler Drop Target */
-          <View ref={(node) => { dropZoneRefs.current.bowler = node; }}>
-            <Pressable
-              onPress={() => {
-                const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === bowlerKey);
-                if (p) onPlayerTap(p);
-              }}
-              style={[
-                styles.creaseSlot,
-                {
-                  backgroundColor: cardBg,
-                  borderColor: isBowlerHovered ? theme.primary : borderColor,
-                  borderWidth: isBowlerHovered ? 1.5 : 1,
-                },
-              ]}
-            >
-              <View style={styles.creaseSlotTopRow}>
-                <ThemedText style={[styles.creaseSlotTitle, { color: theme.primary }]}>
-                  ACTIVE BOWLER
-                </ThemedText>
-                {bowlerName ? (
-                  <Pressable
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      const p = uniquePlayers.find((pl) => pl.name.toLowerCase() === bowlerKey);
-                      if (p) onPlayerTap(p);
-                    }}
-                    hitSlop={4}
-                  >
-                    <ThemedText style={[styles.changeBtnText, { color: textSecondary }]}>
-                      Change
-                    </ThemedText>
-                  </Pressable>
-                ) : null}
-              </View>
-              <ThemedText
-                style={[styles.creaseSlotName, { color: bowlerName ? textPrimary : textMuted }]}
-                numberOfLines={1}
-              >
-                {bowlerName || 'Drop Bowler'}
-              </ThemedText>
-              {formatBowlStats(activeBowlerStats) ? (
-                <ThemedText style={[styles.creaseStatsText, { color: textSecondary }]} numberOfLines={1}>
-                  {formatBowlStats(activeBowlerStats)}
-                </ThemedText>
-              ) : (
-                <ThemedText style={[styles.creaseStatsMuted, { color: textMuted }]} numberOfLines={1}>
-                  {bowlerName ? 'Current Bowler' : 'Drop player here'}
-                </ThemedText>
-              )}
-            </Pressable>
-          </View>
-        )}
-      </View>
+          )}
+        </View>
+      )}
 
       {/* Squad Player Chips */}
       <View style={styles.bubbleWrap}>
         {uniquePlayers.map((player) => {
           const pKey = player.name.trim().toLowerCase();
-          const isStriker = isBatting && strikerKey === pKey;
-          const isNonStriker = isBatting && nonStrikerKey === pKey;
-          const isBowler = !isBatting && bowlerKey === pKey;
+          const isStriker = !isInitialSetup && isBatting && strikerKey === pKey;
+          const isNonStriker = !isInitialSetup && isBatting && nonStrikerKey === pKey;
+          const isBowler = !isInitialSetup && !isBatting && bowlerKey === pKey;
+          const isLastOverBowler = !isInitialSetup && !isBatting && lastOverBowlerName ? lastOverBowlerName.trim().toLowerCase() === pKey : false;
           const retRec = retiredPlayers.find((r) => r.name.toLowerCase() === pKey);
-          const outInfo = isBatting && isPlayerPermanentlyOut ? isPlayerPermanentlyOut(player.name) : { isOut: false, reason: '' };
+          const outInfo = !isInitialSetup && isBatting && isPlayerPermanentlyOut ? isPlayerPermanentlyOut(player.name) : { isOut: false, reason: '' };
 
           const bStat = isBatting ? batsmenStats[pKey] : undefined;
           const bowlStat = !isBatting ? bowlerStats[pKey] : undefined;
+          const bOversCompleted = bowlStat ? parseInt((bowlStat.overs || '0').split('.')[0], 10) : 0;
+          const isQuotaReached = !isInitialSetup && !isBatting && maxBowlerLimit !== undefined && maxBowlerLimit < Infinity && bOversCompleted >= maxBowlerLimit;
 
           let roleLabel: string | undefined;
-          if (outInfo.isOut) {
-            roleLabel = `OUT (${outInfo.reason})`;
-          } else if (retRec) {
-            roleLabel = retRec.type === 'Retired Hurt' ? 'Injured' : 'Retired';
-          } else if (isStriker) {
-            roleLabel = bStat && (bStat.runs > 0 || bStat.balls > 0) ? `Striker · ${bStat.runs}(${bStat.balls}b)` : 'Striker';
-          } else if (isNonStriker) {
-            roleLabel = bStat && (bStat.runs > 0 || bStat.balls > 0) ? `Non-Striker · ${bStat.runs}(${bStat.balls}b)` : 'Non-Striker';
-          } else if (isBowler) {
-            roleLabel = bowlStat && bowlStat.overs !== '0.0' ? `Bowler · ${bowlStat.wickets}/${bowlStat.runs}` : 'Bowler';
-          } else if (bStat && (bStat.runs > 0 || bStat.balls > 0)) {
-            roleLabel = `${bStat.runs}(${bStat.balls}b)`;
-          } else if (bowlStat && bowlStat.overs !== '0.0') {
-            roleLabel = `${bowlStat.wickets}/${bowlStat.runs} (${bowlStat.overs})`;
+          if (!isInitialSetup) {
+            if (outInfo.isOut) {
+              roleLabel = `OUT (${outInfo.reason})`;
+            } else if (retRec) {
+              roleLabel = retRec.type === 'Retired Hurt' ? 'Injured' : 'Retired';
+            } else if (isStriker) {
+              roleLabel = bStat && (bStat.runs > 0 || bStat.balls > 0) ? `Striker · ${bStat.runs}(${bStat.balls}b)` : 'Striker';
+            } else if (isNonStriker) {
+              roleLabel = bStat && (bStat.runs > 0 || bStat.balls > 0) ? `Non-Striker · ${bStat.runs}(${bStat.balls}b)` : 'Non-Striker';
+            } else if (isQuotaReached) {
+              roleLabel = bowlStat && bowlStat.overs !== '0.0' ? `Max Overs (${bowlStat.overs} ov) · ${bowlStat.wickets}/${bowlStat.runs}` : `Max Overs (${maxBowlerLimit} ov)`;
+            } else if (isBowler) {
+              roleLabel = bowlStat && bowlStat.overs !== '0.0' ? `Bowler · ${bowlStat.wickets}/${bowlStat.runs}` : 'Bowler';
+            } else if (isLastOverBowler) {
+              roleLabel = bowlStat && bowlStat.overs !== '0.0' ? `Bowled Last Over · ${bowlStat.wickets}/${bowlStat.runs}` : 'Bowled Last Over';
+            } else if (bStat && (bStat.runs > 0 || bStat.balls > 0)) {
+              roleLabel = `${bStat.runs}(${bStat.balls}b)`;
+            } else if (bowlStat && bowlStat.overs !== '0.0') {
+              roleLabel = `${bowlStat.wickets}/${bowlStat.runs} (${bowlStat.overs})`;
+            }
           }
 
           return (
@@ -1677,9 +1791,12 @@ function TeamZoneCard({
               isRetired={!!retRec}
               isDismissed={outInfo.isOut}
               dismissalReason={outInfo.reason}
-              isActiveRole={isStriker || isNonStriker || isBowler}
+              isActiveRole={isStriker || isNonStriker || (isBowler && !isQuotaReached)}
+              isQuotaReached={isQuotaReached}
               onTap={() => onPlayerTap(player)}
               onRemove={() => onRemovePlayer(player)}
+              onSwitchTeam={() => onTransferPlayer(player)}
+              otherTeamCode={otherTeamCode}
               dragX={dragX}
               dragY={dragY}
               onDragStart={onDragStart}
@@ -1713,10 +1830,13 @@ function CleanPlayerChip({
   isDismissed,
   dismissalReason,
   isActiveRole,
+  isQuotaReached,
   onTap,
   onRemove,
   onQuickAssignA,
   onQuickAssignB,
+  onSwitchTeam,
+  otherTeamCode,
   codeA,
   codeB,
   dragX,
@@ -1738,10 +1858,13 @@ function CleanPlayerChip({
   isDismissed?: boolean;
   dismissalReason?: string;
   isActiveRole?: boolean;
+  isQuotaReached?: boolean;
   onTap: () => void;
   onRemove?: () => void;
   onQuickAssignA?: () => void;
   onQuickAssignB?: () => void;
+  onSwitchTeam?: () => void;
+  otherTeamCode?: string;
   codeA?: string;
   codeB?: string;
   dragX: SharedValue<number>;
@@ -1782,13 +1905,13 @@ function CleanPlayerChip({
           styles.chip,
           {
             backgroundColor: cardBg,
-            borderColor: isDismissed ? '#EF444450' : isActiveRole ? theme.primary : borderColor,
+            borderColor: isDismissed ? '#EF444450' : isQuotaReached ? '#EF444444' : isActiveRole ? theme.primary : borderColor,
             borderWidth: isActiveRole ? 1.5 : 1,
-            opacity: isDragging ? 0 : isDismissed ? 0.5 : pressed ? 0.8 : 1,
+            opacity: isDragging ? 0 : isDismissed ? 0.5 : isQuotaReached ? 0.75 : pressed ? 0.8 : 1,
           },
         ]}
       >
-        <Image source={avatarSourceFor(player)} style={[styles.avatarSmall, isDismissed && { opacity: 0.6 }]} contentFit="cover" />
+        <Image source={avatarSourceFor(player)} style={[styles.avatarSmall, (isDismissed || isQuotaReached) && { opacity: 0.6 }]} contentFit="cover" />
         <View style={{ flexShrink: 1 }}>
           <ThemedText
             style={[
@@ -1804,7 +1927,7 @@ function CleanPlayerChip({
             <ThemedText
               style={[
                 styles.chipRoleSub,
-                { color: isDismissed || isRetired ? '#EF4444' : isActiveRole ? theme.primary : textSecondary },
+                { color: isDismissed || isRetired || isQuotaReached ? '#EF4444' : isActiveRole ? theme.primary : textSecondary },
               ]}
               numberOfLines={1}
             >
@@ -1842,17 +1965,45 @@ function CleanPlayerChip({
           </View>
         )}
 
-        {!isMaster && onRemove && (
-          <Pressable
-            onPress={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-            hitSlop={6}
-            style={styles.chipRemoveBtn}
-          >
-            <Ionicons name="close" size={12} color={textSecondary} />
-          </Pressable>
+        {!isMaster && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+            {onSwitchTeam && otherTeamCode && !isDismissed ? (
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onSwitchTeam();
+                }}
+                hitSlop={5}
+                style={[
+                  styles.teamSwitchBtn,
+                  {
+                    backgroundColor: theme.primary + '18',
+                    borderColor: theme.primary + '44',
+                  },
+                ]}
+                accessibilityLabel={`Switch to ${otherTeamCode}`}
+              >
+                <Ionicons name="swap-horizontal" size={10} color={theme.primary} />
+                <ThemedText style={[styles.teamSwitchText, { color: theme.primary }]}>
+                  {otherTeamCode}
+                </ThemedText>
+              </Pressable>
+            ) : null}
+
+            {onRemove && (
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onRemove();
+                }}
+                hitSlop={6}
+                style={styles.chipRemoveBtn}
+                accessibilityLabel="Remove player"
+              >
+                <Ionicons name="close" size={12} color={textSecondary} />
+              </Pressable>
+            )}
+          </View>
         )}
       </Pressable>
     </GestureDetector>
@@ -1916,11 +2067,13 @@ function PlayerActionModal({
   textMuted,
   isTeamABatting,
   isInitialSetup,
+  maxBowlerLimit,
   labelA,
   labelB,
   strikerName,
   nonStrikerName,
   bowlerName,
+  lastOverBowlerName,
   batsmenStats,
   bowlerStats,
   retiredPlayers,
@@ -1947,11 +2100,13 @@ function PlayerActionModal({
   textMuted: string;
   isTeamABatting: boolean;
   isInitialSetup?: boolean;
+  maxBowlerLimit?: number;
   labelA: string;
   labelB: string;
   strikerName: string;
   nonStrikerName: string;
   bowlerName: string;
+  lastOverBowlerName?: string;
   batsmenStats: Record<string, BatsmanLiveStats>;
   bowlerStats: Record<string, BowlerLiveStats>;
   retiredPlayers: { name: string; type: 'Retired Hurt' | 'Retired Out' }[];
@@ -1978,11 +2133,15 @@ function PlayerActionModal({
   const isStriker = (strikerName || '').toLowerCase() === pKey;
   const isNonStriker = (nonStrikerName || '').toLowerCase() === pKey;
   const isBowler = (bowlerName || '').toLowerCase() === pKey;
+  const isLastOverBowler = isBowlingTeam && lastOverBowlerName ? lastOverBowlerName.trim().toLowerCase() === pKey : false;
   const retRec = retiredPlayers.find((r) => r.name.toLowerCase() === pKey);
   const outInfo = isPlayerPermanentlyOut ? isPlayerPermanentlyOut(player.name) : { isOut: false, reason: '' };
 
   const bStat = batsmenStats[pKey];
   const bowlStat = bowlerStats[pKey];
+  const bOversStr = bowlStat?.overs || '0.0';
+  const bOversCompleted = parseInt(bOversStr.split('.')[0] || '0', 10);
+  const isQuotaReached = !isInitialSetup && isBowlingTeam && maxBowlerLimit !== undefined && maxBowlerLimit < Infinity && bOversCompleted >= maxBowlerLimit;
 
   const otherBucketId: BucketId = bucketId === 'teamA' ? 'teamB' : 'teamA';
   const otherTeamLabel = bucketId === 'teamA' ? labelB : labelA;
@@ -2058,8 +2217,8 @@ function PlayerActionModal({
               </View>
             </View>
 
-            {/* Live Match Batting Stats (if active or has stats) */}
-            {bStat && (bStat.runs > 0 || bStat.balls > 0) ? (
+            {/* Live Match Batting Stats (if active or has stats - in-match only) */}
+            {!isInitialSetup && bStat && (bStat.runs > 0 || bStat.balls > 0) ? (
               <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor, borderLeftWidth: 3, borderLeftColor: theme.primary }]}>
                 <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: theme.primary }}>
                   🏏 LIVE MATCH BATTING
@@ -2070,8 +2229,8 @@ function PlayerActionModal({
               </View>
             ) : null}
 
-            {/* Live Match Bowling Stats (if active or has stats) */}
-            {bowlStat && (bowlStat.overs !== '0.0' && bowlStat.overs !== '' || bowlStat.runs > 0 || bowlStat.wickets > 0) ? (
+            {/* Live Match Bowling Stats (if active or has stats - in-match only) */}
+            {!isInitialSetup && bowlStat && ((bowlStat.overs !== '0.0' && bowlStat.overs !== '') || bowlStat.runs > 0 || bowlStat.wickets > 0) ? (
               <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor, borderLeftWidth: 3, borderLeftColor: '#F59E0B' }]}>
                 <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: '#F59E0B' }}>
                   🎯 LIVE MATCH BOWLING
@@ -2085,244 +2244,381 @@ function PlayerActionModal({
 
           {/* Actions */}
           <View style={styles.actionSheetList}>
-            {isBattingTeam && (
+            {isInitialSetup ? (
               <>
-                {outInfo.isOut && (
-                  <View style={[styles.actionSheetStatsBox, { backgroundColor: '#EF444415', borderColor: '#EF444450', borderLeftWidth: 3, borderLeftColor: '#EF4444' }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Ionicons name="close-circle" size={15} color="#EF4444" />
-                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>
-                        DISMISSED ({outInfo.reason.toUpperCase()})
-                      </ThemedText>
-                    </View>
-                    <ThemedText style={{ fontSize: 10, color: textSecondary, marginTop: 2 }}>
-                      This batsman is out in this innings and cannot bat again or be added to the crease.
-                    </ThemedText>
-                  </View>
-                )}
-
-                {retRec && retRec.type === 'Retired Hurt' && (
-                  <Pressable
-                    onPress={() => {
-                      onUnretire(player);
-                      onClose();
-                    }}
-                    style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor: theme.primary }]}
-                  >
-                    <Ionicons name="refresh" size={15} color={theme.primary} />
-                    <ThemedText style={[styles.sheetActionText, { color: theme.primary }]}>
-                      Resume Batting (Unretire)
-                    </ThemedText>
-                  </Pressable>
-                )}
-
-                {!outInfo.isOut ? (
+                {bucketId === 'master' ? (
                   <>
                     <Pressable
                       onPress={() => {
-                        onSetStriker(player);
+                        onMoveToTeam(player, 'master', 'teamA');
                         onClose();
                       }}
-                      style={[styles.sheetActionItem, { backgroundColor: isStriker ? theme.primary + '12' : zoneBg, borderColor }]}
+                      style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
                     >
-                      <Ionicons name="flash-outline" size={15} color={theme.primary} />
+                      <Ionicons name="arrow-forward" size={15} color={theme.primary} />
                       <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                        {isStriker ? 'Currently on Strike (Striker)' : 'Set as Striker'}
+                        Assign to {labelA}
                       </ThemedText>
                     </Pressable>
-
                     <Pressable
                       onPress={() => {
-                        onSetNonStriker(player);
+                        onMoveToTeam(player, 'master', 'teamB');
                         onClose();
                       }}
-                      style={[styles.sheetActionItem, { backgroundColor: isNonStriker ? theme.primary + '12' : zoneBg, borderColor }]}
+                      style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
                     >
-                      <Ionicons name="walk-outline" size={15} color={theme.primary} />
+                      <Ionicons name="arrow-forward" size={15} color={textPrimary} />
                       <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                        {isNonStriker ? 'Currently Non-Striker (Runner)' : 'Set as Non-Striker'}
+                        Assign to {labelB}
                       </ThemedText>
                     </Pressable>
                   </>
                 ) : (
-                  <View style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor, opacity: 0.55 }]}>
-                    <Ionicons name="lock-closed-outline" size={15} color="#EF4444" />
-                    <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_600SemiBold' }]}>
-                      Batting Disabled (Player is OUT)
-                    </ThemedText>
-                  </View>
+                  <>
+                    <Pressable
+                      onPress={() => {
+                        onMoveToTeam(player, bucketId, otherBucketId);
+                        onClose();
+                      }}
+                      style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                    >
+                      <Ionicons name="swap-horizontal" size={15} color={theme.primary} />
+                      <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                        Transfer to {otherTeamLabel}
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        onRemoveFromTeam(player, bucketId);
+                        onClose();
+                      }}
+                      style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                    >
+                      <Ionicons name="trash-outline" size={15} color="#EF4444" />
+                      <ThemedText style={[styles.sheetActionText, { color: '#EF4444' }]}>
+                        Remove from Squad
+                      </ThemedText>
+                    </Pressable>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                {isBattingTeam && (
+                  <>
+                    {outInfo.isOut && (
+                      <View style={[styles.actionSheetStatsBox, { backgroundColor: '#EF444415', borderColor: '#EF444450', borderLeftWidth: 3, borderLeftColor: '#EF4444' }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="close-circle" size={15} color="#EF4444" />
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>
+                            DISMISSED ({outInfo.reason.toUpperCase()})
+                          </ThemedText>
+                        </View>
+                        <ThemedText style={{ fontSize: 10, color: textSecondary, marginTop: 2 }}>
+                          This batsman is out in this innings and cannot bat again or be added to the crease.
+                        </ThemedText>
+                      </View>
+                    )}
+
+                    {retRec && retRec.type === 'Retired Hurt' && (
+                      <Pressable
+                        onPress={() => {
+                          onUnretire(player);
+                          onClose();
+                        }}
+                        style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor: theme.primary }]}
+                      >
+                        <Ionicons name="refresh" size={15} color={theme.primary} />
+                        <ThemedText style={[styles.sheetActionText, { color: theme.primary }]}>
+                          Resume Batting (Unretire)
+                        </ThemedText>
+                      </Pressable>
+                    )}
+
+                    {!outInfo.isOut ? (
+                      <>
+                        <Pressable
+                          onPress={() => {
+                            onSetStriker(player);
+                            onClose();
+                          }}
+                          style={[styles.sheetActionItem, { backgroundColor: isStriker ? theme.primary + '12' : zoneBg, borderColor }]}
+                        >
+                          <Ionicons name="flash-outline" size={15} color={theme.primary} />
+                          <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                            {isStriker ? 'Currently on Strike (Striker)' : 'Set as Striker'}
+                          </ThemedText>
+                        </Pressable>
+
+                        <Pressable
+                          onPress={() => {
+                            onSetNonStriker(player);
+                            onClose();
+                          }}
+                          style={[styles.sheetActionItem, { backgroundColor: isNonStriker ? theme.primary + '12' : zoneBg, borderColor }]}
+                        >
+                          <Ionicons name="walk-outline" size={15} color={theme.primary} />
+                          <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                            {isNonStriker ? 'Currently Non-Striker (Runner)' : 'Set as Non-Striker'}
+                          </ThemedText>
+                        </Pressable>
+                      </>
+                    ) : (
+                      <View style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor, opacity: 0.55 }]}>
+                        <Ionicons name="lock-closed-outline" size={15} color="#EF4444" />
+                        <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_600SemiBold' }]}>
+                          Batting Disabled (Player is OUT)
+                        </ThemedText>
+                      </View>
+                    )}
+
+                    {(isStriker || isNonStriker) && (
+                      <Pressable
+                        onPress={() => {
+                          onSwapStrike();
+                          onClose();
+                        }}
+                        style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                      >
+                        <Ionicons name="swap-horizontal" size={15} color={theme.primary} />
+                        <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                          Swap Strike Ends
+                        </ThemedText>
+                      </Pressable>
+                    )}
+
+                    {(isStriker || isNonStriker) && !retRec && (
+                      <Pressable
+                        onPress={() => onRetireClick(player)}
+                        style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                      >
+                        <Ionicons name="hand-left-outline" size={15} color="#EF4444" />
+                        <ThemedText style={[styles.sheetActionText, { color: '#EF4444' }]}>
+                          Retire Batsman
+                        </ThemedText>
+                      </Pressable>
+                    )}
+                  </>
                 )}
 
-                {(isStriker || isNonStriker) && (
+                {isBowlingTeam && (
+                  <>
+                    {isQuotaReached && (
+                      <View style={[styles.actionSheetStatsBox, { backgroundColor: '#EF444415', borderColor: '#EF444450', borderLeftWidth: 3, borderLeftColor: '#EF4444', marginBottom: 8 }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="hand-left" size={15} color="#EF4444" />
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>
+                            MAX OVERS QUOTA REACHED ({maxBowlerLimit} {maxBowlerLimit === 1 ? 'OVER' : 'OVERS'})
+                          </ThemedText>
+                        </View>
+                        <ThemedText style={{ fontSize: 10, color: textSecondary, marginTop: 2 }}>
+                          {player.name} has already bowled {bOversStr} overs (max {maxBowlerLimit} {maxBowlerLimit === 1 ? 'over' : 'overs'} per bowler limit). They cannot bowl again in this innings.
+                        </ThemedText>
+                      </View>
+                    )}
+
+                    {isLastOverBowler && !isBowler && !isQuotaReached && (
+                      <View style={[styles.actionSheetStatsBox, { backgroundColor: '#F59E0B15', borderColor: '#F59E0B50', borderLeftWidth: 3, borderLeftColor: '#F59E0B', marginBottom: 8 }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="alert-circle" size={15} color="#F59E0B" />
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#F59E0B' }}>
+                            BOWLED PREVIOUS OVER
+                          </ThemedText>
+                        </View>
+                        <ThemedText style={{ fontSize: 10, color: textSecondary, marginTop: 2 }}>
+                          In cricket, the same bowler cannot bowl two consecutive overs. Please select a different bowler.
+                        </ThemedText>
+                      </View>
+                    )}
+
+                    <Pressable
+                      onPress={() => {
+                        if (isQuotaReached) {
+                          Alert.alert(
+                            'Max Overs Quota Reached',
+                            `${player.name} has already bowled ${bOversStr} overs (max limit is ${maxBowlerLimit} ${maxBowlerLimit === 1 ? 'over' : 'overs'} per bowler). Please select a different bowler.`
+                          );
+                          return;
+                        }
+                        if (isLastOverBowler && !isBowler) {
+                          Alert.alert(
+                            'Consecutive Over Not Allowed',
+                            `${player.name} bowled the previous over. By cricket rules, the same bowler cannot bowl two consecutive overs. Please select a different bowler.`
+                          );
+                          return;
+                        }
+                        onSetBowler(player);
+                        onClose();
+                      }}
+                      style={[
+                        styles.sheetActionItem,
+                        {
+                          backgroundColor: isQuotaReached
+                            ? '#EF444410'
+                            : isBowler
+                            ? theme.primary + '12'
+                            : (isLastOverBowler ? '#F59E0B10' : zoneBg),
+                          borderColor: isQuotaReached ? '#EF444444' : isLastOverBowler ? '#F59E0B44' : borderColor,
+                          opacity: isQuotaReached || (isLastOverBowler && !isBowler) ? 0.6 : 1,
+                        }
+                      ]}
+                    >
+                      <Ionicons
+                        name={isQuotaReached ? 'lock-closed' : isLastOverBowler && !isBowler ? 'ban-outline' : 'baseball-outline'}
+                        size={15}
+                        color={isQuotaReached ? '#EF4444' : isLastOverBowler && !isBowler ? '#F59E0B' : theme.primary}
+                      />
+                      <ThemedText style={[styles.sheetActionText, { color: isQuotaReached ? '#EF4444' : isLastOverBowler && !isBowler ? '#F59E0B' : textPrimary }]}>
+                        {isQuotaReached
+                          ? `Cannot Bowl (Max ${maxBowlerLimit} ov Reached)`
+                          : isBowler
+                          ? 'Active Current Bowler'
+                          : isLastOverBowler
+                          ? 'Cannot Bowl (Bowled Previous Over)'
+                          : 'Set as Current Bowler'}
+                      </ThemedText>
+                    </Pressable>
+
+                    {isBowler && (
+                      <Pressable
+                        onPress={() => {
+                          onRetireBowler(player);
+                          onClose();
+                        }}
+                        style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                      >
+                        <Ionicons name="hand-left-outline" size={15} color="#EF4444" />
+                        <ThemedText style={[styles.sheetActionText, { color: '#EF4444' }]}>
+                          Change / Step Down from Bowling
+                        </ThemedText>
+                      </Pressable>
+                    )}
+                  </>
+                )}
+
+                {bucketId === 'master' && (
+                  <>
+                    {outInfo.isOut && (
+                      <View style={[styles.actionSheetStatsBox, { backgroundColor: '#EF444415', borderColor: '#EF444450', borderLeftWidth: 3, borderLeftColor: '#EF4444' }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="close-circle" size={15} color="#EF4444" />
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>
+                            DISMISSED ({outInfo.reason.toUpperCase()})
+                          </ThemedText>
+                        </View>
+                        <ThemedText style={{ fontSize: 10, color: textSecondary, marginTop: 2 }}>
+                          This batsman is out in this innings and cannot bat again or be added to the crease.
+                        </ThemedText>
+                      </View>
+                    )}
+
+                    {!outInfo.isOut ? (
+                      <>
+                        <Pressable
+                          onPress={() => {
+                            onSetStriker(player);
+                            onClose();
+                          }}
+                          style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                        >
+                          <Ionicons name="flash-outline" size={15} color={theme.primary} />
+                          <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                            Set as Striker ({isTeamABatting ? labelA : labelB})
+                          </ThemedText>
+                        </Pressable>
+
+                        <Pressable
+                          onPress={() => {
+                            onSetNonStriker(player);
+                            onClose();
+                          }}
+                          style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                        >
+                          <Ionicons name="walk-outline" size={15} color={theme.primary} />
+                          <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                            Set as Non-Striker ({isTeamABatting ? labelA : labelB})
+                          </ThemedText>
+                        </Pressable>
+                      </>
+                    ) : (
+                      <View style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor, opacity: 0.55 }]}>
+                        <Ionicons name="lock-closed-outline" size={15} color="#EF4444" />
+                        <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_600SemiBold' }]}>
+                          Batting Disabled (Player is OUT)
+                        </ThemedText>
+                      </View>
+                    )}
+
+                    <Pressable
+                      onPress={() => {
+                        onSetBowler(player);
+                        onClose();
+                      }}
+                      style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                    >
+                      <Ionicons name="baseball-outline" size={15} color={theme.primary} />
+                      <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                        Set as Bowler ({!isTeamABatting ? labelA : labelB})
+                      </ThemedText>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => {
+                        onMoveToTeam(player, 'master', 'teamA');
+                        onClose();
+                      }}
+                      style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                    >
+                      <Ionicons name="arrow-forward" size={15} color={theme.primary} />
+                      <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                        Assign to {labelA} ({isTeamABatting ? '🏏 Batting' : '🎯 Bowling'})
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        onMoveToTeam(player, 'master', 'teamB');
+                        onClose();
+                      }}
+                      style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
+                    >
+                      <Ionicons name="arrow-forward" size={15} color={textPrimary} />
+                      <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
+                        Assign to {labelB} ({!isTeamABatting ? '🏏 Batting' : '🎯 Bowling'})
+                      </ThemedText>
+                    </Pressable>
+                  </>
+                )}
+
+                {bucketId !== 'master' && (
                   <Pressable
                     onPress={() => {
-                      onSwapStrike();
+                      onMoveToTeam(player, bucketId, otherBucketId);
                       onClose();
                     }}
                     style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
                   >
                     <Ionicons name="swap-horizontal" size={15} color={theme.primary} />
                     <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                      Swap Strike Ends
+                      Transfer to {otherTeamLabel}
                     </ThemedText>
                   </Pressable>
                 )}
 
-                {(isStriker || isNonStriker) && !retRec && (
-                  <Pressable
-                    onPress={() => onRetireClick(player)}
-                    style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
-                  >
-                    <Ionicons name="hand-left-outline" size={15} color="#EF4444" />
-                    <ThemedText style={[styles.sheetActionText, { color: '#EF4444' }]}>
-                      Retire Batsman
-                    </ThemedText>
-                  </Pressable>
-                )}
-              </>
-            )}
-
-            {isBowlingTeam && (
-              <>
-                <Pressable
-                  onPress={() => {
-                    onSetBowler(player);
-                    onClose();
-                  }}
-                  style={[styles.sheetActionItem, { backgroundColor: isBowler ? theme.primary + '12' : zoneBg, borderColor }]}
-                >
-                  <Ionicons name="baseball-outline" size={15} color={theme.primary} />
-                  <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    {isBowler ? 'Active Current Bowler' : 'Set as Current Bowler'}
-                  </ThemedText>
-                </Pressable>
-
-                {isBowler && (
+                {bucketId !== 'master' && (
                   <Pressable
                     onPress={() => {
-                      onRetireBowler(player);
+                      onRemoveFromTeam(player, bucketId);
                       onClose();
                     }}
                     style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
                   >
-                    <Ionicons name="hand-left-outline" size={15} color="#EF4444" />
+                    <Ionicons name="trash-outline" size={15} color="#EF4444" />
                     <ThemedText style={[styles.sheetActionText, { color: '#EF4444' }]}>
-                      Change / Step Down from Bowling
+                      Remove from Squad
                     </ThemedText>
                   </Pressable>
                 )}
               </>
-            )}
-
-            {bucketId === 'master' && (
-              <>
-                {outInfo.isOut && (
-                  <View style={[styles.actionSheetStatsBox, { backgroundColor: '#EF444415', borderColor: '#EF444450', borderLeftWidth: 3, borderLeftColor: '#EF4444' }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Ionicons name="close-circle" size={15} color="#EF4444" />
-                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>
-                        DISMISSED ({outInfo.reason.toUpperCase()})
-                      </ThemedText>
-                    </View>
-                    <ThemedText style={{ fontSize: 10, color: textSecondary, marginTop: 2 }}>
-                      This batsman is out in this innings and cannot bat again or be added to the crease.
-                    </ThemedText>
-                  </View>
-                )}
-
-                {!outInfo.isOut ? (
-                  <>
-                    <Pressable
-                      onPress={() => {
-                        onSetStriker(player);
-                        onClose();
-                      }}
-                      style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
-                    >
-                      <Ionicons name="flash-outline" size={15} color={theme.primary} />
-                      <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                        Set as Striker ({isTeamABatting ? labelA : labelB})
-                      </ThemedText>
-                    </Pressable>
-
-                    <Pressable
-                      onPress={() => {
-                        onSetNonStriker(player);
-                        onClose();
-                      }}
-                      style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
-                    >
-                      <Ionicons name="walk-outline" size={15} color={theme.primary} />
-                      <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                        Set as Non-Striker ({isTeamABatting ? labelA : labelB})
-                      </ThemedText>
-                    </Pressable>
-                  </>
-                ) : (
-                  <View style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor, opacity: 0.55 }]}>
-                    <Ionicons name="lock-closed-outline" size={15} color="#EF4444" />
-                    <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_600SemiBold' }]}>
-                      Batting Disabled (Player is OUT)
-                    </ThemedText>
-                  </View>
-                )}
-
-                <Pressable
-                  onPress={() => {
-                    onSetBowler(player);
-                    onClose();
-                  }}
-                  style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
-                >
-                  <Ionicons name="baseball-outline" size={15} color={theme.primary} />
-                  <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    Set as Bowler ({!isTeamABatting ? labelA : labelB})
-                  </ThemedText>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => onMoveToTeam(player, 'master', 'teamA')}
-                  style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
-                >
-                  <Ionicons name="arrow-forward" size={15} color={theme.primary} />
-                  <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    Assign to {labelA} ({isTeamABatting ? '🏏 Batting' : '🎯 Bowling'})
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  onPress={() => onMoveToTeam(player, 'master', 'teamB')}
-                  style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
-                >
-                  <Ionicons name="arrow-forward" size={15} color={textPrimary} />
-                  <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                    Assign to {labelB} ({!isTeamABatting ? '🏏 Batting' : '🎯 Bowling'})
-                  </ThemedText>
-                </Pressable>
-              </>
-            )}
-
-            {bucketId !== 'master' && (
-              <Pressable
-                onPress={() => onMoveToTeam(player, bucketId, otherBucketId)}
-                style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
-              >
-                <Ionicons name="swap-horizontal" size={15} color={theme.primary} />
-                <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
-                  Transfer to {otherTeamLabel}
-                </ThemedText>
-              </Pressable>
-            )}
-
-            {bucketId !== 'master' && (
-              <Pressable
-                onPress={() => onRemoveFromTeam(player, bucketId)}
-                style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor }]}
-              >
-                <Ionicons name="trash-outline" size={15} color="#EF4444" />
-                <ThemedText style={[styles.sheetActionText, { color: '#EF4444' }]}>
-                  Remove from Squad
-                </ThemedText>
-              </Pressable>
             )}
           </View>
         </Pressable>
@@ -2574,6 +2870,16 @@ const styles = StyleSheet.create({
   chipName: { fontFamily: 'Sora_500Medium', fontSize: 11, letterSpacing: -0.1 },
   chipRoleSub: { fontFamily: 'Sora_600SemiBold', fontSize: 8 },
   chipRemoveBtn: { padding: 2, marginLeft: 2 },
+  teamSwitchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  teamSwitchText: { fontFamily: 'Sora_700Bold', fontSize: 8.5 },
   quickAssignBtn: {
     paddingHorizontal: 5,
     paddingVertical: 1,

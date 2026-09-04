@@ -325,7 +325,7 @@ export function QuickMatchTab({
   const [tossCall, setTossCall] = useState<'HEADS' | 'TAILS'>('HEADS');
 
   // Pre-Match Rules Verification States (Total Overs, Wides, No-Balls, Byes)
-  const [totalOversInput, setTotalOversInput] = useState('20');
+  const [totalOversInput, setTotalOversInput] = useState('5');
   const [isCustomOversSelected, setIsCustomOversSelected] = useState(false);
   const [customOversValue, setCustomOversValue] = useState('');
   const [autoWideRule, setAutoWideRule] = useState(true);
@@ -529,7 +529,11 @@ export function QuickMatchTab({
     spinCoin();
   };
 
-  const proceedToScoring = (teamA: Player[] = teamALineup, teamB: Player[] = teamBLineup) => {
+  const proceedToScoring = (
+    teamA: Player[] = teamALineup,
+    teamB: Player[] = teamBLineup,
+    unassigned: Player[] = draftPlayerPool
+  ) => {
     const winner = tossResult === tossCall ? tossCaller : (tossCaller === 'A' ? 'B' : 'A');
     const tossWinnerName = winner === 'A' ? teamAName.trim() : teamBName.trim();
 
@@ -548,11 +552,12 @@ export function QuickMatchTab({
         teamB: teamBName.trim(),
         tossWinner: tossWinnerName,
         decision: tossDecision,
-        totalOvers: totalOversInput.trim() || '20',
+        totalOvers: totalOversInput.trim() || '5',
         autoWide: autoWideRule ? '1' : '0',
         autoNoBall: autoNoBallRule ? '1' : '0',
         allowByes: allowByesRule ? '1' : '0',
         ...(Object.keys(lineup).length > 0 ? { lineup: JSON.stringify(lineup) } : {}),
+        ...(unassigned && unassigned.length > 0 ? { pool: JSON.stringify(unassigned) } : {}),
       },
     });
   };
@@ -587,20 +592,32 @@ export function QuickMatchTab({
   const winner = tossResult === tossCall ? tossCaller : (tossCaller === 'A' ? 'B' : 'A');
   const tossWinnerName = winner === 'A' ? (teamAName.trim() || 'Team A') : (teamBName.trim() || 'Team B');
 
-  // Draft pool for the player-selection sheet: the saved-team rosters for
-  // whichever teams are currently matched, plus anything already in the pool
-  // (manually-added guests, previously confirmed picks) so re-opening the
-  // sheet doesn't drop them.
-  // Deduped by person, not by id: the logged-in captain is auto-seeded into
-  // every team they create, so the same human carries a different synthetic id
-  // in each roster and an id-only merge listed them once per team.
   const matchedTeamA = teams.find((t) => t.name.toLowerCase() === teamAName.trim().toLowerCase());
   const matchedTeamB = teams.find((t) => t.name.toLowerCase() === teamBName.trim().toLowerCase());
-  const draftPlayerPool: Player[] = dedupePlayers([
+
+  const userPlayer: Player[] = profile?.name ? [{
+    id: 'logged-in-user',
+    name: profile.name,
+    skillLevel: profile.skillLevel || 'Intermediate',
+    phone: profile.phone,
+    avatarUrl: profile.avatarUrl,
+  } as Player] : [];
+
+  const allCandidatePool: Player[] = dedupePlayers([
+    ...userPlayer,
     ...playerPool,
     ...(matchedTeamA?.players || []),
     ...(matchedTeamB?.players || []),
   ]);
+
+  const assignedSet = new Set([
+    ...teamALineup.map((p) => (typeof p === 'string' ? p : p.name).trim().toLowerCase()),
+    ...teamBLineup.map((p) => (typeof p === 'string' ? p : p.name).trim().toLowerCase()),
+  ]);
+
+  const draftPlayerPool: Player[] = allCandidatePool.filter(
+    (p) => !assignedSet.has((typeof p === 'string' ? p : p.name).trim().toLowerCase())
+  );
 
   return (
     <View style={[styles.container, { paddingBottom: bottomInset }]}>
@@ -1674,144 +1691,6 @@ export function QuickMatchTab({
                 )}
               </View>
             </View>
-
-            {/* 2. Extra Rules Toggles */}
-            <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>
-              Quick Scoring Rules (Auto-Record Extras):
-            </ThemedText>
-
-            <View style={{ gap: 6 }}>
-              {/* Wide Rule */}
-              <Pressable
-                onPress={() => setAutoWideRule(!autoWideRule)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: '#ffffff',
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: '#e2e8f0',
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                  <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#F59E0B18', justifyContent: 'center', alignItems: 'center' }}>
-                    <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: '#F59E0B' }}>WD</ThemedText>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#1e293b' }}>
-                      Wide Ball: +1 Extra Run (Auto)
-                    </ThemedText>
-                    <ThemedText style={{ fontSize: 9, color: '#64748b' }}>
-                      Tap = +1 run. Long-press 'WD' to score Wide + 1, 2, 4 overthrows.
-                    </ThemedText>
-                  </View>
-                </View>
-                <Ionicons name={autoWideRule ? "checkbox" : "square-outline"} size={18} color={autoWideRule ? '#5D68E8' : '#94a3b8'} />
-              </Pressable>
-
-              {/* No Ball Rule */}
-              <Pressable
-                onPress={() => setAutoNoBallRule(!autoNoBallRule)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: '#ffffff',
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: '#e2e8f0',
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                  <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#F43F5E18', justifyContent: 'center', alignItems: 'center' }}>
-                    <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: '#F43F5E' }}>NB</ThemedText>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#1e293b' }}>
-                      No Ball: +1 Extra Run & Free Hit
-                    </ThemedText>
-                    <ThemedText style={{ fontSize: 9, color: '#64748b' }}>
-                      Tap = +1 run. Long-press 'NB' to credit runs off the bat.
-                    </ThemedText>
-                  </View>
-                </View>
-                <Ionicons name={autoNoBallRule ? "checkbox" : "square-outline"} size={18} color={autoNoBallRule ? '#5D68E8' : '#94a3b8'} />
-              </Pressable>
-
-              {/* Bye & Leg Bye Rule */}
-              <Pressable
-                onPress={() => setAllowByesRule(!allowByesRule)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: '#ffffff',
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: '#e2e8f0',
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                  <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#06B6D418', justifyContent: 'center', alignItems: 'center' }}>
-                    <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: '#06B6D4' }}>LB</ThemedText>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#1e293b' }}>
-                      Byes & Leg Byes: Count runs, legal ball
-                    </ThemedText>
-                    <ThemedText style={{ fontSize: 9, color: '#64748b' }}>
-                      Runs counted without extra wide penalty.
-                    </ThemedText>
-                  </View>
-                </View>
-                <Ionicons name={allowByesRule ? "checkbox" : "square-outline"} size={18} color={allowByesRule ? '#5D68E8' : '#94a3b8'} />
-              </Pressable>
-
-              {/* Wicket + Runs Rule */}
-              <Pressable
-                onPress={() => setAllowWicketRunsRule(!allowWicketRunsRule)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: '#ffffff',
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: '#e2e8f0',
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                  <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#8B5CF618', justifyContent: 'center', alignItems: 'center' }}>
-                    <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: '#8B5CF6' }}>WK</ThemedText>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#1e293b' }}>
-                      Wicket + Runs Allowed (Run Outs: W+1, W+2)
-                    </ThemedText>
-                    <ThemedText style={{ fontSize: 9, color: '#64748b' }}>
-                      Tap 'Wicket' → pick 'W+1' or 'W+2' for completed runs on dismissals.
-                    </ThemedText>
-                  </View>
-                </View>
-                <Ionicons name={allowWicketRunsRule ? "checkbox" : "square-outline"} size={18} color={allowWicketRunsRule ? '#5D68E8' : '#94a3b8'} />
-              </Pressable>
-
-              {/* Scenario Guide Pill */}
-              <View style={{ backgroundColor: '#5D68E810', borderColor: '#5D68E825', borderWidth: 1, borderRadius: 8, padding: 8, marginTop: 4 }}>
-                <ThemedText style={{ fontSize: 9, color: '#475569', lineHeight: 13 }}>
-                  💡 <ThemedText style={{ fontFamily: 'Sora_500Medium', color: '#5D68E8' }}>Match Scenarios:</ThemedText> Long-press 'WD' on pad for Wide + 1, 2 runs. Tap 'Wicket' → pick 'Wicket + 1' or 'Wicket + 2' for Run Outs with runs.
-                </ThemedText>
-              </View>
-            </View>
           </View>
         )}
       </ScrollView>
@@ -2090,6 +1969,7 @@ export function QuickMatchTab({
       {/* ── Playing XI Selection (drag-and-drop, skippable) ── */}
       <PlayerSelectionModal
         visible={isPlayerSelectionOpen}
+        isInitialSetup={true}
         teamAName={teamAName}
         teamBName={teamBName}
         initialPool={draftPlayerPool}
@@ -2098,15 +1978,15 @@ export function QuickMatchTab({
         onClose={() => setIsPlayerSelectionOpen(false)}
         onSkip={() => {
           setIsPlayerSelectionOpen(false);
-          proceedToScoring([], []);
+          proceedToScoring(teamALineup, teamBLineup);
         }}
         onConfirm={(teamA, teamB, unassigned) => {
           setTeamALineup(teamA);
           setTeamBLineup(teamB);
-          setPlayerPool([...teamA, ...teamB, ...unassigned]);
+          setPlayerPool(unassigned);
           setLineupConfigured(teamA.length > 0 || teamB.length > 0);
           setIsPlayerSelectionOpen(false);
-          proceedToScoring(teamA, teamB);
+          proceedToScoring(teamA, teamB, unassigned);
         }}
       />
     </View>

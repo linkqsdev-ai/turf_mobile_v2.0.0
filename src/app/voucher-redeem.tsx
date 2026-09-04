@@ -20,6 +20,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useToast } from '@/context/ToastContext';
 import { getVoucherById } from '@/constants/vouchers';
+import { useOfferStore } from '@/store/app-store';
+import { redemptionsLeft } from '@/store/offer-store';
 
 const BRAND_BLUE = '#2C5CF6';
 
@@ -65,6 +67,46 @@ export default function VoucherRedeemScreen() {
 
   const voucher = getVoucherById(params.id);
   const [showBarcode, setShowBarcode] = useState(false);
+  const [claimed, setClaimed] = useState(false);
+
+  const { offers, redeemOffer } = useOfferStore();
+
+  // The same code can exist both as a static promo (this screen's catalogue)
+  // and as a live owner offer carrying a redemption cap. Only the latter can
+  // actually be claimed, so resolve it before offering the action.
+  const liveOffer = useMemo(
+    () =>
+      voucher
+        ? offers.find(o => o.code.toUpperCase() === voucher.code.toUpperCase())
+        : undefined,
+    [offers, voucher]
+  );
+  const seatsLeft = liveOffer ? redemptionsLeft(liveOffer) : null;
+
+  const handleClaim = () => {
+    if (!voucher) return;
+    const result = redeemOffer(voucher.code);
+    if (result.ok) {
+      setClaimed(true);
+      const left = result.remaining;
+      showSuccess(
+        'Voucher claimed',
+        left === null
+          ? `${voucher.code} is yours — apply it at checkout.`
+          : `${voucher.code} is yours. ${left} ${left === 1 ? 'claim' : 'claims'} left.`
+      );
+      return;
+    }
+    const message =
+      result.reason === 'exhausted'
+        ? 'This voucher has been fully claimed by other players.'
+        : result.reason === 'expired'
+          ? 'This voucher has expired.'
+          : result.reason === 'paused'
+            ? 'The venue has paused this voucher.'
+            : 'This voucher is no longer available.';
+    showError('Could not claim', message);
+  };
 
   // Matches the clipboard approach already used in the wallet screen rather
   // than pulling in expo-clipboard, which isn't a dependency of this project.
@@ -244,6 +286,38 @@ export default function VoucherRedeemScreen() {
               )}
             </View>
           </Reanimated.View>
+
+          {/* Claim — only shown for codes that exist as live owner offers, since
+              those are the ones carrying a real redemption cap to decrement.
+              Static promo vouchers have no cap and nothing to claim against. */}
+          {liveOffer && (
+            <Reanimated.View entering={FadeInUp.delay(120).duration(400)}>
+              {seatsLeft !== null && (
+                <ThemedText style={styles.claimNote}>
+                  {seatsLeft > 0
+                    ? `Only ${seatsLeft} ${seatsLeft === 1 ? 'claim' : 'claims'} left`
+                    : 'Fully claimed'}
+                </ThemedText>
+              )}
+              <Pressable
+                onPress={handleClaim}
+                disabled={claimed || seatsLeft === 0}
+                style={[styles.ctaBtn, (claimed || seatsLeft === 0) && styles.ctaBtnDisabled]}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: claimed || seatsLeft === 0 }}
+                accessibilityLabel={`Claim voucher ${voucher.code}`}
+              >
+                <ThemedText style={styles.ctaText}>
+                  {claimed ? 'Claimed' : seatsLeft === 0 ? 'Fully claimed' : 'Claim this voucher'}
+                </ThemedText>
+                <Ionicons
+                  name={claimed ? 'checkmark-circle' : 'ticket-outline'}
+                  size={17}
+                  color={BRAND_BLUE}
+                />
+              </Pressable>
+            </Reanimated.View>
+          )}
 
           {/* Primary CTA */}
           <Reanimated.View entering={FadeInUp.delay(140).duration(400)}>
@@ -481,6 +555,15 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
+  claimNote: {
+    color: '#ffffff',
+    opacity: 0.85,
+    fontSize: 12,
+    fontFamily: 'Sora_500Medium',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  ctaBtnDisabled: { opacity: 0.5 },
   ctaBtn: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -42,6 +42,7 @@ import { AVATAR_KEYS, getAvatarSource } from '@/constants/avatars';
 import { useTheme } from '@/hooks/use-theme';
 import { useTypeRamp } from '@/lib/typography';
 import { isUsablePhone, normalizePhone, playerIdentity } from '@/store/match-store';
+import { formatPhoneNumber, cleanPhoneDigits, isValidMobile, getPhoneValidationError } from '@/utils/phone-utils';
 
 export interface SquadPlayer {
   id?: string;
@@ -773,13 +774,13 @@ export function AddPlayerModal({
   }, [existing]);
 
   const trimmedName = name.trim();
-  const phoneDigits = phone.replace(/\D/g, '');
-  const phoneOk = phoneDigits.length >= 10;
+  const digits = cleanPhoneDigits(phone);
+  const phoneOk = digits.length === 10;
   const canAdd = trimmedName.length > 0;
 
   const handlePhoneChange = (t: string) => {
-    const cleaned = t.replace(/[^0-9+ ]/g, '').slice(0, 16);
-    setPhone(cleaned);
+    const formatted = formatPhoneNumber(t);
+    setPhone(formatted);
     if (error) setError(null);
     if (otpStage !== 'idle') {
       setOtpStage('idle');
@@ -791,8 +792,9 @@ export function AddPlayerModal({
   };
 
   const handleSendOtp = () => {
-    if (!phoneOk) {
-      setError('Please enter a valid 10-digit mobile number.');
+    const valErr = getPhoneValidationError(phone, true);
+    if (valErr) {
+      setError(valErr);
       return;
     }
     const code = String(Math.floor(100000 + Math.random() * 900000));
@@ -820,18 +822,25 @@ export function AddPlayerModal({
 
   const submit = () => {
     if (!canAdd) return;
-    if (isTaken({ name: trimmedName, phone: phoneOk ? phone : undefined })) {
+    if (isTaken({ name: trimmedName, phone: phoneOk ? digits : undefined })) {
       setError(`${trimmedName} is already in this match`);
       return;
     }
-    if (phone.trim().length > 0 && phoneOk && otpStage !== 'verified') {
-      setError('Please verify the mobile number via OTP first.');
-      return;
+    if (phone.trim().length > 0) {
+      const valErr = getPhoneValidationError(phone, false);
+      if (valErr) {
+        setError(valErr);
+        return;
+      }
+      if (otpStage !== 'verified') {
+        setError('Please verify the 10-digit mobile number via OTP first.');
+        return;
+      }
     }
 
     onAdd({
       name: trimmedName,
-      phone: phoneOk ? normalizePhone(phone) : undefined,
+      phone: phoneOk ? normalizePhone(digits) : undefined,
       avatarUrl: customImageUri || avatarKey,
       isVerified: otpStage === 'verified',
     });

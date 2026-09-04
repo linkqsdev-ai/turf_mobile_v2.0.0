@@ -2,6 +2,47 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
+export interface BatsmanScoreData {
+  name: string;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  status?: string;
+  strikeRate?: number | string;
+}
+
+export interface BowlerScoreData {
+  name: string;
+  overs: number | string;
+  maidens: number;
+  runs: number;
+  wickets: number;
+  economy?: number | string;
+}
+
+export interface ExtrasData {
+  wides?: number;
+  noBalls?: number;
+  byes?: number;
+  legByes?: number;
+  total?: number;
+}
+
+export interface InningsScoreData {
+  teamName: string;
+  bowlingTeamName?: string;
+  captain?: string;
+  score: number;
+  wickets: number;
+  overs: number;
+  balls: number;
+  runRate?: number;
+  extras?: ExtrasData;
+  batsmen?: BatsmanScoreData[];
+  bowlers?: BowlerScoreData[];
+}
+
 export interface ScoreSheetData {
   matchId: string;
   sport: string;
@@ -10,7 +51,11 @@ export interface ScoreSheetData {
   contactNumber?: string;
   date: string;
   time: string;
-  teamA: {
+  // Innings structured data
+  innings1?: InningsScoreData;
+  innings2?: InningsScoreData;
+  // Backward compatibility with legacy teamA / teamB structure
+  teamA?: {
     name: string;
     captain?: string;
     score: number;
@@ -18,32 +63,11 @@ export interface ScoreSheetData {
     overs: number;
     balls: number;
     runRate?: number;
-    extras?: {
-      wides?: number;
-      noBalls?: number;
-      byes?: number;
-      legByes?: number;
-      total?: number;
-    };
-    batsmen: {
-      name: string;
-      runs: number;
-      balls: number;
-      fours: number;
-      sixes: number;
-      status: string;
-      strikeRate?: number;
-    }[];
-    bowlers: {
-      name: string;
-      overs: number;
-      maidens: number;
-      runs: number;
-      wickets: number;
-      economy?: number;
-    }[];
+    extras?: ExtrasData;
+    batsmen?: BatsmanScoreData[];
+    bowlers?: BowlerScoreData[];
   };
-  teamB: {
+  teamB?: {
     name: string;
     captain?: string;
     score: number;
@@ -51,13 +75,9 @@ export interface ScoreSheetData {
     overs: number;
     balls: number;
     runRate?: number;
-    extras?: {
-      wides?: number;
-      noBalls?: number;
-      byes?: number;
-      legByes?: number;
-      total?: number;
-    };
+    extras?: ExtrasData;
+    batsmen?: BatsmanScoreData[];
+    bowlers?: BowlerScoreData[];
   };
   extrasSummary?: {
     wides: number;
@@ -70,9 +90,74 @@ export interface ScoreSheetData {
   winMargin?: string;
   mvpPlayer?: string;
   mvpPerformance?: string;
+  motmName?: string;
+  motmStat?: string;
   tossWinner?: string;
   tossDecision?: string;
+  target?: number;
   notes?: string;
+}
+
+function renderBatsmenTable(batsmen: BatsmanScoreData[] | undefined, borderLight: string) {
+  if (!batsmen || batsmen.length === 0) {
+    return `
+      <tr>
+        <td colspan="7" style="padding: 12px; text-align: center; color: #94a3b8; font-style: italic;">
+          No batting entries recorded
+        </td>
+      </tr>
+    `;
+  }
+
+  return batsmen.map((b, idx) => {
+    const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+    const sr = b.strikeRate !== undefined
+      ? b.strikeRate
+      : (b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0');
+    return `
+      <tr style="background-color: ${bg}; border-bottom: 1px solid ${borderLight};">
+        <td style="padding: 9px 12px; font-weight: 700; color: #0f172a; font-size: 11.5px;">${b.name || 'Batsman'}</td>
+        <td style="padding: 9px 12px; color: #64748b; font-size: 11px;">${b.status || 'not out'}</td>
+        <td style="padding: 9px 12px; text-align: center; font-weight: 800; color: #047857; font-size: 12.5px;">${b.runs ?? 0}</td>
+        <td style="padding: 9px 12px; text-align: center; color: #334155; font-weight: 600;">${b.balls ?? 0}</td>
+        <td style="padding: 9px 12px; text-align: center; color: #334155;">${b.fours ?? 0}</td>
+        <td style="padding: 9px 12px; text-align: center; color: #334155;">${b.sixes ?? 0}</td>
+        <td style="padding: 9px 12px; text-align: right; color: #0f172a; font-weight: 700;">${sr}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderBowlersTable(bowlers: BowlerScoreData[] | undefined, borderLight: string) {
+  if (!bowlers || bowlers.length === 0) {
+    return `
+      <tr>
+        <td colspan="6" style="padding: 12px; text-align: center; color: #94a3b8; font-style: italic;">
+          No bowling entries recorded
+        </td>
+      </tr>
+    `;
+  }
+
+  return bowlers.map((bw, idx) => {
+    const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+    const oversNum = typeof bw.overs === 'number' ? bw.overs : parseFloat(bw.overs || '0');
+    const econ = bw.economy !== undefined
+      ? bw.economy
+      : (oversNum > 0 ? (bw.runs / oversNum).toFixed(2) : '0.00');
+    const oversDisplay = typeof bw.overs === 'string' ? bw.overs : oversNum.toFixed(1);
+
+    return `
+      <tr style="background-color: ${bg}; border-bottom: 1px solid ${borderLight};">
+        <td style="padding: 9px 12px; font-weight: 700; color: #0f172a; font-size: 11.5px;">${bw.name || 'Bowler'}</td>
+        <td style="padding: 9px 12px; text-align: center; color: #334155; font-weight: 600;">${oversDisplay}</td>
+        <td style="padding: 9px 12px; text-align: center; color: #334155;">${bw.maidens ?? 0}</td>
+        <td style="padding: 9px 12px; text-align: center; color: #dc2626; font-weight: 700;">${bw.runs ?? 0}</td>
+        <td style="padding: 9px 12px; text-align: center; font-weight: 800; color: #047857; font-size: 12.5px;">${bw.wickets ?? 0}</td>
+        <td style="padding: 9px 12px; text-align: right; font-weight: 700; color: #0f172a;">${econ}</td>
+      </tr>
+    `;
+  }).join('');
 }
 
 export function generateScoreSheetHTML(data: ScoreSheetData): string {
@@ -81,51 +166,64 @@ export function generateScoreSheetHTML(data: ScoreSheetData): string {
   const primaryLight = '#ecfdf5';
   const borderLight = '#e2e8f0';
 
-  const teamABatsmenRows = (data.teamA.batsmen || []).map((b, idx) => {
-    const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
-    const sr = b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0';
-    return `
-      <tr style="background-color: ${bg}; border-bottom: 1px solid ${borderLight};">
-        <td style="padding: 10px 14px; font-weight: 700; color: #0f172a;">${b.name}</td>
-        <td style="padding: 10px 14px; color: #64748b; font-size: 11px;">${b.status || 'not out'}</td>
-        <td style="padding: 10px 14px; text-align: center; font-weight: 800; color: #047857; font-size: 13px;">${b.runs}</td>
-        <td style="padding: 10px 14px; text-align: center; color: #334155; font-weight: 600;">${b.balls}</td>
-        <td style="padding: 10px 14px; text-align: center; color: #334155;">${b.fours}</td>
-        <td style="padding: 10px 14px; text-align: center; color: #334155;">${b.sixes}</td>
-        <td style="padding: 10px 14px; text-align: right; color: #0f172a; font-weight: 700;">${sr}</td>
-      </tr>
-    `;
-  }).join('');
+  // Extract / Normalize Innings 1
+  const inn1: InningsScoreData = data.innings1 || {
+    teamName: data.teamA?.name || 'Team 1',
+    bowlingTeamName: data.teamB?.name || 'Team 2',
+    captain: data.teamA?.captain,
+    score: data.teamA?.score ?? 0,
+    wickets: data.teamA?.wickets ?? 0,
+    overs: data.teamA?.overs ?? 0,
+    balls: data.teamA?.balls ?? 0,
+    runRate: data.teamA?.runRate,
+    extras: data.teamA?.extras,
+    batsmen: data.teamA?.batsmen || [],
+    bowlers: data.teamA?.bowlers || [],
+  };
 
-  const teamABowlerRows = (data.teamA.bowlers || []).map((bw, idx) => {
-    const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
-    const econ = bw.overs > 0 ? (bw.runs / bw.overs).toFixed(2) : '0.00';
-    return `
-      <tr style="background-color: ${bg}; border-bottom: 1px solid ${borderLight};">
-        <td style="padding: 10px 14px; font-weight: 700; color: #0f172a;">${bw.name}</td>
-        <td style="padding: 10px 14px; text-align: center; color: #334155; font-weight: 600;">${bw.overs.toFixed(1)}</td>
-        <td style="padding: 10px 14px; text-align: center; color: #334155;">${bw.maidens}</td>
-        <td style="padding: 10px 14px; text-align: center; color: #dc2626; font-weight: 700;">${bw.runs}</td>
-        <td style="padding: 10px 14px; text-align: center; font-weight: 800; color: #047857; font-size: 13px;">${bw.wickets}</td>
-        <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: #0f172a;">${econ}</td>
-      </tr>
-    `;
-  }).join('');
+  // Extract / Normalize Innings 2
+  const hasInnings2 = !!(data.innings2 || (data.teamB && (data.teamB.score > 0 || data.teamB.overs > 0 || (data.teamB.batsmen && data.teamB.batsmen.length > 0))));
+  const inn2: InningsScoreData | null = hasInnings2 ? (data.innings2 || {
+    teamName: data.teamB?.name || 'Team 2',
+    bowlingTeamName: data.teamA?.name || 'Team 1',
+    captain: data.teamB?.captain,
+    score: data.teamB?.score ?? 0,
+    wickets: data.teamB?.wickets ?? 0,
+    overs: data.teamB?.overs ?? 0,
+    balls: data.teamB?.balls ?? 0,
+    runRate: data.teamB?.runRate,
+    extras: data.teamB?.extras,
+    batsmen: data.teamB?.batsmen || [],
+    bowlers: data.teamB?.bowlers || [],
+  }) : null;
 
-  const teamARunRate = data.teamA.runRate
-    ? data.teamA.runRate.toFixed(2)
-    : (data.teamA.score / (data.teamA.overs + (data.teamA.balls || 0) / 6 || 1)).toFixed(2);
+  // Run Rates
+  const inn1OversTotal = inn1.overs + (inn1.balls || 0) / 6;
+  const inn1RunRate = inn1.runRate
+    ? inn1.runRate.toFixed(2)
+    : (inn1OversTotal > 0 ? (inn1.score / inn1OversTotal).toFixed(2) : '0.00');
 
-  const teamBRunRate = data.teamB.runRate
-    ? data.teamB.runRate.toFixed(2)
-    : (data.teamB.score / (data.teamB.overs + (data.teamB.balls || 0) / 6 || 1)).toFixed(2);
+  const inn2OversTotal = inn2 ? inn2.overs + (inn2.balls || 0) / 6 : 0;
+  const inn2RunRate = inn2
+    ? (inn2.runRate ? inn2.runRate.toFixed(2) : (inn2OversTotal > 0 ? (inn2.score / inn2OversTotal).toFixed(2) : '0.00'))
+    : '0.00';
 
-  // Extras calculation
-  const totalWides = data.extrasSummary?.wides ?? (data.teamA.extras?.wides || 0);
-  const totalNoBalls = data.extrasSummary?.noBalls ?? (data.teamA.extras?.noBalls || 0);
-  const totalByes = data.extrasSummary?.byes ?? (data.teamA.extras?.byes || 0);
-  const totalLegByes = data.extrasSummary?.legByes ?? (data.teamA.extras?.legByes || 0);
-  const totalExtras = data.extrasSummary?.total ?? (totalWides + totalNoBalls + totalByes + totalLegByes);
+  // Innings 1 Extras
+  const inn1Wides = inn1.extras?.wides ?? 0;
+  const inn1NoBalls = inn1.extras?.noBalls ?? 0;
+  const inn1Byes = (inn1.extras?.byes ?? 0) + (inn1.extras?.legByes ?? 0);
+  const inn1TotalExtras = inn1.extras?.total ?? (inn1Wides + inn1NoBalls + inn1Byes);
+
+  // Innings 2 Extras
+  const inn2Wides = inn2?.extras?.wides ?? 0;
+  const inn2NoBalls = inn2?.extras?.noBalls ?? 0;
+  const inn2Byes = ((inn2?.extras?.byes ?? 0) + (inn2?.extras?.legByes ?? 0));
+  const inn2TotalExtras = inn2?.extras?.total ?? (inn2Wides + inn2NoBalls + inn2Byes);
+
+  const motm = data.motmName || data.mvpPlayer;
+  const motmStat = data.motmStat || data.mvpPerformance;
+  const winner = data.winner;
+  const winMargin = data.winMargin;
 
   return `
     <!DOCTYPE html>
@@ -133,165 +231,308 @@ export function generateScoreSheetHTML(data: ScoreSheetData): string {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Official Match Score Sheet - ${data.matchId}</title>
+      <title>Match Score Sheet - ${data.matchId}</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: #ffffff; color: #0f172a; padding: 28px 32px; font-size: 12px; line-height: 1.4; }
+        body { background-color: #ffffff; color: #0f172a; padding: 24px 30px; font-size: 11.5px; line-height: 1.4; }
         
+        /* HEADER */
         .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2.5px solid ${primaryColor}; }
-        .match-title { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+        .match-title { font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
         .match-meta { font-size: 11.5px; color: #64748b; margin-top: 3px; font-weight: 600; }
-        .match-id-badge { background-color: ${primaryLight}; border: 1px solid #a7f3d0; padding: 5px 12px; border-radius: 6px; font-weight: 700; color: ${primaryDark}; font-size: 11px; }
+        .match-badge-group { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+        .match-id-badge { background-color: ${primaryLight}; border: 1px solid #a7f3d0; padding: 4px 10px; border-radius: 6px; font-weight: 700; color: ${primaryDark}; font-size: 10.5px; }
+        .toss-info { font-size: 10.5px; color: #047857; font-weight: 600; }
 
-        /* 1. SCOREBOARD CARD */
-        .scoreboard-container { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
-        .score-card { background-color: ${primaryLight}; border: 1.5px solid #a7f3d0; border-radius: 10px; padding: 14px 18px; }
-        .score-card.opponent { background-color: #f8fafc; border-color: #e2e8f0; }
-        .team-title { font-size: 15px; font-weight: 800; color: ${primaryDark}; margin-bottom: 6px; }
-        .score-card.opponent .team-title { color: #1e293b; }
-        .big-score { font-size: 24px; font-weight: 900; color: #047857; }
-        .score-card.opponent .big-score { color: #3b82f6; }
-        .overs-text { font-size: 13px; font-weight: 600; color: #475569; }
-        .run-rate { font-size: 11.5px; color: #475569; font-weight: 600; margin-top: 4px; }
+        /* WINNER / MVP BANNER */
+        .highlight-banner {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+          border: 1.5px solid #a7f3d0;
+          border-radius: 10px;
+          padding: 12px 18px;
+          margin-bottom: 16px;
+        }
+        .winner-title { font-size: 15px; font-weight: 800; color: #065f46; display: flex; align-items: center; gap: 6px; }
+        .winner-sub { font-size: 11px; color: #047857; font-weight: 600; margin-top: 2px; }
+        .motm-badge {
+          background-color: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          padding: 6px 12px;
+          text-align: right;
+        }
+        .motm-label { font-size: 9.5px; font-weight: 800; color: #d97706; text-transform: uppercase; letter-spacing: 0.5px; }
+        .motm-name { font-size: 12px; font-weight: 800; color: #0f172a; }
+        .motm-stat { font-size: 10px; color: #64748b; font-weight: 600; }
 
-        /* 2. SECTION TITLES & TABLES */
-        .section-title { font-size: 12.5px; font-weight: 800; text-transform: uppercase; color: #1e293b; margin: 18px 0 8px 0; letter-spacing: 0.5px; }
-        table { width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; border: 1px solid ${borderLight}; font-size: 11.5px; margin-bottom: 6px; }
-        th { background-color: #047857; color: #ffffff; padding: 10px 14px; font-weight: 700; text-align: left; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+        /* SCOREBOARD CARDS */
+        .scoreboard-container { display: grid; grid-template-columns: 1fr ${inn2 ? '1fr' : ''}; gap: 14px; margin-bottom: 20px; }
+        .score-card { background-color: ${primaryLight}; border: 1.5px solid #a7f3d0; border-radius: 10px; padding: 12px 16px; }
+        .score-card.second-inn { background-color: #eff6ff; border-color: #bfdbfe; }
+        .team-title { font-size: 14px; font-weight: 800; color: ${primaryDark}; margin-bottom: 4px; }
+        .score-card.second-inn .team-title { color: #1e40af; }
+        .big-score { font-size: 22px; font-weight: 900; color: #047857; }
+        .score-card.second-inn .big-score { color: #2563eb; }
+        .overs-text { font-size: 12px; font-weight: 600; color: #475569; }
+        .run-rate { font-size: 11px; color: #475569; font-weight: 600; margin-top: 3px; }
 
-        /* 3. EXTRAS & WICKETS SUMMARY */
-        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; margin-bottom: 20px; }
-        .summary-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; }
-        .summary-box-title { font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 6px; }
-        .summary-row { display: flex; justify-content: space-between; font-size: 11px; color: #334155; padding: 3px 0; border-bottom: 1px dashed #e2e8f0; }
-        .summary-row.total-row { border-bottom: none; font-weight: 800; font-size: 12px; color: #047857; padding-top: 6px; }
+        /* INNINGS SECTION */
+        .innings-block { margin-bottom: 22px; border: 1px solid ${borderLight}; border-radius: 10px; overflow: hidden; }
+        .innings-header {
+          background-color: #f1f5f9;
+          padding: 8px 14px;
+          font-size: 12px;
+          font-weight: 800;
+          color: #1e293b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 1.5px solid #cbd5e1;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .innings-header.inn1 { background-color: #e6fcf5; color: #065f46; border-color: #a7f3d0; }
+        .innings-header.inn2 { background-color: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+        
+        .section-title { font-size: 11.5px; font-weight: 800; text-transform: uppercase; color: #334155; padding: 10px 14px 6px 14px; letter-spacing: 0.4px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 4px; }
+        th { background-color: #047857; color: #ffffff; padding: 8px 12px; font-weight: 700; text-align: left; text-transform: uppercase; font-size: 9.5px; letter-spacing: 0.4px; }
+        .th-bowl { background-color: #334155; }
 
-        .footer { text-align: center; margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; font-weight: 600; }
+        /* EXTRAS & MINI SUMMARY */
+        .mini-summary-bar {
+          display: flex;
+          justify-content: space-between;
+          background-color: #f8fafc;
+          border-top: 1px solid ${borderLight};
+          padding: 8px 14px;
+          font-size: 10.5px;
+          color: #475569;
+          font-weight: 600;
+        }
+        .mini-summary-bar span strong { color: #0f172a; }
+
+        /* OVERALL MATCH TOTALS */
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; margin-bottom: 16px; }
+        .summary-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; }
+        .summary-box-title { font-size: 10.5px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 6px; }
+        .summary-row { display: flex; justify-content: space-between; font-size: 10.5px; color: #334155; padding: 2px 0; border-bottom: 1px dashed #e2e8f0; }
+        .summary-row.total-row { border-bottom: none; font-weight: 800; font-size: 11.5px; color: #047857; padding-top: 4px; }
+
+        .footer { text-align: center; margin-top: 20px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 9.5px; color: #94a3b8; font-weight: 600; }
       </style>
     </head>
     <body>
       <!-- Top Scoreboard Header -->
       <div class="header">
         <div>
-          <div class="match-title">${data.teamA.name} vs ${data.teamB.name}</div>
+          <div class="match-title">${inn1.teamName} vs ${inn2 ? inn2.teamName : (inn1.bowlingTeamName || 'Opponent')}</div>
           <div class="match-meta">
-            ${data.venueName || 'Turf Arena'} • ${data.date} • ${data.sport || 'Cricket Match'}
+            ${data.venueName || 'Turf Arena'}${data.venueAddress ? ` • ${data.venueAddress}` : ''} • ${data.date} ${data.time} • ${data.sport || 'Cricket Match'}
           </div>
         </div>
-        <div class="match-id-badge">
-          Match ID: ${data.matchId}
+        <div class="match-badge-group">
+          <div class="match-id-badge">Match ID: ${data.matchId}</div>
+          ${data.tossWinner ? `<div class="toss-info">🪙 ${data.tossWinner} elected to ${data.tossDecision || 'bat'} first</div>` : ''}
         </div>
       </div>
 
-      <!-- 1. SCOREBOARD -->
+      <!-- WINNER / MVP HIGHLIGHT BANNER -->
+      ${(winner || motm) ? `
+        <div class="highlight-banner">
+          <div>
+            ${winner ? `
+              <div class="winner-title">🏆 ${winner} ${winner.toLowerCase().includes('won') || winner.toLowerCase().includes('tied') ? '' : 'Won'}</div>
+              ${winMargin ? `<div class="winner-sub">${winMargin}</div>` : ''}
+            ` : `
+              <div class="winner-title">🏏 Official Match Scorecard</div>
+            `}
+          </div>
+          ${motm ? `
+            <div class="motm-badge">
+              <div class="motm-label">⭐ Player of the Match</div>
+              <div class="motm-name">${motm}</div>
+              ${motmStat ? `<div class="motm-stat">${motmStat}</div>` : ''}
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
+
+      <!-- 1. SCOREBOARD SUMMARY CARDS -->
       <div class="scoreboard-container">
+        <!-- 1st Innings Card -->
         <div class="score-card">
-          <div class="team-title">${data.teamA.name}</div>
+          <div class="team-title">1st Innings: ${inn1.teamName}</div>
           <div>
-            <span class="big-score">${data.teamA.score}/${data.teamA.wickets}</span>
-            <span class="overs-text">(${data.teamA.overs}.${data.teamA.balls} Ov)</span>
+            <span class="big-score">${inn1.score}/${inn1.wickets}</span>
+            <span class="overs-text">(${inn1.overs}.${inn1.balls} Ov)</span>
           </div>
-          <div class="run-rate">Run Rate: ${teamARunRate} RPO</div>
+          <div class="run-rate">Run Rate: ${inn1RunRate} RPO</div>
         </div>
 
-        <div class="score-card opponent">
-          <div class="team-title">${data.teamB.name}</div>
-          <div>
-            <span class="big-score">${data.teamB.score}/${data.teamB.wickets}</span>
-            <span class="overs-text">(${data.teamB.overs}.${data.teamB.balls} Ov)</span>
+        <!-- 2nd Innings Card (if played) -->
+        ${inn2 ? `
+          <div class="score-card second-inn">
+            <div class="team-title">2nd Innings: ${inn2.teamName}</div>
+            <div>
+              <span class="big-score">${inn2.score}/${inn2.wickets}</span>
+              <span class="overs-text">(${inn2.overs}.${inn2.balls} Ov)</span>
+            </div>
+            <div class="run-rate">Run Rate: ${inn2RunRate} RPO ${data.target ? `• Target: ${data.target}` : ''}</div>
           </div>
-          <div class="run-rate">Run Rate: ${teamBRunRate} RPO</div>
-        </div>
+        ` : ''}
       </div>
 
-      <!-- 2. BATSMEN RUNS & STATS -->
-      <div class="section-title">${data.teamA.name} — Batting Performance</div>
-      <table>
-        <thead>
-          <tr>
-            <th>Batsman</th>
-            <th>Dismissal</th>
-            <th style="text-align: center;">Runs</th>
-            <th style="text-align: center;">Balls</th>
-            <th style="text-align: center;">4s</th>
-            <th style="text-align: center;">6s</th>
-            <th style="text-align: right;">Strike Rate</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${teamABatsmenRows || `
-            <tr>
-              <td colspan="7" style="padding: 12px; text-align: center; color: #94a3b8;">No batting data recorded</td>
-            </tr>
-          `}
-        </tbody>
-      </table>
+      <!-- 2. 1ST INNINGS DETAILED BREAKDOWN -->
+      <div class="innings-block">
+        <div class="innings-header inn1">
+          <span>1st Innings Scorecard — ${inn1.teamName}</span>
+          <span>${inn1.score}/${inn1.wickets} (${inn1.overs}.${inn1.balls} Ov)</span>
+        </div>
 
-      <!-- 3. BOWLERS RUNS & WICKETS -->
-      ${data.teamA.bowlers && data.teamA.bowlers.length > 0 ? `
-        <div class="section-title">Bowling Performance</div>
+        <div class="section-title">🏏 Batting Performance (${inn1.teamName})</div>
         <table>
           <thead>
             <tr>
-              <th>Bowler Name</th>
-              <th style="text-align: center;">Overs</th>
-              <th style="text-align: center;">Maidens</th>
+              <th>Batsman</th>
+              <th>Dismissal / Status</th>
               <th style="text-align: center;">Runs</th>
-              <th style="text-align: center;">Wickets</th>
-              <th style="text-align: right;">Economy</th>
+              <th style="text-align: center;">Balls</th>
+              <th style="text-align: center;">4s</th>
+              <th style="text-align: center;">6s</th>
+              <th style="text-align: right;">Strike Rate</th>
             </tr>
           </thead>
           <tbody>
-            ${teamABowlerRows}
+            ${renderBatsmenTable(inn1.batsmen, borderLight)}
           </tbody>
         </table>
+
+        <div class="section-title">🎯 Bowling Performance (${inn1.bowlingTeamName || (inn2 ? inn2.teamName : 'Bowling Team')})</div>
+        <table>
+          <thead>
+            <tr>
+              <th class="th-bowl">Bowler Name</th>
+              <th class="th-bowl" style="text-align: center;">Overs</th>
+              <th class="th-bowl" style="text-align: center;">Maidens</th>
+              <th class="th-bowl" style="text-align: center;">Runs</th>
+              <th class="th-bowl" style="text-align: center;">Wickets</th>
+              <th class="th-bowl" style="text-align: right;">Economy</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${renderBowlersTable(inn1.bowlers, borderLight)}
+          </tbody>
+        </table>
+
+        <div class="mini-summary-bar">
+          <span>Extras: <strong>${inn1TotalExtras}</strong> (WD: ${inn1Wides}, NB: ${inn1NoBalls}, B/LB: ${inn1Byes})</span>
+          <span>Wickets Fallen: <strong>${inn1.wickets}</strong></span>
+          <span>Total: <strong>${inn1.score}/${inn1.wickets}</strong> (${inn1.overs}.${inn1.balls} ov)</span>
+        </div>
+      </div>
+
+      <!-- 3. 2ND INNINGS DETAILED BREAKDOWN (IF PLAYED) -->
+      ${inn2 ? `
+        <div class="innings-block">
+          <div class="innings-header inn2">
+            <span>2nd Innings Scorecard — ${inn2.teamName}</span>
+            <span>${inn2.score}/${inn2.wickets} (${inn2.overs}.${inn2.balls} Ov)</span>
+          </div>
+
+          <div class="section-title">🏏 Batting Performance (${inn2.teamName})</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Batsman</th>
+                <th>Dismissal / Status</th>
+                <th style="text-align: center;">Runs</th>
+                <th style="text-align: center;">Balls</th>
+                <th style="text-align: center;">4s</th>
+                <th style="text-align: center;">6s</th>
+                <th style="text-align: right;">Strike Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderBatsmenTable(inn2.batsmen, borderLight)}
+            </tbody>
+          </table>
+
+          <div class="section-title">🎯 Bowling Performance (${inn2.bowlingTeamName || inn1.teamName})</div>
+          <table>
+            <thead>
+              <tr>
+                <th class="th-bowl">Bowler Name</th>
+                <th class="th-bowl" style="text-align: center;">Overs</th>
+                <th class="th-bowl" style="text-align: center;">Maidens</th>
+                <th class="th-bowl" style="text-align: center;">Runs</th>
+                <th class="th-bowl" style="text-align: center;">Wickets</th>
+                <th class="th-bowl" style="text-align: right;">Economy</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderBowlersTable(inn2.bowlers, borderLight)}
+            </tbody>
+          </table>
+
+          <div class="mini-summary-bar">
+            <span>Extras: <strong>${inn2TotalExtras}</strong> (WD: ${inn2Wides}, NB: ${inn2NoBalls}, B/LB: ${inn2Byes})</span>
+            <span>Wickets Fallen: <strong>${inn2.wickets}</strong></span>
+            <span>Total: <strong>${inn2.score}/${inn2.wickets}</strong> (${inn2.overs}.${inn2.balls} ov)</span>
+          </div>
+        </div>
       ` : ''}
 
-      <!-- 4. EXTRAS & WICKETS SUMMARY -->
+      <!-- 4. OVERALL MATCH SUMMARY -->
       <div class="summary-grid">
         <div class="summary-box">
-          <div class="summary-box-title">Extras Breakdown</div>
+          <div class="summary-box-title">Extras Breakdown (All Innings)</div>
           <div class="summary-row">
-            <span>Wides (WD)</span>
-            <span>${totalWides}</span>
+            <span>Total Wides (WD)</span>
+            <span>${inn1Wides + inn2Wides}</span>
           </div>
           <div class="summary-row">
-            <span>No Balls (NB)</span>
-            <span>${totalNoBalls}</span>
+            <span>Total No Balls (NB)</span>
+            <span>${inn1NoBalls + inn2NoBalls}</span>
           </div>
           <div class="summary-row">
-            <span>Byes (B) / Leg Byes (LB)</span>
-            <span>${totalByes + totalLegByes}</span>
+            <span>Total Byes / Leg Byes</span>
+            <span>${inn1Byes + inn2Byes}</span>
           </div>
           <div class="summary-row total-row">
-            <span>Total Extras</span>
-            <span>${totalExtras}</span>
+            <span>Total Match Extras</span>
+            <span>${inn1TotalExtras + inn2TotalExtras}</span>
           </div>
         </div>
 
         <div class="summary-box">
-          <div class="summary-box-title">Wickets & Match Totals</div>
+          <div class="summary-box-title">Match Totals</div>
           <div class="summary-row">
-            <span>${data.teamA.name} Wickets</span>
-            <span>${data.teamA.wickets} wickets</span>
+            <span>${inn1.teamName} Total</span>
+            <span>${inn1.score}/${inn1.wickets} (${inn1.overs}.${inn1.balls} ov)</span>
           </div>
-          <div class="summary-row">
-            <span>${data.teamB.name} Wickets</span>
-            <span>${data.teamB.wickets} wickets</span>
-          </div>
+          ${inn2 ? `
+            <div class="summary-row">
+              <span>${inn2.teamName} Total</span>
+              <span>${inn2.score}/${inn2.wickets} (${inn2.overs}.${inn2.balls} ov)</span>
+            </div>
+          ` : ''}
           <div class="summary-row">
             <span>Total Match Runs</span>
-            <span>${data.teamA.score + data.teamB.score} runs</span>
+            <span>${inn1.score + (inn2 ? inn2.score : 0)} runs</span>
           </div>
           <div class="summary-row total-row">
             <span>Total Wickets Taken</span>
-            <span>${data.teamA.wickets + data.teamB.wickets}</span>
+            <span>${inn1.wickets + (inn2 ? inn2.wickets : 0)}</span>
           </div>
         </div>
       </div>
 
       <div class="footer">
-        Official Turf Match Score Sheet • Generated on ${data.date} ${data.time}
+        Official Turf Match Score Sheet • Generated on ${data.date} ${data.time} • Turf Arena Cricket Scoring Engine
       </div>
     </body>
     </html>

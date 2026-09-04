@@ -18,6 +18,7 @@ import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useOfferStore, useClassStore, useWalletStore } from '@/store/app-store';
 import { getOffersForTurf, formatDiscount, isRedeemable, OwnerOffer } from '@/store/offer-store';
+import { formatPhoneNumber, getPhoneValidationError } from '@/utils/phone-utils';
 
 const PAYMENT_METHODS = [
   { id: 'gpay',   label: 'Google Pay',       icon: 'google',       family: 'FontAwesome5', color: '#EA4335' },
@@ -30,7 +31,7 @@ export default function EnrollScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const theme = useTheme();
-  const { offers } = useOfferStore();
+  const { offers, redeemOffer } = useOfferStore();
   const { enrollInClass } = useClassStore();
   const { walletBalance } = useWalletStore();
 
@@ -39,13 +40,14 @@ export default function EnrollScreen() {
   const dates = (params.dates as string) || 'Summer 2026';
   const location = (params.location as string) || 'Main Arena';
   const classId = (params.classId as string) || '';
+  const turfId = (params.turfId as string) || '';
   const image =
     (params.image as string) || require('@/assets/images/illustrations/coaching_class_premium.png');
 
   // Form states
   const [name, setName] = useState('');
   const [age, setAge] = useState('14');
-  const [phone, setPhone] = useState('+91 98765 43210');
+  const [phone, setPhone] = useState('98765 43210');
   const [skillLevel, setSkillLevel] = useState('Beginner');
 
   // Payment states
@@ -117,8 +119,14 @@ export default function EnrollScreen() {
       return;
     }
 
+    const phoneErr = getPhoneValidationError(phone, true);
+    if (phoneErr) {
+      Alert.alert('Invalid Mobile Number', phoneErr);
+      return;
+    }
+
     if (classId) {
-      enrollInClass({
+      const result = enrollInClass({
         classId,
         className: title,
         studentName: name.trim(),
@@ -127,6 +135,32 @@ export default function EnrollScreen() {
         amountPaid: netPayable,
         appliedCode: appliedOffer?.code,
       });
+
+      // The class can fill up between opening this form and submitting it, so
+      // a refusal has to stop the flow rather than fall through to a success
+      // dialog for an enrolment that was never recorded.
+      if (!result.ok) {
+        Alert.alert(
+          'Class Full',
+          `${title} has reached its limit of ${result.capacity} students. ` +
+            `Nothing has been charged — please pick another class or contact the coach.`
+        );
+        return;
+      }
+
+      // Claim the voucher only now that the enrolment is committed. Applying a
+      // code above merely previews the discount; this is what actually spends
+      // one of the "first N users" slots, so an abandoned form doesn't burn one.
+      if (appliedOffer) {
+        const claim = redeemOffer(appliedOffer.code);
+        if (!claim.ok) {
+          Alert.alert(
+            'Voucher No Longer Available',
+            'This code was fully claimed while you were filling the form. ' +
+              `Your enrolment is confirmed at the full fee of ₹${grossTotal}.`
+          );
+        }
+      }
     }
 
     Alert.alert(
@@ -244,11 +278,12 @@ export default function EnrollScreen() {
                 <ThemedText style={[styles.inputLabel, { color: theme.text }]}>Contact phone</ThemedText>
                 <TextInput
                   style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33', color: theme.text }]}
-                  placeholder="+91 98765 43210"
+                  placeholder="98765 43210"
                   placeholderTextColor={theme.placeholder}
                   keyboardType="phone-pad"
                   value={phone}
-                  onChangeText={v => setPhone(v.replace(/[^0-9+\s\-()]/g, ''))}
+                  onChangeText={v => setPhone(formatPhoneNumber(v))}
+                  maxLength={11}
                 />
               </View>
             </View>

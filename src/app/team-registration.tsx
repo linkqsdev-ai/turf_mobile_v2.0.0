@@ -22,6 +22,7 @@ import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { formatPhoneNumber, cleanPhoneDigits, getPhoneValidationError, isValidMobile } from '@/utils/phone-utils';
 
 interface SquadPlayer {
   id: string;
@@ -96,7 +97,7 @@ export default function TeamRegistrationScreen() {
       id: 'at1', 
       name: 'Red Devils FC', 
       manager: 'John Doe', 
-      phone: '+44 7911 123456', 
+      phone: '98765 43210', 
       email: 'john.doe@example.com', 
       rosterCount: 8, 
       payment: 'Paid (₹175)', 
@@ -109,7 +110,7 @@ export default function TeamRegistrationScreen() {
       id: 'at2', 
       name: 'Blue Tigers', 
       manager: 'Marcus Vance', 
-      phone: '+44 7911 234567', 
+      phone: '98765 43211', 
       email: 'marcus.vance@example.com', 
       rosterCount: 7, 
       payment: 'Paid (₹175)', 
@@ -122,7 +123,7 @@ export default function TeamRegistrationScreen() {
       id: 'at3', 
       name: 'London United', 
       manager: 'Rob Miller', 
-      phone: '+44 7911 345678', 
+      phone: '98765 43212', 
       email: 'rob.miller@example.com', 
       rosterCount: 5, 
       payment: 'Pending', 
@@ -135,7 +136,7 @@ export default function TeamRegistrationScreen() {
       id: 'at4', 
       name: 'Titans CC', 
       manager: 'Sam Wilson', 
-      phone: '+44 7911 456789', 
+      phone: '98765 43213', 
       email: 'sam.wilson@example.com', 
       rosterCount: 11, 
       payment: 'Paid (₹175)', 
@@ -183,10 +184,9 @@ export default function TeamRegistrationScreen() {
   };
 
   const handleManagerPhoneChange = (text: string) => {
-    // Numbers and leading '+' only up to 15 chars
-    const sanitized = text.replace(/[^\d+]/g, '').slice(0, 15);
-    setManagerPhone(sanitized);
-    if (sanitized.trim()) setErrors(prev => ({ ...prev, managerPhone: false }));
+    const formatted = formatPhoneNumber(text);
+    setManagerPhone(formatted);
+    if (formatted.trim()) setErrors(prev => ({ ...prev, managerPhone: false }));
   };
 
   const handleManagerEmailChange = (text: string) => {
@@ -241,9 +241,10 @@ export default function TeamRegistrationScreen() {
       return;
     }
 
-    if (managerPhone.trim().replace(/[^\d]/g, '').length < 7) {
+    const phoneErr = getPhoneValidationError(managerPhone, true);
+    if (phoneErr) {
       setErrors(prev => ({ ...prev, managerPhone: true }));
-      triggerToast('⚠️ Please enter a valid phone number (min 7 digits)');
+      triggerToast(`⚠️ ${phoneErr}`);
       return;
     }
 
@@ -459,12 +460,12 @@ export default function TeamRegistrationScreen() {
                         styles.textInput,
                         { borderColor: errors.managerPhone ? theme.error : '#00000033', color: theme.text }
                       ]}
-                      placeholder="+44 7911 123456"
+                      placeholder="98765 43210"
                       placeholderTextColor="#94a3b8"
                       keyboardType="phone-pad"
                       value={managerPhone}
                       onChangeText={handleManagerPhoneChange}
-                      maxLength={15}
+                      maxLength={11}
                     />
                   </View>
                   <View style={[styles.inputGroup, { width: '48%' }]}>
@@ -748,7 +749,7 @@ export default function TeamRegistrationScreen() {
                         <View style={styles.mockInvoiceDetailRow}>
                           <Ionicons name="call-outline" size={12} color={theme.textSecondary} style={{ marginRight: 6 }} />
                           <ThemedText style={styles.mockInvoiceLabel}>Phone</ThemedText>
-                          <ThemedText style={styles.mockInvoiceVal}>{t.phone || '+44 7911 123456'}</ThemedText>
+                          <ThemedText style={styles.mockInvoiceVal}>{t.phone || '98765 43210'}</ThemedText>
                         </View>
                         <View style={[styles.mockInvoiceDetailRow, { marginTop: 6 }]}>
                           <Ionicons name="mail-outline" size={12} color={theme.textSecondary} style={{ marginRight: 6 }} />
