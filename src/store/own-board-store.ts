@@ -17,6 +17,7 @@ export interface MatchBatsmanEntry {
   fours: number;
   sixes: number;
   isOut: boolean;
+  status?: string;
   strikeRate: number;
 }
 
@@ -95,32 +96,33 @@ export const INITIAL_SAMPLE_MATCHES: CompletedMatchRecord[] = [
   {
     id: 'sample-match-1',
     completedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-    teamA: 'Antony XI',
-    teamB: 'Siva Strikers',
+    teamA: 'Knights Riders',
+    teamB: 'Royal Rockers',
     innings1: {
-      team: 'Antony XI',
+      team: 'Knights Riders',
       score: '68/2',
       overs: '5.0',
       batsmen: [
-        { name: 'Praveen', runs: 38, balls: 14, fours: 4, sixes: 3, isOut: false, strikeRate: 271.4 },
-        { name: 'Antony', runs: 22, balls: 11, fours: 2, sixes: 1, isOut: true, strikeRate: 200.0 },
-        { name: 'Kavin', runs: 8, balls: 5, fours: 1, sixes: 0, isOut: true, strikeRate: 160.0 },
+        { name: 'Praveen', runs: 38, balls: 14, fours: 4, sixes: 3, isOut: false, status: 'not out', strikeRate: 271.4 },
+        { name: 'Azar', runs: 20, balls: 9, fours: 3, sixes: 1, isOut: false, status: 'not out', strikeRate: 222.2 },
+        { name: 'Antony', runs: 10, balls: 7, fours: 1, sixes: 0, isOut: true, status: 'c Guna b Messi Player', strikeRate: 142.9 },
       ],
       bowlers: [
-        { name: 'Dinesh', overs: 2.0, runs: 24, wickets: 1, maidens: 0, economy: 12.0, dots: 3 },
-        { name: 'Yogi', overs: 2.0, runs: 28, wickets: 1, maidens: 0, economy: 14.0, dots: 2 },
-        { name: 'Siva', overs: 1.0, runs: 16, wickets: 0, maidens: 0, economy: 16.0, dots: 1 },
+        { name: 'Messi Player', overs: 1.0, runs: 11, wickets: 0, maidens: 0, economy: 11.0, dots: 1 },
+        { name: 'Alex Rivera', overs: 1.0, runs: 12, wickets: 0, maidens: 0, economy: 12.0, dots: 1 },
+        { name: 'Guna', overs: 2.0, runs: 24, wickets: 1, maidens: 0, economy: 12.0, dots: 2 },
+        { name: 'Seshu', overs: 1.0, runs: 18, wickets: 0, maidens: 0, economy: 18.0, dots: 1 },
       ],
     },
     innings2: {
-      team: 'Siva Strikers',
+      team: 'Royal Rockers',
       score: '54/4',
       overs: '5.0',
       batsmen: [
-        { name: 'Siva', runs: 26, balls: 13, fours: 3, sixes: 1, isOut: true, strikeRate: 200.0 },
-        { name: 'Sri', runs: 18, balls: 10, fours: 2, sixes: 0, isOut: true, strikeRate: 180.0 },
-        { name: 'Dinesh', runs: 7, balls: 4, fours: 1, sixes: 0, isOut: true, strikeRate: 175.0 },
-        { name: 'Yogi', runs: 3, balls: 3, fours: 0, sixes: 0, isOut: false, strikeRate: 100.0 },
+        { name: 'Messi Player', runs: 22, balls: 12, fours: 2, sixes: 1, isOut: true, status: 'b Azar', strikeRate: 183.3 },
+        { name: 'Seshu', runs: 18, balls: 10, fours: 2, sixes: 1, isOut: true, status: 'c Antony b Praveen', strikeRate: 180.0 },
+        { name: 'Guna', runs: 10, balls: 6, fours: 1, sixes: 0, isOut: true, status: 'c & b Azar', strikeRate: 166.7 },
+        { name: 'Alex Rivera', runs: 4, balls: 2, fours: 1, sixes: 0, isOut: false, status: 'not out', strikeRate: 200.0 },
       ],
       bowlers: [
         { name: 'Azar', overs: 2.0, runs: 18, wickets: 2, maidens: 0, economy: 9.0, dots: 5 },
@@ -128,7 +130,7 @@ export const INITIAL_SAMPLE_MATCHES: CompletedMatchRecord[] = [
         { name: 'Antony', overs: 1.0, runs: 16, wickets: 1, maidens: 0, economy: 16.0, dots: 2 },
       ],
     },
-    winner: 'Antony XI',
+    winner: 'Knights Riders',
     winMargin: 'Won by 14 runs',
     motmName: 'Praveen',
     motmStat: '38 runs (14b) & 1/20 (2.0 ov)',
@@ -140,38 +142,38 @@ export const INITIAL_SAMPLE_MATCHES: CompletedMatchRecord[] = [
     teamB: 'Kent Kings',
     innings1: {
       team: 'London Lions',
-      score: '52/3',
+      score: '62/3',
       overs: '5.0',
       batsmen: [
-        { name: 'Antony', runs: 31, balls: 15, fours: 3, sixes: 2, isOut: false, strikeRate: 206.7 },
-        { name: 'Sri', runs: 14, balls: 8, fours: 2, sixes: 0, isOut: true, strikeRate: 175.0 },
-        { name: 'Azar', runs: 7, balls: 7, fours: 0, sixes: 0, isOut: true, strikeRate: 100.0 },
+        { name: 'Azar', runs: 29, balls: 15, fours: 3, sixes: 2, isOut: false, status: 'not out', strikeRate: 193.3 },
+        { name: 'Antony', runs: 21, balls: 11, fours: 2, sixes: 1, isOut: true, status: 'b Seshu', strikeRate: 190.9 },
+        { name: 'Sri', runs: 12, balls: 4, fours: 1, sixes: 1, isOut: true, status: 'c & b Guna', strikeRate: 300.0 },
       ],
       bowlers: [
-        { name: 'Dinesh', overs: 2.0, runs: 14, wickets: 2, maidens: 0, economy: 7.0, dots: 6 },
-        { name: 'Praveen', overs: 2.0, runs: 22, wickets: 1, maidens: 0, economy: 11.0, dots: 3 },
-        { name: 'Kavin', overs: 1.0, runs: 16, wickets: 0, maidens: 0, economy: 16.0, dots: 1 },
+        { name: 'Seshu', overs: 2.0, runs: 22, wickets: 1, maidens: 0, economy: 11.0, dots: 3 },
+        { name: 'Guna', overs: 2.0, runs: 20, wickets: 1, maidens: 0, economy: 10.0, dots: 4 },
+        { name: 'Messi Player', overs: 1.0, runs: 18, wickets: 1, maidens: 0, economy: 18.0, dots: 1 },
       ],
     },
     innings2: {
       team: 'Kent Kings',
-      score: '46/5',
-      overs: '4.4',
+      score: '56/4',
+      overs: '5.0',
       batsmen: [
-        { name: 'Praveen', runs: 24, balls: 12, fours: 3, sixes: 1, isOut: true, strikeRate: 200.0 },
-        { name: 'Kavin', runs: 12, balls: 7, fours: 1, sixes: 1, isOut: true, strikeRate: 171.4 },
-        { name: 'Dinesh', runs: 10, balls: 9, fours: 1, sixes: 0, isOut: true, strikeRate: 111.1 },
+        { name: 'Seshu', runs: 21, balls: 11, fours: 2, sixes: 1, isOut: true, status: 'c Antony b Azar', strikeRate: 190.9 },
+        { name: 'Guna', runs: 24, balls: 11, fours: 3, sixes: 1, isOut: false, status: 'not out', strikeRate: 218.2 },
+        { name: 'Messi Player', runs: 9, balls: 5, fours: 1, sixes: 0, isOut: true, status: 'b Azar', strikeRate: 180.0 },
       ],
       bowlers: [
-        { name: 'Azar', overs: 2.0, runs: 12, wickets: 3, maidens: 0, economy: 6.0, dots: 7 },
-        { name: 'Antony', overs: 2.0, runs: 22, wickets: 1, maidens: 0, economy: 11.0, dots: 4 },
-        { name: 'Sri', overs: 0.4, runs: 12, wickets: 1, maidens: 0, economy: 18.0, dots: 1 },
+        { name: 'Azar', overs: 2.0, runs: 14, wickets: 3, maidens: 0, economy: 7.0, dots: 6 },
+        { name: 'Praveen', overs: 2.0, runs: 22, wickets: 1, maidens: 0, economy: 11.0, dots: 3 },
+        { name: 'Antony', overs: 1.0, runs: 18, wickets: 0, maidens: 0, economy: 18.0, dots: 1 },
       ],
     },
     winner: 'London Lions',
     winMargin: 'Won by 6 runs',
     motmName: 'Azar',
-    motmStat: '3/12 (2.0 ov) & 7 runs',
+    motmStat: '29* (15b) & 3/14 (2.0 ov)',
   },
   {
     id: 'sample-match-3',
@@ -180,37 +182,38 @@ export const INITIAL_SAMPLE_MATCHES: CompletedMatchRecord[] = [
     teamB: 'Bangalore Blasters',
     innings1: {
       team: 'Bangalore Blasters',
-      score: '62/1',
+      score: '65/2',
       overs: '5.0',
       batsmen: [
-        { name: 'Kavin', runs: 36, balls: 16, fours: 4, sixes: 2, isOut: false, strikeRate: 225.0 },
-        { name: 'Siva', runs: 24, balls: 14, fours: 2, sixes: 1, isOut: true, strikeRate: 171.4 },
+        { name: 'Guna', runs: 26, balls: 12, fours: 3, sixes: 1, isOut: false, status: 'not out', strikeRate: 216.7 },
+        { name: 'Seshu', runs: 24, balls: 13, fours: 2, sixes: 1, isOut: true, status: 'c Azar b Praveen', strikeRate: 184.6 },
+        { name: 'Messi Player', runs: 15, balls: 8, fours: 2, sixes: 0, isOut: true, status: 'c & b Antony', strikeRate: 187.5 },
       ],
       bowlers: [
-        { name: 'Azar', overs: 2.0, runs: 21, wickets: 1, maidens: 0, economy: 10.5, dots: 4 },
-        { name: 'Praveen', overs: 2.0, runs: 25, wickets: 0, maidens: 0, economy: 12.5, dots: 3 },
-        { name: 'Dinesh', overs: 1.0, runs: 16, wickets: 0, maidens: 0, economy: 16.0, dots: 1 },
+        { name: 'Azar', overs: 2.0, runs: 19, wickets: 1, maidens: 0, economy: 9.5, dots: 4 },
+        { name: 'Praveen', overs: 2.0, runs: 24, wickets: 1, maidens: 0, economy: 12.0, dots: 3 },
+        { name: 'Antony', overs: 1.0, runs: 18, wickets: 1, maidens: 0, economy: 18.0, dots: 1 },
       ],
     },
     innings2: {
       team: 'Chennai Super Turfs',
-      score: '65/2',
-      overs: '4.2',
+      score: '68/2',
+      overs: '4.3',
       batsmen: [
-        { name: 'Praveen', runs: 42, balls: 16, fours: 5, sixes: 3, isOut: false, strikeRate: 262.5 },
-        { name: 'Antony', runs: 15, balls: 7, fours: 2, sixes: 0, isOut: true, strikeRate: 214.3 },
-        { name: 'Sri', runs: 8, balls: 3, fours: 1, sixes: 0, isOut: false, strikeRate: 266.7 },
+        { name: 'Praveen', runs: 42, balls: 16, fours: 5, sixes: 3, isOut: false, status: 'not out', strikeRate: 262.5 },
+        { name: 'Azar', runs: 16, balls: 8, fours: 2, sixes: 1, isOut: true, status: 'b Guna', strikeRate: 200.0 },
+        { name: 'Antony', runs: 10, balls: 4, fours: 2, sixes: 0, isOut: false, status: 'not out', strikeRate: 250.0 },
       ],
       bowlers: [
-        { name: 'Dinesh', overs: 2.0, runs: 28, wickets: 1, maidens: 0, economy: 14.0, dots: 2 },
-        { name: 'Yogi', overs: 1.2, runs: 22, wickets: 1, maidens: 0, economy: 16.5, dots: 1 },
-        { name: 'Siva', overs: 1.0, runs: 15, wickets: 0, maidens: 0, economy: 15.0, dots: 2 },
+        { name: 'Guna', overs: 2.0, runs: 26, wickets: 1, maidens: 0, economy: 13.0, dots: 2 },
+        { name: 'Messi Player', overs: 1.3, runs: 22, wickets: 0, maidens: 0, economy: 14.7, dots: 1 },
+        { name: 'Seshu', overs: 1.0, runs: 18, wickets: 0, maidens: 0, economy: 18.0, dots: 1 },
       ],
     },
     winner: 'Chennai Super Turfs',
     winMargin: 'Won by 8 wickets',
     motmName: 'Praveen',
-    motmStat: '42* runs (16b)',
+    motmStat: '42* runs (16b) & 1/24',
   },
 ];
 
@@ -255,6 +258,7 @@ export function aggregateBatsmen(matches: CompletedMatchRecord[]): AggregatedBat
   for (const match of matches) {
     const allInnings = [match.innings1, match.innings2];
     for (const inn of allInnings) {
+      if (!inn || !inn.batsmen) continue;
       for (const b of inn.batsmen) {
         if (!b.name?.trim()) continue;
         const key = b.name.toLowerCase().trim();
@@ -276,8 +280,8 @@ export function aggregateBatsmen(matches: CompletedMatchRecord[]): AggregatedBat
         existing.innings += 1;
         existing.totalRuns += b.runs;
         existing.totalBalls += b.balls;
-        existing.totalFours += b.fours;
-        existing.totalSixes += b.sixes;
+        existing.totalFours += (b.fours || 0);
+        existing.totalSixes += (b.sixes || 0);
         if (b.runs > existing.highScore) existing.highScore = b.runs;
         if (b.isOut) existing.dismissals += 1;
         if (b.avatarUrl && !existing.avatarUrl) existing.avatarUrl = b.avatarUrl;
@@ -306,6 +310,7 @@ export function aggregateBowlers(matches: CompletedMatchRecord[]): AggregatedBow
   for (const match of matches) {
     const allInnings = [match.innings1, match.innings2];
     for (const inn of allInnings) {
+      if (!inn || !inn.bowlers) continue;
       for (const b of inn.bowlers) {
         if (!b.name?.trim()) continue;
         const key = b.name.toLowerCase().trim();
@@ -329,8 +334,8 @@ export function aggregateBowlers(matches: CompletedMatchRecord[]): AggregatedBow
         existing.totalOvers += b.overs;
         existing.totalRuns += b.runs;
         existing.totalWickets += b.wickets;
-        existing.totalMaidens += b.maidens;
-        existing.totalDots += b.dots;
+        existing.totalMaidens += (b.maidens || 0);
+        existing.totalDots += (b.dots || 0);
         if (
           b.wickets > existing.bestWickets ||
           (b.wickets === existing.bestWickets && b.runs < existing.bestRuns)
@@ -357,3 +362,87 @@ export function aggregateBowlers(matches: CompletedMatchRecord[]): AggregatedBow
 
   return result.sort((a, b) => b.totalWickets - a.totalWickets || a.economy - b.economy);
 }
+
+// ── Per-Player Match History ──────────────────────────────────────────────────
+
+export interface PlayerMatchHistoryItem {
+  matchId: string;
+  completedAt: string;
+  matchTitle: string;
+  teamA: string;
+  teamB: string;
+  winner: string;
+  winMargin: string;
+  isMOTM: boolean;
+  motmName: string;
+  batting?: {
+    runs: number;
+    balls: number;
+    fours: number;
+    sixes: number;
+    isOut: boolean;
+    status: string;
+    strikeRate: number;
+  };
+  bowling?: {
+    overs: number;
+    runs: number;
+    wickets: number;
+    maidens: number;
+    economy: number;
+  };
+  matchRecord: CompletedMatchRecord;
+}
+
+export function getPlayerMatchHistory(playerName: string, matches: CompletedMatchRecord[]): PlayerMatchHistoryItem[] {
+  if (!playerName || !matches) return [];
+  const pKey = playerName.trim().toLowerCase();
+  const list: PlayerMatchHistoryItem[] = [];
+
+  for (const match of matches) {
+    let batEntry: MatchBatsmanEntry | undefined;
+    let bowlEntry: MatchBowlerEntry | undefined;
+
+    for (const inn of [match.innings1, match.innings2]) {
+      if (!inn) continue;
+      const b = (inn.batsmen || []).find(x => x && x.name && x.name.trim().toLowerCase() === pKey);
+      if (b) batEntry = b;
+      const bw = (inn.bowlers || []).find(x => x && x.name && x.name.trim().toLowerCase() === pKey);
+      if (bw) bowlEntry = bw;
+    }
+
+    if (batEntry || bowlEntry) {
+      list.push({
+        matchId: match.id,
+        completedAt: match.completedAt,
+        matchTitle: `${match.teamA} vs ${match.teamB}`,
+        teamA: match.teamA,
+        teamB: match.teamB,
+        winner: match.winner,
+        winMargin: match.winMargin,
+        motmName: match.motmName,
+        isMOTM: match.motmName.trim().toLowerCase() === pKey,
+        batting: batEntry ? {
+          runs: batEntry.runs,
+          balls: batEntry.balls,
+          fours: batEntry.fours || 0,
+          sixes: batEntry.sixes || 0,
+          isOut: batEntry.isOut,
+          status: batEntry.status || (batEntry.isOut ? 'out' : 'not out'),
+          strikeRate: batEntry.strikeRate,
+        } : undefined,
+        bowling: bowlEntry ? {
+          overs: bowlEntry.overs,
+          runs: bowlEntry.runs,
+          wickets: bowlEntry.wickets,
+          maidens: bowlEntry.maidens || 0,
+          economy: bowlEntry.economy,
+        } : undefined,
+        matchRecord: match,
+      });
+    }
+  }
+
+  return list;
+}
+

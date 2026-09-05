@@ -41,7 +41,7 @@ import {
 } from '@/store/match-store';
 import { useMatchStore, useWalletStore } from '@/store/app-store';
 import { AddPlayerModal } from '@/components/scoring/squad-modals';
-import { registerFoFPlayer, searchFoFDirectory, getFoFConnection, loadFoFDatabase } from '@/services/fof-network';
+import { registerFoFPlayer, searchFoFDirectory, getFoFConnection, loadFoFDatabase, getFirstDegreePlayers } from '@/services/fof-network';
 
 const CREDIT_REWARD = 5;
 
@@ -236,10 +236,25 @@ export function PlayerSelectionModal({
   const codeA = shortCode(labelA, 'TA');
   const codeB = shortCode(labelB, 'TB');
 
-  const [buckets, setBuckets] = useState<Buckets>({
-    master: strictDedupe(initialPool || []),
-    teamA: strictDedupe(initialTeamA || []),
-    teamB: strictDedupe(initialTeamB || []),
+  const [buckets, setBuckets] = useState<Buckets>(() => {
+    const teamA = strictDedupe(initialTeamA || []);
+    const teamB = strictDedupe(initialTeamB || []).filter(
+      (p) => !teamA.some((a) => a.name.trim().toLowerCase() === p.name.trim().toLowerCase())
+    );
+    const assigned = new Set([...teamA, ...teamB].map((p) => p.name.trim().toLowerCase()));
+    const top15FirstDegree: Player[] = getFirstDegreePlayers(15).map(fof => ({
+      id: fof.id || generatePlayerId(),
+      name: fof.name,
+      phone: fof.phone,
+      avatarUrl: fof.avatar,
+      position: (fof.role?.split('•')[0] || 'All-Rounder').trim(),
+      skillLevel: 'Intermediate',
+    }));
+    return {
+      master: strictDedupe([...(initialPool || []), ...top15FirstDegree]).filter((p) => !assigned.has(p.name.trim().toLowerCase())),
+      teamA,
+      teamB,
+    };
   });
 
   const [currentBattingTeam, setCurrentBattingTeam] = useState<string>(propBattingTeam || labelA);
@@ -261,6 +276,7 @@ export function PlayerSelectionModal({
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addSeed, setAddSeed] = useState<{ name: string; phone: string }>({ name: '', phone: '' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [isPoolExpanded, setIsPoolExpanded] = useState(true);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [draggingPlayer, setDraggingPlayer] = useState<Player | null>(null);
   const [activeDropZone, setActiveDropZone] = useState<DropTargetId | null>(null);
@@ -271,14 +287,22 @@ export function PlayerSelectionModal({
   // Re-seed only when modal opens
   useEffect(() => {
     if (visible) {
-      loadFoFDatabase().catch(() => {});
+      loadFoFDatabase().catch(() => { });
       const teamA = strictDedupe(initialTeamA || []);
       const teamB = strictDedupe(initialTeamB || []).filter(
         (p) => !teamA.some((a) => a.name.trim().toLowerCase() === p.name.trim().toLowerCase())
       );
       const assigned = new Set([...teamA, ...teamB].map((p) => p.name.trim().toLowerCase()));
+      const top15FirstDegree: Player[] = getFirstDegreePlayers(15).map(fof => ({
+        id: fof.id || generatePlayerId(),
+        name: fof.name,
+        phone: fof.phone,
+        avatarUrl: fof.avatar,
+        position: (fof.role?.split('•')[0] || 'All-Rounder').trim(),
+        skillLevel: 'Intermediate',
+      }));
       setBuckets({
-        master: strictDedupe(initialPool || []).filter((p) => !assigned.has(p.name.trim().toLowerCase())),
+        master: strictDedupe([...(initialPool || []), ...top15FirstDegree]).filter((p) => !assigned.has(p.name.trim().toLowerCase())),
         teamA,
         teamB,
       });
@@ -292,11 +316,11 @@ export function PlayerSelectionModal({
 
       const sOut = (dismissedPlayers || []).find(
         (d) => d && d.name && d.name.trim().toLowerCase() === activeStrikerName.trim().toLowerCase() &&
-               d.status !== 'Retired Hurt' && d.status !== 'Retired Not Out' && d.dismissalType !== 'retired_hurt'
+          d.status !== 'Retired Hurt' && d.status !== 'Retired Not Out' && d.dismissalType !== 'retired_hurt'
       );
       const nsOut = (dismissedPlayers || []).find(
         (d) => d && d.name && d.name.trim().toLowerCase() === activeNonStrikerName.trim().toLowerCase() &&
-               d.status !== 'Retired Hurt' && d.status !== 'Retired Not Out' && d.dismissalType !== 'retired_hurt'
+          d.status !== 'Retired Hurt' && d.status !== 'Retired Not Out' && d.dismissalType !== 'retired_hurt'
       );
 
       // Check bowler quota limit
@@ -446,6 +470,23 @@ export function PlayerSelectionModal({
     }
   }, [strikerName, nonStrikerName, bowlerName, batTeamBucket, bowlTeamBucket]);
 
+  const handleDeletePlayer = useCallback((player: Player) => {
+    if (!player || !player.name) return;
+    const playerKey = player.name.trim().toLowerCase();
+    setBuckets((prev) => ({
+      master: (prev.master || []).filter((p) => p.name.trim().toLowerCase() !== playerKey),
+      teamA: (prev.teamA || []).filter((p) => p.name.trim().toLowerCase() !== playerKey),
+      teamB: (prev.teamB || []).filter((p) => p.name.trim().toLowerCase() !== playerKey),
+    }));
+
+    if (player.name.toLowerCase() === strikerName.toLowerCase()) setStrikerName('');
+    if (player.name.toLowerCase() === nonStrikerName.toLowerCase()) setNonStrikerName('');
+    if (player.name.toLowerCase() === bowlerName.toLowerCase()) setBowlerName('');
+    if (selectedActionPlayer?.player.name.toLowerCase() === playerKey) {
+      setSelectedActionPlayer(null);
+    }
+  }, [strikerName, nonStrikerName, bowlerName, selectedActionPlayer]);
+
   const handleSwapBatBowl = () => {
     setCurrentBattingTeam((prev) => (prev === labelA ? labelB : labelA));
   };
@@ -514,6 +555,18 @@ export function PlayerSelectionModal({
   };
 
   const handleSetBowler = (player: Player) => {
+    const pKey = player.name.trim().toLowerCase();
+    const bStat = bowlerStats[pKey];
+    const bOversCompleted = bStat ? parseInt((bStat.overs || '0').split('.')[0], 10) : 0;
+    const isQuotaReached = !isInitialSetup && maxBowlerLimit !== undefined && maxBowlerLimit < Infinity && bOversCompleted >= maxBowlerLimit;
+    if (isQuotaReached) {
+      setDuplicateWarning(`⛔ ${player.name} has already bowled ${bStat?.overs || bOversCompleted} overs (max ${maxBowlerLimit} ${maxBowlerLimit === 1 ? 'over' : 'overs'} limit) and cannot bowl!`);
+      Alert.alert(
+        'Max Overs Quota Reached',
+        `${player.name} has already bowled ${bStat?.overs || bOversCompleted} overs (max limit is ${maxBowlerLimit} ${maxBowlerLimit === 1 ? 'over' : 'overs'} per bowler). Please select a different bowler.`
+      );
+      return;
+    }
     if (lastOverBowlerName && player.name.trim().toLowerCase() === lastOverBowlerName.trim().toLowerCase()) {
       setDuplicateWarning(`⛔ ${player.name} bowled the previous over and cannot bowl consecutive overs!`);
       Alert.alert(
@@ -522,7 +575,6 @@ export function PlayerSelectionModal({
       );
       return;
     }
-    const pKey = player.name.trim().toLowerCase();
     setBowlerName(player.name);
 
     // Ensure player is placed inside the bowling team bucket and removed from master & batting team
@@ -624,6 +676,18 @@ export function PlayerSelectionModal({
       }
       handleSetNonStriker(player);
     } else if (target === 'bowler') {
+      const pKey = player.name.trim().toLowerCase();
+      const bStat = bowlerStats[pKey];
+      const bOversCompleted = bStat ? parseInt((bStat.overs || '0').split('.')[0], 10) : 0;
+      const isQuotaReached = !isInitialSetup && maxBowlerLimit !== undefined && maxBowlerLimit < Infinity && bOversCompleted >= maxBowlerLimit;
+      if (isQuotaReached) {
+        setDuplicateWarning(`⛔ ${player.name} has already bowled ${bStat?.overs || bOversCompleted} overs (max limit is ${maxBowlerLimit} ${maxBowlerLimit === 1 ? 'over' : 'overs'} per bowler).`);
+        Alert.alert(
+          'Max Overs Quota Reached',
+          `${player.name} has already bowled ${bStat?.overs || bOversCompleted} overs (max limit is ${maxBowlerLimit} ${maxBowlerLimit === 1 ? 'over' : 'overs'} per bowler). Please select a different bowler.`
+        );
+        return;
+      }
       if (lastOverBowlerName && player.name.trim().toLowerCase() === lastOverBowlerName.trim().toLowerCase()) {
         setDuplicateWarning(`⛔ ${player.name} bowled the previous over and cannot bowl consecutive overs!`);
         Alert.alert(
@@ -935,283 +999,299 @@ export function PlayerSelectionModal({
                 },
               ]}
             >
-              <View style={styles.zoneHeader}>
-                <ThemedText style={[styles.zoneTitle, { color: textPrimary }]}>
-                  Available Pool
-                </ThemedText>
+              <Pressable
+                onPress={() => setIsPoolExpanded((prev) => !prev)}
+                style={styles.zoneHeader}
+                hitSlop={4}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <ThemedText style={[styles.zoneTitle, { color: textPrimary }]}>
+                    Available Pool
+                  </ThemedText>
+                  <Ionicons
+                    name={isPoolExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={theme.primary}
+                  />
+                </View>
                 <ThemedText style={[styles.zoneMeta, { color: textSecondary }]}>
-                  {(buckets.master || []).length} unassigned
+                  {(buckets.master || []).length} unassigned · {isPoolExpanded ? 'Collapse' : 'Expand'}
                 </ThemedText>
-              </View>
+              </Pressable>
 
-              {/* Clean Search Input */}
-              <View style={[styles.searchBar, { backgroundColor: zoneBg, borderColor }]}>
-                <Ionicons
-                  name={queryLooksLikePhone ? 'call-outline' : 'search-outline'}
-                  size={14}
-                  color={textSecondary}
-                />
-                <TextInput
-                  value={searchQuery}
-                  onChangeText={(t) => {
-                    setSearchQuery(t);
-                    if (duplicateWarning) setDuplicateWarning(null);
-                  }}
-                  placeholder="Search player name or phone..."
-                  placeholderTextColor={textMuted}
-                  style={[
-                    styles.searchInput,
-                    { color: textPrimary },
-                    Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
-                  ]}
-                  returnKeyType="search"
-                />
-                <Pressable
-                  onPress={() => openAddPlayer(searchQuery)}
-                  accessibilityLabel="Add player"
-                  style={[styles.addBtn, { backgroundColor: theme.primary }]}
-                >
-                  <Ionicons name="person-add" size={13} color="#ffffff" />
-                </Pressable>
-              </View>
-
-              {/* Suggestions */}
-              {matchPlayerResults.length > 0 && searchQuery.trim().length > 0 && (
-                <View style={styles.suggestList}>
-                  {matchPlayerResults.map(({ player: p, location, locationLabel, isOut, outReason }) => (
-                    <Pressable
-                      key={p.id}
-                      onPress={() => setSelectedActionPlayer({ player: p, bucketId: location })}
+              {isPoolExpanded && (
+                <>
+                  {/* Clean Search Input */}
+                  <View style={[styles.searchBar, { backgroundColor: zoneBg, borderColor }]}>
+                    <Ionicons
+                      name={queryLooksLikePhone ? 'call-outline' : 'search-outline'}
+                      size={14}
+                      color={textSecondary}
+                    />
+                    <TextInput
+                      value={searchQuery}
+                      onChangeText={(t) => {
+                        setSearchQuery(t);
+                        if (duplicateWarning) setDuplicateWarning(null);
+                      }}
+                      placeholder="Search player name or phone..."
+                      placeholderTextColor={textMuted}
                       style={[
-                        styles.suggestRow,
-                        { backgroundColor: zoneBg, borderColor: isOut ? '#EF444440' : borderColor },
-                        isOut && { opacity: 0.65 },
+                        styles.searchInput,
+                        { color: textPrimary },
+                        Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
                       ]}
+                      returnKeyType="search"
+                    />
+                    <Pressable
+                      onPress={() => openAddPlayer(searchQuery)}
+                      accessibilityLabel="Add player"
+                      style={[styles.addBtn, { backgroundColor: theme.primary }]}
                     >
-                      <Image source={avatarSourceFor(p)} style={[styles.avatarSmall, isOut && { opacity: 0.6 }]} contentFit="cover" />
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <ThemedText
-                          style={[
-                            styles.suggestName,
-                            { color: isOut ? textMuted : textPrimary },
-                            isOut && { textDecorationLine: 'line-through' },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {p.name}
-                        </ThemedText>
-                        <ThemedText
-                          style={[
-                            styles.suggestMeta,
-                            { color: isOut ? '#EF4444' : textSecondary },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {isOut ? `⛔ OUT (${outReason}) · ${locationLabel}` : `${p.phone || 'No phone'} · ${locationLabel}`}
-                        </ThemedText>
-                      </View>
-                      <Ionicons name={isOut ? "lock-closed" : "chevron-forward"} size={14} color={isOut ? '#EF4444' : textMuted} />
+                      <Ionicons name="person-add" size={13} color="#ffffff" />
                     </Pressable>
-                  ))}
-                </View>
-              )}
+                  </View>
 
-              {savedPlayerResults.length > 0 && (
-                <View style={styles.suggestList}>
-                  {savedPlayerResults.map((s) => {
-                    const outCheck = isPlayerPermanentlyOut(s.name);
-                    return (
-                      <Pressable
-                        key={s.id}
-                        onPress={() => {
-                          if (outCheck.isOut) {
-                            setDuplicateWarning(`⛔ ${s.name} was already dismissed (OUT: ${outCheck.reason}) in this match and cannot be added back!`);
-                            return;
-                          }
-                          commitPlayer({ name: s.name, phone: s.phone, avatarUrl: s.avatarUrl });
-                        }}
-                        style={[
-                          styles.suggestRow,
-                          { backgroundColor: zoneBg, borderColor: outCheck.isOut ? '#EF444440' : borderColor },
-                          outCheck.isOut && { opacity: 0.55 },
-                        ]}
-                      >
-                        <Image source={avatarSourceFor(s)} style={[styles.avatarSmall, outCheck.isOut && { opacity: 0.6 }]} contentFit="cover" />
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <ThemedText
-                            style={[
-                              styles.suggestName,
-                              { color: outCheck.isOut ? textMuted : textPrimary },
-                              outCheck.isOut && { textDecorationLine: 'line-through' },
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {s.name}
-                          </ThemedText>
-                          <ThemedText
-                            style={[
-                              styles.suggestMeta,
-                              { color: outCheck.isOut ? '#EF4444' : textSecondary },
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {outCheck.isOut
-                              ? `⛔ OUT (${outCheck.reason}) · Dismissed in match`
-                              : `${s.phone || 'Saved Player'} · Tap to Add`}
-                          </ThemedText>
-                        </View>
-                        <Ionicons
-                          name={outCheck.isOut ? 'lock-closed' : 'add-circle'}
-                          size={16}
-                          color={outCheck.isOut ? '#EF4444' : theme.primary}
-                        />
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              )}
-
-              {directoryResults.length > 0 && (
-                <View style={styles.suggestList}>
-                  {directoryResults.map((s) => {
-                    const conn = getFoFConnection(s.phone || '');
-                    const outCheck = isPlayerPermanentlyOut(s.name);
-                    return (
-                      <Pressable
-                        key={s.id}
-                        onPress={() => {
-                          if (outCheck.isOut) {
-                            setDuplicateWarning(`⛔ ${s.name} was already dismissed (OUT: ${outCheck.reason}) in this match and cannot be added back!`);
-                            return;
-                          }
-                          commitPlayer({ name: s.name, phone: s.phone, avatarUrl: s.avatar });
-                        }}
-                        style={[
-                          styles.suggestRow,
-                          { backgroundColor: zoneBg, borderColor: outCheck.isOut ? '#EF444440' : borderColor },
-                          outCheck.isOut && { opacity: 0.55 },
-                        ]}
-                      >
-                        {s.avatar && (s.avatar.startsWith('http') || s.avatar.startsWith('data:') || s.avatar.startsWith('file:') || s.avatar.startsWith('blob:')) ? (
-                          <Image source={{ uri: s.avatar }} style={[styles.avatarSmall, outCheck.isOut && { opacity: 0.6 }]} contentFit="cover" />
-                        ) : (
-                          <View style={[styles.avatarSmall, { backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center' }]}>
-                            <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
-                              {getTwoLetterLogo(s.name)}
+                  {/* Suggestions */}
+                  {matchPlayerResults.length > 0 && searchQuery.trim().length > 0 && (
+                    <View style={styles.suggestList}>
+                      {matchPlayerResults.map(({ player: p, location, locationLabel, isOut, outReason }) => (
+                        <Pressable
+                          key={p.id}
+                          onPress={() => setSelectedActionPlayer({ player: p, bucketId: location })}
+                          style={[
+                            styles.suggestRow,
+                            { backgroundColor: zoneBg, borderColor: isOut ? '#EF444440' : borderColor },
+                            isOut && { opacity: 0.65 },
+                          ]}
+                        >
+                          <Image source={avatarSourceFor(p)} style={[styles.avatarSmall, isOut && { opacity: 0.6 }]} contentFit="cover" />
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <ThemedText
+                              style={[
+                                styles.suggestName,
+                                { color: isOut ? textMuted : textPrimary },
+                                isOut && { textDecorationLine: 'line-through' },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {p.name}
+                            </ThemedText>
+                            <ThemedText
+                              style={[
+                                styles.suggestMeta,
+                                { color: isOut ? '#EF4444' : textSecondary },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {isOut ? `⛔ OUT (${outReason}) · ${locationLabel}` : `${p.phone || 'No phone'} · ${locationLabel}`}
                             </ThemedText>
                           </View>
-                        )}
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <ThemedText
+                          <Ionicons name={isOut ? "lock-closed" : "chevron-forward"} size={14} color={isOut ? '#EF4444' : textMuted} />
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+
+                  {savedPlayerResults.length > 0 && (
+                    <View style={styles.suggestList}>
+                      {savedPlayerResults.map((s) => {
+                        const outCheck = isPlayerPermanentlyOut(s.name);
+                        return (
+                          <Pressable
+                            key={s.id}
+                            onPress={() => {
+                              if (outCheck.isOut) {
+                                setDuplicateWarning(`⛔ ${s.name} was already dismissed (OUT: ${outCheck.reason}) in this match and cannot be added back!`);
+                                return;
+                              }
+                              commitPlayer({ name: s.name, phone: s.phone, avatarUrl: s.avatarUrl });
+                            }}
                             style={[
-                              styles.suggestName,
-                              { color: outCheck.isOut ? textMuted : textPrimary },
-                              outCheck.isOut && { textDecorationLine: 'line-through' },
+                              styles.suggestRow,
+                              { backgroundColor: zoneBg, borderColor: outCheck.isOut ? '#EF444440' : borderColor },
+                              outCheck.isOut && { opacity: 0.55 },
                             ]}
-                            numberOfLines={1}
                           >
-                            {s.name}
-                          </ThemedText>
-                          <ThemedText
+                            <Image source={avatarSourceFor(s)} style={[styles.avatarSmall, outCheck.isOut && { opacity: 0.6 }]} contentFit="cover" />
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <ThemedText
+                                style={[
+                                  styles.suggestName,
+                                  { color: outCheck.isOut ? textMuted : textPrimary },
+                                  outCheck.isOut && { textDecorationLine: 'line-through' },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {s.name}
+                              </ThemedText>
+                              <ThemedText
+                                style={[
+                                  styles.suggestMeta,
+                                  { color: outCheck.isOut ? '#EF4444' : textSecondary },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {outCheck.isOut
+                                  ? `⛔ OUT (${outCheck.reason}) · Dismissed in match`
+                                  : `${s.phone || 'Saved Player'} · Tap to Add`}
+                              </ThemedText>
+                            </View>
+                            <Ionicons
+                              name={outCheck.isOut ? 'lock-closed' : 'add-circle'}
+                              size={16}
+                              color={outCheck.isOut ? '#EF4444' : theme.primary}
+                            />
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  {directoryResults.length > 0 && (
+                    <View style={styles.suggestList}>
+                      {directoryResults.map((s) => {
+                        const conn = getFoFConnection(s.phone || '');
+                        const outCheck = isPlayerPermanentlyOut(s.name);
+                        return (
+                          <Pressable
+                            key={s.id}
+                            onPress={() => {
+                              if (outCheck.isOut) {
+                                setDuplicateWarning(`⛔ ${s.name} was already dismissed (OUT: ${outCheck.reason}) in this match and cannot be added back!`);
+                                return;
+                              }
+                              commitPlayer({ name: s.name, phone: s.phone, avatarUrl: s.avatar });
+                            }}
                             style={[
-                              styles.suggestMeta,
-                              { color: outCheck.isOut ? '#EF4444' : textSecondary },
+                              styles.suggestRow,
+                              { backgroundColor: zoneBg, borderColor: outCheck.isOut ? '#EF444440' : borderColor },
+                              outCheck.isOut && { opacity: 0.55 },
                             ]}
-                            numberOfLines={1}
                           >
-                            {outCheck.isOut
-                              ? `⛔ OUT (${outCheck.reason}) · Dismissed in match`
-                              : `${s.phone} · ${conn.degreeBadgeText}`}
-                          </ThemedText>
-                        </View>
-                        <Ionicons
-                          name={outCheck.isOut ? 'lock-closed' : 'add-circle'}
-                          size={16}
-                          color={outCheck.isOut ? '#EF4444' : theme.primary}
-                        />
+                            {s.avatar && (s.avatar.startsWith('http') || s.avatar.startsWith('data:') || s.avatar.startsWith('file:') || s.avatar.startsWith('blob:')) ? (
+                              <Image source={{ uri: s.avatar }} style={[styles.avatarSmall, outCheck.isOut && { opacity: 0.6 }]} contentFit="cover" />
+                            ) : (
+                              <View style={[styles.avatarSmall, { backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center' }]}>
+                                <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                                  {getTwoLetterLogo(s.name)}
+                                </ThemedText>
+                              </View>
+                            )}
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <ThemedText
+                                style={[
+                                  styles.suggestName,
+                                  { color: outCheck.isOut ? textMuted : textPrimary },
+                                  outCheck.isOut && { textDecorationLine: 'line-through' },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {s.name}
+                              </ThemedText>
+                              <ThemedText
+                                style={[
+                                  styles.suggestMeta,
+                                  { color: outCheck.isOut ? '#EF4444' : textSecondary },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {outCheck.isOut
+                                  ? `⛔ OUT (${outCheck.reason}) · Dismissed in match`
+                                  : `${s.phone} · ${conn.degreeBadgeText}`}
+                              </ThemedText>
+                            </View>
+                            <Ionicons
+                              name={outCheck.isOut ? 'lock-closed' : 'add-circle'}
+                              size={16}
+                              color={outCheck.isOut ? '#EF4444' : theme.primary}
+                            />
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  {exactMatchInPool && (
+                    <View style={styles.warnRow}>
+                      <Ionicons name="checkmark-circle" size={12} color={theme.primary} />
+                      <ThemedText style={[styles.warnText, { color: theme.primary }]}>
+                        {`${exactMatchInPool.name} is in match squad.`}
+                      </ThemedText>
+                    </View>
+                  )}
+
+                  {searchQuery.trim().length >= 3 &&
+                    !exactMatchInPool &&
+                    matchPlayerResults.length === 0 &&
+                    savedPlayerResults.length === 0 &&
+                    directoryResults.length === 0 && (
+                      <Pressable
+                        onPress={() => openAddPlayer(searchQuery)}
+                        style={[styles.notFound, { borderColor: theme.primary + '55' }]}
+                      >
+                        <Ionicons name="person-add" size={13} color={theme.primary} />
+                        <ThemedText style={[styles.notFoundText, { color: theme.primary }]} numberOfLines={1}>
+                          {queryLooksLikePhone
+                            ? `Add player with ${searchQuery.trim()}`
+                            : `Add “${searchQuery.trim()}” as new player`}
+                        </ThemedText>
+                        <Ionicons name="arrow-forward" size={13} color={theme.primary} />
                       </Pressable>
-                    );
-                  })}
-                </View>
+                    )}
+
+                  {/* Pool Chips */}
+                  <View style={styles.bubbleWrap}>
+                    {displayedMaster.map((player) => {
+                      const outInfo = isPlayerPermanentlyOut(player.name);
+                      return (
+                        <CleanPlayerChip
+                          key={player.id}
+                          player={player}
+                          bucketId="master"
+                          cardBg={zoneBg}
+                          borderColor={borderColor}
+                          textPrimary={textPrimary}
+                          textSecondary={textSecondary}
+                          theme={theme}
+                          isDismissed={outInfo.isOut}
+                          dismissalReason={outInfo.reason}
+                          roleLabel={outInfo.isOut ? `OUT (${outInfo.reason})` : undefined}
+                          onTap={() => setSelectedActionPlayer({ player, bucketId: 'master' })}
+                          onRemove={() => handleDeletePlayer(player)}
+                          onQuickAssignA={() => {
+                            if (isTeamABatting && outInfo.isOut) {
+                              setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot be added to batting team!`);
+                              return;
+                            }
+                            moveToBucket(player, 'master', 'teamA');
+                          }}
+                          onQuickAssignB={() => {
+                            if (!isTeamABatting && outInfo.isOut) {
+                              setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot be added to batting team!`);
+                              return;
+                            }
+                            moveToBucket(player, 'master', 'teamB');
+                          }}
+                          codeA={codeA}
+                          codeB={codeB}
+                          dragX={dragX}
+                          dragY={dragY}
+                          onDragStart={handleDragStart}
+                          onDragUpdate={handleDragUpdate}
+                          onDragEnd={handleDragEnd}
+                          isDragging={draggingPlayer?.id === player.id}
+                        />
+                      );
+                    })}
+                    {displayedMaster.length === 0 && !searchQuery.trim() && (
+                      <ThemedText style={[styles.emptyLabel, { color: textMuted }]}>
+                        No unassigned players. Add new players above.
+                      </ThemedText>
+                    )}
+                  </View>
+                </>
               )}
-
-              {exactMatchInPool && (
-                <View style={styles.warnRow}>
-                  <Ionicons name="checkmark-circle" size={12} color={theme.primary} />
-                  <ThemedText style={[styles.warnText, { color: theme.primary }]}>
-                    {`${exactMatchInPool.name} is in match squad.`}
-                  </ThemedText>
-                </View>
-              )}
-
-              {searchQuery.trim().length >= 3 &&
-                !exactMatchInPool &&
-                matchPlayerResults.length === 0 &&
-                savedPlayerResults.length === 0 &&
-                directoryResults.length === 0 && (
-                  <Pressable
-                    onPress={() => openAddPlayer(searchQuery)}
-                    style={[styles.notFound, { borderColor: theme.primary + '55' }]}
-                  >
-                    <Ionicons name="person-add" size={13} color={theme.primary} />
-                    <ThemedText style={[styles.notFoundText, { color: theme.primary }]} numberOfLines={1}>
-                      {queryLooksLikePhone
-                        ? `Add player with ${searchQuery.trim()}`
-                        : `Add “${searchQuery.trim()}” as new player`}
-                    </ThemedText>
-                    <Ionicons name="arrow-forward" size={13} color={theme.primary} />
-                  </Pressable>
-                )}
-
-              {/* Pool Chips */}
-              <View style={styles.bubbleWrap}>
-                {displayedMaster.map((player) => {
-                  const outInfo = isPlayerPermanentlyOut(player.name);
-                  return (
-                    <CleanPlayerChip
-                      key={player.id}
-                      player={player}
-                      bucketId="master"
-                      cardBg={zoneBg}
-                      borderColor={borderColor}
-                      textPrimary={textPrimary}
-                      textSecondary={textSecondary}
-                      theme={theme}
-                      isDismissed={outInfo.isOut}
-                      dismissalReason={outInfo.reason}
-                      roleLabel={outInfo.isOut ? `OUT (${outInfo.reason})` : undefined}
-                      onTap={() => setSelectedActionPlayer({ player, bucketId: 'master' })}
-                      onQuickAssignA={() => {
-                        if (isTeamABatting && outInfo.isOut) {
-                          setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot be added to batting team!`);
-                          return;
-                        }
-                        moveToBucket(player, 'master', 'teamA');
-                      }}
-                      onQuickAssignB={() => {
-                        if (!isTeamABatting && outInfo.isOut) {
-                          setDuplicateWarning(`⛔ ${player.name} is OUT (${outInfo.reason}) and cannot be added to batting team!`);
-                          return;
-                        }
-                        moveToBucket(player, 'master', 'teamB');
-                      }}
-                      codeA={codeA}
-                      codeB={codeB}
-                      dragX={dragX}
-                      dragY={dragY}
-                      onDragStart={handleDragStart}
-                      onDragUpdate={handleDragUpdate}
-                      onDragEnd={handleDragEnd}
-                      isDragging={draggingPlayer?.id === player.id}
-                    />
-                  );
-                })}
-                {displayedMaster.length === 0 && !searchQuery.trim() && (
-                  <ThemedText style={[styles.emptyLabel, { color: textMuted }]}>
-                    No unassigned players. Add new players above.
-                  </ThemedText>
-                )}
-              </View>
             </View>
 
             {/* ── Team A Zone ── */}
@@ -1297,6 +1377,8 @@ export function PlayerSelectionModal({
               onDragEnd={handleDragEnd}
               draggingId={draggingPlayer?.id ?? null}
             />
+
+            <View style={{ height: 100 }} />
           </ScrollView>
 
           {/* Clean Footer Bar */}
@@ -1316,8 +1398,8 @@ export function PlayerSelectionModal({
                     ? `Continue to Match (${totalAssigned})`
                     : 'Continue to Match'
                   : totalAssigned > 0
-                  ? `Apply Lineup (${totalAssigned})`
-                  : 'Confirm & Resume'}
+                    ? `Apply Lineup (${totalAssigned})`
+                    : 'Confirm & Resume'}
               </ThemedText>
             </Pressable>
           </View>
@@ -1375,6 +1457,10 @@ export function PlayerSelectionModal({
               }}
               onRemoveFromTeam={(p, from) => {
                 moveToBucket(p, from, 'master');
+                setSelectedActionPlayer(null);
+              }}
+              onDeletePlayer={(p) => {
+                handleDeletePlayer(p);
                 setSelectedActionPlayer(null);
               }}
             />
@@ -1877,7 +1963,7 @@ function CleanPlayerChip({
   const pan = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(!isDismissed)
+        .enabled(!isDismissed && !isQuotaReached)
         .minDistance(2)
         .onStart((e) => {
           dragX.value = e.absoluteX;
@@ -1892,7 +1978,7 @@ function CleanPlayerChip({
         .onEnd((e) => {
           runOnJS(onDragEnd)(player, bucketId, e.absoluteX, e.absoluteY);
         }),
-    [player.id, bucketId, isDismissed]
+    [player.id, bucketId, isDismissed, isQuotaReached]
   );
 
   const isMaster = bucketId === 'master';
@@ -1913,16 +1999,21 @@ function CleanPlayerChip({
       >
         <Image source={avatarSourceFor(player)} style={[styles.avatarSmall, (isDismissed || isQuotaReached) && { opacity: 0.6 }]} contentFit="cover" />
         <View style={{ flexShrink: 1 }}>
-          <ThemedText
-            style={[
-              styles.chipName,
-              { color: isDismissed ? textSecondary : textPrimary },
-              isDismissed && { textDecorationLine: 'line-through' },
-            ]}
-            numberOfLines={1}
-          >
-            {player.name}
-          </ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+            <ThemedText
+              style={[
+                styles.chipName,
+                { color: isDismissed ? textSecondary : textPrimary },
+                isDismissed && { textDecorationLine: 'line-through' },
+              ]}
+              numberOfLines={1}
+            >
+              {player.name}
+            </ThemedText>
+            {isQuotaReached && (
+              <Ionicons name="lock-closed" size={10} color="#EF4444" />
+            )}
+          </View>
           {roleLabel && (
             <ThemedText
               style={[
@@ -1962,6 +2053,27 @@ function CleanPlayerChip({
                 {codeB || 'B'}
               </ThemedText>
             </Pressable>
+            {onRemove && (
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onRemove();
+                }}
+                hitSlop={6}
+                style={[
+                  styles.chipRemoveBtn,
+                  {
+                    backgroundColor: '#EF444415',
+                    borderRadius: 9999,
+                    padding: 2,
+                    marginLeft: 2,
+                  },
+                ]}
+                accessibilityLabel="Remove player"
+              >
+                <Ionicons name="close" size={11} color="#EF4444" />
+              </Pressable>
+            )}
           </View>
         )}
 
@@ -2087,6 +2199,7 @@ function PlayerActionModal({
   onUnretire,
   onMoveToTeam,
   onRemoveFromTeam,
+  onDeletePlayer,
 }: {
   visible: boolean;
   item: { player: Player; bucketId: BucketId };
@@ -2120,6 +2233,7 @@ function PlayerActionModal({
   onUnretire: (p: Player) => void;
   onMoveToTeam: (p: Player, from: BucketId, to: BucketId) => void;
   onRemoveFromTeam: (p: Player, from: BucketId) => void;
+  onDeletePlayer?: (p: Player) => void;
 }) {
   const { player, bucketId } = item;
   const conn = getFoFConnection(player.phone || '');
@@ -2270,6 +2384,18 @@ function PlayerActionModal({
                       <Ionicons name="arrow-forward" size={15} color={textPrimary} />
                       <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
                         Assign to {labelB}
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        if (onDeletePlayer) onDeletePlayer(player);
+                        onClose();
+                      }}
+                      style={[styles.sheetActionItem, { backgroundColor: '#EF444410', borderColor: '#EF444440' }]}
+                    >
+                      <Ionicons name="trash-outline" size={15} color="#EF4444" />
+                      <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_600SemiBold' }]}>
+                        Remove Player from Pool
                       </ThemedText>
                     </Pressable>
                   </>
@@ -2456,8 +2582,8 @@ function PlayerActionModal({
                           backgroundColor: isQuotaReached
                             ? '#EF444410'
                             : isBowler
-                            ? theme.primary + '12'
-                            : (isLastOverBowler ? '#F59E0B10' : zoneBg),
+                              ? theme.primary + '12'
+                              : (isLastOverBowler ? '#F59E0B10' : zoneBg),
                           borderColor: isQuotaReached ? '#EF444444' : isLastOverBowler ? '#F59E0B44' : borderColor,
                           opacity: isQuotaReached || (isLastOverBowler && !isBowler) ? 0.6 : 1,
                         }
@@ -2472,10 +2598,10 @@ function PlayerActionModal({
                         {isQuotaReached
                           ? `Cannot Bowl (Max ${maxBowlerLimit} ov Reached)`
                           : isBowler
-                          ? 'Active Current Bowler'
-                          : isLastOverBowler
-                          ? 'Cannot Bowl (Bowled Previous Over)'
-                          : 'Set as Current Bowler'}
+                            ? 'Active Current Bowler'
+                            : isLastOverBowler
+                              ? 'Cannot Bowl (Bowled Previous Over)'
+                              : 'Set as Current Bowler'}
                       </ThemedText>
                     </Pressable>
 
@@ -2584,6 +2710,18 @@ function PlayerActionModal({
                       <Ionicons name="arrow-forward" size={15} color={textPrimary} />
                       <ThemedText style={[styles.sheetActionText, { color: textPrimary }]}>
                         Assign to {labelB} ({!isTeamABatting ? '🏏 Batting' : '🎯 Bowling'})
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        if (onDeletePlayer) onDeletePlayer(player);
+                        onClose();
+                      }}
+                      style={[styles.sheetActionItem, { backgroundColor: '#EF444410', borderColor: '#EF444440' }]}
+                    >
+                      <Ionicons name="trash-outline" size={15} color="#EF4444" />
+                      <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_600SemiBold' }]}>
+                        Remove Player from Pool
                       </ThemedText>
                     </Pressable>
                   </>
