@@ -20,7 +20,7 @@ export function Chip({ label, selected, onPress, leftIcon, className, disabled }
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected, disabled: !!disabled }}
       className={cn(
-        'flex-row items-center gap-1.5 rounded-full border px-3.5 py-2 active:opacity-80',
+        'flex-row items-center gap-1.5 rounded-full border px-2.5 py-1.5 active:opacity-80',
         selected ? 'border-primary bg-primary' : 'border-border bg-card',
         disabled && 'opacity-40',
         className,
@@ -29,7 +29,7 @@ export function Chip({ label, selected, onPress, leftIcon, className, disabled }
       {leftIcon}
       <Text
         className={cn(
-          'font-medium text-sm',
+          'font-medium text-xs',
           selected ? 'text-primary-foreground' : 'text-foreground',
         )}
       >

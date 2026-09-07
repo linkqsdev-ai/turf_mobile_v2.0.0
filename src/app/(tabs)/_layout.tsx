@@ -32,18 +32,18 @@ function TabIcon({
   return (
     <View
       style={{
-        height: 32,
-        paddingHorizontal: 12,
+        height: 28,
+        paddingHorizontal: 8,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 16,
+        borderRadius: 14,
         backgroundColor: focused ? t.primary + '18' : 'transparent',
       }}
     >
       {lib === 'ion' ? (
-        <Ionicons name={(focused ? name : `${name}-outline`) as any} size={20} color={color} />
+        <Ionicons name={(focused ? name : `${name}-outline`) as any} size={17} color={color} />
       ) : (
-        <MaterialCommunityIcons name={name as any} size={22} color={color} />
+        <MaterialCommunityIcons name={name as any} size={19} color={color} />
       )}
     </View>
   );
@@ -57,7 +57,7 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
       <Text
         numberOfLines={1}
         style={{
-          fontSize: isTurfBook ? 9 : 9.5,
+          fontSize: isTurfBook ? 8 : 8.5,
           // Tab labels are navigation chrome, not headings — semibold at most.
           fontWeight: focused ? '600' : '500',
           letterSpacing: 0.2,
@@ -70,9 +70,9 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
       {focused && (
         <View
           style={{
-            width: 3.5,
-            height: 3.5,
-            borderRadius: 2,
+            width: 3,
+            height: 3,
+            borderRadius: 1.5,
             backgroundColor: t.primary,
             marginTop: 2,
           }}
@@ -98,56 +98,59 @@ function BookTab({ focused }: { focused: boolean }) {
     // 1. Continuous smooth floating up and down
     floatY.value = withRepeat(
       withSequence(
-        withTiming(-7, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
-        withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.sin) })
+        withTiming(-3, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
       ),
       -1,
-      true
+      true,
     );
 
-    // 2. Subtle breathing scale
+    // 2. Subtle organic breathing / scale pulsation
     breathScale.value = withRepeat(
       withSequence(
-        withTiming(1.05, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0.97, { duration: 1300, easing: Easing.inOut(Easing.sin) })
+        withTiming(1.03, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1.0, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,
-      true
+      true,
     );
 
-    // 3. Radial floodlight energy ripple
+    // 3. Radial ripple wave expanding outward
     pulseScale.value = withRepeat(
-      withTiming(1.5, { duration: 1700, easing: Easing.out(Easing.cubic) }),
+      withTiming(1.3, { duration: 2200, easing: Easing.out(Easing.ease) }),
       -1,
-      false
+      false,
     );
     pulseOpacity.value = withRepeat(
-      withTiming(0, { duration: 1700, easing: Easing.out(Easing.cubic) }),
+      withTiming(0, { duration: 2200, easing: Easing.out(Easing.ease) }),
       -1,
-      false
+      false,
     );
-  }, [floatY, breathScale, pulseScale, pulseOpacity]);
+  }, []);
 
   const floatStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: floatY.value }, { scale: breathScale.value }],
+    transform: [
+      { translateY: floatY.value },
+      { scale: breathScale.value },
+    ],
   }));
 
   const haloStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: floatY.value }, { scale: pulseScale.value }],
+    transform: [{ scale: pulseScale.value }],
     opacity: pulseOpacity.value,
   }));
 
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', width: 60, height: 60, overflow: 'visible' }}>
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: 50, height: 50, overflow: 'visible' }}>
       {/* Animated pulsating halo behind the puck */}
       <Animated.View
         pointerEvents="none"
         style={[
           {
             position: 'absolute',
-            width: 52,
-            height: 52,
-            borderRadius: 26,
+            width: 44,
+            height: 44,
+            borderRadius: 22,
             backgroundColor: t.primary,
           },
           haloStyle,
@@ -161,23 +164,23 @@ function BookTab({ focused }: { focused: boolean }) {
           start={{ x: 0.1, y: 0 }}
           end={{ x: 0.9, y: 1 }}
           style={{
-            width: 52,
-            height: 52,
-            borderRadius: 26,
+            width: 44,
+            height: 44,
+            borderRadius: 22,
             alignItems: 'center',
             justifyContent: 'center',
-            borderWidth: 2,
+            borderWidth: 1.5,
             borderColor: focused ? '#82FF78' : t.primary + '65',
             shadowColor: '#00C878',
             shadowOpacity: focused ? 0.55 : 0.25,
-            shadowRadius: 12,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 8,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 3 },
+            elevation: 6,
           }}
         >
           <MaterialCommunityIcons
             name="stadium-variant"
-            size={27}
+            size={22}
             color={focused ? '#04140D' : t.primary}
           />
 
@@ -185,18 +188,18 @@ function BookTab({ focused }: { focused: boolean }) {
           <View
             style={{
               position: 'absolute',
-              top: 3,
-              right: 3,
-              width: 8,
-              height: 8,
-              borderRadius: 4,
+              top: 2,
+              right: 2,
+              width: 7,
+              height: 7,
+              borderRadius: 3.5,
               backgroundColor: '#82FF78',
-              borderWidth: 1.5,
+              borderWidth: 1,
               borderColor: t.card,
               shadowColor: '#82FF78',
               shadowOpacity: 0.8,
-              shadowRadius: 4,
-              elevation: 4,
+              shadowRadius: 3,
+              elevation: 3,
             }}
           />
         </LinearGradient>
@@ -221,19 +224,19 @@ export default function TabLayout() {
         tabBarStyle: {
           position: 'absolute',
           overflow: 'visible',
-          height: (Platform.OS === 'ios' ? 72 : 68) + insets.bottom,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
-          paddingTop: 6,
+          height: (Platform.OS === 'ios' ? 64 : 60) + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 5,
+          paddingTop: 4,
           backgroundColor: t.card,
           borderTopWidth: 1,
           borderTopColor: t.border + '50',
-          borderTopLeftRadius: 26,
-          borderTopRightRadius: 26,
+          borderTopLeftRadius: 22,
+          borderTopRightRadius: 22,
           shadowColor: '#000',
           shadowOpacity: 0.08,
-          shadowRadius: 20,
-          shadowOffset: { width: 0, height: -4 },
-          elevation: 14,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: -3 },
+          elevation: 12,
         },
         tabBarShowLabel: true,
       }}
@@ -271,8 +274,15 @@ export default function TabLayout() {
         name="network"
         options={{
           href: role === 'Player' || isSuperAdmin ? undefined : null,
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="share-social" />,
-          tabBarLabel: ({ focused }) => <TabLabel label="Connect" focused={focused} />,
+          // Players get their booked coaching here rather than the player
+          // network, so the tab is labelled for what it actually holds. Super
+          // Admin still sees the network screen behind the same route.
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused} name={role === 'Player' ? 'school' : 'share-social'} />
+          ),
+          tabBarLabel: ({ focused }) => (
+            <TabLabel label={role === 'Player' ? 'Class' : 'Connect'} focused={focused} />
+          ),
         }}
       />
       {/* Organizer's create surface. Mirrors how the Owner's tab becomes

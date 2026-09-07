@@ -9493,7 +9493,7 @@ const styles = StyleSheet.create({
   },
   scoreBanner: {
     borderRadius: 12,
-    padding: 10,
+    padding: 8,
     position: 'relative',
     overflow: 'hidden',
     ...Shadows.level2,
@@ -9517,8 +9517,8 @@ const styles = StyleSheet.create({
   teamTitle: {
     color: '#ffffff',
     fontFamily: 'Sora_500Medium',
-    fontSize: 17,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 18,
   },
   bannerRightCol: {
     alignItems: 'flex-end',
@@ -9526,12 +9526,12 @@ const styles = StyleSheet.create({
   scoreText: {
     color: '#5D68E8',
     fontFamily: 'Sora_500Medium',
-    fontSize: 26,
-    lineHeight: 30,
+    fontSize: 22,
+    lineHeight: 26,
   },
   oversText: {
     color: '#ffffffaa',
-    fontSize: 12,
+    fontSize: 10.5,
     marginTop: 1,
   },
   bannerStatsRow: {
@@ -9546,25 +9546,25 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   section: {
-    marginTop: 10,
+    marginTop: 8,
     paddingHorizontal: Spacing.containerMargin,
   },
   card: {
     borderRadius: 12,
     borderWidth: 1,
-    padding: 10,
+    padding: 8,
     ...Shadows.level2,
   },
   logBallsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.xs,
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   logBall: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 25,
+    height: 25,
+    borderRadius: 12.5,
     backgroundColor: '#05151e',
     justifyContent: 'center',
     alignItems: 'center',
@@ -9582,9 +9582,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   bowlerDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   tableCard: {
     borderRadius: 12,
@@ -9597,14 +9597,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
+    paddingVertical: 5,
   },
   tableRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: '#00000005',
   },
@@ -9620,17 +9620,17 @@ const styles = StyleSheet.create({
   },
   statCell: {
     alignItems: 'center',
-    width: 32,
+    width: 28,
   },
   statLabel: {
-    fontSize: 9,
+    fontSize: 8,
     opacity: 0.5,
     marginBottom: 2,
   },
   consoleCard: {
     borderRadius: 12,
     borderWidth: 1,
-    padding: 10,
+    padding: 8,
     ...Shadows.level2,
   },
   runsGrid: {
@@ -9641,11 +9641,11 @@ const styles = StyleSheet.create({
   },
   scoringButton: {
     width: '31%',
-    aspectRatio: 1.15,
-    borderRadius: 10,
+    aspectRatio: 1.25,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1.5,
   },
   scoringButtonNormal: {
     borderBottomWidth: 3,

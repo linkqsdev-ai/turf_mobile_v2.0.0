@@ -19,10 +19,10 @@ const buttonVariants = cva(
         destructive: 'bg-destructive active:scale-[0.98]',
       },
       size: {
-        sm: 'h-9 px-4',
-        md: 'h-12 px-5',
-        lg: 'h-14 px-7',
-        icon: 'h-11 w-11 px-0',
+        sm: 'h-8 px-3',
+        md: 'h-10 px-4',
+        lg: 'h-12 px-5',
+        icon: 'h-9 w-9 px-0',
       },
       block: { true: 'w-full', false: '' },
     },
@@ -30,7 +30,7 @@ const buttonVariants = cva(
   },
 );
 
-const labelVariants = cva('font-semibold text-sm', {
+const labelVariants = cva('font-semibold text-xs', {
   variants: {
     variant: {
       primary: 'text-primary-foreground',
@@ -40,7 +40,7 @@ const labelVariants = cva('font-semibold text-sm', {
       ghost: 'text-foreground',
       destructive: 'text-destructive-foreground',
     },
-    size: { sm: 'text-xs', md: 'text-sm', lg: 'text-base', icon: 'text-sm' },
+    size: { sm: 'text-2xs', md: 'text-xs', lg: 'text-sm', icon: 'text-xs' },
   },
   defaultVariants: { variant: 'primary', size: 'md' },
 });

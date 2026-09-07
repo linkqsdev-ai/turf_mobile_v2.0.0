@@ -31,7 +31,7 @@ export const Input = React.forwardRef<TextInput, InputProps>(
         ) : null}
         <View
           className={cn(
-            'h-12 flex-row items-center gap-2 rounded-xl border border-input bg-card px-3.5',
+            'h-10 flex-row items-center gap-2 rounded-xl border border-input bg-card px-3',
             focused && 'border-ring',
             error && 'border-destructive',
           )}
@@ -42,7 +42,7 @@ export const Input = React.forwardRef<TextInput, InputProps>(
             placeholderTextColor={t.mutedForeground}
             selectionColor={t.primary}
             className={cn(
-              'h-full flex-1 font-sans text-base text-foreground',
+              'h-full flex-1 font-sans text-sm text-foreground',
               // strip web focus ring; RN ignores unknown props harmlessly
               'outline-none',
               className,

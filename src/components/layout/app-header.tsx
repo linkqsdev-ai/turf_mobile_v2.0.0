@@ -46,18 +46,18 @@ export function AppHeader({
             <Pressable
               onPress={handleBack}
               hitSlop={10}
-              className="h-10 w-10 items-center justify-center rounded-full bg-card"
+              className="h-8 w-8 items-center justify-center rounded-full bg-card"
             >
-              <Ionicons name="chevron-back" size={22} color={t.foreground} />
+              <Ionicons name="chevron-back" size={18} color={t.foreground} />
             </Pressable>
           ) : (
-            <View className="h-10 w-10" />
+            <View className="h-8 w-8" />
           )}
-          {right ?? <View className="h-10 w-10" />}
+          {right ?? <View className="h-8 w-8" />}
         </View>
         {title ? <Text variant="title">{title}</Text> : null}
         {subtitle ? (
-          <Text variant="subtle" className="mt-1">
+          <Text variant="subtle" className="mt-0.5">
             {subtitle}
           </Text>
         ) : null}
@@ -68,19 +68,19 @@ export function AppHeader({
   return (
     <View
       className={cn(
-        'h-header flex-row items-center px-2',
+        'h-11 flex-row items-center px-2',
         !transparent && 'border-b border-border bg-background',
         className,
       )}
     >
-      <View className="w-12 items-start">
+      <View className="w-10 items-start">
         {canBack ? (
           <Pressable
             onPress={handleBack}
             hitSlop={10}
-            className="h-10 w-10 items-center justify-center rounded-full active:bg-muted"
+            className="h-8 w-8 items-center justify-center rounded-full active:bg-muted"
           >
-            <Ionicons name="chevron-back" size={24} color={t.foreground} />
+            <Ionicons name="chevron-back" size={19} color={t.foreground} />
           </Pressable>
         ) : null}
       </View>

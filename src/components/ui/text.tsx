@@ -12,17 +12,17 @@ const textVariants = cva('text-foreground', {
   variants: {
     variant: {
       // ── parent headings (bold) ──────────────────────────────────────────
-      display: 'font-extrabold text-4xl text-foreground',
-      title: 'font-bold text-2xl text-foreground',
-      heading: 'font-bold text-xl text-foreground',
+      display: 'font-extrabold text-2xl text-foreground',
+      title: 'font-bold text-lg text-foreground',
+      heading: 'font-bold text-base text-foreground',
       // ── nested headings & body (never bold) ─────────────────────────────
-      subheading: 'font-medium text-base text-foreground',
-      body: 'font-sans text-base text-foreground',
-      callout: 'font-medium text-sm text-foreground',
-      subtle: 'font-sans text-sm text-muted-foreground',
-      caption: 'font-medium text-xs text-muted-foreground',
+      subheading: 'font-medium text-sm text-foreground',
+      body: 'font-sans text-sm text-foreground',
+      callout: 'font-medium text-xs text-foreground',
+      subtle: 'font-sans text-xs text-muted-foreground',
+      caption: 'font-medium text-2xs text-muted-foreground',
       overline: 'font-semibold text-2xs uppercase tracking-widest text-muted-foreground',
-      link: 'font-medium text-sm text-primary',
+      link: 'font-medium text-xs text-primary',
     },
   },
   defaultVariants: { variant: 'body' },
