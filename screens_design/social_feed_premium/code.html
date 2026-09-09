@@ -1,0 +1,339 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Pro Athlete OS - Social Feed</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#ffc703",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed": "#ffdf94",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#191c1e",
+                        "surface-bright": "#f7f9fb",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "on-primary-fixed": "#001b3d",
+                        "surface": "#f7f9fb",
+                        "surface-dim": "#d8dadc",
+                        "primary-fixed-dim": "#b1c7f2",
+                        "on-secondary-fixed-variant": "#594400",
+                        "tertiary-fixed": "#d3e4fe",
+                        "surface-tint": "#495f84",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-surface-variant": "#44474e",
+                        "on-error-container": "#93000a",
+                        "on-background": "#191c1e",
+                        "secondary": "#765b00",
+                        "on-primary-fixed-variant": "#31476b",
+                        "tertiary-container": "#0b1c30",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary-fixed": "#d6e3ff",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#000000",
+                        "outline-variant": "#c4c6cf",
+                        "surface-container": "#eceef0",
+                        "surface-variant": "#e0e3e5",
+                        "inverse-primary": "#b1c7f2",
+                        "surface-container-low": "#f2f4f6",
+                        "outline": "#74777f",
+                        "on-secondary-container": "#6e5400",
+                        "on-secondary-fixed": "#251a00",
+                        "on-primary-container": "#6f84ac",
+                        "on-error": "#ffffff",
+                        "background": "#f7f9fb",
+                        "primary": "#000000",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "on-tertiary-container": "#75859d",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#2d3133",
+                        "surface-container-high": "#e6e8ea",
+                        "secondary-fixed-dim": "#f5bf00",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "primary-container": "#001b3d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem",
+                        "card": "32px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "margin": "32px",
+                        "lg": "24px",
+                        "base": "4px",
+                        "2xl": "64px",
+                        "xl": "40px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "label-md": ["Hanken Grotesk"],
+                        "body-sm": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        body {
+            font-family: 'Hanken Grotesk', sans-serif;
+            background-color: #f7f9fb;
+            color: #191c1e;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .card-shadow {
+            box-shadow: 0px 4px 20px rgba(0, 27, 61, 0.08);
+        }
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-24 lg:pb-0 lg:pl-[280px]">
+<!-- Navigation Drawer (Desktop) -->
+<aside class="fixed left-0 top-0 h-screen z-40 hidden lg:flex flex-col h-full w-[280px] rounded-r-full bg-primary-container text-on-primary-container shadow-xl transition-all duration-300 ease-in-out">
+<div class="flex flex-col items-start px-gutter py-xl">
+<div class="w-16 h-16 rounded-full bg-secondary-container mb-md flex items-center justify-center overflow-hidden">
+<img alt="Marcus V." class="w-full h-full object-cover" data-alt="A professional headshot of a focused male athlete with sharp features and a confident expression. The lighting is dramatic and technical, using high-contrast studio shadows to emphasize muscle definition and athletic form. The overall aesthetic is clean and premium, consistent with a high-performance sports management platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJ2NtSg5qVYGy9lT6IRzAK-l1-ukVEObSr3_NkJDEK-tHAFzTZ2ZOWX3XnF3Fn85k8vRuO-ZodG6ujI2VokHHzZTckPGedc_6ZQQvPf2HRzZTHHBWju09-n2v5L2wvtOC58U0bMRQwTGzpcfrMXBH0QPPcjN_XoYdOSd15txR14wfO4Roeh9sEGMl9qkDwH8ijF5t-IxxWs2s-nFqrcwI-2gxEHiad5Jac45N1wihefot7VcFNhe2Q1HVqLtmB2ep2_8I60LnhfQ4">
+</div>
+<h2 class="font-headline-md text-headline-md text-white">Marcus V.</h2>
+<p class="font-label-md text-label-md text-secondary-container">Elite Tier Athlete</p>
+<span class="mt-xs inline-block px-sm py-1 bg-white/10 rounded-full text-[10px] font-bold uppercase tracking-wider text-white">Verified Pro</span>
+</div>
+<nav class="flex-1 mt-md">
+<a class="flex items-center text-on-primary-container/70 mx-md my-xs px-md py-sm hover:bg-primary/20 transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined mr-md">analytics</span> Performance Hub
+            </a>
+<a class="flex items-center bg-secondary-container text-on-secondary-container rounded-full mx-md my-xs px-md py-sm font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined mr-md">rss_feed</span> Social Feed
+            </a>
+<a class="flex items-center text-on-primary-container/70 mx-md my-xs px-md py-sm hover:bg-primary/20 transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined mr-md">leaderboard</span> Team Rankings
+            </a>
+<a class="flex items-center text-on-primary-container/70 mx-md my-xs px-md py-sm hover:bg-primary/20 transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined mr-md">psychology</span> Training AI
+            </a>
+<a class="flex items-center text-on-primary-container/70 mx-md my-xs px-md py-sm hover:bg-primary/20 transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined mr-md">settings</span> Settings
+            </a>
+</nav>
+</aside>
+<!-- Top App Bar -->
+<header class="w-full top-0 sticky z-30 bg-surface-container-lowest/80 backdrop-blur-md shadow-sm">
+<div class="flex items-center justify-between px-gutter py-md w-full max-w-7xl mx-auto">
+<div class="flex items-center gap-md">
+<div class="lg:hidden w-10 h-10 rounded-full overflow-hidden bg-surface-container">
+<img alt="Avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEFUz1mIPFVg-S5ms3U95LAn32EfihBygQr9O2OGkBefSXf8Zy_Hrsk8UJIyBcfJK1Y9NviYnCho6UYv9lW2YokIXbb-zqayEkwoi_9nR-p3MbZ-FUgW85YGPWsPxI7cI6h2P0WVzEi79dMxU2keD-vBoxGUKfvN-I99G0PP9lQCZCM8RNMiubO9cWKSfIzI37YN0IxN1T_NxYGzdmgZFstA08nDAQLYA1pFZxm1o0Qpyk9ffO2v9SZ9fK22B5r_c9ZX9TEObp9as">
+</div>
+<h1 class="font-headline-md text-headline-md font-bold tracking-tight text-primary">PRO ATHLETE OS</h1>
+</div>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-primary p-sm rounded-full hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95">notifications</button>
+<button class="material-symbols-outlined text-primary p-sm rounded-full hover:bg-surface-container-low transition-colors cursor-pointer active:scale-95">search</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="max-w-7xl mx-auto px-gutter py-xl">
+<!-- Welcome Header -->
+<div class="mb-xl">
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary">
+                Network <span class="text-secondary-container">Activity</span>
+</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl mt-sm">
+                Stay updated with the latest achievements, match highlights, and global rankings from the professional athlete ecosystem.
+            </p>
+</div>
+<div class="bento-grid">
+<!-- Feed Item 1: Ranking Update (Large Bento) -->
+<div class="col-span-12 md:col-span-8 bg-primary-container text-white rounded-[32px] p-xl flex flex-col md:flex-row items-center gap-xl card-shadow overflow-hidden relative">
+<div class="z-10 flex-1">
+<div class="inline-flex items-center gap-sm bg-white/10 px-md py-xs rounded-full mb-md">
+<span class="material-symbols-outlined text-secondary-container" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="font-label-md text-label-md uppercase tracking-widest">Global Milestone</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg mb-md leading-tight">
+                        Marcus V. just climbed to Rank #3 in the Premier League
+                    </h3>
+<div class="flex items-center gap-xl mt-lg">
+<div class="flex flex-col">
+<span class="text-white/60 font-label-md text-label-md">PREVIOUS</span>
+<span class="text-headline-md font-headline-md">#7</span>
+</div>
+<div class="h-10 w-[1px] bg-white/20"></div>
+<div class="flex flex-col">
+<span class="text-secondary-container font-label-md text-label-md">CURRENT</span>
+<span class="text-headline-md font-headline-md text-secondary-container">#3</span>
+</div>
+</div>
+<div class="flex gap-md mt-xl">
+<button class="bg-secondary-container text-on-secondary-container font-label-md text-label-md px-lg py-md rounded-full font-bold hover:opacity-90 transition-opacity">VIEW PROFILE</button>
+<button class="bg-white/10 text-white font-label-md text-label-md px-lg py-md rounded-full font-bold hover:bg-white/20 transition-all border border-white/20">CONGRATULATE</button>
+</div>
+</div>
+<div class="relative w-full md:w-1/3 flex justify-center">
+<div class="absolute inset-0 bg-secondary-container/10 blur-[60px] rounded-full"></div>
+<img alt="Achievement Trophy" class="w-64 h-64 object-contain drop-shadow-2xl z-10 animate-pulse-slow" src="https://lh3.googleusercontent.com/aida/AP1WRLu9fRgJLZAl6fWwgcGThUV3l8SlnovOuF1bt8AfBU1Yan4fgV_hHQuWvZWkYK3JMcwvOSKgOXIwdVgzJ8eiGlQ_dOCEyT34IPZktiGZOABBb3heBzieath64b0FT8vBTCU_j29AUQkb6jnDEODZWrxJMOd5SqP9EdUVgIzs6palhPl6UKJ2QwC3PnajFql1rzWCxbmU7UIVAIsQTmP9aiJFNdZX4oTXRsQ3wBTi7PthFBo9M5cEw2SzQZw">
+</div>
+</div>
+<!-- Feed Item 2: Team Victory (Square Bento) -->
+<div class="col-span-12 md:col-span-4 bg-white border border-outline-variant rounded-[32px] p-lg flex flex-col justify-between card-shadow">
+<div>
+<div class="flex justify-between items-start mb-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 bg-surface-container rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">sports_soccer</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">Match Result</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">2h ago</span>
+</div>
+<h3 class="font-headline-md text-headline-md mb-md">London Lions secured a victory</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-lg">
+                        A dominant 3-1 performance at the Wembley Stadium moves them to the top of the qualifiers.
+                    </p>
+</div>
+<div class="flex items-center justify-around bg-surface-container-low rounded-xl p-md">
+<div class="text-center">
+<div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-xs">
+<span class="material-symbols-outlined text-secondary">shield</span>
+</div>
+<span class="font-label-md text-[10px]">LIONS</span>
+</div>
+<div class="text-headline-sm font-headline-sm text-primary">3 - 1</div>
+<div class="text-center opacity-40">
+<div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-xs">
+<span class="material-symbols-outlined text-outline">shield</span>
+</div>
+<span class="font-label-md text-[10px]">REDS</span>
+</div>
+</div>
+<div class="mt-lg pt-md border-t border-outline-variant flex justify-between items-center">
+<button class="flex items-center gap-xs font-label-md text-label-md text-primary font-bold">
+<span class="material-symbols-outlined text-md">favorite</span> 1.2k
+                    </button>
+<button class="flex items-center gap-xs font-label-md text-label-md text-on-surface-variant">
+<span class="material-symbols-outlined text-md">chat_bubble</span> 84
+                    </button>
+<button class="material-symbols-outlined text-on-surface-variant">share</button>
+</div>
+</div>
+<!-- Feed Item 3: Player Update (Asymmetric) -->
+<div class="col-span-12 md:col-span-6 bg-surface-container-lowest border border-outline-variant rounded-[32px] overflow-hidden card-shadow">
+<div class="h-48 w-full bg-cover bg-center" data-alt="An atmospheric, low-angle shot of a high-tech training facility. The scene shows a blurred athlete in the background using advanced biometric monitoring equipment. The lighting is cool-toned with sleek blue and white glows from LED displays, creating a clinical but highly professional atmosphere suitable for an elite athlete's performance tracker." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCf3V67NqVR1PCyyZpLzFUdzQxLfAO3fycfOiisrnJhatpV72v3zv7EVbtJySHmN0xW-tG-ibOfWkcfZV-NxjMDM2wGeJegpPOGGmiGX3lA0-DHnTX-SCSRUVTero9vPCvKnSDB_2vdR92vjv58VS6j3AXhL80zbH1hJtBnto1Oqt-I8O5UPPpxj2-3Rre7Toj4oZnAuDHsqrijsUC-wiv1F0xv4mlf4JrmTK4wVWYTsoQzMtcQSZjmldl00aMsjyLt3JvYvWCaTJI')">
+</div>
+<div class="p-lg">
+<div class="flex items-center gap-md mb-md">
+<img alt="Alex Rivers" class="w-10 h-10 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRtc7deNfm7005lF1RdF2CJmbEzSZIe8dBLuXymDoVclm0iIX64Mgu_bGOf6CF2rD6V5wG2py8YE5dkhiOVHyg74HgdDmK6MKZ7x_I8O9dq-FDDLVN4kBVw3fNPHGNIaBbKUFsssC5zHbCUEWukVviimhuoErEYOJrDJ8cAmy0zBw_7imDJgSyE5xPpfLbe7bQ0q7HSjQRLgM8Ikh9EjoIMV9_-UKm3gDBn6qWd4_ZjL8FOM0Ge4gYsEIiQwf82CYXqtqvNdnMBDM">
+<div class="flex-1">
+<h4 class="font-headline-sm text-headline-sm">Alex Rivers</h4>
+<p class="font-label-md text-label-md text-on-surface-variant">Elite Sprinter</p>
+</div>
+<button class="px-md py-1 border border-primary rounded-full font-label-md text-label-md hover:bg-primary hover:text-white transition-colors">Follow</button>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-md">
+                        "Just smashed my 100m personal best at the altitude camp. The new AI-driven training cycle is definitely paying off. #ElitePerformance #DataDriven"
+                    </p>
+<div class="flex gap-sm">
+<span class="px-sm py-xs bg-surface-container-high rounded-md text-[10px] font-bold">#Sprinting</span>
+<span class="px-sm py-xs bg-surface-container-high rounded-md text-[10px] font-bold">#PB</span>
+</div>
+</div>
+</div>
+<!-- Feed Item 4: Training Stats (Metric Card) -->
+<div class="col-span-12 md:col-span-6 bg-white border border-outline-variant rounded-[32px] p-lg flex flex-col card-shadow">
+<div class="flex justify-between items-center mb-xl">
+<h3 class="font-headline-sm text-headline-sm">Weekly High-Intensity Volume</h3>
+<span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
+</div>
+<div class="flex-1 flex items-end justify-between gap-sm mb-lg px-md">
+<div class="w-full bg-surface-container-low rounded-t-xl h-[40%] relative group">
+<div class="absolute inset-0 bg-primary/10 rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<div class="w-full bg-surface-container-low rounded-t-xl h-[60%]"></div>
+<div class="w-full bg-secondary-container rounded-t-xl h-[95%] shadow-lg shadow-secondary-container/20"></div>
+<div class="w-full bg-surface-container-low rounded-t-xl h-[75%]"></div>
+<div class="w-full bg-surface-container-low rounded-t-xl h-[55%]"></div>
+<div class="w-full bg-surface-container-low rounded-t-xl h-[85%]"></div>
+<div class="w-full bg-surface-container-low rounded-t-xl h-[45%]"></div>
+</div>
+<div class="flex items-center justify-between p-md bg-primary-container rounded-2xl text-white">
+<div>
+<p class="font-label-md text-[10px] opacity-70">PEAK HEART RATE</p>
+<p class="font-headline-md text-headline-md">184 <span class="text-label-md font-normal opacity-70">BPM</span></p>
+</div>
+<div class="text-right">
+<p class="font-label-md text-[10px] opacity-70">STATUS</p>
+<span class="inline-flex items-center gap-xs px-sm py-1 bg-green-500/20 text-green-400 rounded-full font-label-md text-[10px] font-bold">
+<span class="w-2 h-2 rounded-full bg-green-400"></span> OPTIMAL
+                        </span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-lg py-sm lg:hidden bg-surface-container-lowest/90 backdrop-blur-lg" style="box-shadow: 0px -4px 20px rgba(0, 27, 61, 0.08);">
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-sm active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="font-label-md text-label-md">Performance</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full p-sm scale-110 active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dynamic_feed</span>
+<span class="font-label-md text-label-md">Feed</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-sm active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">emoji_events</span>
+<span class="font-label-md text-label-md">Rankings</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-sm active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+<!-- Floating Action Button (FAB) - Contextual -->
+<button class="fixed bottom-32 right-gutter lg:bottom-12 lg:right-12 w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-40">
+<span class="material-symbols-outlined">add</span>
+</button>
+<script>
+        // Micro-interactions for hovering and state
+        document.querySelectorAll('.bento-grid > div').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-4px)';
+                card.style.transition = 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0px)';
+            });
+        });
+    </script>
+</body></html>

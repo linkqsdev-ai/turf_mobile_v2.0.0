@@ -1,0 +1,343 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Lord's View Pavillion | Sports OS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        body {
+            font-family: 'Hanken Grotesk', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .premium-shadow {
+            box-shadow: 0px 24px 48px -12px rgba(0, 27, 61, 0.08), 0px 8px 16px -8px rgba(0, 27, 61, 0.05);
+        }
+        .ripple {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 600ms linear;
+            pointer-events: none;
+        }
+        @keyframes ripple {
+            to { transform: scale(4); opacity: 0; }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#e6e8ea",
+                        "primary": "#000000",
+                        "outline-variant": "#c4c6cf",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "background": "#f7f9fb",
+                        "secondary-container": "#ffc703",
+                        "primary-fixed": "#d6e3ff",
+                        "on-secondary-fixed": "#251a00",
+                        "surface": "#f7f9fb",
+                        "inverse-on-surface": "#eff1f3",
+                        "inverse-surface": "#2d3133",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#f7f9fb",
+                        "on-primary": "#ffffff",
+                        "surface-tint": "#495f84",
+                        "secondary-fixed-dim": "#f5bf00",
+                        "outline": "#74777f",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-surface": "#191c1e",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed": "#001b3d",
+                        "on-error-container": "#93000a",
+                        "error": "#ba1a1a",
+                        "surface-container": "#eceef0",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "on-background": "#191c1e",
+                        "tertiary-container": "#0b1c30",
+                        "on-secondary-fixed-variant": "#594400",
+                        "surface-variant": "#e0e3e5",
+                        "on-surface-variant": "#44474e",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-container": "#001b3d",
+                        "tertiary": "#000000",
+                        "surface-dim": "#d8dadc",
+                        "surface-container-low": "#f2f4f6",
+                        "secondary": "#765b00",
+                        "secondary-fixed": "#ffdf94",
+                        "tertiary-fixed": "#d3e4fe",
+                        "primary-fixed-dim": "#b1c7f2",
+                        "on-secondary-container": "#6e5400",
+                        "on-primary-container": "#6f84ac",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#31476b",
+                        "on-tertiary-container": "#75859d",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "inverse-primary": "#b1c7f2"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem",
+                        "venue": "32px"
+                    },
+                    "spacing": {
+                        "margin": "32px",
+                        "lg": "24px",
+                        "base": "4px",
+                        "md": "16px",
+                        "gutter": "24px",
+                        "xl": "40px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "2xl": "64px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "label-md": ["Hanken Grotesk"],
+                        "body-sm": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"],
+                        "headline-sm": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="text-on-surface selection:bg-secondary-fixed selection:text-on-secondary-fixed min-h-screen">
+<!-- Top Navigation (TopAppBar) -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 flex items-center justify-between px-md h-16">
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-primary p-2 hover:bg-surface-variant transition-colors active:scale-95 duration-200 rounded-full" data-icon="menu">menu</button>
+<h1 class="font-display-lg text-headline-sm tracking-tighter text-primary">Sports OS</h1>
+</div>
+<div class="flex items-center gap-md">
+<div class="hidden md:flex gap-lg items-center px-lg">
+<span class="font-headline-sm text-label-md text-primary font-bold cursor-pointer">Explore</span>
+<span class="font-headline-sm text-label-md text-on-surface-variant hover:text-primary transition-all cursor-pointer">Bookings</span>
+<span class="font-headline-sm text-label-md text-on-surface-variant hover:text-primary transition-all cursor-pointer">Performance</span>
+</div>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant active:scale-95 duration-200 cursor-pointer">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAY_9PIrvl7tq5ayF0jwmRXjMSFOkYnLECBdpPRwfCQYF3hljb9Ep-mPluiefzHyu2DcwsGuGpiS9wApy1k3BcjD7zPcgAcf9lZ8667IiXUlKixfhn_mj5rz7CJWVjRKdgDu8F5KH_Wgyq9atisHKPeMD924rhQ2bJ78LDU7o_sU9YvmTHxMuzAwrI3C0F-cwuaHQmrcjUeiHLdQAIJsh6NxopI-QGYTAk-FeGPky11hYwDmxYAFnQXyzxTCOmkpzSexW8OpudSBo0">
+</div>
+</div>
+</header>
+<main class="pt-20 pb-32 md:pb-16 max-w-[1280px] mx-auto px-gutter grid grid-cols-1 md:grid-cols-12 gap-lg">
+<!-- Hero Section -->
+<section class="md:col-span-7 lg:col-span-8 flex flex-col gap-lg">
+<!-- Dynamic Hero Card -->
+<div class="relative w-full aspect-[4/3] md:aspect-[16/9] rounded-venue overflow-hidden premium-shadow bg-surface-container-lowest border border-outline-variant/30 group">
+<img alt="Lord's View Pavillion Hero" class="w-full h-full object-contain p-xl transform transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida/AP1WRLs2JEjyM9FVVwSH8GzTGxfXIPXyCvRpJr2XQRI8KQGllXmLflvI1wFBX4nygyhEQaryLxaIA6KIrwR1GYU433G-UNlu-Q7PvGLVpmngETwR0qv8LTddzNP0lxpZOLoLfY55rln-wvi2AOQHzY0aYNhzEr2LhxBwQr4wY6aVc4Uz3FsfBU_Y5OZ-ushmORm76eEXXe7_ACda2sHiD-5sSBNbno6xEdrAwE1y8YW4aNZC-VZ84qPCk4PuMgY">
+<div class="absolute bottom-lg left-lg right-lg flex justify-between items-end gap-md">
+<div class="bg-white/90 backdrop-blur-lg p-md rounded-xl border border-outline-variant shadow-sm flex items-center gap-sm">
+<div class="flex items-center gap-xs text-secondary-container">
+<span class="material-symbols-outlined fill-icon" data-icon="star">star</span>
+<span class="font-headline-sm text-body-md text-on-surface font-bold">4.8</span>
+</div>
+<span class="text-on-surface-variant text-label-md">(124 REVIEWS)</span>
+</div>
+<div class="bg-primary-container text-white px-lg py-sm rounded-full font-label-md uppercase tracking-widest border border-white/20">
+                    Premium Turf
+                </div>
+</div>
+</div>
+<!-- Title & Location -->
+<div class="flex flex-col gap-xs mt-sm">
+<h2 class="font-headline-lg text-headline-lg md:text-display-lg text-primary leading-tight">Lord's View Pavillion</h2>
+<div class="flex items-center gap-sm text-on-surface-variant">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-secondary-container" data-icon="location_on">location_on</span>
+<span class="font-body-md text-body-md">St John's Wood, London</span>
+</div>
+<span class="w-1 h-1 bg-outline-variant rounded-full"></span>
+<span class="font-label-md uppercase tracking-wider text-on-tertiary-container">Open Today</span>
+</div>
+</div>
+<!-- Refined Quick Stats Bento -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-md">
+<div class="bg-white p-md rounded-venue border border-outline-variant/50 flex flex-col gap-sm premium-shadow hover:translate-y-[-4px] transition-transform duration-300">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container" data-icon="payments">payments</span>
+</div>
+<div>
+<span class="font-label-md text-on-surface-variant uppercase text-[10px] tracking-[0.1em]">Pricing</span>
+<p class="font-headline-sm text-headline-sm text-primary">$22/hr</p>
+</div>
+</div>
+<div class="bg-white p-md rounded-venue border border-outline-variant/50 flex flex-col gap-sm premium-shadow hover:translate-y-[-4px] transition-transform duration-300">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container" data-icon="sports_cricket">sports_cricket</span>
+</div>
+<div>
+<span class="font-label-md text-on-surface-variant uppercase text-[10px] tracking-[0.1em]">Pitch Type</span>
+<p class="font-headline-sm text-headline-sm text-primary">Hybrid Turf</p>
+</div>
+</div>
+<div class="bg-white p-md rounded-venue border border-outline-variant/50 flex flex-col gap-sm premium-shadow hover:translate-y-[-4px] transition-transform duration-300">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container" data-icon="schedule">schedule</span>
+</div>
+<div>
+<span class="font-label-md text-on-surface-variant uppercase text-[10px] tracking-[0.1em]">Availability</span>
+<p class="font-headline-sm text-headline-sm text-primary">06:00 - 23:00</p>
+</div>
+</div>
+<div class="bg-white p-md rounded-venue border border-outline-variant/50 flex flex-col gap-sm premium-shadow hover:translate-y-[-4px] transition-transform duration-300">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container" data-icon="groups">groups</span>
+</div>
+<div>
+<span class="font-label-md text-on-surface-variant uppercase text-[10px] tracking-[0.1em]">Capacity</span>
+<p class="font-headline-sm text-headline-sm text-primary">22 Players</p>
+</div>
+</div>
+</div>
+<!-- Improved Content Sections -->
+<div class="bg-white p-xl rounded-venue border border-outline-variant/50 premium-shadow">
+<h3 class="font-headline-md text-headline-md text-primary mb-lg border-b border-outline-variant/20 pb-md">About the Venue</h3>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+                Experience elite-level cricket at Lord's View Pavillion. Situated in the heart of St John's Wood, our facility provides a professional-grade hybrid surface that replicates international standard bounce and seam. Perfect for competitive matches or focused training sessions under high-intensity LED floodlights.
+            </p>
+</div>
+</section>
+<!-- Sidebar Actions -->
+<aside class="md:col-span-5 lg:col-span-4 flex flex-col gap-lg">
+<!-- Booking Card -->
+<div class="sticky top-24 bg-white p-lg rounded-venue border border-outline-variant/50 premium-shadow flex flex-col gap-xl">
+<div class="flex flex-col gap-sm">
+<span class="font-label-md text-on-surface-variant uppercase tracking-widest text-[10px]">Selected Session</span>
+<div class="flex justify-between items-end border-b border-outline-variant/20 pb-md">
+<span class="font-headline-md text-headline-md text-primary">Fri, Oct 24</span>
+<span class="font-display-lg text-headline-md text-secondary-container">$22.00</span>
+</div>
+</div>
+<div class="flex flex-col gap-md">
+<h4 class="font-headline-sm text-body-md text-on-surface font-bold flex items-center gap-xs">
+
+                    Venue Amenities
+                </h4>
+<div class="grid grid-cols-1 gap-sm">
+<div class="flex items-center gap-md p-md bg-surface-container-low rounded-xl border border-outline-variant/30 hover:bg-white transition-colors duration-200">
+<span class="material-symbols-outlined text-primary-container" data-icon="lightbulb">lightbulb</span>
+<span class="font-body-md text-body-md font-semibold">Professional Floodlights</span>
+</div>
+<div class="flex items-center gap-md p-md bg-surface-container-low rounded-xl border border-outline-variant/30 hover:bg-white transition-colors duration-200">
+<span class="material-symbols-outlined text-primary-container" data-icon="sports_cricket">sports_cricket</span>
+<span class="font-body-md text-body-md font-semibold">Premium Equipment Hire</span>
+</div>
+<div class="flex items-center gap-md p-md bg-surface-container-low rounded-xl border border-outline-variant/30 hover:bg-white transition-colors duration-200">
+<span class="material-symbols-outlined text-primary-container" data-icon="lock">lock</span>
+<span class="font-body-md text-body-md font-semibold">Secure Locker Rooms</span>
+</div>
+<div class="flex items-center gap-md p-md bg-surface-container-low rounded-xl border border-outline-variant/30 hover:bg-white transition-colors duration-200">
+<span class="material-symbols-outlined text-primary-container" data-icon="shower">shower</span>
+<span class="font-body-md text-body-md font-semibold">Shower Facilities</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-md">
+<button class="relative overflow-hidden w-full bg-primary-container text-white font-headline-sm py-lg rounded-xl hover:bg-black transition-all active:scale-[0.98] duration-150 shadow-lg shadow-primary-container/20 group">
+<span class="relative z-10">Book Now</span>
+<div class="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+</button>
+<button class="w-full bg-transparent border-2 border-outline-variant text-on-surface-variant font-headline-sm py-lg rounded-xl hover:bg-surface-variant hover:text-primary hover:border-primary transition-all active:scale-[0.98] duration-150">
+                    Add to Favorites
+                </button>
+</div>
+<div class="flex items-center justify-center gap-xs px-md py-sm bg-surface-container-high/50 rounded-full">
+<span class="material-symbols-outlined text-[16px] text-on-tertiary-container" data-icon="info">info</span>
+<p class="text-center font-label-md text-on-tertiary-container text-[11px]">
+                    Free cancellation up to 24h before match
+                </p>
+</div>
+</div>
+<!-- Location Card -->
+<div class="bg-white p-lg rounded-venue border border-outline-variant/50 premium-shadow flex flex-col gap-lg">
+<h4 class="font-headline-sm text-body-md text-on-surface font-bold">Location</h4>
+<div class="h-48 rounded-2xl bg-surface-container-highest relative overflow-hidden group shadow-inner">
+<img alt="Map View" class="w-full h-full object-cover grayscale opacity-40 transition-transform duration-500 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAs7ZFxpDuTY0Y20RzzsmBGxAjht8U5AihgJyskprBmTPKVYrEOab08NWaF-4BFy3UjwPr46PMa9oRy0TqoklyqETyaI3T9xbHvBGj0vyYb99qgZn6w5StHhG9_NAMWkvZiyjhoW9QJ4TVDCuUjWD2x6xrp0HlAaAIVRu2xmLKg6V1CrRxUQiNFhiU_n_PBx9V6T9ZF5x3yGwizSIx_I4x5fTWBozUqBJ77o8N5RyeuxUvrf6uWewzXD86IF4X_G5brMzCocIakM-w">
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="bg-primary-container text-white p-3 rounded-full animate-bounce shadow-2xl shadow-primary-container/50">
+<span class="material-symbols-outlined" data-icon="location_on">location_on</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-sm">
+<div>
+<p class="font-body-sm text-on-surface font-bold">Lords View Estate, NW8 8QN</p>
+<p class="font-body-sm text-on-surface-variant">St John's Wood, London</p>
+</div>
+<a class="text-secondary-container font-label-md uppercase tracking-widest text-[11px] font-bold border-t border-outline-variant/20 pt-sm mt-xs inline-flex items-center gap-xs hover:gap-md transition-all" href="#">
+                    Get Directions
+                    <span class="material-symbols-outlined text-[16px]" data-icon="arrow_forward">arrow_forward</span>
+</a>
+</div>
+</div>
+</aside>
+</main>
+<!-- Bottom Navigation (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 bg-white/95 backdrop-blur-xl h-20 px-sm pb-safe flex justify-around items-center border-t border-outline-variant/30 shadow-[0px_-4px_24px_rgba(0,27,61,0.06)]">
+<div class="flex flex-col items-center justify-center w-20 text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-label-md text-[10px] mt-1">Explore</span>
+</div>
+<div class="flex flex-col items-center justify-center w-20">
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full w-14 h-14 shadow-lg shadow-secondary-container/20 active:scale-90 duration-150 transition-transform">
+<span class="material-symbols-outlined fill-icon" data-icon="event_available">event_available</span>
+</div>
+<span class="font-label-md text-[10px] mt-1 font-bold text-primary">Bookings</span>
+</div>
+<div class="flex flex-col items-center justify-center w-20 text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span class="font-label-md text-[10px] mt-1">Performance</span>
+</div>
+<div class="flex flex-col items-center justify-center w-20 text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-150 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-[10px] mt-1">Profile</span>
+</div>
+</nav>
+<script>
+    // Micro-interactions for buttons
+    document.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            let rect = this.getBoundingClientRect();
+            let ripple = document.createElement('span');
+            ripple.classList.add('ripple');
+            let x = e.clientX - rect.left;
+            let y = e.clientY - rect.top;
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            this.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+</script>
+
+
+</body></html>

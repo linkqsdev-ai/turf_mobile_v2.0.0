@@ -1,0 +1,1086 @@
+/**
+ * app-store.tsx
+ * Global state management using React Context + AsyncStorage.
+ * Provides booking, tournament, match, and turf state throughout the app.
+ */
+
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Booking, RescheduleResult, createBooking, findSlotClashes } from './booking-store';
+import { PublishedTournament, TournamentRegistration, createRegistration, canTransitionTournament } from './tournament-store';
+import { Team, Player, Match, createTeam, createMatch } from './match-store';
+import { PublishedTurf, createTurf } from './turf-store';
+import { ensureClassIdentity, sortByNewestFirst, generateClassId } from './class-list';
+import {
+  OwnerOffer,
+  OfferRedemptionResult,
+  createOffer,
+  defaultOwnerOffers,
+  redemptionBlocker,
+  redemptionsLeft,
+} from './offer-store';
+import {
+  ClassEnrollment,
+  EnrollmentResult,
+  createEnrollment,
+  countForClass,
+  isClassLocked,
+} from './enrollment-store';
+import { syncPlayersToFoF, loadFoFDatabase, registerFoFPlayer } from '@/services/fof-network';
+import { classApi } from '@/services/class-api';
+
+// ── Storage keys ──────────────────────────────────────────────────────────────
+const KEYS = {
+  bookings: '@turf_bookings',
+  tournaments: '@turf_tournaments',
+  registrations: '@turf_registrations',
+  teams: '@turf_teams',
+  matches: '@turf_matches',
+  turfs: '@turf_owned_turfs',
+  classes: '@turf_classes',
+  wallet: '@turf_wallet',
+  bids: '@turf_bids',
+  offers: '@turf_owner_offers',
+  enrollments: '@turf_class_enrollments',
+};
+
+// A team can only be marked favourite while fewer than this many are already set.
+const MAX_FAVOURITE_TEAMS = 2;
+
+// Single choke point for the favourite-team cap: whatever mutated the list,
+// route it through here before it reaches state/storage. Keeps the first
+// MAX_FAVOURITE_TEAMS favourites (array order) and demotes any beyond that,
+// so stale/corrupted data (e.g. from before this cap existed) self-heals on
+// the very next mutation — and the load path runs it once up front too.
+function capFavourites(list: Team[]): Team[] {
+  let kept = 0;
+  return list.map(t => {
+    if (!t.isFavourite) return t;
+    kept += 1;
+    return kept <= MAX_FAVOURITE_TEAMS ? t : { ...t, isFavourite: false };
+  });
+}
+
+// ── Context type ──────────────────────────────────────────────────────────────
+interface AppStoreContextType {
+  // Bookings
+  bookings: Booking[];
+  addBooking: (params: Omit<Booking, 'id' | 'bookingRef' | 'createdAt' | 'status'>) => Booking;
+  cancelBooking: (id: string) => void;
+  /** Move a booking to new slots, refusing times another booking already holds. */
+  rescheduleBooking: (
+    id: string,
+    next: { date: string; dayLabel: string; slots: string[] }
+  ) => RescheduleResult;
+
+  // Tournaments
+  publishedTournaments: PublishedTournament[];
+  addTournament: (t: PublishedTournament) => void;
+  /** Edit a published tournament in place. `id` and `createdAt` are immutable. */
+  updateTournament: (id: string, patch: Partial<Omit<PublishedTournament, 'id' | 'createdAt'>>) => void;
+  /** Remove a tournament and every registration attached to it. */
+  deleteTournament: (id: string) => void;
+  /** Move a tournament along its lifecycle, rejecting illegal jumps. */
+  setTournamentStatus: (id: string, status: PublishedTournament['status']) => boolean;
+  updateTournamentTeamsCount: (id: string, delta: number) => void;
+  registrations: TournamentRegistration[];
+  registerForTournament: (params: Omit<TournamentRegistration, 'id' | 'registeredAt'>) => TournamentRegistration;
+  /** Organizer's approve/reject decision on a pending registration. */
+  decideRegistration: (registrationId: string, status: 'confirmed' | 'rejected') => void;
+  /** A team pulls out — frees its slot back to the pool. */
+  withdrawRegistration: (registrationId: string) => void;
+  /** Records money collected against a registration. */
+  setRegistrationPayment: (registrationId: string, paymentStatus: TournamentRegistration['paymentStatus']) => void;
+
+  // Teams
+  teams: Team[];
+  addTeam: (params: Omit<Team, 'id' | 'wins' | 'losses' | 'draws' | 'createdAt'>) => Team;
+  addPlayerToTeam: (teamName: string, player: any) => void;
+  updateTeam: (id: string, params: Partial<Omit<Team, 'id' | 'players' | 'createdAt'>>) => void;
+  deleteTeam: (id: string) => void;
+  // Returns false (and leaves state untouched) if the team isn't already a
+  // favourite and the app-wide 2-favourite cap has been reached.
+  toggleTeamFavourite: (id: string) => boolean;
+  readonly MAX_FAVOURITE_TEAMS: number;
+  addPlayerToTeamById: (teamId: string, player: Omit<Player, 'id'>) => void;
+  removePlayerFromTeam: (teamId: string, playerId: string) => void;
+
+  // Matches
+  matches: Match[];
+  addMatch: (params: Omit<Match, 'id' | 'homeScore' | 'awayScore' | 'status' | 'createdAt'>) => Match;
+  updateMatchScore: (id: string, homeScore: number, awayScore: number) => void;
+  completeMatch: (id: string) => void;
+
+  // Turfs
+  ownedTurfs: PublishedTurf[];
+  addTurf: (params: Omit<PublishedTurf, 'id' | 'rating' | 'isActive' | 'createdAt'>) => PublishedTurf;
+  updateTurf: (id: string, params: Partial<PublishedTurf>) => void;
+
+  // Classes
+  classes: any[];
+  addClass: (params: any) => void;
+  updateClass: (id: string, params: any) => void;
+  // Refuses to delete a class that already has enrolments; returns false then.
+  deleteClass: (id: string) => boolean;
+  /**
+   * Soft delete. Deactivating hides a class from players but keeps the record
+   * and its enrolments intact, so a coach can never destroy a class students
+   * have paid for — and can put it back.
+   */
+  setClassActive: (id: string, active: boolean) => void;
+  isClassActive: (cls: any) => boolean;
+  refreshClasses: () => Promise<void>;
+
+  // Class enrolments — the record that locks a class against edit/delete
+  enrollments: ClassEnrollment[];
+  // Refuses to exceed the class's declared capacity; see EnrollmentResult.
+  enrollInClass: (params: Parameters<typeof createEnrollment>[0]) => EnrollmentResult;
+  enrollmentCountForClass: (classId: string) => number;
+  isClassEditable: (classId: string) => boolean;
+
+  // Wallet
+  walletBalance: number;
+  addWalletFunds: (amount: number) => void;
+  deductWalletFunds: (amount: number) => void;
+
+  // Bids
+  bids: any[];
+  addBid: (bid: any) => void;
+  removeBid: (id: string) => void;
+
+  // Owner vouchers & offers
+  offers: OwnerOffer[];
+  addOffer: (params: Parameters<typeof createOffer>[0]) => OwnerOffer;
+  updateOffer: (id: string, params: Partial<Omit<OwnerOffer, 'id' | 'createdAt'>>) => void;
+  deleteOffer: (id: string) => void;
+  toggleOfferStatus: (id: string) => void;
+  // True when the code is free to use (case-insensitive), ignoring `exceptId`
+  // so an offer being edited doesn't collide with itself.
+  isOfferCodeAvailable: (code: string, exceptId?: string) => boolean;
+  // Claims one redemption against a code. This is the only place the
+  // "first N users" cap is enforced, so all redemption must route through it.
+  redeemOffer: (code: string) => OfferRedemptionResult;
+
+  // Loading state
+  isLoading: boolean;
+}
+
+// ── Context ───────────────────────────────────────────────────────────────────
+const AppStoreContext = createContext<AppStoreContextType | null>(null);
+
+// ── Provider ──────────────────────────────────────────────────────────────────
+export function AppStoreProvider({ children }: { children: ReactNode }) {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [publishedTournaments, setPublishedTournaments] = useState<PublishedTournament[]>([]);
+  const [registrations, setRegistrations] = useState<TournamentRegistration[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [ownedTurfs, setOwnedTurfs] = useState<PublishedTurf[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [walletBalance, setWalletBalance] = useState<number>(200); // Initial ₹200 wallet balance
+  const [offers, setOffers] = useState<OwnerOffer[]>([]);
+  const [enrollments, setEnrollments] = useState<ClassEnrollment[]>([]);
+  const [bids, setBids] = useState<any[]>([
+    {
+      id: 'bid-demo-1',
+      tournament: 'Bid Challenge: Super 11',
+      sport: 'Cricket',
+      category: 'Turf',
+      location: 'Skyline Turf Arena, Court #1',
+      type: 'Bid',
+      status: 'Accept Bid',
+      isMe: true,
+      isBid: true,
+      playerName: 'Rahul Sharma',
+      avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+      team1: 'Rahul XI',
+      team1Code: 'RX',
+      team2: 'Weekend Warriors',
+      opponentTeam: 'Weekend Warriors',
+      team2Code: 'WW',
+      timeText: 'Today, 8:00 PM',
+      subText: 'Bid Active • Stake: 200 Coins',
+      statusColor: '#8b5cf6',
+      section: 'Today',
+      bidCoins: 200,
+    }
+  ]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load all data on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const [b, t, r, te, m, tu, cl, w, of, en] = await Promise.all([
+          AsyncStorage.getItem(KEYS.bookings),
+          AsyncStorage.getItem(KEYS.tournaments),
+          AsyncStorage.getItem(KEYS.registrations),
+          AsyncStorage.getItem(KEYS.teams),
+          AsyncStorage.getItem(KEYS.matches),
+          AsyncStorage.getItem(KEYS.turfs),
+          AsyncStorage.getItem(KEYS.classes),
+          AsyncStorage.getItem(KEYS.wallet),
+          AsyncStorage.getItem(KEYS.offers),
+          AsyncStorage.getItem(KEYS.enrollments),
+        ]);
+        if (en) setEnrollments(JSON.parse(en));
+        if (b) setBookings(JSON.parse(b));
+        if (t) setPublishedTournaments(JSON.parse(t));
+        if (r) setRegistrations(JSON.parse(r));
+        if (w) setWalletBalance(JSON.parse(w));
+        if (of) {
+          setOffers(JSON.parse(of));
+        } else {
+          // First run for this owner — seed sample offers so the screen isn't empty.
+          const seeded = defaultOwnerOffers();
+          setOffers(seeded);
+          AsyncStorage.setItem(KEYS.offers, JSON.stringify(seeded));
+        }
+        if (te && JSON.parse(te).length > 0) {
+          const parsedTeams = JSON.parse(te);
+          const cappedTeams = capFavourites(parsedTeams);
+          setTeams(cappedTeams);
+          // Self-heal: if this device had more favourites than the cap allows
+          // (e.g. from before the cap existed), persist the corrected list so
+          // it doesn't keep re-appearing on every load.
+          if (cappedTeams.some((t: Team, i: number) => t.isFavourite !== parsedTeams[i].isFavourite)) {
+            AsyncStorage.setItem(KEYS.teams, JSON.stringify(cappedTeams));
+          }
+          // Sync all team players into FoF network
+          parsedTeams.forEach((t: Team) => {
+            if (t.players && Array.isArray(t.players)) {
+              syncPlayersToFoF(t.players.map((p: any) => ({
+                name: p.name,
+                phone: p.phone,
+                avatar: p.avatarUrl || p.avatar,
+                role: p.position || 'Player',
+                team: t.name,
+                sport: t.sport || 'Cricket 🏏',
+              })));
+            }
+          });
+        } else {
+          const defaultTeams = [
+            { id: 't1', name: 'Siva Team', sport: 'Cricket', mascot: 'lion', wins: 10, losses: 2, draws: 1, isFavourite: true, createdAt: new Date().toISOString(), players: [
+              { id: 't1-p1', name: 'Siva Kumar', position: 'All-Rounder (C)', jerseyNumber: 7, skillLevel: 'Pro' as const },
+              { id: 't1-p2', name: 'Arun Prakash', position: 'Batsman', jerseyNumber: 10, skillLevel: 'Advanced' as const },
+              { id: 't1-p3', name: 'Karthik Raja', position: 'Bowler', jerseyNumber: 23, skillLevel: 'Advanced' as const },
+              { id: 't1-p4', name: 'Vignesh M', position: 'Wicket-Keeper', jerseyNumber: 1, skillLevel: 'Intermediate' as const },
+              { id: 't1-p5', name: 'Dinesh Babu', position: 'Batsman', jerseyNumber: 15, skillLevel: 'Advanced' as const },
+              { id: 't1-p6', name: 'Praveen S', position: 'Bowler', jerseyNumber: 9, skillLevel: 'Intermediate' as const },
+            ] },
+            { id: 't2', name: 'Antony Team', sport: 'Cricket', mascot: 'cobra', wins: 8, losses: 3, draws: 2, isFavourite: true, createdAt: new Date().toISOString(), players: [
+              { id: 't2-p1', name: 'Antony Rozario', position: 'Batsman (C)', jerseyNumber: 4, skillLevel: 'Pro' as const },
+              { id: 't2-p2', name: 'Michael Fernando', position: 'Bowler', jerseyNumber: 11, skillLevel: 'Advanced' as const },
+              { id: 't2-p3', name: 'Joseph Xavier', position: 'All-Rounder', jerseyNumber: 8, skillLevel: 'Advanced' as const },
+              { id: 't2-p4', name: 'Vincent Paul', position: 'Wicket-Keeper', jerseyNumber: 2, skillLevel: 'Intermediate' as const },
+              { id: 't2-p5', name: 'Thomas George', position: 'Bowler', jerseyNumber: 17, skillLevel: 'Intermediate' as const },
+            ] },
+            { id: 't3', name: 'London Lions', sport: 'Cricket', mascot: 'falcon', players: [], wins: 5, losses: 5, draws: 3, isFavourite: false, createdAt: new Date().toISOString() },
+            { id: 't4', name: 'Kent Kings', sport: 'Cricket', mascot: 'warrior', players: [], wins: 6, losses: 4, draws: 4, isFavourite: false, createdAt: new Date().toISOString() },
+          ];
+          setTeams(defaultTeams);
+          AsyncStorage.setItem(KEYS.teams, JSON.stringify(defaultTeams));
+        }
+        if (m) {
+          const parsedMatches = JSON.parse(m);
+          setMatches(parsedMatches);
+          // Sync match players into FoF network
+          if (Array.isArray(parsedMatches)) {
+            parsedMatches.forEach((match: Match) => {
+              [match.homeTeam, match.awayTeam].forEach(t => {
+                if (t && t.players && Array.isArray(t.players)) {
+                  syncPlayersToFoF(t.players.map((p: any) => ({
+                    name: p.name,
+                    phone: p.phone,
+                    avatar: p.avatarUrl || p.avatar,
+                    role: p.position || 'Player',
+                    team: t.name,
+                    sport: match.sport || 'Cricket 🏏',
+                  })));
+                }
+              });
+            });
+          }
+        }
+        await loadFoFDatabase();
+        if (tu) setOwnedTurfs(JSON.parse(tu));
+        if (cl) {
+          const parsed = JSON.parse(cl);
+          // Identity is the class id. This previously keyed on
+          // className-classType-sportType and wrote the survivors back, so a
+          // coach running a morning and an evening batch of one course lost
+          // one of them permanently on the next app start.
+          const { classes: repaired, changed } = ensureClassIdentity(parsed);
+          if (changed) {
+            AsyncStorage.setItem(KEYS.classes, JSON.stringify(repaired));
+          }
+          setClasses(sortByNewestFirst(repaired));
+        }
+        // Fetch any classes published to the backend by other coaches/admins
+        refreshClasses();
+      } catch (e) {
+        console.error('AppStore: Failed to load data', e);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, []);
+
+function notifyCrossTabSync(key: string = KEYS.classes) {
+  if (Platform.OS === 'web') {
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        const channel = new BroadcastChannel('turf_sync_channel');
+        channel.postMessage({ type: 'SYNC_UPDATE', key });
+        channel.close();
+      } catch {}
+    }
+  }
+}
+
+  const refreshClasses = useCallback(async () => {
+    try {
+      const localStoredStr = await AsyncStorage.getItem(KEYS.classes);
+      const localStoredList: any[] = localStoredStr ? JSON.parse(localStoredStr) : [];
+      const { classes: cleanLocal } = ensureClassIdentity(localStoredList);
+
+      let backendList: any[] = [];
+      try {
+        backendList = await classApi.listClasses();
+      } catch (e) {
+        // Backend offline or unreachable, use local storage
+      }
+
+      if (Array.isArray(backendList) && backendList.length > 0) {
+        const mappedBackend = backendList.map((b: any) => ({
+          id: b.id,
+          className: b.title || b.className,
+          coachName: b.coach?.name || b.coachName || 'Coach Specialist',
+          avatar: b.coach?.avatarUrl || b.avatar || 'avatar_12',
+          sportType: b.sport || b.sportType || 'Cricket',
+          classType: b.classType || 'Regular Class',
+          venue: b.location || b.venue || 'Local Turf',
+          feeAmount: b.price || b.feeAmount || 0,
+          sessionTime: b.schedule || b.sessionTime,
+          maxStudents: b.maxStudents,
+          skillLevel: b.skillLevel || 'Intermediate',
+          ageGroup: b.ageGroup || 'All Ages',
+          isActive: b.status === 'Active' || b.isActive !== false,
+          isBackendSeed: true,
+          createdAt: b.createdAt || new Date(0).toISOString(),
+        }));
+
+        const existingIds = new Set(cleanLocal.map((c: any) => c.id));
+        const newFromBackend = mappedBackend.filter((b: any) => !existingIds.has(b.id));
+
+        const merged = cleanLocal.map((c: any) => {
+          const matched = mappedBackend.find((b: any) => b.id === c.id);
+          return matched ? { ...matched, ...c } : c;
+        });
+
+        // Coach-created classes in cleanLocal appear first, followed by backend-seeded classes
+        const localCreated = merged.filter((c: any) => !c.isBackendSeed);
+        const backendClasses = [...merged.filter((c: any) => c.isBackendSeed), ...newFromBackend];
+        const combined = [...sortByNewestFirst(localCreated), ...sortByNewestFirst(backendClasses)];
+
+        await AsyncStorage.setItem(KEYS.classes, JSON.stringify(combined));
+        setClasses(combined);
+      } else if (cleanLocal.length > 0) {
+        setClasses(sortByNewestFirst(cleanLocal));
+      }
+    } catch (err) {
+      console.warn('AppStore: Failed to refresh backend classes', err);
+    }
+  }, []);
+
+  // Listen for storage & BroadcastChannel events so multiple tabs / windows sync in real time
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const handleStorageChange = (e: StorageEvent) => {
+        if (!e.key || e.key === KEYS.classes) {
+          refreshClasses();
+        }
+      };
+
+      if (typeof window !== 'undefined') {
+        window.addEventListener('storage', handleStorageChange);
+      }
+
+      let channel: any = null;
+      if (typeof BroadcastChannel !== 'undefined') {
+        try {
+          channel = new BroadcastChannel('turf_sync_channel');
+          channel.onmessage = (event: any) => {
+            if (event.data?.key === KEYS.classes || event.data?.type === 'SYNC_UPDATE') {
+              refreshClasses();
+            }
+          };
+        } catch {}
+      }
+
+      return () => {
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('storage', handleStorageChange);
+        }
+        if (channel) {
+          channel.close();
+        }
+      };
+    }
+  }, [refreshClasses]);
+
+  // ── Booking actions ─────────────────────────────────────────────────────────
+  const addBooking = useCallback((params: Omit<Booking, 'id' | 'bookingRef' | 'createdAt' | 'status'>) => {
+    const booking = createBooking(params);
+    setBookings(prev => {
+      const next = [booking, ...prev];
+      AsyncStorage.setItem(KEYS.bookings, JSON.stringify(next));
+      return next;
+    });
+    return booking;
+  }, []);
+
+  /**
+   * Move a booking to a new date/slots.
+   *
+   * Cancelling was previously the only way out of a booking, which pushed
+   * players into cancel-and-rebook — losing the slot to someone else in
+   * between, and (before the refund path existed) their advance with it.
+   *
+   * The replacement slots are checked against every other live booking at the
+   * same venue, and the booking being moved is excluded from that check so a
+   * partial change (same slots, new date, or vice versa) isn't blocked by
+   * itself. Cancelled and completed bookings never hold a slot.
+   */
+  const rescheduleBooking = useCallback(
+    (
+      id: string,
+      next: { date: string; dayLabel: string; slots: string[] }
+    ): RescheduleResult => {
+      const booking = bookings.find(b => b.id === id);
+      if (!booking) return { ok: false, reason: 'not_found' };
+      if (booking.status === 'cancelled') return { ok: false, reason: 'cancelled' };
+      if (booking.status === 'completed') return { ok: false, reason: 'completed' };
+      if (next.slots.length === 0) return { ok: false, reason: 'no_slots' };
+
+      const clashes = findSlotClashes(
+        bookings,
+        id,
+        booking.venueId,
+        next.date,
+        next.slots
+      );
+      if (clashes.length > 0) {
+        return { ok: false, reason: 'slot_taken', clashes };
+      }
+
+      setBookings(prev => {
+        const updated = prev.map(b =>
+          b.id === id
+            ? { ...b, date: next.date, dayLabel: next.dayLabel, slots: next.slots }
+            : b
+        );
+        AsyncStorage.setItem(KEYS.bookings, JSON.stringify(updated));
+        return updated;
+      });
+      return { ok: true };
+    },
+    [bookings]
+  );
+
+  const cancelBooking = useCallback((id: string) => {
+    setBookings(prev => {
+      const next = prev.map(b => b.id === id ? { ...b, status: 'cancelled' as const } : b);
+      AsyncStorage.setItem(KEYS.bookings, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  // ── Tournament actions ──────────────────────────────────────────────────────
+  const addTournament = useCallback((t: PublishedTournament) => {
+    setPublishedTournaments(prev => {
+      const next = [t, ...prev];
+      AsyncStorage.setItem(KEYS.tournaments, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const updateTournamentTeamsCount = useCallback((id: string, delta: number) => {
+    setPublishedTournaments(prev => {
+      const next = prev.map(t => t.id === id ? { ...t, teamsCount: t.teamsCount + delta } : t);
+      AsyncStorage.setItem(KEYS.tournaments, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const updateTournament = useCallback(
+    (id: string, patch: Partial<Omit<PublishedTournament, 'id' | 'createdAt'>>) => {
+      setPublishedTournaments(prev => {
+        const next = prev.map(t => (t.id === id ? { ...t, ...patch, id: t.id, createdAt: t.createdAt } : t));
+        AsyncStorage.setItem(KEYS.tournaments, JSON.stringify(next));
+        return next;
+      });
+    },
+    []
+  );
+
+  const deleteTournament = useCallback((id: string) => {
+    setPublishedTournaments(prev => {
+      const next = prev.filter(t => t.id !== id);
+      AsyncStorage.setItem(KEYS.tournaments, JSON.stringify(next));
+      return next;
+    });
+    // Registrations would otherwise be orphaned against a tournament that no
+    // longer exists, and would keep showing in a team's "my tournaments".
+    setRegistrations(prev => {
+      const next = prev.filter(r => r.tournamentId !== id);
+      AsyncStorage.setItem(KEYS.registrations, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const setTournamentStatus = useCallback((id: string, status: PublishedTournament['status']) => {
+    if (!canTransitionTournament(publishedTournaments.find(t => t.id === id)?.status, status)) {
+      return false;
+    }
+    updateTournament(id, { status });
+    return true;
+  }, [publishedTournaments, updateTournament]);
+
+  const registerForTournament = useCallback((params: Omit<TournamentRegistration, 'id' | 'registeredAt'>) => {
+    const reg = createRegistration(params);
+    setRegistrations(prev => {
+      const next = [reg, ...prev];
+      AsyncStorage.setItem(KEYS.registrations, JSON.stringify(next));
+      return next;
+    });
+    updateTournamentTeamsCount(params.tournamentId, 1);
+    return reg;
+  }, [updateTournamentTeamsCount]);
+
+  const decideRegistration = useCallback((registrationId: string, status: 'confirmed' | 'rejected') => {
+    let rejectedTournamentId: string | null = null;
+    setRegistrations(prev => {
+      const next = prev.map(r => {
+        if (r.id !== registrationId) return r;
+        // A rejection frees the slot the registration was holding.
+        if (status === 'rejected' && r.status !== 'rejected') rejectedTournamentId = r.tournamentId;
+        return { ...r, status };
+      });
+      AsyncStorage.setItem(KEYS.registrations, JSON.stringify(next));
+      return next;
+    });
+    if (rejectedTournamentId) updateTournamentTeamsCount(rejectedTournamentId, -1);
+  }, [updateTournamentTeamsCount]);
+
+  const withdrawRegistration = useCallback((registrationId: string) => {
+    let freedTournamentId: string | null = null;
+    setRegistrations(prev => {
+      const target = prev.find(r => r.id === registrationId);
+      // Only a registration that still holds a slot gives one back.
+      if (target && target.status !== 'rejected') freedTournamentId = target.tournamentId;
+      const next = prev.filter(r => r.id !== registrationId);
+      AsyncStorage.setItem(KEYS.registrations, JSON.stringify(next));
+      return next;
+    });
+    if (freedTournamentId) updateTournamentTeamsCount(freedTournamentId, -1);
+  }, [updateTournamentTeamsCount]);
+
+  const setRegistrationPayment = useCallback(
+    (registrationId: string, paymentStatus: TournamentRegistration['paymentStatus']) => {
+      setRegistrations(prev => {
+        const next = prev.map(r => (r.id === registrationId ? { ...r, paymentStatus } : r));
+        AsyncStorage.setItem(KEYS.registrations, JSON.stringify(next));
+        return next;
+      });
+    },
+    []
+  );
+
+  // ── Team actions ────────────────────────────────────────────────────────────
+  const addTeam = useCallback((params: Omit<Team, 'id' | 'wins' | 'losses' | 'draws' | 'createdAt'>) => {
+    const team = createTeam(params);
+    let stored = team;
+    setTeams(prev => {
+      const next = capFavourites([team, ...prev]);
+      stored = next.find(t => t.id === team.id) || team;
+      AsyncStorage.setItem(KEYS.teams, JSON.stringify(next));
+      return next;
+    });
+    // Reflects the capped isFavourite value, so a caller reading the
+    // returned team (e.g. to set its name in a field) sees the real state.
+    return stored;
+  }, []);
+
+  const addPlayerToTeam = useCallback((teamName: string, player: any) => {
+    setTeams(prev => {
+      let found = false;
+      const merged = prev.map(t => {
+        if (t.name.toLowerCase() === teamName.toLowerCase()) {
+          found = true;
+          return {
+            ...t,
+            players: [...(t.players || []), player],
+          };
+        }
+        return t;
+      });
+      if (!found) {
+        const newTeam = createTeam({
+          name: teamName,
+          sport: 'Cricket',
+          mascot: 'lion',
+          players: [player],
+          // Being auto-created mid-match (e.g. an opponent typed in live
+          // scoring) doesn't make it one of the player's favourites — that's
+          // an explicit, capped choice made elsewhere.
+          isFavourite: false,
+        });
+        merged.push(newTeam);
+      }
+      const next = capFavourites(merged);
+      AsyncStorage.setItem(KEYS.teams, JSON.stringify(next));
+      // Auto-register to FoF network
+      if (player && player.name) {
+        registerFoFPlayer({
+          name: player.name,
+          phone: player.phone,
+          avatar: player.avatarUrl || player.avatar,
+          role: player.position || 'Player',
+          team: teamName,
+        });
+      }
+      return next;
+    });
+  }, []);
+
+  const updateTeam = useCallback((id: string, params: Partial<Omit<Team, 'id' | 'players' | 'createdAt'>>) => {
+    setTeams(prev => {
+      const next = capFavourites(prev.map(t => t.id === id ? { ...t, ...params } : t));
+      AsyncStorage.setItem(KEYS.teams, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const deleteTeam = useCallback((id: string) => {
+    setTeams(prev => {
+      const next = prev.filter(t => t.id !== id);
+      AsyncStorage.setItem(KEYS.teams, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  // Checked against the current `teams` state up front (rather than inside the
+  // setTeams updater) so the caller gets a reliable success/failure result to
+  // react to immediately — e.g. to show "you can only favourite 2 teams".
+  const toggleTeamFavourite = useCallback((id: string): boolean => {
+    const target = teams.find(t => t.id === id);
+    if (!target) return false;
+    if (!target.isFavourite && teams.filter(t => t.isFavourite).length >= MAX_FAVOURITE_TEAMS) {
+      return false;
+    }
+    setTeams(prev => {
+      const next = capFavourites(prev.map(t => t.id === id ? { ...t, isFavourite: !t.isFavourite } : t));
+      AsyncStorage.setItem(KEYS.teams, JSON.stringify(next));
+      return next;
+    });
+    return true;
+  }, [teams]);
+
+  const addPlayerToTeamById = useCallback((teamId: string, player: Omit<Player, 'id'>) => {
+    setTeams(prev => {
+      // Date.now() alone can collide on rapid/double-invoked calls (e.g. React 19
+      // dev-mode double-invocation) and produce duplicate player ids, which then
+      // trips React's "unique key" warning in any list keyed off player.id.
+      const uniqueId = `${teamId}-p${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const next = prev.map(t => t.id === teamId
+        ? { ...t, players: [...(t.players || []), { ...player, id: uniqueId }] }
+        : t
+      );
+      AsyncStorage.setItem(KEYS.teams, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const removePlayerFromTeam = useCallback((teamId: string, playerId: string) => {
+    setTeams(prev => {
+      const next = prev.map(t => t.id === teamId
+        ? { ...t, players: (t.players || []).filter(p => p.id !== playerId) }
+        : t
+      );
+      AsyncStorage.setItem(KEYS.teams, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  // ── Match actions ───────────────────────────────────────────────────────────
+  const addMatch = useCallback((params: Omit<Match, 'id' | 'homeScore' | 'awayScore' | 'status' | 'createdAt'>) => {
+    const match = createMatch(params);
+    setMatches(prev => {
+      const next = [match, ...prev];
+      AsyncStorage.setItem(KEYS.matches, JSON.stringify(next));
+      return next;
+    });
+    return match;
+  }, []);
+
+  const updateMatchScore = useCallback((id: string, homeScore: number, awayScore: number) => {
+    setMatches(prev => {
+      const next = prev.map(m => m.id === id ? { ...m, homeScore, awayScore, status: 'live' as const } : m);
+      AsyncStorage.setItem(KEYS.matches, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const completeMatch = useCallback((id: string) => {
+    setMatches(prev => {
+      const next = prev.map(m => m.id === id ? { ...m, status: 'completed' as const, completedAt: new Date().toISOString() } : m);
+      AsyncStorage.setItem(KEYS.matches, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  // ── Turf actions ────────────────────────────────────────────────────────────
+  const addTurf = useCallback((params: Omit<PublishedTurf, 'id' | 'rating' | 'isActive' | 'createdAt'>) => {
+    const turf = createTurf(params);
+    setOwnedTurfs(prev => {
+      const next = [turf, ...prev];
+      AsyncStorage.setItem(KEYS.turfs, JSON.stringify(next));
+      return next;
+    });
+    return turf;
+  }, []);
+
+  const updateTurf = useCallback((id: string, params: Partial<PublishedTurf>) => {
+    setOwnedTurfs(prev => {
+      const next = prev.map(t => t.id === id ? { ...t, ...params } : t);
+      AsyncStorage.setItem(KEYS.turfs, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  // ── Class actions ───────────────────────────────────────────────────────────
+  const addClass = useCallback((params: any) => {
+    const newClass = {
+      ...params,
+      // Date.now() alone collides when two classes are saved in the same
+      // millisecond, and the id is the only identity a class has.
+      id: generateClassId(),
+      createdAt: new Date().toISOString(),
+    };
+    setClasses(prev => {
+      const next = sortByNewestFirst([newClass, ...prev]);
+      AsyncStorage.setItem(KEYS.classes, JSON.stringify(next));
+      notifyCrossTabSync(KEYS.classes);
+      return next;
+    });
+
+    // Asynchronously publish the new class to the backend API so it is accessible by any user/player
+    classApi.createClass({
+      title: newClass.className || newClass.title || 'Coaching Class',
+      sport: newClass.sportType || newClass.sport || 'Cricket',
+      schedule: newClass.sessionTime || newClass.schedule || 'Flexible',
+      maxStudents: Number(newClass.maxStudents || 20),
+      price: Number(newClass.feeAmount || newClass.price || 0),
+      location: newClass.venue || newClass.location || 'Local Turf',
+    }).catch(err => {
+      console.warn('AppStore: Failed to persist new class to backend', err);
+    });
+
+    return newClass;
+  }, []);
+
+  const updateClass = useCallback((id: string, params: any) => {
+    setClasses(prev => {
+      const next = prev.map(c => c.id === id ? { ...c, ...params, updatedAt: new Date().toISOString() } : c);
+      AsyncStorage.setItem(KEYS.classes, JSON.stringify(next));
+      notifyCrossTabSync(KEYS.classes);
+      return next;
+    });
+  }, []);
+
+  /**
+   * Deletes a class only while it has no enrolments. Returns false (leaving
+   * state untouched) if a player has already booked, so a stale UI that still
+   * shows the delete button can't wipe a class somebody paid for.
+   */
+  const deleteClass = useCallback((id: string) => {
+    if (isClassLocked(enrollments, id)) return false;
+    setClasses(prev => {
+      const next = prev.filter(c => c.id !== id);
+      AsyncStorage.setItem(KEYS.classes, JSON.stringify(next));
+      notifyCrossTabSync(KEYS.classes);
+      return next;
+    });
+    return true;
+  }, [enrollments]);
+
+  /**
+   * Classes created before this flag existed have no `isActive`, and must read
+   * as active — otherwise every existing class would silently vanish from
+   * players the moment this shipped.
+   */
+  const isClassActive = useCallback((cls: any) => cls?.isActive !== false, []);
+
+  const setClassActive = useCallback((id: string, active: boolean) => {
+    setClasses(prev => {
+      const next = prev.map(c =>
+        c.id === id ? { ...c, isActive: active, updatedAt: new Date().toISOString() } : c
+      );
+      AsyncStorage.setItem(KEYS.classes, JSON.stringify(next));
+      notifyCrossTabSync(KEYS.classes);
+      return next;
+    });
+  }, []);
+
+  // ── Class enrolment actions ─────────────────────────────────────────────────
+  /**
+   * Enrol a student, refusing to exceed the class's declared capacity.
+   *
+   * This previously appended unconditionally, so a class advertising 20 seats
+   * would happily take a 21st booking. Capacity is read from the class record
+   * rather than trusted from the caller, and a class with no `maxStudents` set
+   * is treated as uncapped (the field is optional in the create form).
+   */
+  const enrollInClass = useCallback(
+    (params: Parameters<typeof createEnrollment>[0]): EnrollmentResult => {
+      const cls = classes.find((c: any) => c.id === params.classId);
+      const capacity = parseInt(String(cls?.maxStudents ?? ''), 10);
+
+      if (!isNaN(capacity) && capacity > 0) {
+        const taken = enrollments.filter(e => e.classId === params.classId).length;
+        if (taken >= capacity) {
+          return { ok: false, reason: 'class_full', capacity, taken };
+        }
+      }
+
+      const record = createEnrollment(params);
+      setEnrollments(prev => {
+        const next = [record, ...prev];
+        AsyncStorage.setItem(KEYS.enrollments, JSON.stringify(next));
+        return next;
+      });
+      return { ok: true, record };
+    },
+    [classes, enrollments]
+  );
+
+  const enrollmentCountForClass = useCallback(
+    (classId: string) => countForClass(enrollments, classId),
+    [enrollments]
+  );
+
+  const isClassEditable = useCallback(
+    (classId: string) => !isClassLocked(enrollments, classId),
+    [enrollments]
+  );
+
+  // ── Bid actions ─────────────────────────────────────────────────────────────
+  const addBid = useCallback((bidData: any) => {
+    setBids(prev => {
+      const next = [bidData, ...prev];
+      AsyncStorage.setItem(KEYS.bids, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const removeBid = useCallback((id: string) => {
+    setBids(prev => {
+      const next = prev.filter(b => b.id !== id);
+      AsyncStorage.setItem(KEYS.bids, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  // ── Owner offer actions ─────────────────────────────────────────────────────
+  const persistOffers = (next: OwnerOffer[]) => {
+    AsyncStorage.setItem(KEYS.offers, JSON.stringify(next));
+    return next;
+  };
+
+  const addOffer = useCallback((params: Parameters<typeof createOffer>[0]) => {
+    const offer = createOffer(params);
+    setOffers(prev => persistOffers([offer, ...prev]));
+    return offer;
+  }, []);
+
+  const updateOffer = useCallback((id: string, params: Partial<Omit<OwnerOffer, 'id' | 'createdAt'>>) => {
+    setOffers(prev =>
+      persistOffers(
+        prev.map(o =>
+          o.id === id
+            ? { ...o, ...params, code: (params.code ?? o.code).trim().toUpperCase() }
+            : o
+        )
+      )
+    );
+  }, []);
+
+  const deleteOffer = useCallback((id: string) => {
+    setOffers(prev => persistOffers(prev.filter(o => o.id !== id)));
+  }, []);
+
+  const toggleOfferStatus = useCallback((id: string) => {
+    setOffers(prev =>
+      persistOffers(
+        prev.map(o =>
+          o.id === id ? { ...o, status: o.status === 'active' ? 'paused' : 'active' } : o
+        )
+      )
+    );
+  }, []);
+
+  const isOfferCodeAvailable = useCallback(
+    (code: string, exceptId?: string) => {
+      const target = code.trim().toUpperCase();
+      if (!target) return false;
+      return !offers.some(o => o.id !== exceptId && o.code.toUpperCase() === target);
+    },
+    [offers]
+  );
+
+  /**
+   * Claims a single redemption against an owner offer. Enforces the
+   * "first N users" cap: once `redeemedCount` reaches `maxRedemptions` the
+   * code stops working for everyone afterwards.
+   */
+  const redeemOffer = useCallback(
+    (code: string): OfferRedemptionResult => {
+      const key = code.trim().toUpperCase();
+      const offer = offers.find(o => o.code.toUpperCase() === key);
+      if (!offer) return { ok: false, reason: 'not_found' };
+
+      const blocker = redemptionBlocker(offer);
+      if (blocker) return { ok: false, reason: blocker, offer };
+
+      const claimed = { ...offer, redeemedCount: offer.redeemedCount + 1 };
+      setOffers(prev => persistOffers(prev.map(o => (o.id === offer.id ? claimed : o))));
+
+      return { ok: true, offer: claimed, remaining: redemptionsLeft(claimed) };
+    },
+    [offers]
+  );
+
+  // ── Wallet actions ──────────────────────────────────────────────────────────
+  const addWalletFunds = useCallback((amount: number) => {
+    setWalletBalance(prev => {
+      const next = prev + amount;
+      AsyncStorage.setItem(KEYS.wallet, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const deductWalletFunds = useCallback((amount: number) => {
+    setWalletBalance(prev => {
+      const next = Math.max(0, prev - amount);
+      AsyncStorage.setItem(KEYS.wallet, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  return (
+    <AppStoreContext.Provider value={{
+      bookings, addBooking, cancelBooking, rescheduleBooking,
+      publishedTournaments, addTournament, updateTournament, deleteTournament,
+      setTournamentStatus, updateTournamentTeamsCount,
+      registrations, registerForTournament, decideRegistration,
+      withdrawRegistration, setRegistrationPayment,
+      teams, addTeam, addPlayerToTeam, updateTeam, deleteTeam, toggleTeamFavourite, addPlayerToTeamById, removePlayerFromTeam, MAX_FAVOURITE_TEAMS,
+      matches, addMatch, updateMatchScore, completeMatch,
+      ownedTurfs, addTurf, updateTurf,
+      classes, addClass, updateClass, deleteClass, setClassActive, isClassActive, refreshClasses,
+      enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
+      walletBalance, addWalletFunds, deductWalletFunds,
+      bids, addBid, removeBid,
+      offers, addOffer, updateOffer, deleteOffer, toggleOfferStatus, isOfferCodeAvailable, redeemOffer,
+      isLoading,
+    }}>
+      {children}
+    </AppStoreContext.Provider>
+  );
+}
+
+// ── Hooks ─────────────────────────────────────────────────────────────────────
+export function useAppStore() {
+  const ctx = useContext(AppStoreContext);
+  if (!ctx) throw new Error('useAppStore must be used within AppStoreProvider');
+  return ctx;
+}
+
+export function useBookings() {
+  const { bookings, addBooking, cancelBooking, rescheduleBooking } = useAppStore();
+  return { bookings, addBooking, cancelBooking, rescheduleBooking };
+}
+
+export function useTournamentStore() {
+  const {
+    publishedTournaments, addTournament, updateTournament, deleteTournament,
+    setTournamentStatus, updateTournamentTeamsCount,
+    registrations, registerForTournament, decideRegistration,
+    withdrawRegistration, setRegistrationPayment,
+  } = useAppStore();
+  return {
+    publishedTournaments, addTournament, updateTournament, deleteTournament,
+    setTournamentStatus, updateTournamentTeamsCount,
+    registrations, registerForTournament, decideRegistration,
+    withdrawRegistration, setRegistrationPayment,
+  };
+}
+
+export function useMatchStore() {
+  const { teams, addTeam, addPlayerToTeam, matches, addMatch, updateMatchScore, completeMatch } = useAppStore();
+  return { teams, addTeam, addPlayerToTeam, matches, addMatch, updateMatchScore, completeMatch };
+}
+
+export function useTurfStore() {
+  const { ownedTurfs, addTurf, updateTurf } = useAppStore();
+  return { ownedTurfs, addTurf, updateTurf };
+}
+
+export function useClassStore() {
+  const {
+    classes, addClass, updateClass, deleteClass, setClassActive, isClassActive, refreshClasses,
+    enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
+  } = useAppStore();
+  return {
+    classes, addClass, updateClass, deleteClass, setClassActive, isClassActive, refreshClasses,
+    enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
+  };
+}
+
+export function useWalletStore() {
+  const { walletBalance, addWalletFunds, deductWalletFunds } = useAppStore();
+  return { walletBalance, addWalletFunds, deductWalletFunds };
+}
+
+export function useBidStore() {
+  const { bids, addBid, removeBid } = useAppStore();
+  return { bids, addBid, removeBid };
+}
+
+export function useOfferStore() {
+  const {
+    offers,
+    addOffer,
+    updateOffer,
+    deleteOffer,
+    toggleOfferStatus,
+    isOfferCodeAvailable,
+    redeemOffer,
+    isLoading,
+  } = useAppStore();
+  // `isLoading` is exposed so callers can tell "no offers yet" apart from
+  // "offers haven't finished hydrating from storage".
+  return {
+    offers,
+    addOffer,
+    updateOffer,
+    deleteOffer,
+    toggleOfferStatus,
+    isOfferCodeAvailable,
+    redeemOffer,
+    offersLoading: isLoading,
+  };
+}

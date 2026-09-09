@@ -1,0 +1,328 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Non-Stricker | Match Center</title>
+<!-- Google Fonts: Hanken Grotesk for technical, premium feel -->
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary": "#765b00",
+                    "surface": "#f7f9fb",
+                    "on-primary-fixed-variant": "#31476b",
+                    "tertiary-fixed-dim": "#b7c8e1",
+                    "on-surface-variant": "#44474e",
+                    "inverse-surface": "#2d3133",
+                    "error-container": "#ffdad6",
+                    "outline": "#74777f",
+                    "inverse-primary": "#b1c7f2",
+                    "tertiary-fixed": "#d3e4fe",
+                    "primary-fixed-dim": "#b1c7f2",
+                    "on-secondary-container": "#6e5400",
+                    "surface-tint": "#495f84",
+                    "secondary-fixed-dim": "#f5bf00",
+                    "on-primary-container": "#6f84ac",
+                    "background": "#f7f9fb",
+                    "on-tertiary-container": "#75859d",
+                    "surface-container-low": "#f2f4f6",
+                    "on-tertiary": "#ffffff",
+                    "primary": "#000000",
+                    "tertiary-container": "#0b1c30",
+                    "on-background": "#191c1e",
+                    "on-surface": "#191c1e",
+                    "on-error-container": "#93000a",
+                    "on-primary": "#ffffff",
+                    "surface-container": "#eceef0",
+                    "primary-container": "#001b3d",
+                    "outline-variant": "#c4c6cf",
+                    "on-secondary-fixed": "#251a00",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed-variant": "#38485d",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-fixed": "#0b1c30",
+                    "on-secondary-fixed-variant": "#594400",
+                    "secondary-fixed": "#ffdf94",
+                    "primary-fixed": "#d6e3ff",
+                    "on-primary-fixed": "#001b3d",
+                    "on-error": "#ffffff",
+                    "surface-variant": "#e0e3e5",
+                    "surface-container-high": "#e6e8ea",
+                    "tertiary": "#000000",
+                    "surface-dim": "#d8dadc",
+                    "inverse-on-surface": "#eff1f3",
+                    "secondary-container": "#ffc703",
+                    "error": "#ba1a1a",
+                    "surface-bright": "#f7f9fb"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem",
+                    "card": "32px"
+            },
+            "spacing": {
+                    "xs": "4px",
+                    "md": "16px",
+                    "gutter": "24px",
+                    "xl": "40px",
+                    "sm": "8px",
+                    "margin": "32px",
+                    "lg": "24px",
+                    "base": "4px",
+                    "2xl": "64px"
+            },
+            "fontFamily": {
+                    "headline-sm": ["Hanken Grotesk"],
+                    "body-lg": ["Hanken Grotesk"],
+                    "body-md": ["Hanken Grotesk"],
+                    "label-md": ["Hanken Grotesk"],
+                    "display-lg": ["Hanken Grotesk"],
+                    "body-sm": ["Hanken Grotesk"],
+                    "headline-lg-mobile": ["Hanken Grotesk"],
+                    "headline-lg": ["Hanken Grotesk"],
+                    "headline-md": ["Hanken Grotesk"]
+            },
+            "fontSize": {
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f7f9fb;
+            font-family: 'Hanken Grotesk', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .match-card-shadow {
+            box-shadow: 0px 4px 20px rgba(0, 27, 61, 0.08);
+        }
+        .glass-nav {
+            backdrop-filter: blur(12px);
+            background-color: rgba(255, 255, 255, 0.85);
+        }
+    </style>
+</head>
+<body class="text-on-surface antialiased overflow-x-hidden">
+<!-- TopAppBar Shell -->
+<header class="fixed top-0 left-0 w-full z-50 bg-surface-container-lowest shadow-sm flex justify-between items-center px-gutter py-2">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary" data-icon="location_on">location_on</span>
+<h1 class="font-headline-md text-headline-md font-black text-primary tracking-tighter">Non-Stricker</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container active:scale-95 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+</button>
+</header>
+<main class="pt-14 pb-32 px-gutter max-w-2xl mx-auto">
+<!-- Filter Tabs -->
+<div class="flex items-center gap-sm mb-lg overflow-x-auto no-scrollbar py-2">
+<button class="bg-primary text-on-primary py-sm rounded-full font-label-md text-label-md whitespace-nowrap active:scale-95 transition-transform px-4">Me</button>
+<button class="bg-surface-container-high text-on-surface-variant py-sm rounded-full font-label-md text-label-md whitespace-nowrap hover:bg-surface-container-highest transition-colors px-4">All</button>
+<button class="bg-surface-container-high text-on-surface-variant py-sm rounded-full font-label-md text-label-md whitespace-nowrap flex items-center gap-xs px-4">
+<span class="w-2 h-2 rounded-full bg-error"></span> Live
+            </button>
+<button class="bg-surface-container-high text-on-surface-variant py-sm rounded-full font-label-md text-label-md whitespace-nowrap px-4">Upcoming</button>
+<button class="bg-surface-container-high text-on-surface-variant py-sm rounded-full font-label-md text-label-md whitespace-nowrap px-4">Finished</button>
+</div>
+<!-- LIVE NOW Section -->
+<section class="mb-lg">
+<div class="flex items-center justify-between mb-sm">
+<h2 class="font-label-md text-label-md text-on-surface-variant tracking-widest uppercase">Live Now</h2>
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
+</div>
+<div class="bg-surface-container-low rounded-2xl match-card-shadow p-4 relative overflow-hidden border border-outline-variant/30">
+<img alt="Cricket Player" class="absolute -right-12 -top-12 w-48 opacity-[0.03] pointer-events-none" src="https://lh3.googleusercontent.com/aida/AP1WRLs2JEjyM9FVVwSH8GzTGxfXIPXyCvRpJr2XQRI8KQGllXmLflvI1wFBX4nygyhEQaryLxaIA6KIrwR1GYU433G-UNlu-Q7PvGLVpmngETwR0qv8LTddzNP0lxpZOLoLfY55rln-wvi2AOQHzY0aYNhzEr2LhxBwQr4wY6aVc4Uz3FsfBU_Y5OZ-ushmORm76eEXXe7_ACda2sHiD-5sSBNbno6xEdrAwE1y8YW4aNZC-VZ84qPCk4PuMgY">
+<div class="flex justify-between items-start mb-md">
+<div class="flex flex-col">
+<span class="font-label-md text-[10px] text-error font-bold mb-xs flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]" data-icon="podium">podium</span> IPL 2026
+</span>
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center text-on-primary font-bold text-xs">RC</div>
+<span class="font-headline-sm text-sm">Royal Challengers</span>
+</div>
+</div>
+<div class="bg-secondary-container text-on-secondary-container px-md py-1 rounded-full font-label-md text-[10px]">ME</div>
+</div>
+<div class="flex items-center justify-between gap-md py-2 border-y border-outline-variant/10">
+<div class="text-center">
+<p class="font-display-lg text-[24px] font-black text-primary">172/4</p>
+<p class="font-label-md text-on-surface-variant text-[10px]">18.2 OVERS</p>
+</div>
+<div class="text-center px-2 py-1 bg-surface-container-highest rounded">
+<p class="font-label-md text-[10px] text-on-surface-variant">VS</p>
+</div>
+<div class="text-center">
+<p class="font-display-lg text-[24px] font-black text-outline">Yet to bat</p>
+<p class="font-label-md text-on-surface-variant text-[10px]">2ND INNINGS</p>
+</div>
+</div>
+<div class="flex justify-between items-center mt-md">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]" data-icon="stadium">stadium</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">M. Chinnaswamy Stadium</span>
+</div>
+<a class="flex items-center gap-xs text-primary font-label-md text-label-md group" href="#">
+MATCH CENTER
+<span class="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</a>
+</div>
+</div>
+</section>
+<!-- TODAY Section -->
+<section class="mb-lg">
+<h2 class="font-label-md text-label-md text-on-surface-variant tracking-widest uppercase mb-sm">Today</h2>
+<div class="bg-surface-container-low rounded-2xl match-card-shadow p-4 relative overflow-hidden border border-outline-variant/30">
+<img alt="Football Player" class="absolute -right-8 -bottom-8 w-40 opacity-[0.04] pointer-events-none" src="https://lh3.googleusercontent.com/aida/AP1WRLtktV94nJFc0U5ggptbWUmJdSyDpzbXQmz0_Q8mx0mGuM0jwTvOYvB8NJV5PiYkP9f7ZvujLKNMFqOAPGdU64Qf9kcw9LBrrNmqyA5SjFWCFo74KLUo6y9pQIsIzQqXje9l_-qoQw07AzB9s9fy4ANoskUlqNfHpM6Ef8ELcIqwSXwbJuToojtZEvvCDg9-2XbE-mNw9LGBe8tgJp6rRCzHknvrnmculyjYWwW0eukUl3qTOYtxBH8daw">
+<div class="flex justify-between items-start mb-md">
+<div>
+<span class="bg-primary-container text-on-primary-container px-md py-1 rounded-full font-label-md text-[10px] mr-sm">TODAY</span>
+<span class="font-label-md text-[10px] text-on-surface-variant font-bold">SUMMER FUTSAL LEAGUE</span>
+</div>
+<div class="bg-secondary-container text-on-secondary-container px-md py-1 rounded-full font-label-md text-[10px]">ME</div>
+</div>
+<div class="flex items-center justify-between gap-sm mb-md">
+<div class="flex-1 flex flex-col items-center gap-xs">
+<div class="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center p-2 overflow-hidden">
+<img alt="Lions Crest" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbto1U0bbqBYhZDYV3bRev4XgiJxvvWRG3w40vHUwWwxUh2feLgBo85jwevviHrxIDCa1gprSZng5ASJvvRk5nas7oMPKEUgCGs6TlHC_ESv5PCqrRKSxj0gAvj1d3XkiVUACchzZI_M8wGwTTmetZ4ZeMLSWMzl7gkE1dOAHyg5MOc9zPUPGw-B8npYwuiXySHXJh9mzcUpUc6CItxdEf1PM1a-y2ckDgWJucKbI4p5DChGV-ijlxrlVFGYW8D3ekoJHbR_NWfk4">
+</div>
+<p class="font-headline-sm text-center text-xs">London Lions</p>
+</div>
+<div class="px-4 py-2 bg-surface-container-highest rounded-xl">
+<p class="font-display-lg text-[20px] font-black text-primary">19:00</p>
+</div>
+<div class="flex-1 flex flex-col items-center gap-xs">
+<div class="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center p-2 overflow-hidden">
+<img alt="Kings Crest" class="w-full h-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBA2dJ0Ek3TfO8QEv-PcmOto2y8-ZqGd902j1u79pG8obAs-1BA-nsD9aJ2CH5AbL5mVYLCbjrpO7zfGOlXLzB58D3sisJrpuxANnTg7cj78gzBIm-RdSBzzBZYXpqQ3j8UMWZL03qNNK5qcTQRgNhKqjg4DDKzFe2RJpQvJbD_LW26CxMiD8PS7rYFS9tzUes4z9-X-0JmSTiyXyhj3CjESjSn1j0648MjUAROIinLSsX3S5VAi6n2PDcs-SUcADbOzzp07_mBlcM">
+</div>
+<p class="font-headline-sm text-center text-xs">Kent Kings</p>
+</div>
+</div>
+<div class="flex justify-between items-center mt-sm">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]" data-icon="sports_soccer">sports_soccer</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">O2 Arena Turf</span>
+</div>
+<a class="flex items-center gap-xs text-primary font-label-md text-label-md group" href="#">
+MATCH CENTER
+<span class="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</a>
+</div>
+</div>
+</section>
+<!-- YESTERDAY Section -->
+<section class="mb-lg">
+<h2 class="font-label-md text-label-md text-on-surface-variant tracking-widest uppercase mb-sm">Yesterday</h2>
+<div class="bg-white rounded-2xl border border-outline-variant/30 p-4 opacity-80">
+<div class="flex justify-between items-start mb-md">
+<div class="flex flex-col w-full">
+<span class="font-label-md text-[10px] text-on-surface-variant font-bold mb-xs">T20 BLAST</span>
+<div class="flex items-center gap-sm">
+<div class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center text-primary font-bold text-[10px]">MT</div>
+<span class="font-headline-sm text-xs">Middlesex Titans</span>
+<span class="font-display-lg text-sm font-black ml-auto">145/6</span>
+</div>
+<div class="flex items-center gap-sm mt-xs">
+<div class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center text-primary font-bold text-[10px]">SS</div>
+<span class="font-headline-sm text-xs">Sussex Sharks</span>
+<span class="font-display-lg text-sm font-black ml-auto">142/9</span>
+</div>
+</div>
+</div>
+<div class="flex justify-between items-center mt-sm pt-sm border-t border-outline-variant/10">
+<span class="bg-surface-container-highest text-on-surface-variant px-md py-1 rounded font-label-md text-[10px]">FINISHED</span>
+<a class="flex items-center gap-xs text-primary font-label-md text-label-md group" href="#">
+SCORECARD
+<span class="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform" data-icon="chevron_right">chevron_right</span>
+</a>
+</div>
+</div>
+</section>
+</main>
+<!-- FAB: New Match -->
+<button class="fixed right-gutter bottom-32 z-50 w-14 h-14 bg-secondary-container text-on-secondary-container rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform duration-200">
+<span class="material-symbols-outlined text-[32px] font-bold" data-icon="add">add</span>
+</button>
+<!-- BottomNavBar Shell -->
+<nav class="fixed bottom-0 left-0 w-full z-50 bg-primary shadow-[0px_-4px_20px_rgba(0,27,61,0.08)] flex justify-around items-center px-4 pb-6 pt-3 rounded-t-full">
+<a class="flex flex-col items-center justify-center text-on-primary/60 hover:text-secondary-fixed transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary-fixed bg-on-primary-fixed-variant/20 rounded-full px-4 py-2 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="sports_cricket" data-weight="fill" style="font-variation-settings: 'FILL' 1;">sports_cricket</span>
+<span class="font-label-md text-label-md mt-1 font-bold">Matches</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-primary/60 hover:text-secondary-fixed transition-all active:scale-90 duration-200" href="#">
+<div class="bg-on-primary-fixed-variant/20 p-2 rounded-full -mt-8 mb-1 shadow-lg border-2 border-primary">
+<span class="material-symbols-outlined text-secondary-fixed" data-icon="event_available">event_available</span>
+</div>
+<span class="font-label-md text-label-md">Book</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-primary/60 hover:text-secondary-fixed transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="emoji_events">emoji_events</span>
+<span class="font-label-md text-label-md mt-1">Leagues</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-primary/60 hover:text-secondary-fixed transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span class="font-label-md text-label-md mt-1">Profile</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for match cards on scroll
+        const observerOptions = {
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('opacity-100', 'translate-y-0');
+                    entry.target.classList.remove('opacity-0', 'translate-y-8');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('section').forEach(section => {
+            section.classList.add('transition-all', 'duration-700', 'ease-out', 'opacity-0', 'translate-y-8');
+            observer.observe(section);
+        });
+
+        // Simple tab switching logic for aesthetic
+        const tabs = document.querySelectorAll('.no-scrollbar button');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    t.classList.remove('bg-primary', 'text-on-primary');
+                    t.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+                });
+                tab.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+                tab.classList.add('bg-primary', 'text-on-primary');
+            });
+        });
+    </script>
+
+
+</body></html>

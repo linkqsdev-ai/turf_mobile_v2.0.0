@@ -23,15 +23,45 @@ export type ThemedTextProps = TextProps & {
     | 'bodyMd'
     | 'bodySm'
     | 'labelMd'
-    | 'labelSm';
+    | 'labelSm'
+    // Semantic Peek Scale Types
+    | 'subheading'
+    | 'heading'
+    | 'body'
+    | 'smallBody'
+    | 'caption'
+    | 'micro';
   themeColor?: ThemeColor;
 };
 
-export function ThemedText({ style, type = 'default', themeColor, ...rest }: ThemedTextProps) {
+/**
+ * Ceiling on the device's system font-size setting.
+ *
+ * React Native scales text with that setting without bound by default. This app
+ * lays out with fixed pixel heights throughout — inputs at `height: 30`,
+ * promo cards at `height: 130` — several of which fit their content by only a
+ * few pixels. At 150% or 200% accessibility text those layouts overflow and
+ * clip, which is why the same build renders differently from one device to the
+ * next.
+ *
+ * 1.3 keeps larger-text settings usefully larger while staying inside the
+ * headroom those fixed heights actually have. Pass `maxFontSizeMultiplier`
+ * explicitly to override on text that has room to grow.
+ */
+export const MAX_FONT_SCALE = 1.3;
+
+export function ThemedText({
+  style,
+  type = 'default',
+  themeColor,
+  maxFontSizeMultiplier = MAX_FONT_SCALE,
+  ...rest
+}: ThemedTextProps) {
   const theme = useTheme();
 
   return (
     <Text
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
       style={[
         { color: theme[themeColor ?? 'text'] },
         type === 'default' && styles.bodyMd,
@@ -51,6 +81,14 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
         type === 'bodySm' && styles.bodySm,
         type === 'labelMd' && styles.labelMd,
         type === 'labelSm' && styles.labelSm,
+
+        // Semantic Peek Tokens
+        type === 'subheading' && styles.displayLgMobile,
+        type === 'heading' && styles.headlineLg,
+        type === 'body' && styles.bodyLg,
+        type === 'smallBody' && styles.bodyMd,
+        type === 'caption' && styles.bodySm,
+        type === 'micro' && styles.labelSm,
 
         // Defaults/Fallback
         type === 'link' && styles.link,
@@ -113,7 +151,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.labelMd.fontSize,
     lineHeight: Typography.labelMd.lineHeight,
     letterSpacing: Typography.labelMd.letterSpacing,
-    textTransform: 'uppercase', // Often stylized in small caps
   },
   labelSm: {
     fontFamily: Typography.fontFamilies.jakartaMedium,
