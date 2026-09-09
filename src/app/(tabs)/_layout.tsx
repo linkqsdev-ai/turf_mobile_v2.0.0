@@ -32,18 +32,18 @@ function TabIcon({
   return (
     <View
       style={{
-        height: 28,
-        paddingHorizontal: 8,
+        height: 25,
+        paddingHorizontal: 6,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 14,
+        borderRadius: 12,
         backgroundColor: focused ? t.primary + '18' : 'transparent',
       }}
     >
       {lib === 'ion' ? (
-        <Ionicons name={(focused ? name : `${name}-outline`) as any} size={17} color={color} />
+        <Ionicons name={(focused ? name : `${name}-outline`) as any} size={16} color={color} />
       ) : (
-        <MaterialCommunityIcons name={name as any} size={19} color={color} />
+        <MaterialCommunityIcons name={name as any} size={18} color={color} />
       )}
     </View>
   );
@@ -53,12 +53,11 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
   const t = useTokens();
   const isTurfBook = label === 'Turf Book';
   return (
-    <View style={{ alignItems: 'center', marginTop: 1 }}>
+    <View style={{ alignItems: 'center', marginTop: 0.5 }}>
       <Text
         numberOfLines={1}
         style={{
           fontSize: isTurfBook ? 8 : 8.5,
-          // Tab labels are navigation chrome, not headings — semibold at most.
           fontWeight: focused ? '600' : '500',
           letterSpacing: 0.2,
           textTransform: 'uppercase',
@@ -74,7 +73,7 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
             height: 3,
             borderRadius: 1.5,
             backgroundColor: t.primary,
-            marginTop: 2,
+            marginTop: 1.5,
           }}
         />
       )}
@@ -98,7 +97,7 @@ function BookTab({ focused }: { focused: boolean }) {
     // 1. Continuous smooth floating up and down
     floatY.value = withRepeat(
       withSequence(
-        withTiming(-3, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
+        withTiming(-2.5, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
         withTiming(0, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
       ),
       -1,
@@ -141,16 +140,16 @@ function BookTab({ focused }: { focused: boolean }) {
   }));
 
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', width: 50, height: 50, overflow: 'visible' }}>
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: 44, height: 44, overflow: 'visible' }}>
       {/* Animated pulsating halo behind the puck */}
       <Animated.View
         pointerEvents="none"
         style={[
           {
             position: 'absolute',
-            width: 44,
-            height: 44,
-            borderRadius: 22,
+            width: 39,
+            height: 39,
+            borderRadius: 19.5,
             backgroundColor: t.primary,
           },
           haloStyle,
@@ -164,23 +163,23 @@ function BookTab({ focused }: { focused: boolean }) {
           start={{ x: 0.1, y: 0 }}
           end={{ x: 0.9, y: 1 }}
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
+            width: 39,
+            height: 39,
+            borderRadius: 19.5,
             alignItems: 'center',
             justifyContent: 'center',
             borderWidth: 1.5,
             borderColor: focused ? '#82FF78' : t.primary + '65',
             shadowColor: '#00C878',
             shadowOpacity: focused ? 0.55 : 0.25,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 3 },
-            elevation: 6,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 5,
           }}
         >
           <MaterialCommunityIcons
             name="stadium-variant"
-            size={22}
+            size={19}
             color={focused ? '#04140D' : t.primary}
           />
 
@@ -190,9 +189,9 @@ function BookTab({ focused }: { focused: boolean }) {
               position: 'absolute',
               top: 2,
               right: 2,
-              width: 7,
-              height: 7,
-              borderRadius: 3.5,
+              width: 6,
+              height: 6,
+              borderRadius: 3,
               backgroundColor: '#82FF78',
               borderWidth: 1,
               borderColor: t.card,
@@ -224,19 +223,19 @@ export default function TabLayout() {
         tabBarStyle: {
           position: 'absolute',
           overflow: 'visible',
-          height: (Platform.OS === 'ios' ? 64 : 60) + insets.bottom,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 5,
-          paddingTop: 4,
+          height: (Platform.OS === 'ios' ? 57 : 53) + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 4,
+          paddingTop: 3,
           backgroundColor: t.card,
           borderTopWidth: 1,
           borderTopColor: t.border + '50',
-          borderTopLeftRadius: 22,
-          borderTopRightRadius: 22,
+          borderTopLeftRadius: 18,
+          borderTopRightRadius: 18,
           shadowColor: '#000',
           shadowOpacity: 0.08,
-          shadowRadius: 16,
-          shadowOffset: { width: 0, height: -3 },
-          elevation: 12,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: -2 },
+          elevation: 10,
         },
         tabBarShowLabel: true,
       }}
@@ -273,15 +272,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="network"
         options={{
-          href: role === 'Player' || isSuperAdmin ? undefined : null,
-          // Players get their booked coaching here rather than the player
-          // network, so the tab is labelled for what it actually holds. Super
-          // Admin still sees the network screen behind the same route.
+          href: isSuperAdmin ? undefined : null,
           tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} name={role === 'Player' ? 'school' : 'share-social'} />
+            <TabIcon focused={focused} name="share-social" />
           ),
           tabBarLabel: ({ focused }) => (
-            <TabLabel label={role === 'Player' ? 'Class' : 'Connect'} focused={focused} />
+            <TabLabel label="Connect" focused={focused} />
           ),
         }}
       />
@@ -299,16 +295,16 @@ export default function TabLayout() {
       <Tabs.Screen
         name="coach"
         options={{
-          href: role === 'Owner' || role === 'Coach' || isSuperAdmin ? undefined : null,
+          href: role === 'Organizer' ? null : undefined,
           tabBarIcon: ({ focused }) => (
             <TabIcon
               focused={focused}
-              lib="mc"
-              name={role === 'Owner' ? 'soccer-field' : 'whistle'}
+              lib={role === 'Player' ? 'ion' : 'mc'}
+              name={role === 'Player' ? 'school' : role === 'Owner' ? 'soccer-field' : 'whistle'}
             />
           ),
           tabBarLabel: ({ focused }) => (
-            <TabLabel label={role === 'Owner' ? 'Add Turf' : 'Coach'} focused={focused} />
+            <TabLabel label={role === 'Player' ? 'Class' : role === 'Owner' ? 'Add Turf' : 'Coach'} focused={focused} />
           ),
         }}
       />

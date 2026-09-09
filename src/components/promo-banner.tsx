@@ -272,7 +272,7 @@ export function AutoScrollingHorizontalBanners({
   }, [banners.length, step]);
 
   return (
-    <View style={{ height: 185, marginVertical: Spacing.sm, width: '100%', overflow: 'hidden' }}>
+    <View style={{ height: 145, marginVertical: Spacing.xs, width: '100%', overflow: 'hidden' }}>
       <ScrollView
         ref={scrollViewRef}
         horizontal
@@ -280,10 +280,10 @@ export function AutoScrollingHorizontalBanners({
         scrollEnabled={true}
         snapToInterval={step}
         decelerationRate="fast"
-        contentContainerStyle={{ paddingHorizontal: Spacing.containerMargin, paddingVertical: 6, gap: gap }}
+        contentContainerStyle={{ paddingHorizontal: Spacing.containerMargin, paddingVertical: 4, gap: gap }}
       >
         {banners.map((banner, index) => (
-          <View key={index} style={{ width: cardWidth, height: 165 }}>
+          <View key={index} style={{ width: cardWidth, height: 130 }}>
             <PromoBanner {...banner} variant="horizontal" />
           </View>
         ))}
@@ -489,106 +489,102 @@ export const BANNER_DESIGNS_10 = {
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 20,
-    shadowColor: '#4f46e5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
-    backgroundColor: 'transparent',
+    borderRadius: 14,
     overflow: 'hidden',
-    height: 165,
+    height: '100%',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
   background: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    position: 'relative',
-    height: 165,
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    overflow: 'hidden',
+    justifyContent: 'center',
   },
   backgroundVertical: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    position: 'relative',
-    minHeight: 185,
+    flex: 1,
+    padding: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    overflow: 'hidden',
+    justifyContent: 'space-between',
   },
   content: {
     flexDirection: 'row',
-    padding: 16,
     alignItems: 'center',
     justifyContent: 'space-between',
-    flex: 1,
     zIndex: 2,
+    width: '100%',
+    height: '100%',
   },
   contentVertical: {
     flexDirection: 'column',
-    padding: 18,
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    flex: 1,
-    position: 'relative',
     zIndex: 2,
+    width: '100%',
+    height: '100%',
   },
   leftColumn: {
-    flex: 1.45,
-    zIndex: 3,
-    paddingRight: 8,
+    flex: 1,
+    paddingRight: 6,
     justifyContent: 'center',
     alignItems: 'flex-start',
   },
   leftColumnVertical: {
-    flex: 1,
-    zIndex: 3,
     width: '100%',
-    paddingRight: 80,
+    paddingRight: 60,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
   },
   title: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 16,
+    fontSize: 13.5,
     color: '#ffffff',
-    marginBottom: 3,
-    lineHeight: 20,
+    marginBottom: 2,
+    lineHeight: 17,
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 2,
   },
   titleVertical: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 18,
+    fontSize: 15,
     color: '#ffffff',
-    marginBottom: 5,
-    lineHeight: 22,
+    marginBottom: 4,
+    lineHeight: 19,
     textShadowColor: 'rgba(0,0,0,0.35)',
-    textShadowOffset: { width: 0, height: 1.5 },
-    textShadowRadius: 4,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   subtitle: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 9.5,
+    color: 'rgba(255,255,255,0.92)',
+    marginBottom: 5,
+    lineHeight: 12,
+  },
+  subtitleVertical: {
     fontFamily: 'Sora_400Regular',
     fontSize: 10.5,
     color: 'rgba(255,255,255,0.92)',
     marginBottom: 8,
     lineHeight: 14,
   },
-  subtitleVertical: {
-    fontFamily: 'Sora_400Regular',
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.92)',
-    marginBottom: 12,
-    lineHeight: 17,
-  },
   highlightText: {
-    fontSize: 9.5,
+    fontSize: 8.5,
     fontFamily: 'Sora_500Medium',
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
   button: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: BorderRadius.full,
     alignSelf: 'flex-start',
     zIndex: 4,
@@ -598,22 +594,22 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.15,
+        shadowRadius: 2,
       },
       android: {
-        elevation: 4,
+        elevation: 2,
       },
     }),
   },
   buttonText: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 11,
+    fontSize: 9.5,
     letterSpacing: 0.2,
   },
   illustrationContainer: {
-    flex: 0.55,
+    flex: 0.45,
     alignItems: 'flex-end',
     justifyContent: 'center',
     zIndex: 3,
@@ -622,20 +618,20 @@ const styles = StyleSheet.create({
   },
   illustrationContainerVertical: {
     position: 'absolute',
-    right: 12,
-    bottom: 12,
+    right: 8,
+    bottom: 8,
     zIndex: 3,
     pointerEvents: 'none',
   },
   illustration: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
+    width: 65,
+    height: 65,
+    borderRadius: 10,
   },
   illustrationVertical: {
-    width: 90,
-    height: 90,
-    borderRadius: 12,
+    width: 75,
+    height: 75,
+    borderRadius: 10,
   },
 
   /* Graphical Theme Accents */

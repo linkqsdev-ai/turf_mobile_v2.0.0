@@ -6,10 +6,12 @@ import { useRouter } from 'expo-router';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
+import { EditIcon } from '@/components/ui/edit-icon';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useClassStore } from '@/store/app-store';
+import { sortByNewestFirst } from '@/store/class-list';
 import { useToast } from '@/context/ToastContext';
 
 type Filter = 'active' | 'inactive' | 'all';
@@ -30,7 +32,7 @@ export default function CoachClassesScreen() {
 
   const rows = useMemo(
     () =>
-      classes.map((cls: any) => {
+      sortByNewestFirst(classes).map((cls: any) => {
         const enrolled = enrollmentCountForClass(cls.id);
         const capacity = parseInt(String(cls.maxStudents || ''), 10);
         return {
@@ -277,7 +279,7 @@ export default function CoachClassesScreen() {
                             },
                           ]}
                         >
-                          <Ionicons name="create-outline" size={14} color={locked ? theme.textSecondary : '#ffffff'} />
+                          <EditIcon size={14} />
                           <ThemedText style={[styles.actionText, { color: locked ? theme.textSecondary : '#ffffff' }]}>
                             Edit
                           </ThemedText>
@@ -285,7 +287,16 @@ export default function CoachClassesScreen() {
 
                         {/* Booked students for this class */}
                         <Pressable
-                          onPress={() => router.push('/coach-students')}
+                          onPress={() =>
+                            router.push({
+                              pathname: '/coach-students',
+                              params: {
+                                classVariant: cls.className,
+                                className: cls.className,
+                                classId: cls.id,
+                              },
+                            })
+                          }
                           accessibilityRole="button"
                           accessibilityLabel={
                             enrolled > 0

@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -330,7 +330,7 @@ export default function SettingsScreen() {
             >
               <View pointerEvents="none">
                 <ThemedText style={[styles.rowTitle, { color: theme.textSecondary, marginBottom: 6 }]}>Service API Key</ThemedText>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   value={geminiKey}
                   onChangeText={setGeminiKey}
                   editable={false}
@@ -718,12 +718,14 @@ const styles = StyleSheet.create({
   },
 
   textInput: {
-    height: 44,
+    height: 34,
     borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.md,
-    fontSize: 13,
+    paddingHorizontal: Spacing.sm,
+    fontSize: 11.5,
     fontFamily: 'Sora_500Medium',
     borderWidth: 1,
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
 
   // Modals
@@ -732,31 +734,31 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(5, 21, 30, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.xl,
+    padding: Spacing.lg,
   },
   confirmModalCard: {
     width: '100%',
     maxWidth: 340,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
   },
   confirmIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   confirmActionsRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
   },
   confirmBtn: {
     flex: 1,
-    height: 44,
+    height: 32,
     borderRadius: BorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',

@@ -15,7 +15,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -170,7 +170,7 @@ export default function BookingHistoryScreen() {
         <View style={styles.searchSection}>
           <View style={[styles.searchBox, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
             <Ionicons name="search-outline" size={16} color={theme.textSecondary} />
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={[styles.searchInput, { color: theme.text }]}
               placeholder="Search by venue name, location, or ref..."
               placeholderTextColor={theme.textSecondary + '88'}
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitleGroup: { flex: 1, marginLeft: 8 },
-  headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 16, letterSpacing: -0.2 },
+  headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 14.5, letterSpacing: -0.2 },
   headerSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1 },
   newBookingBtn: {
     flexDirection: 'row',
@@ -484,6 +484,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Sora_400Regular',
     fontSize: 11.5,
     padding: 0,
+    includeFontPadding: false,
   },
 
   // Tab Bar

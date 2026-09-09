@@ -24,7 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -179,7 +179,7 @@ export default function PayoutSettingsScreen() {
     return (
       <View style={{ marginBottom: Spacing.md }}>
         <ThemedText style={[type.micro, styles.label, { color: theme.textSecondary }]}>{label}</ThemedText>
-        <TextInput
+        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
           value={value}
           onChangeText={onChange}
           placeholder={opts.placeholder}
@@ -479,7 +479,10 @@ const styles = StyleSheet.create({
   },
 
   label: { letterSpacing: 0.3, marginBottom: 5 },
-  input: { height: 40, borderRadius: BorderRadius.md, borderWidth: 1, paddingHorizontal: 12 },
+  input: { height: 40, borderRadius: BorderRadius.md, borderWidth: 1, paddingHorizontal: 12,
+    includeFontPadding: false,
+    paddingVertical: 0,
+  },
   errRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   row: { flexDirection: 'row' },
 

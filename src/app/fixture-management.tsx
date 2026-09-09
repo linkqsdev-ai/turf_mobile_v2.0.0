@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -13,9 +13,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useTournamentStore } from '@/store/app-store';
+import { generateFixtures, hasTournamentStarted } from '@/store/tournament-store';
+import { todayIso } from '@/constants/tournament';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
@@ -26,6 +29,8 @@ const { width } = Dimensions.get('window');
 interface Fixture {
   id: string;
   matchNo: string;
+  /** Quarter Final / Semi Final / Final — grouped by this in the UI. */
+  round?: string;
   teamA: string;
   teamB: string;
   pitch: string;
@@ -34,22 +39,56 @@ interface Fixture {
   status: 'Scheduled' | 'Live' | 'Finished' | 'Cancelled';
 }
 
-const INITIAL_FIXTURES: Fixture[] = [
-  { id: 'f1', matchNo: 'Match 1', teamA: 'Red Devils FC', teamB: 'Blue Tigers', pitch: 'Pitch A', time: '10:00 AM', date: '2026-06-15', status: 'Finished' },
-  { id: 'f2', matchNo: 'Match 2', teamA: 'Apex Warriors', teamB: 'Strikers City', pitch: 'Pitch B', time: '12:30 PM', date: '2026-06-15', status: 'Live' },
-  { id: 'f3', matchNo: 'Match 3', teamA: 'London United', teamB: 'Titans CC', pitch: 'Pitch A', time: '12:30 PM', date: '2026-06-15', status: 'Scheduled' }, // Overlap conflict
-  { id: 'f4', matchNo: 'Match 4', teamA: 'Arsenal Fans', teamB: 'Chelsea Fans', pitch: 'Pitch B', time: '03:00 PM', date: '2026-06-15', status: 'Scheduled' },
-];
+/**
+ * The planner previously opened on four invented matches — "Red Devils FC vs
+ * Blue Tigers, Pitch A" — complete with a staged scheduling conflict, on every
+ * tournament. It now starts empty and builds the draw from the teams that
+ * actually registered.
+ */
+const KICKOFF_TIMES = ['09:00 AM', '10:30 AM', '12:00 PM', '01:30 PM', '03:00 PM', '04:30 PM'];
+const PITCHES = ['Pitch A', 'Pitch B'];
 
 export default function FixtureManagementScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const params = useLocalSearchParams<{ tournamentId?: string }>();
+  const { publishedTournaments, registrations, updateTournament } = useTournamentStore();
+
+  const tournament = useMemo(
+    () => (publishedTournaments || []).find((t: any) => t.id === params.tournamentId),
+    [publishedTournaments, params.tournamentId]
+  );
+
+  /** Confirmed teams, in the order they registered — the seeding order. */
+  const registeredTeamNames = useMemo(
+    () =>
+      (registrations || [])
+        .filter((r: any) => r.tournamentId === params.tournamentId && r.status !== 'rejected')
+        .map((r: any) => r.teamName)
+        .filter(Boolean),
+    [registrations, params.tournamentId]
+  );
 
   // State Variables
   const [viewMode, setViewMode] = useState<'calendar' | 'bracket' | 'list'>('list');
-  const [fixtures, setFixtures] = useState<Fixture[]>(INITIAL_FIXTURES);
-  const [selectedDate, setSelectedDate] = useState('2026-06-15');
-  const [hasConflict, setHasConflict] = useState(true);
+  const [fixtures, setFixturesLocal] = useState<Fixture[]>([]);
+
+  /** Persist alongside local state so every screen sees the same draw. */
+  const setFixtures = (next: Fixture[] | ((prev: Fixture[]) => Fixture[])) => {
+    setFixturesLocal(prev => {
+      const value = typeof next === 'function' ? (next as (p: Fixture[]) => Fixture[])(prev) : next;
+      if (params.tournamentId) updateTournament(params.tournamentId, { fixtures: value });
+      return value;
+    });
+  };
+
+  // Load whatever the tournament already holds.
+  React.useEffect(() => {
+    if (Array.isArray(tournament?.fixtures)) setFixturesLocal(tournament!.fixtures as Fixture[]);
+  }, [tournament?.id]);
+  const [selectedDate, setSelectedDate] = useState(todayIso());
+  // Derived from the fixtures actually present, not asserted up front.
+  const [conflictDismissed, setConflictDismissed] = useState(false);
 
   // Schedule tools state
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -84,42 +123,111 @@ export default function FixtureManagementScreen() {
   };
 
   // Schedule tools
+  /**
+   * Spread clashing matches onto free slots.
+   *
+   * This used to hardcode a fix for mock fixture 'f3'. It now finds real
+   * collisions — two matches on the same pitch at the same time — and moves
+   * the later one to the next free kick-off.
+   */
   const handleOptimizeSchedule = () => {
     setIsOptimizing(true);
     setTimeout(() => {
-      // Rearrange schedules: resolve the overlap at 12:30 PM on Pitch A
+      const seen = new Set<string>();
       const optimized = fixtures.map(f => {
-        if (f.id === 'f3') {
-          return { ...f, time: '01:45 PM', pitch: 'Pitch A' }; // Rescheduled to resolve conflict
+        let time = f.time;
+        let slot = KICKOFF_TIMES.indexOf(time);
+        if (slot < 0) slot = 0;
+        while (seen.has(`${f.pitch}@${time}`) && slot < KICKOFF_TIMES.length - 1) {
+          slot += 1;
+          time = KICKOFF_TIMES[slot];
         }
-        return f;
+        seen.add(`${f.pitch}@${time}`);
+        return time === f.time ? f : { ...f, time };
       });
+      const moved = optimized.filter((f, i) => f.time !== fixtures[i].time).length;
       setFixtures(optimized);
-      setHasConflict(false);
+      setConflictDismissed(true);
       setIsOptimizing(false);
-      triggerToast('Schedule optimised — pitch idle time reduced by 28 mins.');
-    }, 1500);
+      triggerToast(moved > 0 ? `Moved ${moved} ${moved === 1 ? 'match' : 'matches'} to free slots` : 'No clashes to resolve');
+    }, 700);
   };
 
+  /**
+   * Build the draw from the teams that registered.
+   *
+   * This returned a fixed 8-team bracket of invented clubs ("Real Madrid UK vs
+   * Barca London") regardless of who had entered. Slots are spread across the
+   * available pitches and kick-off times so two matches never open on the same
+   * pitch at the same time.
+   */
+  /** Pitch/time collisions in the current draw. */
+  const conflicts = useMemo(() => {
+    const seen = new Map<string, Fixture>();
+    const clashes: string[] = [];
+    for (const f of fixtures) {
+      const key = `${f.pitch}@${f.time}@${f.date}`;
+      const first = seen.get(key);
+      if (first) {
+        clashes.push(`${f.teamA} vs ${f.teamB} clashes with ${first.teamA} vs ${first.teamB} on ${f.pitch} at ${f.time}.`);
+      } else {
+        seen.set(key, f);
+      }
+    }
+    return clashes;
+  }, [fixtures]);
+
+  const conflictSummary = conflicts[0] || 'No scheduling clashes.';
+
+  const buildFixtures = (): Fixture[] =>
+    generateFixtures(registeredTeamNames).map((f, i) => ({
+      id: f.id,
+      matchNo: f.matchNo,
+      round: f.round,
+      teamA: f.teamA,
+      teamB: f.teamB,
+      pitch: PITCHES[i % PITCHES.length],
+      time: KICKOFF_TIMES[Math.floor(i / PITCHES.length) % KICKOFF_TIMES.length],
+      date: tournament?.startDate || selectedDate,
+      status: 'Scheduled' as const,
+    }));
+
   const handleGenerateBrackets = () => {
+    if (registeredTeamNames.length < 2) {
+      triggerToast('At least two teams must register before a draw can be made');
+      return;
+    }
     setIsGenerating(true);
     setTimeout(() => {
-      const generated: Fixture[] = [
-        { id: 'g1', matchNo: 'QF 1', teamA: 'Red Devils FC', teamB: 'Blue Tigers', pitch: 'Pitch A', time: '09:00 AM', date: '2026-06-16', status: 'Scheduled' },
-        { id: 'g2', matchNo: 'QF 2', teamA: 'Apex Warriors', teamB: 'Strikers City', pitch: 'Pitch B', time: '10:30 AM', date: '2026-06-16', status: 'Scheduled' },
-        { id: 'g3', matchNo: 'QF 3', teamA: 'London United', teamB: 'Titans CC', pitch: 'Pitch A', time: '12:00 PM', date: '2026-06-16', status: 'Scheduled' },
-        { id: 'g4', matchNo: 'QF 4', teamA: 'Real Madrid UK', teamB: 'Barca London', pitch: 'Pitch B', time: '01:30 PM', date: '2026-06-16', status: 'Scheduled' },
-        { id: 'g5', matchNo: 'SF 1', teamA: 'Winner QF 1', teamB: 'Winner QF 2', pitch: 'Pitch A', time: '03:30 PM', date: '2026-06-16', status: 'Scheduled' },
-        { id: 'g6', matchNo: 'SF 2', teamA: 'Winner QF 3', teamB: 'Winner QF 4', pitch: 'Pitch B', time: '05:00 PM', date: '2026-06-16', status: 'Scheduled' },
-        { id: 'g7', matchNo: 'Final', teamA: 'Winner SF 1', teamB: 'Winner SF 2', pitch: 'Pitch A', time: '07:30 PM', date: '2026-06-17', status: 'Scheduled' },
-      ];
+      const generated = buildFixtures();
       setFixtures(generated);
-      setHasConflict(false);
+      setConflictDismissed(true);
       setViewMode('bracket');
       setIsGenerating(false);
-      triggerToast('Generated a perfect 8-team knockout bracket!');
-    }, 1800);
+      triggerToast(`Generated ${generated.length} ${generated.length === 1 ? 'match' : 'matches'} from ${registeredTeamNames.length} teams`);
+    }, 900);
   };
+
+  /**
+   * Draw automatically once registration has closed and play has begun, but
+   * only while no fixtures exist — regenerating would discard an organiser's
+   * manual edits.
+   */
+  React.useEffect(() => {
+    if (!tournament) return;
+    if (fixtures.length > 0) return;
+    // Full counts as "registration complete" — waiting for the status to flip
+    // to Ongoing meant a full cup still showed no fixtures.
+    const full =
+      Number(tournament.maxTeams) > 0 &&
+      registeredTeamNames.length >= Number(tournament.maxTeams);
+    if (!full && !hasTournamentStarted(tournament.status)) return;
+    if (registeredTeamNames.length < 2) return;
+
+    setFixtures(buildFixtures());
+    triggerToast('Fixtures generated automatically — registration has closed');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournament?.status, tournament?.maxTeams, registeredTeamNames.length]);
 
   const handleResolveConflict = () => {
     handleOptimizeSchedule();
@@ -203,74 +311,56 @@ export default function FixtureManagementScreen() {
     </View>
   );
 
+  /**
+   * The draw, rendered from the fixtures that exist.
+   *
+   * This was a fixed 8-team bracket with invented clubs and invented scores —
+   * "Real Madrid UK 1 – 4 Barca London" — shown on every tournament.
+   */
   const renderBracketView = () => (
     <View style={styles.viewContent}>
-      <ThemedText type="headlineSm" style={styles.sectionHeader}>Tournament Bracket Tree</ThemedText>
-      
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bracketScroll}>
-        {/* Quarter Finals */}
-        <View style={styles.bracketColumn}>
-          <ThemedText type="labelSm" style={styles.bracketStageTitle}>QUARTER FINALS</ThemedText>
-          <View style={styles.bracketMatches}>
-            {[
-              { teamA: 'Red Devils FC', scoreA: '2', teamB: 'Blue Tigers', scoreB: '1', date: 'June 16 09:00' },
-              { teamA: 'Apex Warriors', scoreA: '3', teamB: 'Strikers City', scoreB: '2', date: 'June 16 10:30' },
-              { teamA: 'London United', scoreA: '0', teamB: 'Titans CC', scoreB: '1', date: 'June 16 12:00' },
-              { teamA: 'Real Madrid UK', scoreA: '1', teamB: 'Barca London', scoreB: '4', date: 'June 16 13:30' },
-            ].map((m, idx) => (
-              <View key={idx} style={[styles.bracketMatchBox, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}>
-                <View style={[styles.bracketTeamRow, { borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '22' }]}>
-                  <ThemedText type="bodySm" numberOfLines={1} style={{ flex: 1, color: theme.text }}>{m.teamA}</ThemedText>
-                  <ThemedText type="bodySm" style={{ fontWeight: '500', color: theme.text }}>{m.scoreA}</ThemedText>
-                </View>
-                <View style={styles.bracketTeamRow}>
-                  <ThemedText type="bodySm" numberOfLines={1} style={{ flex: 1, color: theme.text }}>{m.teamB}</ThemedText>
-                  <ThemedText type="bodySm" style={{ fontWeight: '500', color: theme.text }}>{m.scoreB}</ThemedText>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
+      <ThemedText type="headlineSm" style={styles.sectionHeader}>Tournament Bracket</ThemedText>
 
-        {/* Semi Finals */}
-        <View style={styles.bracketColumn}>
-          <ThemedText type="labelSm" style={styles.bracketStageTitle}>SEMI FINALS</ThemedText>
-          <View style={styles.bracketMatches}>
-            {[
-              { teamA: 'Red Devils FC', scoreA: '-', teamB: 'Apex Warriors', scoreB: '-', date: 'June 16 15:30' },
-              { teamA: 'Titans CC', scoreA: '-', teamB: 'Barca London', scoreB: '-', date: 'June 16 17:00' },
-            ].map((m, idx) => (
-              <View key={idx} style={[styles.bracketMatchBox, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant, marginTop: 45, marginBottom: 45 }]}>
-                <View style={[styles.bracketTeamRow, { borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '22' }]}>
-                  <ThemedText type="bodySm" style={{ flex: 1, color: theme.text }}>{m.teamA}</ThemedText>
-                  <ThemedText type="bodySm" style={{ color: theme.text }}>{m.scoreA}</ThemedText>
-                </View>
-                <View style={styles.bracketTeamRow}>
-                  <ThemedText type="bodySm" style={{ flex: 1, color: theme.text }}>{m.teamB}</ThemedText>
-                  <ThemedText type="bodySm" style={{ color: theme.text }}>{m.scoreB}</ThemedText>
-                </View>
-              </View>
-            ))}
-          </View>
+      {fixtures.length === 0 ? (
+        <View style={[styles.emptyBox, { borderColor: theme.outlineVariant + '55' }]}>
+          <Ionicons name="git-branch-outline" size={22} color={theme.textSecondary} />
+          <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 8 }}>
+            {registeredTeamNames.length < 2
+              ? 'At least two teams must register before a draw can be made.'
+              : 'No draw yet — tap Generate Brackets to build one from the registered teams.'}
+          </ThemedText>
         </View>
-
-        {/* Final */}
-        <View style={styles.bracketColumn}>
-          <ThemedText type="labelSm" style={styles.bracketStageTitle}>FINAL</ThemedText>
-          <View style={styles.bracketMatches}>
-            <View style={[styles.bracketMatchBox, { backgroundColor: theme.surfaceLowest, borderColor: theme.secondaryContainer, borderWidth: 2, marginTop: 140 }]}>
-              <View style={[styles.bracketTeamRow, { borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '22' }]}>
-                <ThemedText type="bodySm" style={{ flex: 1, color: theme.text }}>Winner Semis 1</ThemedText>
-                <ThemedText type="bodySm" style={{ color: theme.text }}>-</ThemedText>
-              </View>
-              <View style={styles.bracketTeamRow}>
-                <ThemedText type="bodySm" style={{ flex: 1, color: theme.text }}>Winner Semis 2</ThemedText>
-                <ThemedText type="bodySm" style={{ color: theme.text }}>-</ThemedText>
-              </View>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bracketScroll}>
+          {/* One column per round, so the bracket reads left-to-right from the
+              opening ties through to the final. */}
+          {[...new Map(fixtures.map(f => [f.round || 'Fixtures', null])).keys()].map((round) => (
+          <View key={round} style={styles.bracketColumn}>
+            <ThemedText type="labelSm" style={styles.bracketStageTitle}>
+              {String(round).toUpperCase()}
+            </ThemedText>
+            <View style={styles.bracketMatches}>
+              {fixtures.filter(f => (f.round || 'Fixtures') === round).map((m) => (
+                <View
+                  key={m.id}
+                  style={[styles.bracketMatchBox, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}
+                >
+                  <View style={[styles.bracketTeamRow, { borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '22' }]}>
+                    <ThemedText type="bodySm" numberOfLines={1} style={{ flex: 1, color: theme.text }}>{m.teamA}</ThemedText>
+                  </View>
+                  <View style={styles.bracketTeamRow}>
+                    <ThemedText type="bodySm" numberOfLines={1} style={{ flex: 1, color: theme.text }}>{m.teamB}</ThemedText>
+                  </View>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, marginTop: 4 }}>
+                    {m.pitch} · {m.time}
+                  </ThemedText>
+                </View>
+              ))}
             </View>
           </View>
-        </View>
-      </ScrollView>
+          ))}
+        </ScrollView>
+      )}
     </View>
   );
 
@@ -400,14 +490,14 @@ export default function FixtureManagementScreen() {
         </View>
 
         {/* CONFLICT DETECTOR WARNING BOX */}
-        {hasConflict && viewMode === 'list' && (
+        {conflicts.length > 0 && !conflictDismissed && viewMode === 'list' && (
           <View style={[styles.conflictAlertBox, { backgroundColor: '#fff8e1', borderColor: '#ffe082' }]}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
               <Ionicons name="warning-sharp" size={20} color="#ffb300" style={{ marginTop: 2 }} />
               <View style={{ flex: 1, marginLeft: 8 }}>
                 <ThemedText type="labelSm" style={{ color: '#6b4500', fontWeight: '500' }}>Schedule Conflict Detected</ThemedText>
                 <ThemedText type="bodySm" style={{ color: '#7f5800', marginTop: 2 }}>
-                  Blue Tigers vs London United scheduled on Pitch A at 12:30 PM, overlapping with Red Devils FC.
+                  {conflictSummary}
                 </ThemedText>
                 <Pressable style={styles.conflictResolveBtn} onPress={handleResolveConflict}>
                   <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '500' }}>AUTO RESOLVE</ThemedText>
@@ -436,7 +526,7 @@ export default function FixtureManagementScreen() {
 
               <View style={styles.inputGroup}>
                 <ThemedText type="labelSm" style={styles.inputLabel}>Selected pitch</ThemedText>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                   value={editPitch}
                   onChangeText={setEditPitch}
@@ -445,7 +535,7 @@ export default function FixtureManagementScreen() {
 
               <View style={styles.inputGroup}>
                 <ThemedText type="labelSm" style={styles.inputLabel}>Scheduled time</ThemedText>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                   value={editTime}
                   onChangeText={setEditTime}
@@ -616,6 +706,15 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   // Bracket View styles
+  emptyBox: {
+    alignItems: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 14,
+    paddingVertical: 30,
+    paddingHorizontal: 22,
+    marginTop: 8,
+  },
   bracketScroll: {
     paddingVertical: 10,
     gap: 24,
@@ -700,6 +799,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     height: 48,
     fontSize: 14,
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   statusSelectors: {
     flexDirection: 'row',

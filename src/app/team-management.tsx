@@ -16,7 +16,8 @@ import { Image } from 'expo-image';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
+import { EditIcon } from '@/components/ui/edit-icon';
 import { GradientContainer } from '@/components/gradient-container';
 import { FavouriteTeamIcon } from '@/components/favourite-team-icon';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
@@ -266,7 +267,7 @@ export default function TeamManagementScreen() {
                         style={[styles.cardBtn, { borderColor: theme.outlineVariant }]}
                         onPress={() => openEditModal(team)}
                       >
-                        <Ionicons name="create-outline" size={14} color={theme.text} />
+                        <EditIcon size={14} />
                         <ThemedText type="labelSm" style={{ color: theme.text, marginLeft: 4 }}>Edit</ThemedText>
                       </Pressable>
 
@@ -300,7 +301,7 @@ export default function TeamManagementScreen() {
 
               <View style={styles.inputGroup}>
                 <ThemedText type="labelSm" style={styles.inputLabel}>Team name</ThemedText>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                   value={editName}
                   onChangeText={setEditName}
@@ -418,14 +419,14 @@ export default function TeamManagementScreen() {
               {showAddPlayer ? (
                 <View style={[styles.addPlayerForm, { borderColor: theme.outlineVariant + '55', backgroundColor: theme.surfaceLow }]}>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       style={[styles.textInput, styles.addPlayerNameInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                       value={newPlayerName}
                       onChangeText={setNewPlayerName}
                       placeholder="Player name"
                       placeholderTextColor={theme.textSecondary}
                     />
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       style={[styles.textInput, styles.addPlayerJerseyInput, { borderColor: theme.outlineVariant, color: theme.text }]}
                       value={newPlayerJersey}
                       onChangeText={(t) => setNewPlayerJersey(t.replace(/\D/g, '').slice(0, 3))}
@@ -434,7 +435,7 @@ export default function TeamManagementScreen() {
                       keyboardType="number-pad"
                     />
                   </View>
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text, marginTop: 8 }]}
                     value={newPlayerPosition}
                     onChangeText={setNewPlayerPosition}
@@ -717,6 +718,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     height: 48,
     fontSize: 14,
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   sportChip: {
     paddingHorizontal: 12,
@@ -819,10 +822,12 @@ const styles = StyleSheet.create({
   },
   addPlayerNameInput: {
     flex: 1,
+    includeFontPadding: false,
   },
   addPlayerJerseyInput: {
     width: 56,
     textAlign: 'center',
+    includeFontPadding: false,
   },
   skillChip: {
     flex: 1,

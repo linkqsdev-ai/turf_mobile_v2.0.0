@@ -24,7 +24,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.linkqsdev.turf_mobile_app_v2.x0.x0"
+      "package": "com.linkqsdev.turfmobileapp"
     },
     "web": {
       "bundler": "metro",

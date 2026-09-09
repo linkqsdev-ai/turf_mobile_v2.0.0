@@ -23,11 +23,12 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile, getShortLocation } from '@/hooks/use-user-profile';
+import { MyClasses } from '@/components/class/my-classes';
 import { getAvatarSource } from '@/constants/avatars';
 import { CoinTossModal } from '@/components/coin-toss-modal';
 
@@ -429,11 +430,52 @@ export default function NetworkScreen() {
     return matchesSport && matchesSearch;
   });
 
+  // For a Player this tab is "Class": the coaching they have booked, not the
+  // player network. The route keeps its name so deep links and the layout
+  // registration are unaffected.
   if (isPlayerRole) {
     return (
       <GradientContainer screenName="network" style={styles.container}>
         <SafeAreaView style={styles.safeArea} edges={['top']}>
-          <PlayerNetworkComingSoon />
+          {/* Top App Bar with Username (Azarudeen) and Location Short Form */}
+          <View style={[styles.header, { backgroundColor: 'transparent' }]}>
+            <View style={styles.headerLeft}>
+              <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
+                <Image
+                  source={getAvatarSource(profile.avatarUrl)}
+                  style={styles.headerAvatar}
+                  contentFit="cover"
+                />
+              </Pressable>
+              <View style={styles.headerTextGroup}>
+                <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_500Medium', lineHeight: 18 }}>
+                  {profile.name}
+                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                  <Ionicons name="location-sharp" size={12} color={theme.secondary} />
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
+                    {shortLocation}
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.headerRightActions}>
+              <Pressable style={styles.iconButton} onPress={() => router.push('/(tabs)/matches')}>
+                <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
+              </Pressable>
+              <Pressable style={styles.iconButton} onPress={() => setCoinTossVisible(true)}>
+                <Image
+                  source={require('@/assets/images/coin_toss_icon.png')}
+                  style={{ width: 26, height: 26 }}
+                  contentFit="contain"
+                />
+              </Pressable>
+            </View>
+          </View>
+
+          <MyClasses />
+          <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
         </SafeAreaView>
       </GradientContainer>
     );
@@ -508,7 +550,7 @@ export default function NetworkScreen() {
           <Reanimated.View entering={FadeInDown.delay(200).duration(500).damping(14)} style={styles.searchSection}>
             <View style={[styles.searchBar, { backgroundColor: 'rgba(255, 255, 255, 0.9)' }]}>
               <Ionicons name="search" size={18} color="#8b5cf6" style={{ marginRight: 8 }} />
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.searchInput, { color: theme.text }]}
                 placeholder="Search athletes, roles, or sports..."
                 placeholderTextColor="#9ca3af"
@@ -829,6 +871,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontFamily: 'Sora_500Medium',
+    includeFontPadding: false,
   },
   filterScroll: {
     flexDirection: 'row',

@@ -12,10 +12,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { CoinTossModal } from '@/components/coin-toss-modal';
-import Reanimated, { FadeInDown } from 'react-native-reanimated';
+import Reanimated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 
+import { EditIcon } from '@/components/ui/edit-icon';
+import { CoachBrowser } from '@/components/class/coach-browser';
 import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
@@ -24,10 +26,15 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useUserProfile, getShortLocation } from '@/hooks/use-user-profile';
 import { getAvatarSource } from '@/constants/avatars';
 import { RecordCard } from '@/components/record-card';
+import { normaliseScheduleList, formatClassDateRange, formatDaysShort, formatSessionsShort } from '@/utils/class-schedule';
+import { sortByNewestFirst } from '@/store/class-list';
 import { useClassStore, useTurfStore, useBookings } from '@/store/app-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TicketVoucherCarousel } from '@/components/ticket-voucher-card';
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
 import { computeTurfSlotMetrics } from '@/utils/turf-slot-sync';
+import { MyClasses } from '@/components/class/my-classes';
 
 // Mock Players Data
 const PLAYERS = [
@@ -143,14 +150,24 @@ const COACHES = [
   },
 ];
 
-/** Calendar order for `selectedDays`, matching the create-class form. */
-const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
 export default function CoachTab() {
   const theme = useTheme();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
+  const params = useLocalSearchParams<{ toast?: string }>();
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (params.toast) {
+      setToastMsg(String(params.toast));
+      const t = setTimeout(() => {
+        setToastMsg(null);
+      }, 4000);
+      return () => clearTimeout(t);
+    }
+  }, [params.toast]);
+
   const { profile } = useUserProfile();
   const { classes, deleteClass, enrollmentCountForClass, isClassActive } = useClassStore();
 
@@ -199,6 +216,31 @@ export default function CoachTab() {
   const [backendTurfs, setBackendTurfs] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [coinTossVisible, setCoinTossVisible] = useState(false);
+  const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
+
+  const fetchDrafts = React.useCallback(async () => {
+    try {
+      const draftsStr = await AsyncStorage.getItem('@turf_class_drafts');
+      if (draftsStr) {
+        setSavedDrafts(JSON.parse(draftsStr));
+      } else {
+        setSavedDrafts([]);
+      }
+    } catch (e) {
+      console.log('Failed to fetch class drafts in coach tab', e);
+    }
+  }, []);
+
+  const handleDeleteDraft = React.useCallback(async (draftId: string) => {
+    try {
+      const nextDrafts = savedDrafts.filter(d => d.id !== draftId);
+      await AsyncStorage.setItem('@turf_class_drafts', JSON.stringify(nextDrafts));
+      setSavedDrafts(nextDrafts);
+      Alert.alert('Draft deleted', 'The draft class was removed.');
+    } catch (e) {
+      console.error('Failed to delete draft', e);
+    }
+  }, [savedDrafts]);
 
   const fetchTurfs = React.useCallback(async () => {
     try {
@@ -213,19 +255,22 @@ export default function CoachTab() {
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    await fetchTurfs();
+    await Promise.all([fetchTurfs(), fetchDrafts()]);
     setTimeout(() => setRefreshing(false), 600);
-  }, [fetchTurfs]);
+  }, [fetchTurfs, fetchDrafts]);
 
   useFocusEffect(
     React.useCallback(() => {
       fetchTurfs();
-    }, [fetchTurfs])
+      fetchDrafts();
+    }, [fetchTurfs, fetchDrafts])
   );
 
   // Map our self-created classes to coach cards layout
   const myCreatedCoaches = useMemo(() => {
-    return classes.map((cls: any, idx: number) => ({
+    // Newest first, and stated rather than relying on addClass's prepend
+    // surviving reload and edits.
+    return sortByNewestFirst(classes).map((cls: any, idx: number) => ({
       id: cls.id || `created-${idx}`,
       name: profile.name || 'My Coaching',
       specialty: cls.className,
@@ -257,6 +302,7 @@ export default function CoachTab() {
       avatar: profile.avatarUrl || 'avatar_12',
       badge: 'OWNER',
       defaultAction: 'Active Class',
+      rawClass: cls,
     }));
   }, [classes, profile.name, profile.avatarUrl, enrollmentCountForClass, isClassActive]);
 
@@ -301,6 +347,51 @@ export default function CoachTab() {
   };
 
   const avatarSource = useMemo(() => getAvatarSource(profile.avatarUrl), [profile.avatarUrl]);
+
+  if (profile.role === 'Player') {
+    return (
+      <GradientContainer screenName="coach" style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          {/* Top App Bar */}
+          <View style={[styles.header, { backgroundColor: 'transparent' }]}>
+            <View style={styles.headerLeft}>
+              <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
+                <Image
+                  source={avatarSource}
+                  style={styles.headerAvatar}
+                />
+              </Pressable>
+              <View style={styles.headerTextGroup}>
+                <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_500Medium', lineHeight: 18 }}>
+                  {profile.name}
+                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                  <Ionicons name="location-sharp" size={12} color={theme.secondary} />
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}>
+                    {getShortLocation(profile.location)}
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
+            <View style={styles.headerRightActions}>
+              <Pressable style={styles.iconButton} onPress={() => router.push('/(tabs)/matches')}>
+                <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
+              </Pressable>
+              <Pressable style={styles.iconButton} onPress={() => setCoinTossVisible(true)}>
+                <Image
+                  source={require('@/assets/images/coin_toss_icon.png')}
+                  style={{ width: 26, height: 26 }}
+                  contentFit="contain"
+                />
+              </Pressable>
+            </View>
+          </View>
+          <MyClasses />
+          <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
+        </SafeAreaView>
+      </GradientContainer>
+    );
+  }
 
   if (profile.role === 'Owner' || profile.role === 'Super Admin') {
     return (
@@ -421,7 +512,14 @@ export default function CoachTab() {
                           key={cls.id || i}
                           onPress={() =>
                             locked
-                              ? router.push('/coach-students')
+                              ? router.push({
+                                  pathname: '/coach-students',
+                                  params: {
+                                    classId: cls.id,
+                                    className: cls.className || '',
+                                    classVariant: cls.className || '',
+                                  },
+                                })
                               : router.push({ pathname: '/create-class', params: { editId: cls.id } })
                           }
                           accessibilityRole="button"
@@ -464,6 +562,13 @@ export default function CoachTab() {
                           <ThemedText style={{ color: theme.textSecondary, fontSize: 10, marginTop: 4 }} numberOfLines={1}>
                             📍 {cls.venue || 'Main Pitch'}
                           </ThemedText>
+                          {cls.vouchers && cls.vouchers.length > 0 ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                              <ThemedText style={{ color: '#d97706', fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
+                                🎟️ {cls.vouchers[0].discountValue ? `${cls.vouchers[0].discountValue}${cls.vouchers[0].discountType === 'flat' ? '₹ OFF' : '% OFF'}` : '15% OFF'} ({cls.vouchers[0].code})
+                              </ThemedText>
+                            </View>
+                          ) : null}
 
                           {locked ? (
                             <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5, marginTop: 8, lineHeight: 13 }}>
@@ -492,6 +597,82 @@ export default function CoachTab() {
                   </ScrollView>
                 </View>
               )}
+
+              {/* Saved Draft Classes (Coach Page) */}
+              {savedDrafts && savedDrafts.length > 0 && (
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <View>
+                      <ThemedText type="headlineSm">Draft Classes ({savedDrafts.length})</ThemedText>
+                      <ThemedText type="bodySm" style={{ color: theme.textSecondary }}>
+                        Unpublished classes in progress · Tap to resume
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginTop: 8 }}>
+                    {savedDrafts.map((draft: any) => (
+                      <View
+                        key={draft.id}
+                        style={[
+                          styles.teamCard,
+                          {
+                            width: 240,
+                            backgroundColor: theme.surfaceLowest,
+                            borderColor: theme.outlineVariant + '44',
+                            borderWidth: 1,
+                            padding: 12,
+                            borderRadius: BorderRadius.lg,
+                          },
+                          Shadows.level2,
+                        ]}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <View style={{ backgroundColor: '#fef3c7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                            <ThemedText style={{ color: '#d97706', fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
+                              📝 In Draft
+                            </ThemedText>
+                          </View>
+                          <ThemedText style={{ color: theme.textSecondary, fontSize: 10, fontFamily: 'Sora_400Regular' }}>
+                            Step {(draft.step || 0) + 1}/3
+                          </ThemedText>
+                        </View>
+                        <ThemedText type="headlineSm" style={{ fontSize: 14, color: theme.text }} numberOfLines={1}>
+                          {draft.className || 'Untitled Class Draft'}
+                        </ThemedText>
+                        <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
+                          {draft.sportType || 'Sport TBD'} • {draft.classType || 'Class Type TBD'}
+                        </ThemedText>
+                        <ThemedText style={{ color: theme.textSecondary, fontSize: 10, marginTop: 4 }} numberOfLines={1}>
+                          📍 {draft.venue || 'Venue TBD'}
+                        </ThemedText>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '22' }}>
+                          <Pressable
+                            onPress={() => router.push({ pathname: '/create-class', params: { draftId: draft.id } })}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                          >
+                            <EditIcon size={14} />
+                            <ThemedText style={{ color: theme.primary, fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>
+                              Resume Draft
+                            </ThemedText>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => handleDeleteDraft(draft.id)}
+                            hitSlop={6}
+                          >
+                            <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Coaching Vouchers & Offers Carousel */}
+              <View style={{ marginTop: 8 }}>
+                <TicketVoucherCarousel filterType="class" title="COACHING CLASS VOUCHERS & OFFERS" />
+              </View>
 
               {/* My Managed Turfs */}
               <View style={styles.section}>
@@ -775,7 +956,7 @@ export default function CoachTab() {
                                 >
                                   {/* Day & Date Header */}
                                   <View style={{ alignItems: 'center' }}>
-                                    <ThemedText style={{ fontSize: 7.5, fontFamily: isToday ? 'Sora_600SemiBold' : 'Sora_500Medium', color: headerColor }}>
+                                    <ThemedText style={{ fontSize: 9, fontFamily: isToday ? 'Sora_600SemiBold' : 'Sora_500Medium', color: headerColor }}>
                                       {isToday ? 'TODAY' : dayName.toUpperCase()}
                                     </ThemedText>
                                     <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: dateColor, marginTop: 0.5 }}>
@@ -816,10 +997,10 @@ export default function CoachTab() {
                                   {/* Available & Booked slot counts */}
                                   <View style={{ alignItems: 'center', gap: 0.5 }}>
                                     <ThemedText style={{ fontSize: 8, color: availColor, fontFamily: 'Sora_600SemiBold' }}>
-                                      {metrics.totalAvailable} <ThemedText style={{ fontSize: 6.5, color: availColor, fontFamily: 'Sora_400Regular' }}>avail</ThemedText>
+                                      {metrics.totalAvailable} <ThemedText style={{ fontSize: 9, color: availColor, fontFamily: 'Sora_400Regular' }}>avail</ThemedText>
                                     </ThemedText>
-                                    <ThemedText style={{ fontSize: 7.5, color: bkdColor, fontFamily: isSolidGradient ? 'Sora_600SemiBold' : 'Sora_500Medium' }}>
-                                      {metrics.totalBooked} <ThemedText style={{ fontSize: 6.5, color: bkdColor, fontFamily: 'Sora_400Regular' }}>bkd</ThemedText>
+                                    <ThemedText style={{ fontSize: 9, color: bkdColor, fontFamily: isSolidGradient ? 'Sora_600SemiBold' : 'Sora_500Medium' }}>
+                                      {metrics.totalBooked} <ThemedText style={{ fontSize: 9, color: bkdColor, fontFamily: 'Sora_400Regular' }}>bkd</ThemedText>
                                     </ThemedText>
                                   </View>
                                 </LinearGradient>
@@ -920,6 +1101,19 @@ export default function CoachTab() {
           </Pressable>
 
           <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
+
+          {toastMsg && (
+            <Reanimated.View
+              entering={FadeInDown.duration(300)}
+              exiting={FadeOutDown.duration(250)}
+              style={styles.floatingToast}
+            >
+              <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+              <ThemedText style={styles.floatingToastText} numberOfLines={2}>
+                {toastMsg}
+              </ThemedText>
+            </Reanimated.View>
+          )}
         </SafeAreaView>
       </GradientContainer>
     );
@@ -1108,15 +1302,9 @@ export default function CoachTab() {
                     const capacity = parseInt(String(coach.maxStudents || ''), 10);
                     const seatsLeft = isNaN(capacity) ? null : Math.max(0, capacity - booked);
 
-                    // `selectedDays` is a Record<string, boolean> keyed by day,
-                    // not a list — reading it as an array yields "[object
-                    // Object]". Pull the ticked keys in calendar order.
-                    const days = DAYS_OF_WEEK.filter(
-                      (d) => (coach.selectedDays || {})[d]
-                    ).join(', ');
-                    const dateRange = [coach.startDate, coach.endDate]
-                      .filter(Boolean)
-                      .join(' – ');
+                    const days = formatDaysShort(coach.selectedDays);
+                    const sessions = formatSessionsShort(coach.sessionTime);
+                    const dateRange = formatClassDateRange(coach.startDate, coach.endDate);
 
                     return (
                       <RecordCard
@@ -1134,7 +1322,7 @@ export default function CoachTab() {
                         details={[
                           { icon: 'calendar-outline', label: 'Runs', value: dateRange, full: true },
                           { icon: 'repeat-outline', label: 'Days', value: days },
-                          { icon: 'time-outline', label: 'Sessions', value: coach.sessionTime },
+                          { icon: 'time-outline', label: 'Sessions', value: sessions },
                           { icon: 'pricetag-outline', label: 'Fee', value: coach.rate },
                           {
                             icon: 'trending-up-outline',
@@ -1163,7 +1351,11 @@ export default function CoachTab() {
                           onPress: () =>
                             router.push({
                               pathname: '/coach-students',
-                              params: { classId: coach.id, className: coach.specialty || '' },
+                              params: {
+                                classId: coach.id,
+                                className: coach.specialty || coach.name || '',
+                                classVariant: coach.specialty || coach.name || '',
+                              },
                             }),
                         }}
                         actions={[
@@ -1174,9 +1366,10 @@ export default function CoachTab() {
                               router.push({ pathname: '/create-class', params: { editId: coach.id } }),
                           },
                           {
-                            icon: 'options-outline',
-                            accessibilityLabel: 'Manage all classes',
-                            onPress: () => router.push('/coach-classes'),
+                            icon: 'trash-outline',
+                            accessibilityLabel: `Delete ${coach.specialty}`,
+                            destructive: true,
+                            onPress: () => handleDeleteClass(coach.rawClass || { id: coach.id, className: coach.specialty }),
                           },
                         ]}
                       />
@@ -1211,6 +1404,19 @@ export default function CoachTab() {
         )}
       </SafeAreaView>
       <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
+
+      {toastMsg && (
+        <Reanimated.View
+          entering={FadeInDown.duration(300)}
+          exiting={FadeOutDown.duration(250)}
+          style={styles.floatingToast}
+        >
+          <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+          <ThemedText style={styles.floatingToastText} numberOfLines={2}>
+            {toastMsg}
+          </ThemedText>
+        </Reanimated.View>
+      )}
     </GradientContainer>
   );
 }
@@ -1246,7 +1452,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.containerMargin,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',
     zIndex: 10,
@@ -1254,12 +1460,12 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   headerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     borderWidth: 1.5,
     borderColor: '#5D68E8',
   },
@@ -1273,7 +1479,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   iconButton: {
-    padding: 4,
+    padding: 3,
   },
   profileIconButton: {
     padding: 2,
@@ -1282,22 +1488,22 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   section: {
-    marginTop: Spacing.lg,
+    marginTop: Spacing.sm,
     paddingHorizontal: Spacing.containerMargin,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.xs,
   },
   rankingGrid: {
     flexDirection: 'column',
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
   rankingCard: {
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -1305,48 +1511,48 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: -20,
     bottom: -20,
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: '#5D68E8',
     opacity: 0.15,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.xs,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.sm,
   },
   matcherCard: {
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
   matcherAvatarContainer: {
     position: 'relative',
-    width: 64,
-    height: 64,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
   },
   matcherAvatarRing: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 3,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   teamGrid: {
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
   teamCard: {
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.sm,
     borderWidth: 1,
   },
   teamCardHeader: {
@@ -1358,27 +1564,27 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   coachAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2.5,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
     borderColor: '#5D68E8',
   },
   coachNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.xs,
   },
   detailsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginTop: Spacing.sm,
+    gap: 8,
+    marginTop: Spacing.xs,
   },
   detailItem: {
     flexDirection: 'row',
@@ -1387,25 +1593,25 @@ const styles = StyleSheet.create({
   rateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.xs,
   },
   teamCardActions: {
     flexDirection: 'row',
-    marginTop: Spacing.md,
+    marginTop: Spacing.sm,
     gap: Spacing.xs,
   },
   joinBtn: {
     flexDirection: 'row',
     flex: 1,
-    height: 40,
+    height: 28,
     borderRadius: BorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
   },
   optionsBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1556,6 +1762,31 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  floatingToast: {
+    position: 'absolute',
+    bottom: 84,
+    left: 20,
+    right: 20,
+    backgroundColor: '#0f172a',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 9999,
+  },
+  floatingToastText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontFamily: 'Sora_600SemiBold',
+    flex: 1,
   },
 });
 

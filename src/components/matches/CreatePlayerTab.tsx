@@ -1,4 +1,4 @@
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { Shadows, Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -256,7 +256,7 @@ export function CreatePlayerTab() {
             <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
               Full Name <ThemedText style={{ color: '#ef4444' }}>*</ThemedText>
             </ThemedText>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={[
                 styles.input,
                 { backgroundColor: 'transparent', color: theme.text, borderColor: isNameFocused ? theme.primary : '#00000033' }
@@ -315,7 +315,7 @@ export function CreatePlayerTab() {
             <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
               Jersey No
             </ThemedText>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={[
                 styles.input,
                 { backgroundColor: 'transparent', color: theme.text, borderColor: jerseyError ? '#ef4444' : isJerseyFocused ? theme.primary : '#00000033' }
@@ -335,7 +335,7 @@ export function CreatePlayerTab() {
             <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
               Mobile No
             </ThemedText>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={[
                 styles.input,
                 { backgroundColor: 'transparent', color: theme.text, borderColor: mobileError ? '#ef4444' : isMobileFocused ? theme.primary : '#00000033' }
@@ -704,6 +704,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     fontFamily: 'Sora_400Regular',
     fontSize: 11.5,
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   sportList: {
     flexDirection: 'row',

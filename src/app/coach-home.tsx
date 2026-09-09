@@ -127,7 +127,7 @@ export default function CoachHomeScreen() {
         </View>
       </Section>
 
-      <Section title="Featured coaches" action={{ label: 'See all', onPress: () => router.push('/coach') }} className="my-6">
+      <Section title="Featured coaches" action={{ label: 'See all', onPress: () => router.push('/(tabs)/coach') }} className="my-6">
         <FlatList
           data={FEATURED_COACHES}
           horizontal

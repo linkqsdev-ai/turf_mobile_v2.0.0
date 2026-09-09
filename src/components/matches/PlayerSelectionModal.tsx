@@ -26,7 +26,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
 import { AVATAR_KEYS, getAvatarSource } from '@/constants/avatars';
 import { getMascotImage } from '@/constants/mascots';
@@ -1028,7 +1028,7 @@ export function PlayerSelectionModal({
                       size={14}
                       color={textSecondary}
                     />
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       value={searchQuery}
                       onChangeText={(t) => {
                         setSearchQuery(t);
@@ -3043,7 +3043,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     borderWidth: 1,
   },
-  searchInput: { flex: 1, minWidth: 0, height: 28, fontFamily: 'Sora_500Medium', fontSize: 11 },
+  searchInput: { flex: 1, minWidth: 0, height: 28, fontFamily: 'Sora_500Medium', fontSize: 11,
+    includeFontPadding: false,
+    paddingVertical: 0,
+  },
   addBtn: {
     width: 24,
     height: 24,

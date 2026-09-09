@@ -26,13 +26,16 @@ export function isTransientImageUri(uri?: string | null): boolean {
 
 /** True for a value that is safe to store and re-render later. */
 export function isPersistableImageUri(uri?: string | null): boolean {
-  if (!uri) return false;
-  if (isTransientImageUri(uri)) return false;
+  if (!uri || typeof uri !== 'string' || uri.trim().length === 0) return false;
   return (
     uri.startsWith('data:') ||
     uri.startsWith('http://') ||
     uri.startsWith('https://') ||
-    uri.startsWith('file://')
+    uri.startsWith('file://') ||
+    uri.startsWith('blob:') ||
+    uri.startsWith('/') ||
+    uri.startsWith('assets/') ||
+    uri.startsWith('./')
   );
 }
 
@@ -75,4 +78,26 @@ export function toPersistableImage(asset: {
     return { ok: false, reason: 'too-large' };
   }
   return { ok: true, uri: dataUri };
+}
+
+/**
+ * True for a value that will still render after the app restarts.
+ *
+ * `isPersistableImageUri` accepts `blob:` because a freshly picked image is
+ * legitimately a blob for the rest of that session. Once stored and reloaded
+ * the object URL is revoked, so the same string is now a dead reference that
+ * renders as an empty box — which is what a gallery saved before the picker
+ * started base64-encoding looks like.
+ */
+export function isDurableImageUri(uri?: string | null): boolean {
+  return isPersistableImageUri(uri) && !isTransientImageUri(uri);
+}
+
+/**
+ * Keep only the images in a stored gallery that can still be displayed.
+ * Dropping them is not data loss — a revoked blob URL can never resolve again.
+ */
+export function durableImages(list?: unknown): string[] {
+  if (!Array.isArray(list)) return [];
+  return list.filter((u): u is string => typeof u === 'string' && isDurableImageUri(u));
 }

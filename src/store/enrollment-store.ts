@@ -43,7 +43,9 @@ export function createEnrollment(
 
 export function countForClass(list: ClassEnrollment[], classId: string): number {
   if (!classId) return 0;
-  return list.filter(e => e.classId === classId).length;
+  return list.filter(
+    e => e.classId === classId || (e.className && e.className.toLowerCase() === classId.toLowerCase())
+  ).length;
 }
 
 /**

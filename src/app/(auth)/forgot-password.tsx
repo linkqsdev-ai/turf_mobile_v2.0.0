@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -164,7 +164,7 @@ export default function ForgotPasswordScreen() {
                   <ThemedText style={styles.label}>Email Address</ThemedText>
                   <View style={[styles.inputWrapper, isEmailFocused && styles.inputFocused]}>
                     <Ionicons name="mail-outline" size={18} color={isEmailFocused ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       style={styles.input}
                       placeholder="Enter registered email"
                       placeholderTextColor="#94a3b8"
@@ -369,6 +369,7 @@ const styles = StyleSheet.create({
     color: TEXT_DARK,
     fontFamily: 'Sora_500Medium',
     height: '100%',
+    includeFontPadding: false,
   },
 
   ctaButton: {

@@ -2117,7 +2117,7 @@ export default function HomeScreen() {
                   <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                       <ThemedText type="headlineSm">{"Today's Academy Sessions"}</ThemedText>
-                      <Pressable>
+                      <Pressable onPress={() => router.push('/(tabs)/coach')}>
                         <ThemedText type="labelMd" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium' }}>
                           Full Calendar
                         </ThemedText>

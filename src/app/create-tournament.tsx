@@ -16,15 +16,47 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { SPORTS_LIST } from '@/constants/sports';
+import { FieldLabel } from '@/components/field-label';
+import { getCurrentGPSLocation } from '@/utils/location';
+import {
+  TOURNAMENT_SPORTS,
+  MAX_TOURNAMENT_NAME_LENGTH,
+  MAX_ORGANIZER_NAME_LENGTH,
+  nameLengthIssue,
+  coerceTournamentSport,
+  TournamentSport,
+  digitsOnly,
+  supportsOvers,
+  MAX_DURATION_DIGITS,
+  MAX_TEAM_SIZE_DIGITS,
+  MAX_OVERS_DIGITS,
+  MAX_MONEY_DIGITS,
+  RULE_PRESET_LIMIT,
+  MAX_VENUE_NAME_LENGTH,
+  MAX_SPONSOR_NAME_LENGTH,
+  MAX_SPONSOR_TIER_LENGTH,
+  MAX_VOUCHER_CODE_LENGTH,
+  MAX_OFFER_TITLE_LENGTH,
+  MAX_OFFER_TERMS_LENGTH,
+  MAX_TEAM_PRESETS,
+  MAX_TEAMS_DIGITS,
+  MIN_TEAMS,
+  todayIso,
+  isoDaysFromToday,
+  formatIsoDate,
+  TOURNAMENT_VOUCHER_BANNERS,
+  TournamentVoucherDraft,
+} from '@/constants/tournament';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTournamentStore } from '@/store/app-store';
-import { generateTournamentId, rulePresetsForSport } from '@/store/tournament-store';
+import { useTournamentStore, useOfferStore } from '@/store/app-store';
+import { generateTournamentId, rulePresetsForSport, TournamentSponsor } from '@/store/tournament-store';
+import { toPersistableImage, durableImages } from '@/utils/persist-image';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 /** Where saved tournament drafts persist between sessions. */
@@ -41,7 +73,7 @@ const STEPS = [
   { title: 'Venue', icon: 'map-outline' },
   { title: 'Rules', icon: 'document-text-outline' },
   { title: 'Fees', icon: 'cash-outline' },
-  { title: 'Prizes', icon: 'trophy-outline' },
+  { title: 'Prizes & Media', icon: 'trophy-outline' },
 ];
 
 /**
@@ -81,13 +113,14 @@ export default function CreateTournamentScreen() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const { addTournament, updateTournament, publishedTournaments } = useTournamentStore();
+  const { addOffer } = useOfferStore();
   const { profile } = useUserProfile();
   /** Phone is the canonical identity elsewhere in the app; email/name back it up. */
   const ownerKey = (profile?.phone || '').replace(/\D/g, '').slice(-10)
     || (profile?.email || '').trim().toLowerCase()
     || (profile?.name || '').trim().toLowerCase();
   /** Present when the organizer opened this wizard to fix a published cup. */
-  const params = useLocalSearchParams<{ editId?: string }>();
+  const params = useLocalSearchParams<{ editId?: string; draftId?: string }>();
   const editId = typeof params.editId === 'string' ? params.editId : undefined;
   const isEditing = Boolean(editId);
 
@@ -102,7 +135,6 @@ export default function CreateTournamentScreen() {
   ];
 
   // Drafts State
-  const [draftsModalVisible, setDraftsModalVisible] = useState(false);
   const [drafts, setDrafts] = useState<any[]>([
     {
       id: 'draft-1',
@@ -165,17 +197,19 @@ export default function CreateTournamentScreen() {
     // Section 1: Basic
     name: '',
     description: '',
-    sportType: 'Football', // Football, Cricket, Tennis
+    sportType: TOURNAMENT_SPORTS[0] as string, // see constants/tournament.ts
     tournamentType: 'Knockout', // Knockout, League, Round Robin
     organizerName: '',
     organizerContact: '',
     banner: require('@/assets/images/illustrations/tournament_cover.png'), // Default cover banner
     
     // Section 2: Schedule
-    regStart: '2026-06-12',
-    regEnd: '2026-06-25',
-    tournStart: '2026-07-01',
-    tournEnd: '2026-07-15',
+    // Seeded relative to today. These were fixed 2026 dates, so every new
+    // tournament opened with a registration window already in the past.
+    regStart: todayIso(),
+    regEnd: isoDaysFromToday(14),
+    tournStart: isoDaysFromToday(21),
+    tournEnd: isoDaysFromToday(28),
     
     // Section 3: Venue
     selectedGround: '',
@@ -183,8 +217,8 @@ export default function CreateTournamentScreen() {
     latLng: '',
     
     // Section 4: Rules
-    matchDuration: '90 Mins',
-    teamSize: '11 players',
+    matchDuration: '90',
+    teamSize: '11',
     overs: '',
     pointSystem: '3 pts Win, 1 pt Draw, 0 pts Loss',
     // Ticked rules, plus any the organizer wrote themselves.
@@ -192,12 +226,13 @@ export default function CreateTournamentScreen() {
     customRules: [] as string[],
     // Gallery images shown under the tournament's Media tab.
     mediaImages: [] as string[],
+    sponsors: [] as TournamentSponsor[],
     
     // Section 5: Fees
     maxTeams: '16',
-    entryFee: '₹150',
-    registrationFee: '₹25',
-    deposit: '₹50',
+    entryFee: '150',
+    registrationFee: '25',
+    deposit: '50',
     
     // Section 6: Prizes
     winnerPrize: '₹2,500 + Gold Trophy',
@@ -235,7 +270,7 @@ export default function CreateTournamentScreen() {
       ...prev,
       name: t.name ?? prev.name,
       description: t.description ?? prev.description,
-      sportType: t.sport ?? prev.sportType,
+      sportType: coerceTournamentSport(t.sport ?? prev.sportType),
       tournamentType: t.type ?? prev.tournamentType,
       organizerName: t.organizerName ?? prev.organizerName,
       organizerContact: t.organizerContact ?? prev.organizerContact,
@@ -258,12 +293,23 @@ export default function CreateTournamentScreen() {
       mvpPrize: t.mvpPrize ?? prev.mvpPrize,
       banner: t.banner ?? prev.banner,
       rules: Array.isArray(t.rules) ? t.rules : prev.rules,
-      // Anything ticked that isn't a preset for this sport must have been the
-      // organizer's own rule, so it belongs back in the custom list.
+      // Anything ticked that isn't one of the presets we still OFFER belongs in
+      // the custom list. Comparing against the full preset book instead would
+      // silently drop rules that used to be presets before the list was
+      // trimmed to RULE_PRESET_LIMIT — they'd match neither list and vanish
+      // from the form while remaining on the saved tournament.
       customRules: Array.isArray(t.rules)
-        ? t.rules.filter((r: string) => !rulePresetsForSport(t.sport || '').includes(r))
+        ? t.rules.filter(
+            (r: string) =>
+              !rulePresetsForSport(t.sport || '')
+                .slice(0, RULE_PRESET_LIMIT)
+                .includes(r)
+          )
         : prev.customRules,
-      mediaImages: Array.isArray(t.mediaImages) ? t.mediaImages : prev.mediaImages,
+      // Drop photos stored as revoked blob: URLs — they render as empty boxes
+      // and re-saving them would carry the dead reference forward.
+      mediaImages: Array.isArray(t.mediaImages) ? durableImages(t.mediaImages) : prev.mediaImages,
+      sponsors: Array.isArray(t.sponsors) ? t.sponsors : prev.sponsors,
     }));
 
     // Rebuild the photo grid exactly as it was saved, so an edit that touches
@@ -294,8 +340,102 @@ export default function CreateTournamentScreen() {
   const [tournamentImages, setTournamentImages] = useState<(string | null)[]>([null, null, null]);
   const [pinnedIndex, setPinnedIndex] = useState<number>(0);
   const [customRuleText, setCustomRuleText] = useState('');
+  const [isLocatingVenue, setIsLocatingVenue] = useState(false);
+  /** The draft this form was loaded from, cleared once it is published. */
+  const [loadedDraftId, setLoadedDraftId] = useState<string | null>(null);
+  const [useCurrentLocation, setUseCurrentLocation] = useState(false);
+
+  /**
+   * Vouchers drafted for this tournament. Published into the offer store on
+   * save with `appliesTo` set to the tournament name, so the registration
+   * screen finds them and the "first N users" cap is enforced in the one place
+   * that owns it (`redeemOffer`).
+   */
+  const [voucherDrafts, setVoucherDrafts] = useState<TournamentVoucherDraft[]>([]);
+
+  const addVoucherDraft = () => {
+    setVoucherDrafts(prev => {
+      if (prev.length >= 4) return prev;
+      const idx = prev.length;
+      return [
+        ...prev,
+        {
+          localId: `tv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          code: '',
+          title: '',
+          description: '',
+          discountType: 'percent',
+          discountValue: '10',
+          minBooking: '0',
+          maxRedemptions: '50',
+          validDays: '30',
+          bannerImage: TOURNAMENT_VOUCHER_BANNERS[idx % TOURNAMENT_VOUCHER_BANNERS.length].uri,
+        },
+      ];
+    });
+  };
+
+  const patchVoucher = (localId: string, patch: Partial<TournamentVoucherDraft>) => {
+    setVoucherDrafts(prev => prev.map(v => (v.localId === localId ? { ...v, ...patch } : v)));
+  };
+
+  const removeVoucher = (localId: string) => {
+    setVoucherDrafts(prev => prev.filter(v => v.localId !== localId));
+  };
+
+  /** Upload custom art for a voucher's coupon card. */
+  const pickVoucherBanner = async (localId: string) => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      triggerToast('Photo permission is needed to add a banner');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.9,
+      base64: true,
+    });
+    if (result.canceled || !result.assets?.length) return;
+
+    const persisted = toPersistableImage(result.assets[0] as any);
+    if (!persisted.ok && persisted.reason === 'too-large') {
+      triggerToast('That banner is too large — try a smaller image');
+      return;
+    }
+    const uri = persisted.ok ? persisted.uri : persisted.uri;
+    if (uri) patchVoucher(localId, { bannerImage: uri });
+  };
+
+  /**
+   * Fill the address from the device's GPS.
+   *
+   * The address is still editable afterwards — a reverse-geocoded string is
+   * rarely how an organiser would write their own ground — and the
+   * coordinates are kept separately so the pin survives an edit to the text.
+   */
+  const handleUseCurrentLocation = async () => {
+    if (isLocatingVenue) return;
+    setIsLocatingVenue(true);
+    try {
+      const result = await getCurrentGPSLocation();
+      if (result.error) {
+        Alert.alert('Location unavailable', result.error);
+        return;
+      }
+      updateField('address', result.address);
+      if (typeof result.latitude === 'number' && typeof result.longitude === 'number') {
+        updateField('latLng', `${result.latitude.toFixed(5)}, ${result.longitude.toFixed(5)}`);
+      }
+    } catch (err: any) {
+      Alert.alert('Location unavailable', err?.message || 'Could not read your location.');
+    } finally {
+      setIsLocatingVenue(false);
+    }
+  };
   const [datePickerField, setDatePickerField] = useState<'regStart' | 'regEnd' | 'tournStart' | 'tournEnd' | null>(null);
-  const [pickerDate, setPickerDate] = useState(new Date(2026, 5, 23));
+  const [pickerDate, setPickerDate] = useState(new Date());
 
   const pickCoverImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -375,7 +515,10 @@ export default function CreateTournamentScreen() {
   };
 
   /** Presets follow the sport, so switching sport re-offers the right list. */
-  const rulePresets = rulePresetsForSport(form.sportType);
+  // Only the first few presets are offered as tick boxes; anything else the
+  // organiser writes themselves.
+  const rulePresets = rulePresetsForSport(form.sportType).slice(0, RULE_PRESET_LIMIT);
+  const oversEnabled = supportsOvers(form.sportType);
 
   const toggleRule = (rule: string) => {
     setForm(prev => ({
@@ -423,15 +566,73 @@ export default function CreateTournamentScreen() {
       allowsMultipleSelection: true,
       selectionLimit: 8,
       quality: 0.9,
+      // Needed to store something durable: on web the picker returns a
+      // URL.createObjectURL() blob that is revoked on reload, so the gallery
+      // came back empty next launch.
+      base64: true,
     });
     if (result.canceled) return;
-    const uris = (result.assets || []).map(a => a.uri).filter(Boolean);
+    const uris: string[] = [];
+    let skipped = 0;
+    for (const asset of result.assets || []) {
+      const persisted = toPersistableImage(asset as any);
+      if (persisted.ok) uris.push(persisted.uri);
+      else if (persisted.reason === 'too-large') skipped += 1;
+      else if (persisted.uri) uris.push(persisted.uri);
+    }
+    if (skipped > 0) {
+      triggerToast(`${skipped} image${skipped === 1 ? ' was' : 's were'} too large to save`);
+    }
     setForm(prev => {
       // De-duplicate: re-picking the same photo shouldn't add it twice.
       const merged = [...prev.mediaImages, ...uris.filter(u => !prev.mediaImages.includes(u))];
       return { ...prev, mediaImages: merged.slice(0, 12) };
     });
     triggerToast(`${uris.length} image${uris.length === 1 ? '' : 's'} added`);
+  };
+
+  /** Adds a sponsor from a picked logo. Name and tier are edited in place. */
+  const pickSponsorLogo = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      triggerToast('Photo permission is needed to add a sponsor logo');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.9,
+      base64: true,
+    });
+    if (result.canceled || !result.assets?.length) return;
+
+    const persisted = toPersistableImage(result.assets[0] as any);
+    if (!persisted.ok && persisted.reason === 'too-large') {
+      triggerToast('That logo is too large — try a smaller image');
+      return;
+    }
+    const logo = persisted.ok ? persisted.uri : persisted.uri || '';
+    if (!logo) return;
+
+    setForm(prev => ({
+      ...prev,
+      sponsors: [
+        ...prev.sponsors,
+        { id: `sponsor-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name: '', tier: 'Sponsor', logo },
+      ].slice(0, 8),
+    }));
+  };
+
+  const patchSponsor = (id: string, patch: Partial<{ name: string; tier: string }>) => {
+    setForm(prev => ({
+      ...prev,
+      sponsors: prev.sponsors.map(sp => (sp.id === id ? { ...sp, ...patch } : sp)),
+    }));
+  };
+
+  const removeSponsor = (id: string) => {
+    setForm(prev => ({ ...prev, sponsors: prev.sponsors.filter(sp => sp.id !== id) }));
   };
 
   const removeMediaImage = (uri: string) => {
@@ -474,8 +675,10 @@ export default function CreateTournamentScreen() {
    */
   const stepIssue = (step: number): string | null => {
     if (step === 0) {
-      if (!form.name.trim()) return 'Tournament name is required';
-      if (!form.organizerName.trim()) return 'Organizer name is required';
+      const nameIssue = nameLengthIssue('Tournament name', form.name, MAX_TOURNAMENT_NAME_LENGTH);
+      if (nameIssue) return nameIssue;
+      const organizerIssue = nameLengthIssue('Organizer name', form.organizerName, MAX_ORGANIZER_NAME_LENGTH);
+      if (organizerIssue) return organizerIssue;
       if (!form.organizerContact.trim()) return 'Organizer contact is required';
       if (!isValidPhone(form.organizerContact)) return 'Enter a valid 10-digit mobile number';
       return null;
@@ -502,6 +705,10 @@ export default function CreateTournamentScreen() {
       return null;
     }
     if (step === 4) {
+      // The draw size is now editable, so it has to be checked. A tournament
+      // of one team is not a tournament.
+      const teams = parseAmount(form.maxTeams);
+      if (teams < MIN_TEAMS) return `A tournament needs at least ${MIN_TEAMS} teams`;
       if (parseAmount(form.entryFee) <= 0) return 'Entry fee is required';
       return null;
     }
@@ -602,11 +809,31 @@ export default function CreateTournamentScreen() {
     triggerToast('Draft saved successfully!');
   };
 
+  // Arriving from the host screen's "saved drafts" banner opens the picker
+  // straight away, rather than making the organiser find the folder icon.
   const handleSelectDraft = (draft: any) => {
-    setForm(draft);
-    setDraftsModalVisible(false);
+    // `banner` is stripped when a draft is saved (a require()'d asset id does
+    // not survive a reload), so keep whatever the form already holds.
+    setForm(prev => ({ ...prev, ...draft, banner: prev.banner }));
+    setLoadedDraftId(draft.id);
     triggerToast(`Loaded draft: ${draft.name}`);
   };
+
+  /**
+   * Arriving with a `draftId` loads that draft straight into the form.
+   *
+   * This used to open the drafts picker on top of an empty wizard, so
+   * "Create Tournament" flashed up before the draft was even chosen. The
+   * choice now happens on the host screen and this screen opens populated.
+   */
+  const draftLoaded = React.useRef(false);
+  React.useEffect(() => {
+    if (!params.draftId || draftLoaded.current) return;
+    const match = drafts.find((d: any) => d.id === params.draftId);
+    if (!match) return;
+    draftLoaded.current = true;
+    handleSelectDraft(match);
+  }, [params.draftId, drafts]);
 
   const handleDeleteDraft = (id: string) => {
     setDrafts(prev => {
@@ -676,13 +903,16 @@ export default function CreateTournamentScreen() {
       teamSize: form.teamSize,
       overs: form.overs,
       pointSystem: form.pointSystem,
-      registrationFee: form.registrationFee,
-      deposit: form.deposit,
+      // Stored as parsed numbers, matching entryFee above. Keeping the raw
+      // form string here is what let "₹25" reach the registration screen.
+      registrationFee: String(parseAmount(form.registrationFee)),
+      deposit: String(parseAmount(form.deposit)),
       winnerPrize: form.winnerPrize,
       runnerPrize: form.runnerPrize,
       mvpPrize: form.mvpPrize,
       rules: form.rules,
       mediaImages: form.mediaImages,
+      sponsors: form.sponsors,
       coverImages: tournamentImages,
       coverIndex: pinnedIndex,
     };
@@ -697,6 +927,38 @@ export default function CreateTournamentScreen() {
         else router.replace('/(tabs)/tournaments');
       }, 1200);
       return;
+    }
+
+    // Publish the drafted vouchers as offers scoped to this tournament, so the
+    // registration screen finds them and redemption caps are enforced by
+    // `redeemOffer` — the one place that owns that rule.
+    voucherDrafts.forEach((v) => {
+      const value = parseAmount(v.discountValue);
+      if (!v.code.trim() || value <= 0) return;
+      const days = parseInt(v.validDays, 10) || 30;
+      addOffer({
+        code: v.code.trim().toUpperCase(),
+        title: v.title.trim() || `${form.name} Voucher`,
+        description: v.description.trim() || `Discount for teams registering for ${form.name}`,
+        discountType: v.discountType,
+        discountValue: value,
+        minBooking: parseAmount(v.minBooking),
+        maxRedemptions: parseInt(v.maxRedemptions, 10) || 0,
+        validTill: new Date(Date.now() + days * 86400000).toISOString(),
+        appliesTo: form.name.trim(),
+        bannerImage: v.bannerImage,
+      });
+    });
+
+    // A published tournament is no longer a draft. Leaving it behind meant the
+    // organiser saw a stale copy in the drafts list beside the real thing.
+    if (loadedDraftId) {
+      setDrafts(prev => {
+        const next = prev.filter(d => d.id !== loadedDraftId);
+        persistDrafts(next);
+        return next;
+      });
+      setLoadedDraftId(null);
     }
 
     addTournament({
@@ -725,7 +987,6 @@ export default function CreateTournamentScreen() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // Step render functions
-  const hasSlotPhotos = tournamentImages.some(Boolean);
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -733,12 +994,18 @@ export default function CreateTournamentScreen() {
         return (
           <View style={styles.stepFormContainer}>
             <View style={styles.inputGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Tournament name <ThemedText style={styles.requiredStar}>*</ThemedText></ThemedText>
-              <TextInput
+              <FieldLabel
+                label="Tournament name"
+                required
+                current={form.name.length}
+                max={MAX_TOURNAMENT_NAME_LENGTH}
+              />
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'name' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. London Summer Slam"
                 placeholderTextColor={theme.textSecondary + '80'}
                 value={form.name}
+                maxLength={MAX_TOURNAMENT_NAME_LENGTH}
                 onChangeText={(v) => updateField('name', v)}
                 onFocus={() => setFocusedField('name')}
                 onBlur={() => setFocusedField(null)}
@@ -747,7 +1014,7 @@ export default function CreateTournamentScreen() {
 
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Description</ThemedText>
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'description' ? theme.primary : '#00000033', height: 80, paddingVertical: 10, textAlignVertical: 'top' }]}
                 placeholder="Describe your tournament, match timings, general guidelines..."
                 placeholderTextColor={theme.textSecondary + '80'}
@@ -760,128 +1027,11 @@ export default function CreateTournamentScreen() {
               />
             </View>
 
-            <View style={[styles.inputGroup, { marginTop: 16 }]}>
-              <View style={styles.labelRow}>
-                <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Tournament photos</ThemedText>
-                <ThemedText style={[styles.fieldLabelSub, { color: theme.textSecondary }]}>
-                  Tap 📌 to set Cover
-                </ThemedText>
-              </View>
-
-              <View style={styles.threeImageGrid}>
-                {tournamentImages.map((img, idx) => {
-                  const isCover = pinnedIndex === idx && !!img;
-                  if (img) {
-                    return (
-                      <View
-                        key={idx}
-                        style={[
-                          styles.imageCardSlot,
-                          { borderColor: isCover ? theme.primary : '#00000022' },
-                          isCover && { borderWidth: 2 },
-                        ]}
-                      >
-                        <Image source={{ uri: img }} style={styles.imagePreviewFull} contentFit="cover" />
-
-                        {isCover && (
-                          <View style={[styles.pinnedCoverBadge, { backgroundColor: theme.primary }]}>
-                            <Ionicons name="pin" size={10} color="#ffffff" style={{ marginRight: 2 }} />
-                            <ThemedText style={styles.pinnedCoverBadgeText}>Cover</ThemedText>
-                          </View>
-                        )}
-
-                        {/* Icon-only actions: a text label made this row wider
-                            than the slot and clipped the delete button. */}
-                        <View style={styles.imageSlotActionOverlay}>
-                          <Pressable
-                            onPress={() => pinSlotImage(idx)}
-                            hitSlop={6}
-                            accessibilityLabel="Set as cover photo"
-                            style={[
-                              styles.pinIconButton,
-                              { backgroundColor: isCover ? theme.primary : 'rgba(0,0,0,0.65)' },
-                            ]}
-                          >
-                            <Ionicons name={isCover ? 'pin' : 'pin-outline'} size={12} color="#ffffff" />
-                          </Pressable>
-
-                          <Pressable
-                            onPress={() => removeSlotImage(idx)}
-                            hitSlop={6}
-                            accessibilityLabel="Remove photo"
-                            style={[styles.deleteIconButton, { backgroundColor: '#ef4444cc' }]}
-                          >
-                            <Ionicons name="trash-outline" size={12} color="#ffffff" />
-                          </Pressable>
-                        </View>
-                      </View>
-                    );
-                  }
-
-                  return (
-                    <Pressable
-                      key={idx}
-                      onPress={() => pickSlotImage(idx)}
-                      style={[
-                        styles.imageCardSlot,
-                        styles.imageCardPlaceholder,
-                        { backgroundColor: theme.surfaceLow, borderColor: '#00000022' },
-                      ]}
-                    >
-                      <View style={[styles.uploadIconCircle, { backgroundColor: theme.primary + '16' }]}>
-                        <Ionicons name="camera-outline" size={20} color={theme.primary} />
-                      </View>
-                      <ThemedText style={[styles.uploadSlotTitle, { color: theme.primary }]}>Upload</ThemedText>
-                      <ThemedText style={[styles.uploadSlotSub, { color: theme.textSecondary }]}>Photo {idx + 1}</ThemedText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {/* Presets remain as the no-photo fallback: a cup published from
-                  a desk still needs a cover. Selecting one un-pins the photos. */}
-              <ThemedText style={[styles.fieldLabelSub, { color: theme.textSecondary, marginTop: 12 }]}>
-                {hasSlotPhotos ? 'Or use a preset cover instead' : 'No photo? Pick a preset cover'}
-              </ThemedText>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
-              >
-                {COVER_PRESETS.map((preset) => {
-                  const isSelected = form.banner === preset.source;
-                  return (
-                    <Pressable
-                      key={preset.name}
-                      onPress={() => {
-                        updateField('banner', preset.source);
-                        setCustomImageUri(null);
-                      }}
-                      style={[
-                        styles.coverPresetCard,
-                        { borderColor: isSelected ? theme.primary : '#00000033', backgroundColor: theme.surfaceLow }
-                      ]}
-                    >
-                      <Image source={preset.source} style={styles.coverPresetThumb} contentFit="cover" />
-                      <ThemedText style={[styles.coverPresetLabel, { color: isSelected ? theme.primary : theme.textSecondary }]} numberOfLines={1}>
-                        {preset.name}
-                      </ThemedText>
-                      {isSelected && (
-                        <View style={[styles.coverPresetCheck, { backgroundColor: theme.primary }]}>
-                          <Ionicons name="checkmark" size={10} color="#ffffff" />
-                        </View>
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Sport type</ThemedText>
                 <View style={styles.sportList}>
-                  {['Football', 'Cricket', 'Tennis'].map(s => {
+                  {TOURNAMENT_SPORTS.map(s => {
                     const isActive = form.sportType === s;
                     const sportObj = SPORTS_LIST.find(sp => sp.name === s) || { icon: 'sports' };
                     return (
@@ -941,12 +1091,18 @@ export default function CreateTournamentScreen() {
             </View>
 
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Organizer name <ThemedText style={styles.requiredStar}>*</ThemedText></ThemedText>
-              <TextInput
+              <FieldLabel
+                label="Organizer name"
+                required
+                current={form.organizerName.length}
+                max={MAX_ORGANIZER_NAME_LENGTH}
+              />
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'organizerName' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. Apex Sports Club"
                 placeholderTextColor={theme.textSecondary + '80'}
                 value={form.organizerName}
+                maxLength={MAX_ORGANIZER_NAME_LENGTH}
                 onChangeText={(v) => updateField('organizerName', v)}
                 onFocus={() => setFocusedField('organizerName')}
                 onBlur={() => setFocusedField(null)}
@@ -966,7 +1122,7 @@ export default function CreateTournamentScreen() {
                 <View style={[styles.countryCodeBadge, { backgroundColor: theme.primary + '18' }]}>
                   <ThemedText style={[styles.countryCodeText, { color: theme.primary }]}>+91</ThemedText>
                 </View>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[styles.inputRowInner, { color: theme.text }]}
                   placeholder="98765 43210"
                   placeholderTextColor={theme.textSecondary + '80'}
@@ -993,13 +1149,13 @@ export default function CreateTournamentScreen() {
                 <Pressable
                   onPress={() => {
                     setDatePickerField('regStart');
-                    const parsed = form.regStart ? new Date(form.regStart) : new Date(2026, 5, 23);
-                    setPickerDate(isNaN(parsed.getTime()) ? new Date(2026, 5, 23) : parsed);
+                    const parsed = form.regStart ? new Date(form.regStart) : new Date();
+                    setPickerDate(isNaN(parsed.getTime()) ? new Date() : parsed);
                   }}
                   style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: '#00000033', justifyContent: 'center', position: 'relative' }]}
                 >
                   <ThemedText style={{ color: form.regStart ? theme.text : theme.textSecondary + '80', fontSize: 13 }}>
-                    {form.regStart || 'YYYY-MM-DD'}
+                    {formatIsoDate(form.regStart) || 'Select a date'}
                   </ThemedText>
                   <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} style={{ position: 'absolute', right: 12 }} />
                 </Pressable>
@@ -1016,7 +1172,7 @@ export default function CreateTournamentScreen() {
                   style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: '#00000033', justifyContent: 'center', position: 'relative' }]}
                 >
                   <ThemedText style={{ color: form.regEnd ? theme.text : theme.textSecondary + '80', fontSize: 13 }}>
-                    {form.regEnd || 'YYYY-MM-DD'}
+                    {formatIsoDate(form.regEnd) || 'Select a date'}
                   </ThemedText>
                   <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} style={{ position: 'absolute', right: 12 }} />
                 </Pressable>
@@ -1035,7 +1191,7 @@ export default function CreateTournamentScreen() {
                   style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: '#00000033', justifyContent: 'center', position: 'relative' }]}
                 >
                   <ThemedText style={{ color: form.tournStart ? theme.text : theme.textSecondary + '80', fontSize: 13 }}>
-                    {form.tournStart || 'YYYY-MM-DD'}
+                    {formatIsoDate(form.tournStart) || 'Select a date'}
                   </ThemedText>
                   <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} style={{ position: 'absolute', right: 12 }} />
                 </Pressable>
@@ -1052,7 +1208,7 @@ export default function CreateTournamentScreen() {
                   style={[styles.input, { backgroundColor: theme.surfaceLow, borderColor: '#00000033', justifyContent: 'center', position: 'relative' }]}
                 >
                   <ThemedText style={{ color: form.tournEnd ? theme.text : theme.textSecondary + '80', fontSize: 13 }}>
-                    {form.tournEnd || 'YYYY-MM-DD'}
+                    {formatIsoDate(form.tournEnd) || 'Select a date'}
                   </ThemedText>
                   <Ionicons name="calendar-outline" size={16} color={theme.textSecondary} style={{ position: 'absolute', right: 12 }} />
                 </Pressable>
@@ -1063,46 +1219,329 @@ export default function CreateTournamentScreen() {
       case 2:
         return (
           <View style={styles.stepFormContainer}>
+            {/* Venue name. The three hard-coded grounds that stood here were
+                London placeholders — useless to an organiser anywhere else,
+                and they made the field look like a closed list when the
+                published value is just free text. */}
             <View style={[styles.inputGroup, { marginBottom: 16 }]}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Ground selection</ThemedText>
-              <View style={styles.selectorRowVertical}>
-                {['Elms Field Ground A', 'Regents Cricket Oval', 'West London Multi-Turf'].map(g => (
-                  <Pressable
-                    key={g}
-                    onPress={() => updateField('selectedGround', g)}
-                    style={[
-                      styles.verticalSelectBtn,
-                      { backgroundColor: theme.surfaceLow, borderColor: form.selectedGround === g ? theme.primary : '#00000033' }
-                    ]}
-                  >
-                    <Ionicons name={form.selectedGround === g ? "checkmark-circle" : "ellipse-outline"} size={16} color={form.selectedGround === g ? theme.primary : theme.textSecondary} />
-                    <ThemedText style={{ marginLeft: 8, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 13 }}>{g}</ThemedText>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Detailed address</ThemedText>
-              <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'address' ? theme.primary : '#00000033' }]}
-                value={form.address}
-                onChangeText={(v) => updateField('address', v)}
-                onFocus={() => setFocusedField('address')}
+              <FieldLabel
+                label="Venue name"
+                required
+                current={form.selectedGround.length}
+                max={MAX_VENUE_NAME_LENGTH}
+              />
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'selectedGround' ? theme.primary : '#00000033' }]}
+                placeholder="e.g. Elms Field Ground A"
+                placeholderTextColor={theme.textSecondary + '80'}
+                value={form.selectedGround}
+                maxLength={MAX_VENUE_NAME_LENGTH}
+                onChangeText={(v) => updateField('selectedGround', v)}
+                onFocus={() => setFocusedField('selectedGround')}
                 onBlur={() => setFocusedField(null)}
               />
             </View>
 
-            {/* Map Mock Graphic */}
-            <View style={[styles.mapMockContainer, { backgroundColor: theme.surfaceLow, borderColor: '#00000033' }]}>
-              <View style={styles.mapGridOverlay}>
-                {[...Array(6)].map((_, i) => (
-                  <View key={i} style={styles.mapGridRow} />
-                ))}
+            {/* Address — the same two-mode picker create-turf uses: detect via
+                GPS, or type it. A single "use my location" button left it
+                ambiguous whether the field was still editable. */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 0 }]}>
+                  Detailed address <ThemedText style={styles.requiredStar}>*</ThemedText>
+                </ThemedText>
+                <Pressable
+                  onPress={() => {
+                    const next = !useCurrentLocation;
+                    setUseCurrentLocation(next);
+                    if (next) handleUseCurrentLocation();
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    useCurrentLocation ? 'Switch to entering the address manually' : 'Use my current location'
+                  }
+                  style={[
+                    styles.togglePill,
+                    {
+                      backgroundColor: useCurrentLocation ? theme.primary + '18' : theme.surfaceLow,
+                      borderColor: useCurrentLocation ? theme.primary + '44' : theme.outlineVariant + '33',
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={useCurrentLocation ? 'locate' : 'create-outline'}
+                    size={11}
+                    color={useCurrentLocation ? theme.primary : theme.textSecondary}
+                  />
+                  <ThemedText
+                    style={[
+                      styles.togglePillText,
+                      { color: useCurrentLocation ? theme.primary : theme.textSecondary },
+                    ]}
+                  >
+                    {useCurrentLocation ? 'Current Location' : 'Enter Address'}
+                  </ThemedText>
+                </Pressable>
               </View>
-              <View style={[styles.mapMarker, { backgroundColor: theme.secondaryContainer }]}>
-                <Ionicons name="location" size={24} color="#ffffff" />
+
+              {useCurrentLocation ? (
+                <Pressable
+                  onPress={handleUseCurrentLocation}
+                  disabled={isLocatingVenue}
+                  accessibilityRole="button"
+                  accessibilityLabel="Refresh the detected location"
+                  style={[
+                    styles.locationCard,
+                    { backgroundColor: theme.surfaceLow, borderColor: theme.primary + '33' },
+                  ]}
+                >
+                  <View style={[styles.locationIconBg, { backgroundColor: theme.primary + '18' }]}>
+                    <Ionicons name="navigate" size={18} color={theme.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={[styles.locationText, { color: theme.text }]} numberOfLines={2}>
+                      {isLocatingVenue ? 'Locating…' : form.address || 'Tap to detect your location'}
+                    </ThemedText>
+                    <ThemedText style={[styles.locationHint, { color: theme.textSecondary }]}>
+                      {form.latLng
+                        ? `Pinned at ${form.latLng} • Tap to refresh`
+                        : 'Formatted GPS Location • Tap to refresh'}
+                    </ThemedText>
+                  </View>
+                  <Ionicons name="refresh-outline" size={16} color={theme.primary} />
+                </Pressable>
+              ) : (
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                  style={[
+                    styles.input,
+                    styles.addressInput,
+                    { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'address' ? theme.primary : '#00000033' },
+                  ]}
+                  placeholder="e.g. 12 Bypass Road, Thillai Nagar, Tiruchirappalli - 620018"
+                  placeholderTextColor={theme.textSecondary + '80'}
+                  multiline
+                  value={form.address}
+                  onChangeText={(v) => updateField('address', v)}
+                  onFocus={() => setFocusedField('address')}
+                  onBlur={() => setFocusedField(null)}
+                />
+              )}
+            </View>
+
+            {/* ── Promotional Vouchers ──────────────────────────────────
+                Same card design as the class voucher builder, so an organiser
+                who has published a class recognises this immediately. */}
+            <View style={[styles.inputGroup, { marginTop: 20 }]}>
+              <View style={styles.labelRowBetween}>
+                <ThemedText style={[styles.fieldLabel, { fontSize: 10.5, color: theme.primary, letterSpacing: 0.6, marginBottom: 0 }]}>
+                  PROMOTIONAL VOUCHERS ({voucherDrafts.length})
+                </ThemedText>
+                <Pressable
+                  onPress={addVoucherDraft}
+                  disabled={voucherDrafts.length >= 4}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add a voucher"
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 4,
+                    backgroundColor: theme.primary + '15',
+                    paddingHorizontal: 9, paddingVertical: 4,
+                    borderRadius: BorderRadius.full,
+                    opacity: voucherDrafts.length >= 4 ? 0.5 : 1,
+                  }}
+                >
+                  <Ionicons name="add-circle" size={13} color={theme.primary} />
+                  <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: theme.primary }}>
+                    Add Voucher
+                  </ThemedText>
+                </Pressable>
               </View>
+
+              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: theme.textSecondary, marginTop: 4, marginBottom: 10 }}>
+                Create discounts with custom banner art that teams can redeem when registering for this tournament.
+              </ThemedText>
+
+              {voucherDrafts.length === 0 ? (
+                <View style={[styles.voucherEmptyBox, { backgroundColor: theme.surfaceLow }]}>
+                  <Ionicons name="pricetags-outline" size={24} color={theme.textSecondary} />
+                  <ThemedText style={[styles.voucherEmptyText, { color: theme.textSecondary }]}>
+                    No vouchers added. Tap &apos;+ Add Voucher&apos; to create one.
+                  </ThemedText>
+                </View>
+              ) : (
+                voucherDrafts.map((v, idx) => (
+                  <View
+                    key={v.localId}
+                    style={[styles.voucherRowCard, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}
+                  >
+                    <View style={styles.voucherRowHeader}>
+                      <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 12 }}>
+                        Voucher {idx + 1} · New
+                      </ThemedText>
+                      <Pressable
+                        onPress={() => removeVoucher(v.localId)}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove voucher ${v.code || idx + 1}`}
+                      >
+                        <Ionicons name="trash-outline" size={15} color="#ef4444" />
+                      </Pressable>
+                    </View>
+
+                    <ThemedText style={styles.voucherFieldLabel}>VOUCHER BANNER ART</ThemedText>
+                    <View style={styles.voucherBannerWrap}>
+                      <Image source={{ uri: v.bannerImage }} style={styles.voucherBannerImg} contentFit="cover" />
+                      <View style={styles.voucherBannerActions}>
+                        <Pressable onPress={() => pickVoucherBanner(v.localId)} style={styles.voucherBannerBtn} accessibilityRole="button" accessibilityLabel="Upload a banner">
+                          <Ionicons name="cloud-upload-outline" size={13} color="#ffffff" />
+                          <ThemedText style={styles.voucherBannerBtnText}>Upload Banner</ThemedText>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => patchVoucher(v.localId, { bannerImage: TOURNAMENT_VOUCHER_BANNERS[idx % TOURNAMENT_VOUCHER_BANNERS.length].uri })}
+                          style={styles.voucherBannerBtn}
+                          accessibilityRole="button"
+                          accessibilityLabel="Reset the banner"
+                        >
+                          <Ionicons name="refresh" size={13} color="#ffffff" />
+                          <ThemedText style={styles.voucherBannerBtnText}>Reset</ThemedText>
+                        </Pressable>
+                      </View>
+                    </View>
+
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: theme.textSecondary, marginTop: 8, marginBottom: 6 }}>
+                      Or select a curated sports preset:
+                    </ThemedText>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                      {TOURNAMENT_VOUCHER_BANNERS.map((preset) => {
+                        const active = v.bannerImage === preset.uri;
+                        return (
+                          <Pressable
+                            key={preset.id}
+                            onPress={() => patchVoucher(v.localId, { bannerImage: preset.uri })}
+                            style={[styles.bannerChip, { borderColor: active ? theme.primary : theme.outlineVariant + '55', backgroundColor: active ? theme.primary + '14' : 'transparent' }]}
+                          >
+                            <ThemedText style={[styles.bannerChipText, { color: active ? theme.primary : theme.textSecondary }]}>
+                              {preset.label}
+                            </ThemedText>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+
+                    <View style={styles.voucherFieldRow}>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={styles.voucherFieldLabel}>PROMO CODE</ThemedText>
+                        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                          style={[styles.voucherInput, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', color: theme.text }]}
+                          placeholder="CUP10"
+                          placeholderTextColor={theme.textSecondary + '80'}
+                          autoCapitalize="characters"
+                          maxLength={MAX_VOUCHER_CODE_LENGTH}
+                          value={v.code}
+                          onChangeText={(t) => patchVoucher(v.localId, { code: t.toUpperCase().replace(/\s/g, '') })}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={styles.voucherFieldLabel}>OFFER NAME</ThemedText>
+                        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                          style={[styles.voucherInput, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', color: theme.text }]}
+                          placeholder="Early Bird Entry"
+                          placeholderTextColor={theme.textSecondary + '80'}
+                          maxLength={MAX_OFFER_TITLE_LENGTH}
+                          value={v.title}
+                          onChangeText={(t) => patchVoucher(v.localId, { title: t })}
+                        />
+                      </View>
+                    </View>
+
+                    <ThemedText style={styles.voucherFieldLabel}>DISCOUNT TYPE</ThemedText>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {(['percent', 'flat'] as const).map((t) => {
+                        const active = v.discountType === t;
+                        return (
+                          <Pressable
+                            key={t}
+                            onPress={() => patchVoucher(v.localId, { discountType: t })}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: active }}
+                            style={[styles.discountTypeBtn, { backgroundColor: active ? theme.primary : 'transparent', borderColor: active ? theme.primary : theme.outlineVariant + '55' }]}
+                          >
+                            <ThemedText style={[styles.discountTypeText, { color: active ? '#ffffff' : theme.textSecondary }]}>
+                              {t === 'percent' ? 'Percent (%)' : 'Flat (₹)'}
+                            </ThemedText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+
+                    <View style={styles.voucherFieldRow}>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={styles.voucherFieldLabel}>
+                          {v.discountType === 'percent' ? 'DISCOUNT (%)' : 'DISCOUNT (₹)'}
+                        </ThemedText>
+                        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                          style={[styles.voucherInput, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', color: theme.text }]}
+                          placeholder="10"
+                          placeholderTextColor={theme.textSecondary + '80'}
+                          keyboardType="number-pad"
+                          maxLength={4}
+                          value={v.discountValue}
+                          onChangeText={(t) => patchVoucher(v.localId, { discountValue: digitsOnly(t, 4) })}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={styles.voucherFieldLabel}>MIN FEE (₹)</ThemedText>
+                        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                          style={[styles.voucherInput, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', color: theme.text }]}
+                          placeholder="0"
+                          placeholderTextColor={theme.textSecondary + '80'}
+                          keyboardType="number-pad"
+                          maxLength={MAX_MONEY_DIGITS}
+                          value={v.minBooking}
+                          onChangeText={(t) => patchVoucher(v.localId, { minBooking: digitsOnly(t, MAX_MONEY_DIGITS) })}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.voucherFieldRow}>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={styles.voucherFieldLabel}>VALID (DAYS)</ThemedText>
+                        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                          style={[styles.voucherInput, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', color: theme.text }]}
+                          placeholder="30"
+                          placeholderTextColor={theme.textSecondary + '80'}
+                          keyboardType="number-pad"
+                          maxLength={3}
+                          value={v.validDays}
+                          onChangeText={(t) => patchVoucher(v.localId, { validDays: digitsOnly(t, 3) })}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={styles.voucherFieldLabel}>FIRST N TEAMS</ThemedText>
+                        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                          style={[styles.voucherInput, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', color: theme.text }]}
+                          placeholder="0 = unlimited"
+                          placeholderTextColor={theme.textSecondary + '80'}
+                          keyboardType="number-pad"
+                          maxLength={4}
+                          value={v.maxRedemptions}
+                          onChangeText={(t) => patchVoucher(v.localId, { maxRedemptions: digitsOnly(t, 4) })}
+                        />
+                      </View>
+                    </View>
+
+                    <ThemedText style={styles.voucherFieldLabel}>DESCRIPTION / TERMS</ThemedText>
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                      style={[styles.voucherInput, styles.voucherTermsInput, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', color: theme.text }]}
+                      placeholder="Claim this voucher discount during tournament registration."
+                      placeholderTextColor={theme.textSecondary + '80'}
+                      multiline
+                      maxLength={MAX_OFFER_TERMS_LENGTH}
+                      value={v.description}
+                      onChangeText={(t) => patchVoucher(v.localId, { description: t })}
+                    />
+                  </View>
+                ))
+              )}
             </View>
           </View>
         );
@@ -1112,46 +1551,66 @@ export default function CreateTournamentScreen() {
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Match duration</ThemedText>
-                <TextInput
-                  style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'matchDuration' ? theme.primary : '#00000033' }]}
-                  placeholder="e.g. 90 mins"
-                  placeholderTextColor={theme.textSecondary + '80'}
-                  value={form.matchDuration}
-                  onChangeText={(v) => updateField('matchDuration', v)}
-                  onFocus={() => setFocusedField('matchDuration')}
-                  onBlur={() => setFocusedField(null)}
-                />
+                <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: focusedField === 'matchDuration' ? theme.primary : '#00000033' }]}>
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.inputRowInner, { color: theme.text }]}
+                    placeholder="90"
+                    placeholderTextColor={theme.textSecondary + '80'}
+                    keyboardType="number-pad"
+                    maxLength={MAX_DURATION_DIGITS}
+                    value={form.matchDuration}
+                    onChangeText={(v) => updateField('matchDuration', digitsOnly(v, MAX_DURATION_DIGITS))}
+                    onFocus={() => setFocusedField('matchDuration')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                  <ThemedText style={styles.unitSuffix}>mins</ThemedText>
+                </View>
               </View>
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Team size</ThemedText>
-                <TextInput
-                  style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'teamSize' ? theme.primary : '#00000033' }]}
-                  placeholder="e.g. 11 players"
-                  placeholderTextColor={theme.textSecondary + '80'}
-                  value={form.teamSize}
-                  onChangeText={(v) => updateField('teamSize', v)}
-                  onFocus={() => setFocusedField('teamSize')}
-                  onBlur={() => setFocusedField(null)}
-                />
+                <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: focusedField === 'teamSize' ? theme.primary : '#00000033' }]}>
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.inputRowInner, { color: theme.text }]}
+                    placeholder="11"
+                    placeholderTextColor={theme.textSecondary + '80'}
+                    keyboardType="number-pad"
+                    maxLength={MAX_TEAM_SIZE_DIGITS}
+                    value={form.teamSize}
+                    onChangeText={(v) => updateField('teamSize', digitsOnly(v, MAX_TEAM_SIZE_DIGITS))}
+                    onFocus={() => setFocusedField('teamSize')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                  <ThemedText style={styles.unitSuffix}>players</ThemedText>
+                </View>
               </View>
             </View>
 
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
-                Overs per innings {form.sportType === 'Cricket' ? <ThemedText style={styles.requiredStar}>*</ThemedText> : '(cricket only)'}
+                Overs per innings {oversEnabled ? <ThemedText style={styles.requiredStar}>*</ThemedText> : '(cricket only)'}
               </ThemedText>
               {/* Digits only: an over count is a number, and the free-text
                   field previously accepted "dkfjdljfd" and defaulted to "N/A",
                   which then had to be parsed downstream. */}
-              <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: focusedField === 'overs' ? theme.primary : '#00000033' }]}>
-                <TextInput
+              <View
+                style={[
+                  styles.inputRow,
+                  {
+                    backgroundColor: theme.surfaceLow,
+                    borderColor: focusedField === 'overs' ? theme.primary : '#00000033',
+                    opacity: oversEnabled ? 1 : 0.45,
+                  },
+                ]}
+              >
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[styles.inputRowInner, { color: theme.text }]}
-                  placeholder="20"
+                  placeholder={oversEnabled ? '20' : 'Cricket only'}
                   placeholderTextColor={theme.textSecondary + '80'}
                   keyboardType="number-pad"
-                  maxLength={3}
-                  value={form.overs}
-                  onChangeText={(v) => updateField('overs', v.replace(/\D/g, '').slice(0, 3))}
+                  maxLength={MAX_OVERS_DIGITS}
+                  editable={oversEnabled}
+                  value={oversEnabled ? form.overs : ''}
+                  onChangeText={(v) => updateField('overs', digitsOnly(v, MAX_OVERS_DIGITS))}
                   onFocus={() => setFocusedField('overs')}
                   onBlur={() => setFocusedField(null)}
                 />
@@ -1161,7 +1620,7 @@ export default function CreateTournamentScreen() {
 
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Points / qualification rules</ThemedText>
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'pointSystem' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. 3 pts for Win, 1 pt Draw"
                 placeholderTextColor={theme.textSecondary + '80'}
@@ -1240,7 +1699,7 @@ export default function CreateTournamentScreen() {
               })}
 
               <View style={[styles.inputRow, { marginTop: 10, backgroundColor: theme.surfaceLow, borderColor: focusedField === 'customRule' ? theme.primary : '#00000033' }]}>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[styles.inputRowInner, { color: theme.text }]}
                   placeholder="Add your own rule"
                   placeholderTextColor={theme.textSecondary + '80'}
@@ -1266,43 +1725,115 @@ export default function CreateTournamentScreen() {
       case 4:
         return (
           <View style={styles.stepFormContainer}>
+            {/* Max teams was published as a fixed 16 with no way to change it —
+                the field existed on the record but had no input. */}
             <View style={styles.inputGroup}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Entry fee (per team) <ThemedText style={styles.requiredStar}>*</ThemedText></ThemedText>
-              <TextInput
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'entryFee' ? theme.primary : '#00000033' }]}
-                placeholder="e.g. ₹150"
-                placeholderTextColor={theme.textSecondary + '80'}
-                value={form.entryFee}
-                onChangeText={(v) => updateField('entryFee', v)}
-                onFocus={() => setFocusedField('entryFee')}
-                onBlur={() => setFocusedField(null)}
-              />
+              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+                Max teams allowed <ThemedText style={styles.requiredStar}>*</ThemedText>
+              </ThemedText>
+              <View style={styles.maxTeamsRow}>
+                {MAX_TEAM_PRESETS.map((n) => {
+                  const active = String(n) === String(form.maxTeams).trim();
+                  return (
+                    <Pressable
+                      key={n}
+                      onPress={() => updateField('maxTeams', String(n))}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      style={[
+                        styles.maxTeamsChip,
+                        {
+                          backgroundColor: active ? theme.primary : 'transparent',
+                          borderColor: active ? theme.primary : theme.outlineVariant + '55',
+                        },
+                      ]}
+                    >
+                      <ThemedText
+                        style={[styles.maxTeamsChipText, { color: active ? '#ffffff' : theme.textSecondary }]}
+                      >
+                        {n}
+                      </ThemedText>
+                    </Pressable>
+                  );
+                })}
+
+                <View
+                  style={[
+                    styles.inputRow,
+                    styles.maxTeamsCustom,
+                    { backgroundColor: theme.surfaceLow, borderColor: focusedField === 'maxTeams' ? theme.primary : '#00000033' },
+                  ]}
+                >
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.inputRowInner, { color: theme.text, textAlign: 'center' }]}
+                    placeholder="Custom"
+                    placeholderTextColor={theme.textSecondary + '80'}
+                    keyboardType="number-pad"
+                    maxLength={MAX_TEAMS_DIGITS}
+                    value={form.maxTeams}
+                    onChangeText={(v) => updateField('maxTeams', digitsOnly(v, MAX_TEAMS_DIGITS))}
+                    onFocus={() => setFocusedField('maxTeams')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                </View>
+              </View>
+              <ThemedText style={[styles.voucherHint, { marginTop: 6, marginBottom: 0 }]}>
+                A knockout draw works best with a power of two. Minimum 2.
+              </ThemedText>
+            </View>
+
+            <View style={[styles.inputGroup, { marginTop: 16 }]}>
+                <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Entry fee (per team) <ThemedText style={styles.requiredStar}>*</ThemedText></ThemedText>
+              <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: focusedField === 'entryFee' ? theme.primary : '#00000033' }]}>
+                <ThemedText style={styles.unitPrefix}>₹</ThemedText>
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                  style={[styles.inputRowInner, { color: theme.text }]}
+                  placeholder="150"
+                  placeholderTextColor={theme.textSecondary + '80'}
+                  keyboardType="number-pad"
+                  maxLength={MAX_MONEY_DIGITS}
+                  value={form.entryFee}
+                  onChangeText={(v) => updateField('entryFee', digitsOnly(v, MAX_MONEY_DIGITS))}
+                  onFocus={() => setFocusedField('entryFee')}
+                  onBlur={() => setFocusedField(null)}
+                />
+              </View>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Admin / reg fee</ThemedText>
-                <TextInput
-                  style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'registrationFee' ? theme.primary : '#00000033' }]}
-                  placeholder="e.g. ₹25"
-                  placeholderTextColor={theme.textSecondary + '80'}
-                  value={form.registrationFee}
-                  onChangeText={(v) => updateField('registrationFee', v)}
-                  onFocus={() => setFocusedField('registrationFee')}
-                  onBlur={() => setFocusedField(null)}
-                />
+                <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: focusedField === 'registrationFee' ? theme.primary : '#00000033' }]}>
+                  <ThemedText style={styles.unitPrefix}>₹</ThemedText>
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.inputRowInner, { color: theme.text }]}
+                    placeholder="25"
+                    placeholderTextColor={theme.textSecondary + '80'}
+                    keyboardType="number-pad"
+                    maxLength={MAX_MONEY_DIGITS}
+                    value={form.registrationFee}
+                    onChangeText={(v) => updateField('registrationFee', digitsOnly(v, MAX_MONEY_DIGITS))}
+                    onFocus={() => setFocusedField('registrationFee')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                </View>
               </View>
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Security deposit</ThemedText>
-                <TextInput
-                  style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'deposit' ? theme.primary : '#00000033' }]}
-                  placeholder="e.g. ₹50"
-                  placeholderTextColor={theme.textSecondary + '80'}
-                  value={form.deposit}
-                  onChangeText={(v) => updateField('deposit', v)}
-                  onFocus={() => setFocusedField('deposit')}
-                  onBlur={() => setFocusedField(null)}
-                />
+                <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: focusedField === 'deposit' ? theme.primary : '#00000033' }]}>
+                  <ThemedText style={styles.unitPrefix}>₹</ThemedText>
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.inputRowInner, { color: theme.text }]}
+                    placeholder="50"
+                    placeholderTextColor={theme.textSecondary + '80'}
+                    keyboardType="number-pad"
+                    maxLength={MAX_MONEY_DIGITS}
+                    value={form.deposit}
+                    onChangeText={(v) => updateField('deposit', digitsOnly(v, MAX_MONEY_DIGITS))}
+                    onFocus={() => setFocusedField('deposit')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                </View>
               </View>
             </View>
           </View>
@@ -1310,6 +1841,75 @@ export default function CreateTournamentScreen() {
       case 5:
         return (
           <View style={styles.stepFormContainer}>
+            {/* Sponsors — a logo plus the name and tier shown beneath it on the
+                tournament's Overview strip and Sponsors tab. */}
+            <View style={[styles.inputGroup, { marginBottom: 20 }]}>
+              <View style={styles.labelRowBetween}>
+                <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 0 }]}>
+                  Sponsors ({form.sponsors.length}/8)
+                </ThemedText>
+                <Pressable onPress={pickSponsorLogo} accessibilityLabel="Add a sponsor logo">
+                  <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_500Medium', fontSize: 11 }}>
+                    + Add sponsor
+                  </ThemedText>
+                </Pressable>
+              </View>
+
+              {form.sponsors.length === 0 ? (
+                <Pressable
+                  onPress={pickSponsorLogo}
+                  style={[styles.mediaEmpty, { borderColor: theme.outlineVariant + '66' }]}
+                >
+                  <Ionicons name="ribbon-outline" size={20} color={theme.textSecondary} />
+                  <ThemedText style={{ color: theme.textSecondary, fontFamily: 'Sora_400Regular', fontSize: 11 }}>
+                    Add a sponsor logo, then name it and set its tier
+                  </ThemedText>
+                </Pressable>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  {form.sponsors.map((sp) => (
+                    <View
+                      key={sp.id}
+                      style={[
+                        styles.sponsorRow,
+                        { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
+                      ]}
+                    >
+                      <Image source={{ uri: sp.logo }} style={styles.sponsorRowLogo} contentFit="contain" />
+
+                      <View style={{ flex: 1, gap: 6 }}>
+                        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                          style={[styles.sponsorRowInput, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', color: theme.text }]}
+                          placeholder="Sponsor name"
+                          placeholderTextColor={theme.textSecondary + '80'}
+                          value={sp.name}
+                          maxLength={MAX_SPONSOR_NAME_LENGTH}
+                          onChangeText={(v) => patchSponsor(sp.id, { name: v })}
+                        />
+                        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                          style={[styles.sponsorRowInput, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', color: theme.text }]}
+                          placeholder="Tier, e.g. Title Sponsor"
+                          placeholderTextColor={theme.textSecondary + '80'}
+                          value={sp.tier}
+                          maxLength={MAX_SPONSOR_TIER_LENGTH}
+                          onChangeText={(v) => patchSponsor(sp.id, { tier: v })}
+                        />
+                      </View>
+
+                      <Pressable
+                        onPress={() => removeSponsor(sp.id)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove sponsor ${sp.name || 'without a name'}`}
+                      >
+                        <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
             {/* Gallery — multi-select upload; these appear under the
                 tournament's Media tab once published. */}
             <View style={[styles.inputGroup, { marginBottom: 20 }]}>
@@ -1353,7 +1953,7 @@ export default function CreateTournamentScreen() {
 
             <View style={styles.inputGroup}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>First prize (winner) <ThemedText style={styles.requiredStar}>*</ThemedText></ThemedText>
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'winnerPrize' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. ₹2,500 + Cup"
                 placeholderTextColor={theme.textSecondary + '80'}
@@ -1366,7 +1966,7 @@ export default function CreateTournamentScreen() {
 
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Runner-up prize</ThemedText>
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'runnerPrize' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. ₹1,000 + Medals"
                 placeholderTextColor={theme.textSecondary + '80'}
@@ -1379,7 +1979,7 @@ export default function CreateTournamentScreen() {
 
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Individual MVPs / other awards</ThemedText>
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'mvpPrize' ? theme.primary : '#00000033' }]}
                 placeholder="e.g. MVP ₹200, Golden Boot"
                 placeholderTextColor={theme.textSecondary + '80'}
@@ -1455,14 +2055,31 @@ export default function CreateTournamentScreen() {
             {isEditing ? 'Edit Tournament' : 'Create Tournament'}
           </ThemedText>
           
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 0 }}>
-            <Pressable style={{ paddingVertical: 4, paddingLeft: 4, paddingRight: 0 }} onPress={() => setDraftsModalVisible(true)}>
-              <Ionicons name="folder-open-outline" size={22} color={theme.error} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            {/* Host screen first, then drafts — both icon-only, so the header
+                stays readable next to a long tournament title. */}
+            <Pressable
+              onPress={() => router.push('/(tabs)/club')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Go to your host screen"
+            >
+              <Ionicons name="megaphone-outline" size={21} color={theme.secondaryContainer} />
             </Pressable>
-            
-            <Pressable style={[styles.draftBtn, { paddingVertical: 4, paddingLeft: 2, paddingRight: 4 }]} onPress={handleSaveDraft}>
-              <ThemedText type="labelSm" style={{ color: theme.secondaryContainer, fontFamily: 'Sora_500Medium' }}>Save Draft</ThemedText>
-            </Pressable>
+
+            {/* Drafts belong to creation only. When editing, the tournament is
+                already published — saving a draft there would fork a second,
+                half-finished copy of a live record. */}
+            {!isEditing && (
+              <Pressable
+                onPress={handleSaveDraft}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Save this tournament as a draft"
+              >
+                <Ionicons name="save-outline" size={21} color={theme.secondaryContainer} />
+              </Pressable>
+            )}
           </View>
         </View>
 
@@ -1520,14 +2137,10 @@ export default function CreateTournamentScreen() {
           </View>
         </View>
 
-        {/* Wizard Form Area */}
-        <ScrollView 
-          style={styles.formScroll} 
-          contentContainerStyle={{ paddingBottom: 160, paddingHorizontal: Spacing.containerMargin }} 
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Live Preview / Highlights Card */}
-          <View style={{ marginBottom: Spacing.md }}>
+        {/* Ticket preview, pinned above the scrolling form. It sat as the
+            first child of the ScrollView, so it slid out of view on the
+            very first scroll — the one thing it exists to keep visible. */}
+        <View style={[styles.previewPinned, { borderBottomColor: theme.outlineVariant + '33' }]}>
             <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>
               LIVE TICKET PREVIEW
             </ThemedText>
@@ -1552,7 +2165,6 @@ export default function CreateTournamentScreen() {
                 <View style={styles.previewSportBadgeRow}>
                   {form.sportType === 'Football' && <MaterialCommunityIcons name="soccer" size={11} color={theme.secondary} />}
                   {form.sportType === 'Cricket' && <MaterialCommunityIcons name="cricket" size={11} color={theme.secondary} />}
-                  {form.sportType === 'Tennis' && <MaterialCommunityIcons name="tennis" size={11} color={theme.secondary} />}
                   <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, marginLeft: 4, fontWeight: '500' }}>
                     {form.sportType.toUpperCase()}
                   </ThemedText>
@@ -1572,7 +2184,7 @@ export default function CreateTournamentScreen() {
                 <View style={styles.previewMetaRow}>
                   <Ionicons name="calendar-outline" size={10} color={theme.textSecondary} />
                   <ThemedText type="labelSm" numberOfLines={1} style={{ color: theme.textSecondary, fontSize: 9, marginLeft: 2 }}>
-                    {form.tournStart} to {form.tournEnd}
+                    {formatIsoDate(form.tournStart)} – {formatIsoDate(form.tournEnd)}
                   </ThemedText>
                 </View>
               </View>
@@ -1583,14 +2195,14 @@ export default function CreateTournamentScreen() {
               {/* Right Section */}
               <View style={styles.previewTicketRight}>
                 <View style={{ alignItems: 'center' }}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 7 }}>Prize Pool</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9 }}>Prize Pool</ThemedText>
                   <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium', fontSize: 12, marginTop: 1 }}>
                     {form.winnerPrize ? form.winnerPrize.split(' ')[0] : 'TBD'}
                   </ThemedText>
                 </View>
 
                 <View style={{ alignItems: 'center', marginTop: 4 }}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 7 }}>Entry Fee</ThemedText>
+                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9 }}>Entry Fee</ThemedText>
                   <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '500', fontSize: 9 }}>
                     {form.entryFee || 'Free'}
                   </ThemedText>
@@ -1599,6 +2211,12 @@ export default function CreateTournamentScreen() {
             </View>
           </View>
 
+        {/* Wizard Form Area */}
+        <ScrollView 
+          style={styles.formScroll} 
+          contentContainerStyle={{ paddingBottom: 160, paddingHorizontal: Spacing.containerMargin }} 
+          showsVerticalScrollIndicator={false}
+        >
           <View style={[styles.bentoCard, Shadows.level2, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44', marginBottom: 20 }]}>
             <View style={styles.cardHeader}>
               <View style={[styles.cardIconWrap, { backgroundColor: theme.primary + '11' }]}>
@@ -1675,78 +2293,6 @@ export default function CreateTournamentScreen() {
         </Animated.View>
       )}
 
-      {/* Drafts List Modal */}
-      <Modal
-        visible={draftsModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setDraftsModalVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalSheet, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }]}>
-            {/* Modal Header */}
-            <View style={styles.modalHeader}>
-              <Ionicons name="folder-open-outline" size={20} color={theme.error} style={{ marginRight: 6 }} />
-              <ThemedText type="headlineSm" style={{ color: theme.text, flex: 1 }}>
-                Saved Drafts
-              </ThemedText>
-              <Pressable style={styles.modalCloseBtn} onPress={() => setDraftsModalVisible(false)}>
-                <Ionicons name="close" size={20} color={theme.text} />
-              </Pressable>
-            </View>
-
-            {/* Modal Body */}
-            {drafts.length === 0 ? (
-              <View style={styles.modalEmptyState}>
-                <Ionicons name="folder-open-outline" size={48} color={theme.textSecondary + '44'} />
-                <ThemedText style={{ color: theme.textSecondary, marginTop: 12, textAlign: 'center', fontSize: 13 }}>
-                  No drafts saved yet. Create a tournament and click {"\"Save Draft\""} to keep it here.
-                </ThemedText>
-              </View>
-            ) : (
-              <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-                {drafts.map((draft) => (
-                  <View 
-                    key={draft.id} 
-                    style={[styles.draftCard, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}
-                  >
-                    <View style={styles.draftCardLeft}>
-                      <View style={[styles.draftSportCircle, { backgroundColor: theme.primary + '1a' }]}>
-                        {draft.sportType === 'Football' && <MaterialCommunityIcons name="soccer" size={16} color={theme.primary} />}
-                        {draft.sportType === 'Cricket' && <MaterialCommunityIcons name="cricket" size={16} color={theme.primary} />}
-                        {draft.sportType === 'Tennis' && <MaterialCommunityIcons name="tennis" size={16} color={theme.primary} />}
-                      </View>
-                      <View style={{ flex: 1, marginLeft: 10 }}>
-                        <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 13 }} numberOfLines={1}>
-                          {draft.name || 'Untitled Draft'}
-                        </ThemedText>
-                        <ThemedText style={{ color: theme.textSecondary, fontSize: 10, marginTop: 2 }}>
-                          {draft.sportType} • {draft.selectedGround.split(',')[0]}
-                        </ThemedText>
-                      </View>
-                    </View>
-
-                    <View style={styles.draftCardActions}>
-                      <Pressable 
-                        style={[styles.draftLoadBtn, { backgroundColor: theme.primary }]}
-                        onPress={() => handleSelectDraft(draft)}
-                      >
-                        <ThemedText type="labelSm" style={{ color: '#ffffff', fontSize: 10, fontWeight: '500' }}>Load</ThemedText>
-                      </Pressable>
-                      <Pressable 
-                        style={styles.draftDeleteBtn}
-                        onPress={() => handleDeleteDraft(draft.id)}
-                      >
-                        <Ionicons name="trash-outline" size={16} color="#ba1a1a" />
-                      </Pressable>
-                    </View>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
 
       {/* Date Picker Modal */}
       <Modal
@@ -1885,11 +2431,6 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     padding: 4,
-  },
-  draftBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
   },
   progressTrackerCard: {
     marginHorizontal: Spacing.containerMargin,
@@ -2210,7 +2751,152 @@ const styles = StyleSheet.create({
   inputRow: { height: 42, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.sm, borderWidth: 1, flexDirection: 'row', alignItems: 'center' },
   countryCodeBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 8 },
   countryCodeText: { fontSize: 13, fontFamily: 'Sora_500Medium' },
-  inputRowInner: { flex: 1, fontSize: 13, fontFamily: 'Sora_500Medium' },
+  addressInput: { height: 64, textAlignVertical: 'top', paddingTop: 10 },
+  togglePill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full, borderWidth: 1 },
+  togglePillText: { fontFamily: 'Sora_500Medium', fontSize: 10 },
+  locationCard: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: BorderRadius.md, borderWidth: 1, padding: Spacing.md },
+  locationIconBg: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  locationText: { fontFamily: 'Sora_500Medium', fontSize: 13 },
+  locationHint: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 2 },
+
+  // Bulk Apply Buttons
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xs },
+
+  // 3 Images Grid with Pin
+  threeImageGrid: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 6,
+  },
+  maxTeamsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 6 },
+  // Chips and the custom box share one height. Padding-derived chips came out
+  // ~34px against inputRow's 42px, so the row sat visibly out of line.
+  maxTeamsChip: {
+    minWidth: 46,
+    height: 42,
+    paddingHorizontal: 12,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  maxTeamsChipText: { fontSize: 13, fontFamily: 'Sora_500Medium' },
+  maxTeamsCustom: { width: 96, paddingHorizontal: 8 },
+  // ── Voucher builder, mirroring the class voucher card ────────────────────
+  voucherEmptyBox: {
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: BorderRadius.md,
+    paddingVertical: 22,
+    paddingHorizontal: 16,
+  },
+  voucherEmptyText: { fontSize: 11, fontFamily: 'Sora_400Regular', textAlign: 'center' },
+  voucherRowCard: {
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 12,
+  },
+  voucherRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  voucherFieldLabel: {
+    fontSize: 9.5,
+    fontFamily: 'Sora_500Medium',
+    color: '#64748b',
+    letterSpacing: 0.5,
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  voucherFieldRow: { flexDirection: 'row', gap: 8 },
+  voucherBannerWrap: { borderRadius: 10, overflow: 'hidden', position: 'relative' },
+  voucherBannerImg: { width: '100%', height: 96 },
+  voucherBannerActions: {
+    position: 'absolute',
+    left: 10,
+    bottom: 10,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  voucherBannerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(15,23,42,0.78)',
+  },
+  voucherBannerBtnText: { color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_500Medium' },
+  discountTypeBtn: {
+    flex: 1,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  discountTypeText: { fontSize: 11.5, fontFamily: 'Sora_500Medium' },
+  numericInput: { textAlign: 'center' },
+  previewPinned: {
+    paddingHorizontal: Spacing.containerMargin,
+    paddingBottom: Spacing.sm,
+    borderBottomWidth: 1,
+  },
+  voucherTermsInput: { height: 58, textAlignVertical: 'top', paddingTop: 9 },
+  bannerChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+  },
+  bannerChipText: { fontSize: 10, fontFamily: 'Sora_500Medium' },
+  voucherInput: {
+    height: 34,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    fontFamily: 'Sora_500Medium',
+    fontSize: 11.5,
+    includeFontPadding: false,
+    paddingVertical: 0,
+    ...({ outlineStyle: 'none' } as any),
+  },
+  voucherHint: { fontSize: 9.5, fontFamily: 'Sora_400Regular', color: '#64748b', marginBottom: 4 },
+  sponsorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 10,
+  },
+  sponsorRowLogo: { width: 42, height: 42, borderRadius: 8, flexShrink: 0 },
+  sponsorRowInput: {
+    height: 34,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11.5,
+    includeFontPadding: false,
+    paddingVertical: 0,
+    ...({ outlineStyle: 'none' } as any),
+  },
+  unitPrefix: { fontFamily: 'Sora_500Medium', fontSize: 12, color: '#64748b', marginRight: 2 },
+  unitSuffix: { fontFamily: 'Sora_400Regular', fontSize: 11, color: '#64748b' },
+  inputRowInner: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: 'Sora_500Medium',
+    includeFontPadding: false,
+  },
   requiredStar: { color: '#ef4444', fontFamily: 'Sora_500Medium' },
   errorText: { color: '#ef4444', fontSize: 11, fontFamily: 'Sora_500Medium', marginTop: 4 },
   input: {
@@ -2220,6 +2906,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     fontFamily: 'Sora_500Medium',
     fontSize: 13,
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   sportList: {
     flexDirection: 'row',
@@ -2246,20 +2934,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginLeft: 4,
   },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
   fieldLabelSub: {
     fontSize: 10.5,
     fontFamily: 'Sora_400Regular',
-  },
-  threeImageGrid: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: 6,
   },
   imageCardSlot: {
     flex: 1,
@@ -2335,41 +3012,6 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontFamily: 'Sora_400Regular',
   },
-  coverPresetCard: {
-    width: 100,
-    height: 64,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1.5,
-    overflow: 'hidden',
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  coverPresetThumb: {
-    width: '100%',
-    height: 46,
-    borderRadius: BorderRadius.sm,
-  },
-  coverPresetLabel: {
-    fontSize: 9,
-    fontFamily: 'Sora_500Medium',
-    marginTop: 3,
-    textAlign: 'center',
-  },
-  coverPresetCheck: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(5, 21, 30, 0.65)',
@@ -2403,15 +3045,6 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     paddingHorizontal: 24,
   },
-  draftCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    marginBottom: 10,
-  },
   draftCardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2434,8 +3067,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
-  },
-  draftDeleteBtn: {
-    padding: 6,
   },
 });

@@ -61,6 +61,12 @@ export interface Match {
   id: string;
   sport: string;
   matchType: 'Quick' | 'Bid' | 'Tournament';
+  /**
+   * The tournament this match belongs to, when matchType is 'Tournament'.
+   * Without it a tournament's screen cannot tell its own live matches from
+   * any other tournament's.
+   */
+  tournamentId?: string;
   homeTeam: Team | null;
   awayTeam: Team | null;
   homeScore: number;

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { MAX_FONT_SCALE } from '@/components/themed-text';
 import { TextInput, View, type TextInputProps } from 'react-native';
 import { cn } from '@/lib/utils';
 import { useTokens } from '@/hooks/use-scheme';
@@ -23,7 +24,7 @@ export const Input = React.forwardRef<TextInput, InputProps>(
     const t = useTokens();
 
     return (
-      <View className={cn('gap-1.5', containerClassName)}>
+      <View className={cn('gap-1', containerClassName)}>
         {label ? (
           <Text variant="caption" className="text-foreground">
             {label}
@@ -31,13 +32,13 @@ export const Input = React.forwardRef<TextInput, InputProps>(
         ) : null}
         <View
           className={cn(
-            'h-10 flex-row items-center gap-2 rounded-xl border border-input bg-card px-3',
+            'h-9 flex-row items-center gap-2 rounded-lg border border-input bg-card px-2.5',
             focused && 'border-ring',
             error && 'border-destructive',
           )}
         >
           {leftSlot}
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             ref={ref}
             placeholderTextColor={t.mutedForeground}
             selectionColor={t.primary}

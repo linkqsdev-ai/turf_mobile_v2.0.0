@@ -15,6 +15,7 @@ import { getAvatarSource } from '@/constants/avatars';
 import { getSportIllustration } from '@/constants/sports';
 import { VOUCHERS } from '@/constants/vouchers';
 import { AutoScrollingHorizontalBanners, type PromoBannerProps } from '@/components/promo-banner';
+import { TicketVoucherCarousel } from '@/components/ticket-voucher-card';
 import { MotionIllustration } from '@/components/motion-illustration';
 import {
   StatTile,
@@ -197,9 +198,59 @@ export function PlayerDashboard({
       />
 
       <SafeAreaView edges={['top']} style={styles.flex}>
+        {/* ── Fixed Top App Bar ────────────────────────────────────────── */}
+        <View style={[styles.header, { backgroundColor: theme.surfaceLowest }]}>
+          <View style={styles.headerLeft}>
+            <Pressable style={styles.profileIconButton} onPress={() => go('/profile')}>
+              <Image
+                source={getAvatarSource(profile.avatarUrl)}
+                style={styles.headerAvatar}
+                contentFit="cover"
+              />
+            </Pressable>
+            <View style={styles.headerTextGroup}>
+              <ThemedText
+                type="bodyMd"
+                style={{ color: theme.text, fontFamily: 'Sora_500Medium', lineHeight: 18 }}
+              >
+                {profile.name}
+              </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                <Ionicons name="location-sharp" size={12} color={theme.secondary} />
+                <ThemedText
+                  type="labelSm"
+                  style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}
+                >
+                  {getShortLocation(profile.location)}
+                </ThemedText>
+              </View>
+            </View>
+          </View>
+          <View style={styles.headerRightActions}>
+            <Pressable
+              style={styles.iconButton}
+              onPress={onOpenNotifications}
+              accessibilityLabel="Notifications"
+            >
+              <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
+            </Pressable>
+            <Pressable
+              style={styles.iconButton}
+              onPress={onOpenCoinToss}
+              accessibilityLabel="Coin toss"
+            >
+              <Image
+                source={require('@/assets/images/coin_toss_icon.png')}
+                style={{ width: 26, height: 26 }}
+                contentFit="contain"
+              />
+            </Pressable>
+          </View>
+        </View>
+
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: Spacing.xs }]}
           refreshControl={
             onRefresh ? (
               <RefreshControl
@@ -211,58 +262,6 @@ export function PlayerDashboard({
             ) : undefined
           }
         >
-          {/* ── Top App Bar — same structure as the other tab screens:
-                 avatar + name / location on the left, notification + coin
-                 toss on the right. ─────────────────────────────────────── */}
-          <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <Pressable style={styles.profileIconButton} onPress={() => go('/profile')}>
-                <Image
-                  source={getAvatarSource(profile.avatarUrl)}
-                  style={styles.headerAvatar}
-                  contentFit="cover"
-                />
-              </Pressable>
-              <View style={styles.headerTextGroup}>
-                <ThemedText
-                  type="bodyMd"
-                  style={{ color: theme.text, fontFamily: 'Sora_500Medium', lineHeight: 18 }}
-                >
-                  {profile.name}
-                </ThemedText>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                  <Ionicons name="location-sharp" size={12} color={theme.secondary} />
-                  <ThemedText
-                    type="labelSm"
-                    style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 10 }}
-                  >
-                    {getShortLocation(profile.location)}
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
-            <View style={styles.headerRightActions}>
-              <Pressable
-                style={styles.iconButton}
-                onPress={onOpenNotifications}
-                accessibilityLabel="Notifications"
-              >
-                <Ionicons name="notifications-outline" size={20} color={theme.secondary} />
-              </Pressable>
-              <Pressable
-                style={styles.iconButton}
-                onPress={onOpenCoinToss}
-                accessibilityLabel="Coin toss"
-              >
-                <Image
-                  source={require('@/assets/images/coin_toss_icon.png')}
-                  style={{ width: 26, height: 26 }}
-                  contentFit="contain"
-                />
-              </Pressable>
-            </View>
-          </View>
-
           {/* ── Hero band with motion illustration ─────────────────────── */}
           <Reanimated.View entering={FadeInDown.delay(110).duration(460)} style={styles.section}>
             <View
@@ -421,6 +420,11 @@ export function PlayerDashboard({
             />
           </Reanimated.View>
 
+          {/* ── Coaching Class Deals & Passes (Player Dashboard) ──────── */}
+          <Reanimated.View entering={FadeInDown.delay(290).duration(460)} style={styles.sectionBleed}>
+            <TicketVoucherCarousel filterType="class" title="COACHING CLASS VOUCHERS & OFFERS" />
+          </Reanimated.View>
+
           {/* ── Bid match ──────────────────────────────────────────────── */}
           <Reanimated.View entering={FadeInDown.delay(320).duration(460)} style={styles.section}>
             <SectionHeading title="Bid match" tint={accent} />
@@ -487,35 +491,9 @@ export function PlayerDashboard({
             </View>
           </Reanimated.View>
 
-          {/* ── Offers & vouchers ──────────────────────────────────────── */}
+          {/* ── Turf Booking, Tournament & Wallet Offers ─────────────────── */}
           <Reanimated.View entering={FadeInDown.delay(370).duration(460)} style={styles.sectionBleed}>
-            <View style={styles.sectionInset}>
-              <SectionHeading
-                title="Offers & vouchers"
-                action={{ label: 'Wallet', onPress: () => go('/wallet') }}
-              />
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.voucherStrip}
-            >
-              {VOUCHERS.slice(0, 6).map((v, i) => (
-                <VoucherTicket
-                  key={v.id}
-                  value={v.discountLabel}
-                  suffix={v.discountSuffix}
-                  title={v.title}
-                  brand={v.brand}
-                  code={v.code}
-                  tint={[theme.primary, accent, info][i % 3]}
-                  onPress={() =>
-                    router.push({ pathname: '/voucher-redeem', params: { id: v.id } })
-                  }
-                />
-              ))}
-            </ScrollView>
+            <TicketVoucherCarousel filterType="turf_tournament_wallet" title="TURF, TOURNAMENTS & WALLET OFFERS" />
           </Reanimated.View>
 
           {/* ── Jump back in ───────────────────────────────────────────── */}

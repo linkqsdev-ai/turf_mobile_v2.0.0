@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
 import {
@@ -57,10 +57,10 @@ export function FoFPlayerSearchModal({
                 <Ionicons name="people" size={20} color={theme.primary} />
               </View>
               <View>
-                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                <ThemedText style={{ fontSize: 13.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
                   Find Players by Phone & FoF
                 </ThemedText>
-                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
+                <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, fontFamily: 'Sora_400Regular' }}>
                   3-Chain Social Network Search (Azar ➔ Guna ➔ Siva ➔ Asif)
                 </ThemedText>
               </View>
@@ -73,7 +73,7 @@ export function FoFPlayerSearchModal({
           {/* Search Input */}
           <View style={[styles.searchBox, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}>
             <Ionicons name="search" size={18} color={theme.textSecondary} />
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search by Phone (+91 98765...) or Name..."
@@ -255,6 +255,7 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontFamily: 'Sora_500Medium',
     padding: 0,
+    includeFontPadding: false,
   },
   filterRow: {
     flexDirection: 'row',

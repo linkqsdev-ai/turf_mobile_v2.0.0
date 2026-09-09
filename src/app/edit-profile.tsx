@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -31,7 +31,7 @@ const SKILL_LEVELS: NonNullable<UserProfile['skillLevel']>[] = ['Beginner', 'Int
 // Super Admin) from Edit Profile. Hidden for now — flip to `true` to bring the
 // picker back. The role itself is still loaded from the profile and saved
 // unchanged while this is off, so hiding it never rewrites anyone's role.
-const SHOW_ROLE_SWITCHER = false;
+const SHOW_ROLE_SWITCHER = true;
 
 export default function EditProfileScreen() {
   const theme = useTheme();
@@ -252,7 +252,7 @@ export default function EditProfileScreen() {
             <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
               <View style={styles.inputContainer}>
                 <ThemedText type="labelMd" style={styles.inputLabel}>FULL NAME</ThemedText>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   value={name}
                   onChangeText={setName}
                   style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
@@ -264,7 +264,7 @@ export default function EditProfileScreen() {
               <View style={styles.rowPair}>
                 <View style={[styles.inputContainer, { flex: 1 }]}>
                   <ThemedText type="labelMd" style={styles.inputLabel}>EMAIL</ThemedText>
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     value={email}
                     onChangeText={setEmail}
                     keyboardType="email-address"
@@ -279,7 +279,7 @@ export default function EditProfileScreen() {
 
               <View style={styles.inputContainer}>
                 <ThemedText type="labelMd" style={styles.inputLabel}>PHONE NUMBER</ThemedText>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   value={phone}
                   onChangeText={(t) => setPhone(formatPhoneNumber(t))}
                   keyboardType="phone-pad"
@@ -326,7 +326,7 @@ export default function EditProfileScreen() {
 
               <View style={styles.inputContainer}>
                 <ThemedText type="labelMd" style={styles.inputLabel}>PLAYING POSITION</ThemedText>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   value={position}
                   onChangeText={setPosition}
                   style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
@@ -349,7 +349,7 @@ export default function EditProfileScreen() {
                     </ThemedText>
                   </Pressable>
                 </View>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   value={location}
                   onChangeText={setLocation}
                   style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
@@ -440,7 +440,7 @@ export default function EditProfileScreen() {
               <View style={styles.rowPair}>
                 <View style={[styles.inputContainer, { flex: 1 }]}>
                   <ThemedText type="labelMd" style={styles.inputLabel}>JERSEY NUMBER</ThemedText>
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     value={jerseyNumber}
                     onChangeText={(t) => setJerseyNumber(t.replace(/\D/g, '').slice(0, 3))}
                     keyboardType="number-pad"
@@ -451,7 +451,7 @@ export default function EditProfileScreen() {
                 </View>
                 <View style={[styles.inputContainer, { flex: 1.6 }]}>
                   <ThemedText type="labelMd" style={styles.inputLabel}>PLAYING STYLE</ThemedText>
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     value={playingStyle}
                     onChangeText={setPlayingStyle}
                     style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.text }]}
@@ -475,7 +475,7 @@ export default function EditProfileScreen() {
             <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
               <View style={[styles.inputContainer, { marginBottom: 0 }]}>
                 <ThemedText type="labelMd" style={styles.inputLabel}>BIO DESCRIPTION</ThemedText>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   value={bio}
                   onChangeText={setBio}
                   multiline
@@ -580,23 +580,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    height: 56,
+    height: 48,
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',
     zIndex: 10,
   },
   backButton: {
-    padding: 6,
+    padding: 4,
   },
   headerTitle: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 16,
+    fontSize: 14.5,
   },
   scrollContent: {
     paddingBottom: 40,
   },
   section: {
-    marginTop: Spacing.lg,
+    marginTop: Spacing.sm,
     paddingHorizontal: Spacing.containerMargin,
   },
   portraitCard: {
@@ -675,12 +675,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     borderWidth: 1,
     borderColor: '#0000000a',
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   multilineInput: {
     height: 100,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.sm,
     textAlignVertical: 'top',
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   segmentedRow: {
     flexDirection: 'row',

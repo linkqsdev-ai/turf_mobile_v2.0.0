@@ -7,33 +7,9 @@ const PRODUCTION_VPS_URL = 'https://srv1939048.hstgr.cloud/api';
 
 export const API_BASE_URL = PRODUCTION_VPS_URL;
 
-// Dynamically discover Metro dev machine IP for Expo Go on physical phones
+// Base candidate URLs pointing directly to live Hostinger VPS backend
 function getCandidateBaseUrls(): string[] {
-  const debuggerHost =
-    Constants.expoConfig?.hostUri ||
-    (Constants as any)?.manifest2?.extra?.expoGo?.debuggerHost ||
-    (Constants as any)?.manifest?.debuggerHost;
-
-  const devMachineIp = debuggerHost ? debuggerHost.split(':')[0] : '192.168.1.12';
-
-  const urls: string[] = [];
-
-  // In development, prefer the live local backend (running port 5070 with latest OTP routes)
-  if (__DEV__) {
-    urls.push('http://localhost:5070/api');
-    urls.push('http://127.0.0.1:5070/api');
-    if (devMachineIp) {
-      urls.push(`http://${devMachineIp}:5070/api`);
-    }
-    urls.push('http://192.168.1.43:5070/api');
-    urls.push('http://192.168.1.38:5070/api');
-    urls.push('http://192.168.1.12:5070/api');
-  }
-
-  // Live Production VPS
-  urls.push(PRODUCTION_VPS_URL);
-
-  return [...new Set(urls)];
+  return [PRODUCTION_VPS_URL];
 }
 
 const TOKEN_KEY = '@turf_auth_token';

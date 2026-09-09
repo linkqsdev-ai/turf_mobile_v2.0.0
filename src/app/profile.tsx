@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { EditIcon } from '@/components/ui/edit-icon';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -236,7 +237,7 @@ export default function ProfileScreen() {
                 onPress={() => router.push('/edit-profile')}
                 style={[styles.pillActionBtn, { flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1 }]}
               >
-                <Ionicons name="create-outline" size={14} color="#ffffff" style={{ marginRight: 6 }} />
+                <EditIcon size={14} style={{ marginRight: 6 }} />
                 <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '500' }}>Edit Profile</ThemedText>
               </Pressable>
 
@@ -1794,7 +1795,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 16,
+    fontSize: 14.5,
   },
   iconButton: {
     padding: 6,
@@ -2541,25 +2542,25 @@ const styles = StyleSheet.create({
   },
   confirmTitle: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 18,
+    fontSize: 14.5,
     marginBottom: Spacing.xs,
     textAlign: 'center',
   },
   confirmText: {
-    fontSize: 14,
+    fontSize: 11.5,
     textAlign: 'center',
-    marginBottom: Spacing.lg,
-    lineHeight: 20,
+    marginBottom: Spacing.md,
+    lineHeight: 16,
   },
   confirmActionsRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    gap: Spacing.xs,
     width: '100%',
   },
   confirmBtn: {
     flex: 1,
-    height: 40,
-    borderRadius: 10,
+    height: 32,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2568,10 +2569,10 @@ const styles = StyleSheet.create({
   },
   actionConfirmBtn: {
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 2,
+    elevation: 1,
   },
   bannerScrim: {
     position: 'absolute',
@@ -2582,17 +2583,17 @@ const styles = StyleSheet.create({
   },
   profileNameText: {
     color: '#ffffff',
-    fontSize: 20,
+    fontSize: 16.5,
     fontFamily: 'Sora_500Medium',
   },
   profileMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 3,
+    marginTop: 2,
   },
   profileMetaText: {
     color: '#cbd5e1',
-    fontSize: 12,
+    fontSize: 10.5,
     marginLeft: 3,
   },
   metaDot: {

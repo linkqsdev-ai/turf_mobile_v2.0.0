@@ -24,10 +24,12 @@ import { getCurrentGPSLocation, cleanLocation } from '@/utils/location';
 
 import { SPORTS_LIST } from '@/constants/sports';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
-import { Spacing, BorderRadius } from '@/constants/theme';
+import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { TicketVoucherCard, STUB_COLORS } from '@/components/ticket-voucher-card';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -69,8 +71,8 @@ const SESSION_SLOT_MINUTES = 60;
 const SESSION_SLOT_LABEL = `${SESSION_SLOT_MINUTES} min`;
 
 const SESSION_GROUPS = {
-  'Morning Session': ['6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM'],
-  'Noon Session': ['2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM'],
+  'Morning Session': ['6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM'],
+  'Noon Session': ['12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'],
   'Evening Session': ['6:00 PM', '7:00 PM', '8:00 PM', '9:00 PM', '10:00 PM', '11:00 PM']
 };
 const DURATIONS = ['60 min', '120 min'];
@@ -85,24 +87,34 @@ const SKILL_LEVELS = [
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const formatSelectedDate = (date: Date) => {
+  if (!date || isNaN(date.getTime())) return '';
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mmm = MONTH_NAMES[date.getMonth()];
+  const yyyy = date.getFullYear();
+  return `${dd}/${mmm}/${yyyy}`;
+};
+
 const getTodayDate = () => {
-  const d = new Date();
-  return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+  return formatSelectedDate(new Date());
 };
 
 export default function CreateClassScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ editId?: string; id?: string; showDrafts?: string }>();
+  const { profile } = useUserProfile();
+  const params = useLocalSearchParams<{ editId?: string; id?: string; draftId?: string }>();
   const editId = params.editId || params.id;
   const { classes, addClass, updateClass, isClassEditable, enrollmentCountForClass } = useClassStore();
-  const { addOffer } = useOfferStore();
+  const { addOffer, offers } = useOfferStore();
   const [currentStep, setCurrentStep] = useState(0);
 
   const [datePickerField, setDatePickerField] = useState<'start' | 'end' | null>(null);
   const [pickerDate, setPickerDate] = useState(new Date());
 
-  const [draftsModalVisible, setDraftsModalVisible] = useState(false);
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(params.draftId || null);
   const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
   const [resumeDraftModalVisible, setResumeDraftModalVisible] = useState(false);
   const [pendingResumeDraft, setPendingResumeDraft] = useState<any>(null);
@@ -117,7 +129,45 @@ export default function CreateClassScreen() {
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>(['Water Station', 'Training Gear Provided', 'Locker & Shower']);
   const [sportType, setSportType] = useState('Football');
   const [classType, setClassType] = useState('');
-  const [ageGroup, setAgeGroup] = useState('');
+  const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>([]);
+  const ageGroup = useMemo(() => selectedAgeGroups.join(', '), [selectedAgeGroups]);
+
+  const toggleAgeGroup = (group: string) => {
+    if (group === 'All Ages') {
+      if (selectedAgeGroups.includes('All Ages')) {
+        setSelectedAgeGroups([]);
+      } else {
+        setSelectedAgeGroups(['All Ages']);
+      }
+      return;
+    }
+    setSelectedAgeGroups(prev => {
+      const withoutAll = prev.filter(g => g !== 'All Ages');
+      if (withoutAll.includes(group)) {
+        return withoutAll.filter(g => g !== group);
+      } else {
+        return [...withoutAll, group];
+      }
+    });
+  };
+
+  const setAgeGroupFromData = (data: any) => {
+    if (!data) {
+      setSelectedAgeGroups([]);
+      return;
+    }
+    if (Array.isArray(data)) {
+      setSelectedAgeGroups(data.map(String));
+    } else if (typeof data === 'string') {
+      setSelectedAgeGroups(
+        data
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean)
+      );
+    }
+  };
+
   const [maxStudents, setMaxStudents] = useState('');
   const [skillLevel, setSkillLevel] = useState('');
 
@@ -135,19 +185,51 @@ export default function CreateClassScreen() {
   const [feeType, setFeeType] = useState('');
   const [feeAmount, setFeeAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [classOffers, setClassOffers] = useState<ClassOfferDraft[]>([
-    {
-      localId: 'offer-init-1',
-      code: 'COACH20',
-      title: 'Academy Early Bird',
-      description: 'Special 20% discount for first 20 students enrolling.',
-      discountType: 'percent',
-      discountValue: '20',
-      minBooking: '500',
-      maxRedemptions: '20',
-      validDays: '30',
-      bannerImage: VOUCHER_BANNER_PRESETS[0].uri,
-    },
+  const [classBannerImage, setClassBannerImage] = useState<string>('');
+  const [classOffers, setClassOffers] = useState<ClassOfferDraft[]>([]);
+
+  // Check if any class data has been entered to prevent saving empty drafts
+  const hasDraftContent = useMemo(() => {
+    const hasName = Boolean(className && className.trim());
+    const hasClassType = Boolean(classType && classType.trim());
+    const hasDesc = Boolean(description && description.trim());
+    const hasVenue = Boolean(venue && venue.trim());
+    const hasFee = Boolean(feeAmount && feeAmount.trim());
+    const hasMaxStudents = Boolean(maxStudents && maxStudents.trim());
+    const hasSessionTime = Boolean(sessionTime && sessionTime.trim());
+    const hasSkill = Boolean(skillLevel && skillLevel.trim());
+    const hasAge = selectedAgeGroups.length > 0;
+    const hasDays = Object.values(selectedDays || {}).some(Boolean);
+    const hasBanner = Boolean(classBannerImage);
+    const hasOffers = (classOffers || []).length > 0;
+
+    return (
+      hasName ||
+      hasClassType ||
+      hasDesc ||
+      hasVenue ||
+      hasFee ||
+      hasMaxStudents ||
+      hasSessionTime ||
+      hasSkill ||
+      hasAge ||
+      hasDays ||
+      hasBanner ||
+      hasOffers
+    );
+  }, [
+    className,
+    classType,
+    description,
+    venue,
+    feeAmount,
+    maxStudents,
+    sessionTime,
+    skillLevel,
+    selectedAgeGroups,
+    selectedDays,
+    classBannerImage,
+    classOffers,
   ]);
 
   // Toast
@@ -179,16 +261,20 @@ export default function CreateClassScreen() {
 
   const addOfferRow = () => {
     const newIdx = classOffers.length + 1;
+    const computedDays = calculateScheduleDays(startDate, endDate);
+    const assignedCap = maxStudents.trim() && !isNaN(parseInt(maxStudents, 10)) && parseInt(maxStudents, 10) > 0
+      ? maxStudents.trim()
+      : '50';
     const newDraft: ClassOfferDraft = {
       localId: `offer-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      code: `CLASS${newIdx * 10}`,
-      title: `Special Class Discount ${newIdx}`,
+      code: `CLASS${newIdx * 10}`.toUpperCase(),
+      title: `Special ${newIdx}`.slice(0, 12),
       description: 'Claim this voucher discount during academy enrollment checkout.',
       discountType: 'percent',
       discountValue: '15',
       minBooking: '0',
-      maxRedemptions: '50',
-      validDays: '30',
+      maxRedemptions: assignedCap,
+      validDays: String(computedDays),
       bannerImage: VOUCHER_BANNER_PRESETS[(newIdx - 1) % VOUCHER_BANNER_PRESETS.length].uri,
     };
     setClassOffers(prev => [...prev, newDraft]);
@@ -253,11 +339,47 @@ export default function CreateClassScreen() {
     }
   };
 
+  const pickClassBanner = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission Required', 'Gallery access is needed to pick a class background banner.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.5,
+        base64: true,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      const picked = toPersistableImage(result.assets[0]);
+      if (picked.ok) {
+        setClassBannerImage(picked.uri);
+        triggerToast('Class background banner updated! 🎨');
+        return;
+      }
+
+      if (picked.reason === 'too-large') {
+        Alert.alert('Image too large', 'Pick a smaller image — this one is too big to store with the class.');
+        return;
+      }
+
+      setClassBannerImage(result.assets[0].uri);
+      triggerToast('Background banner updated! 🎨');
+    } catch (err) {
+      console.warn('Error picking class banner:', err);
+      Alert.alert('Could not load image', 'Something went wrong picking that banner.');
+    }
+  };
+
   const loadDraft = (draft: any) => {
     if (draft.className) setClassName(draft.className);
     if (draft.sportType) setSportType(draft.sportType);
     if (draft.classType) setClassType(draft.classType);
-    if (draft.ageGroup) setAgeGroup(draft.ageGroup);
+    if (draft.ageGroup) setAgeGroupFromData(draft.ageGroup);
     if (draft.maxStudents) setMaxStudents(draft.maxStudents);
     if (draft.skillLevel) setSkillLevel(draft.skillLevel);
     if (draft.startDate) setStartDate(draft.startDate);
@@ -268,12 +390,23 @@ export default function CreateClassScreen() {
     if (draft.feeType) setFeeType(draft.feeType);
     if (draft.feeAmount) setFeeAmount(draft.feeAmount);
     if (draft.description) setDescription(draft.description);
+    if (draft.bannerImage || draft.image || draft.classBannerImage) {
+      setClassBannerImage(draft.bannerImage || draft.image || draft.classBannerImage);
+    }
     if (draft.classOffers && Array.isArray(draft.classOffers)) {
-      setClassOffers(draft.classOffers);
+      setClassOffers(
+        draft.classOffers.map((v: any, idx: number) => ({
+          ...v,
+          bannerImage:
+            v?.bannerImage ||
+            v?.image ||
+            VOUCHER_BANNER_PRESETS[idx % VOUCHER_BANNER_PRESETS.length].uri,
+        }))
+      );
     }
     if (typeof draft.currentStep === 'number') setCurrentStep(draft.currentStep);
+    if (draft.id) setActiveDraftId(draft.id);
 
-    setDraftsModalVisible(false);
     triggerToast('Draft loaded! 📝');
   };
 
@@ -282,24 +415,41 @@ export default function CreateClassScreen() {
       const nextDrafts = savedDrafts.filter(d => d.id !== id);
       await AsyncStorage.setItem('@turf_class_drafts', JSON.stringify(nextDrafts));
       setSavedDrafts(nextDrafts);
+      if (activeDraftId === id) setActiveDraftId(null);
       triggerToast('Draft deleted.');
     } catch (e) {
       console.error(e);
     }
   };
 
-  // Load draft list on mount or bind edit data
+  // Load draft by draftId or bind edit data on mount
   useEffect(() => {
-    if (params.showDrafts === 'true') {
-      setDraftsModalVisible(true);
+    if (params.draftId) {
+      (async () => {
+        try {
+          const savedDraftsStr = await AsyncStorage.getItem('@turf_class_drafts');
+          if (savedDraftsStr) {
+            const list = JSON.parse(savedDraftsStr);
+            const found = list.find((d: any) => d.id === params.draftId);
+            if (found) {
+              loadDraft(found);
+              setActiveDraftId(found.id);
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load draft by draftId', e);
+        }
+      })();
+      return;
     }
+
     if (editId) {
       const existing = (classes || []).find((c: any) => c.id === editId);
       if (existing) {
         if (existing.className) setClassName(existing.className);
         if (existing.sportType) setSportType(existing.sportType);
         if (existing.classType) setClassType(existing.classType);
-        if (existing.ageGroup) setAgeGroup(existing.ageGroup);
+        if (existing.ageGroup) setAgeGroupFromData(existing.ageGroup);
         if (existing.maxStudents) setMaxStudents(String(existing.maxStudents));
         if (existing.skillLevel) setSkillLevel(existing.skillLevel);
         if (existing.startDate) setStartDate(existing.startDate);
@@ -310,17 +460,35 @@ export default function CreateClassScreen() {
         if (existing.feeType) setFeeType(existing.feeType);
         if (existing.feeAmount) setFeeAmount(String(existing.feeAmount));
         if (existing.description) setDescription(existing.description);
-        if (existing.vouchers && Array.isArray(existing.vouchers)) {
-          // Banners saved before the picker persisted real data are dead
-          // handles (blob:/cache paths). Swap them for the default preset so
-          // the form shows something valid rather than a broken image.
+        if (existing.bannerImage || existing.image || existing.classBannerImage) {
+          setClassBannerImage(existing.bannerImage || existing.image || existing.classBannerImage);
+        }
+        
+        const matchingOffers = (offers || []).filter(
+          (o: any) => o.appliesTo && existing.className && o.appliesTo.toLowerCase() === existing.className.toLowerCase()
+        );
+        const sourceVouchers =
+          existing.vouchers && Array.isArray(existing.vouchers) && existing.vouchers.length > 0
+            ? existing.vouchers
+            : matchingOffers;
+
+        if (sourceVouchers && sourceVouchers.length > 0) {
           setClassOffers(
-            existing.vouchers.map((v: any) => ({
-              ...v,
-              bannerImage: sanitiseStoredImageUri(
-                v?.bannerImage,
-                VOUCHER_BANNER_PRESETS[0].uri
-              ),
+            sourceVouchers.map((v: any, idx: number) => ({
+              localId: v.localId || `offer-${idx + 1}`,
+              offerId: v.offerId || v.id,
+              code: v.code || '',
+              title: v.title || '',
+              description: v.description || '',
+              discountType: v.discountType || 'percent',
+              discountValue: String(v.discountValue || ''),
+              minBooking: String(v.minBooking || ''),
+              maxRedemptions: String(v.maxRedemptions || ''),
+              validDays: String(v.validDays || '30'),
+              bannerImage:
+                v?.bannerImage ||
+                v?.image ||
+                VOUCHER_BANNER_PRESETS[idx % VOUCHER_BANNER_PRESETS.length].uri,
             }))
           );
         }
@@ -334,18 +502,13 @@ export default function CreateClassScreen() {
           if (savedDraftsStr) {
             const list = JSON.parse(savedDraftsStr);
             setSavedDrafts(list);
-            if (list.length > 0 && params.showDrafts !== 'true') {
-              const latest = list[0];
-              setPendingResumeDraft(latest);
-              setResumeDraftModalVisible(true);
-            }
           }
         } catch (e) {
           console.error('Failed to load drafts', e);
         }
       })();
     }
-  }, [editId, params.showDrafts, classes]);
+  }, [editId, params.draftId, classes]);
 
   const handleFetchVenueLocation = async () => {
     if (isFetchingLocation) return;
@@ -427,30 +590,51 @@ export default function CreateClassScreen() {
     setSelectedDays(prev => ({ ...prev, [day]: !prev[day] }));
   };
 
-  const formatSelectedDate = (date: Date) => {
-    const dd = String(date.getDate()).padStart(2, '0');
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const yyyy = date.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
-  };
-
   const parseDateString = (dateStr: string): Date | null => {
     if (!dateStr) return null;
-    const parts = dateStr.split('/');
-    if (parts.length !== 3) return null;
+    const parts = dateStr.trim().split('/');
+    if (parts.length !== 3) {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        d.setHours(0, 0, 0, 0);
+        return d;
+      }
+      return null;
+    }
     const d = parseInt(parts[0], 10);
-    const m = parseInt(parts[1], 10) - 1;
+    const mStr = parts[1];
+    let m = -1;
+    const numMonth = parseInt(mStr, 10);
+    if (!isNaN(numMonth) && numMonth >= 1 && numMonth <= 12) {
+      m = numMonth - 1;
+    } else {
+      m = MONTH_NAMES.findIndex(month => month.toLowerCase() === mStr.toLowerCase());
+    }
     const y = parseInt(parts[2], 10);
+    if (isNaN(d) || m < 0 || isNaN(y)) return null;
     const res = new Date(y, m, d);
     res.setHours(0, 0, 0, 0);
     return isNaN(res.getTime()) ? null : res;
   };
 
-  // Step 0 validation: Class Name (3 to 40 chars), Sport, Class Type are mandatory
+  const calculateScheduleDays = (startStr: string, endStr: string): number => {
+    const start = parseDateString(startStr);
+    const end = parseDateString(endStr);
+    if (start && end && end.getTime() >= start.getTime()) {
+      const diffMs = end.getTime() - start.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1;
+      return Math.max(1, diffDays);
+    }
+    return 30;
+  };
+
+  // Step 0 validation: Class Name (3 to 25 chars), Sport, Class Type, Max Students (> 0) are mandatory
   const isStepZeroValid = useMemo(() => {
-    const validName = className.trim().length >= 3 && className.trim().length <= 40;
-    return Boolean(validName && sportType.trim() && classType.trim());
-  }, [className, sportType, classType]);
+    const validName = className.trim().length >= 3 && className.trim().length <= 25;
+    const validMaxStudents =
+      Boolean(maxStudents.trim()) && !isNaN(parseInt(maxStudents, 10)) && parseInt(maxStudents, 10) > 0;
+    return Boolean(validName && sportType.trim() && classType.trim() && validMaxStudents);
+  }, [className, sportType, classType, maxStudents]);
 
   // Step 1 validation: Start Date (>= Today), End Date (>= Start Date), Recurring Days, Session Time, Venue (>= 3 chars)
   const isStepOneValid = useMemo(() => {
@@ -476,8 +660,10 @@ export default function CreateClassScreen() {
       if (currentStep === 0 && !isStepZeroValid) {
         if (className.trim().length > 0 && className.trim().length < 3) {
           triggerToast('⚠️ Class Name must be at least 3 characters long.');
+        } else if (!maxStudents.trim() || isNaN(parseInt(maxStudents, 10)) || parseInt(maxStudents, 10) <= 0) {
+          triggerToast('⚠️ Please enter a valid number of Max Students (*)');
         } else {
-          triggerToast('⚠️ Please fill required fields (*): Class Name, Sport, Class Type');
+          triggerToast('⚠️ Please fill required fields (*): Class Name, Sport, Class Type, Max Students');
         }
         return;
       }
@@ -511,8 +697,12 @@ export default function CreateClassScreen() {
         triggerToast('⚠️ Class Name must be at least 3 characters long.');
         return;
       }
+      if (!maxStudents.trim() || isNaN(parseInt(maxStudents, 10)) || parseInt(maxStudents, 10) <= 0) {
+        triggerToast('⚠️ Please enter a valid number of Max Students (*)');
+        return;
+      }
       if (!isStepZeroValid) {
-        triggerToast('⚠️ Please fill required fields (*): Class Name, Sport, Class Type');
+        triggerToast('⚠️ Please fill required fields (*): Class Name, Sport, Class Type, Max Students');
         return;
       }
       setCurrentStep(1);
@@ -579,6 +769,8 @@ export default function CreateClassScreen() {
 
     const classPayload = {
       className,
+      coachName: profile?.name || 'Coach Specialist',
+      avatar: profile?.avatarUrl,
       sportType,
       classType,
       ageGroup,
@@ -593,9 +785,12 @@ export default function CreateClassScreen() {
       feeType,
       feeAmount,
       description,
+      bannerImage: classBannerImage,
+      image: classBannerImage,
       vouchers: classOffers,
       certificates,
       amenities: selectedAmenities,
+      isActive: true,
     };
 
     if (editId) {
@@ -614,18 +809,10 @@ export default function CreateClassScreen() {
       }
 
       updateClass(editId, classPayload);
-
-      if (Platform.OS === 'web') {
-        alert(`"${className || 'Your Class'}" has been updated.`);
-        router.replace('/(tabs)/coach');
-        return;
-      }
-
-      Alert.alert(
-        'Class Updated! 🎓',
-        `"${className || 'Your Class'}" has been updated successfully.`,
-        [{ text: 'Done', onPress: () => router.replace('/(tabs)/coach') }]
-      );
+      router.replace({
+        pathname: '/(tabs)/coach',
+        params: { toast: `"${className || 'Class'}" updated successfully! 🎓` },
+      });
       return;
     }
 
@@ -637,7 +824,12 @@ export default function CreateClassScreen() {
         const existingDraftsStr = await AsyncStorage.getItem('@turf_class_drafts');
         if (existingDraftsStr) {
           const draftsList = JSON.parse(existingDraftsStr);
-          const nextDrafts = draftsList.filter((d: any) => d.className !== className);
+          const nextDrafts = draftsList.filter(
+            (d: any) =>
+              d.id !== activeDraftId &&
+              d.id !== params.draftId &&
+              d.className !== className
+          );
           await AsyncStorage.setItem('@turf_class_drafts', JSON.stringify(nextDrafts));
           setSavedDrafts(nextDrafts);
         }
@@ -646,31 +838,29 @@ export default function CreateClassScreen() {
       }
     })();
 
-    if (Platform.OS === 'web') {
-      alert(`"${className || 'Your Class'}" is now live with ${classOffers.length} voucher(s). Students can enrol now.`);
-      router.replace('/(tabs)/coach');
-      return;
-    }
-
-    Alert.alert(
-      'Class Published! 🎓',
-      `"${className || 'Your Class'}" is now live with ${classOffers.length} promotional voucher(s). Students can enrol now.`,
-      [{
-        text: 'Done', onPress: () => {
-          router.replace('/(tabs)/coach');
-        }
-      }]
-    );
+    router.replace({
+      pathname: '/(tabs)/coach',
+      params: { toast: `"${className || 'Class'}" published live! 🎓` },
+    });
   };
 
   const handleSaveDraft = async () => {
+    if (!hasDraftContent) {
+      Alert.alert(
+        'Empty Draft',
+        'Please enter some class details (such as class name, schedule, or fee) before saving a draft.'
+      );
+      return;
+    }
     if (isSavingDraft) return;
     setIsSavingDraft(true);
     try {
       const newDraft = {
         id: `draft-${Date.now()}`,
         dateStr: new Date().toLocaleString(),
-        className: className || 'Untitled Class Draft',
+        className: className.trim() || 'Untitled Class Draft',
+        coachName: profile?.name || 'Coach Specialist',
+        avatar: profile?.avatarUrl,
         sportType,
         classType,
         ageGroup,
@@ -685,9 +875,12 @@ export default function CreateClassScreen() {
         feeType,
         feeAmount,
         description,
+        bannerImage: classBannerImage,
+        image: classBannerImage,
         classOffers,
         certificates,
         selectedAmenities,
+        isActive: true,
         currentStep,
       };
 
@@ -707,88 +900,142 @@ export default function CreateClassScreen() {
     }
   };
 
-  const renderVoucherDesignCard = (draft: ClassOfferDraft) => {
+  const renderVoucherDesignCard = (draft: ClassOfferDraft, idx: number = 0) => {
     const code = draft.code.trim().toUpperCase() || 'PROMOCODE';
-    const val = Number(draft.discountValue) || 0;
-    const discountLabel = draft.discountType === 'percent' ? `${val}%` : `₹${val}`;
-    const days = parseInt(draft.validDays, 10) || 30;
-    const cap = parseInt(draft.maxRedemptions, 10) || 0;
+    const val = Number(draft.discountValue) || 15;
+    const discountText = draft.discountType === 'percent' ? `${val}% OFF` : `₹${val} OFF`;
+    const computedDays = calculateScheduleDays(startDate, endDate);
+    const days = parseInt(draft.validDays, 10) || computedDays;
+    const defaultCap = maxStudents.trim() && !isNaN(parseInt(maxStudents, 10)) ? parseInt(maxStudents, 10) : 50;
+    const cap = parseInt(draft.maxRedemptions, 10) || defaultCap;
     const minBook = parseFloat(draft.minBooking) || 0;
-    const bannerUri = draft.bannerImage || VOUCHER_BANNER_PRESETS[0].uri;
+    const color = STUB_COLORS[idx % STUB_COLORS.length];
+    const voucherTitle = draft.title.trim().slice(0, 12) || `${className.trim().slice(0, 12) || 'Class'} Voucher`;
+    const appliesTo = className.trim() || 'Coaching Academy Class';
 
     return (
-      <View style={styles.kakaoCouponContainer}>
-        {/* Top Visual Half */}
-        <View style={styles.kakaoVisualHalf}>
-          <Image
-            source={{ uri: bannerUri }}
-            style={styles.kakaoBgImage}
-            contentFit="cover"
-          />
+      <View style={{ alignItems: 'center', marginVertical: 6, width: '100%' }}>
+        <TicketVoucherCard
+          item={{
+            id: draft.localId,
+            code,
+            title: voucherTitle,
+            appliesTo,
+            discountText,
+            color,
+            subType: draft.discountType === 'flat' ? 'SAVE' : 'OFF',
+            category: 'coach',
+          }}
+          index={idx}
+        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 280, marginTop: 5, paddingHorizontal: 4 }}>
+          <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>
+            Valid for {days} days {cap > 0 ? `· 1st ${cap} students` : '· Unlimited'}
+          </ThemedText>
+          {minBook > 0 ? (
+            <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
+              Min ₹{minBook}
+            </ThemedText>
+          ) : null}
+        </View>
+      </View>
+    );
+  };
+
+  const renderVoucherDetailsOutput = (draft: ClassOfferDraft, idx: number = 0) => {
+    const code = draft.code.trim().toUpperCase() || 'PROMOCODE';
+    const val = Number(draft.discountValue) || 15;
+    const discountText = draft.discountType === 'percent' ? `${val}% OFF` : `₹${val} OFF`;
+    const computedDays = calculateScheduleDays(startDate, endDate);
+    const days = parseInt(draft.validDays, 10) || computedDays;
+    const defaultCap = maxStudents.trim() && !isNaN(parseInt(maxStudents, 10)) ? parseInt(maxStudents, 10) : 50;
+    const cap = parseInt(draft.maxRedemptions, 10) || defaultCap;
+    const minBook = parseFloat(draft.minBooking) || 0;
+    const bannerUri = draft.bannerImage || VOUCHER_BANNER_PRESETS[idx % VOUCHER_BANNER_PRESETS.length].uri;
+    const voucherTitle = draft.title.trim().slice(0, 12) || 'Special Offer';
+    const appliesTo = className.trim() || 'Coaching Academy Class';
+
+    return (
+      <View
+        style={[
+          styles.voucherDetailOutputCard,
+          { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
+          Shadows.level1,
+        ]}
+      >
+        {/* Banner with Overlay */}
+        <View style={styles.voucherDetailBannerWrap}>
+          <Image source={{ uri: bannerUri }} style={styles.voucherDetailBannerImg} contentFit="cover" />
           <LinearGradient
-            colors={['rgba(0,0,0,0.25)', 'rgba(0,0,0,0.7)']}
+            colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.85)']}
             style={StyleSheet.absoluteFill}
           />
 
-          {/* Top Bar Branding */}
-          <View style={styles.kakaoTopBar}>
-            <View style={styles.kakaoBrandCol}>
-              <ThemedText style={styles.kakaoBrandTitle} numberOfLines={1}>
-                {(className || 'ACADEMY').toUpperCase()}
-              </ThemedText>
-              <ThemedText style={styles.kakaoBrandSub}>TRAINING</ThemedText>
-              <ThemedText style={styles.kakaoBrandCoupon}>X VOUCHER</ThemedText>
-              <View style={styles.kakaoBrandLine} />
+          {/* Top Badges */}
+          <View style={styles.voucherDetailTopRow}>
+            <View style={styles.voucherDetailCategoryBadge}>
+              <Ionicons name="school-outline" size={11} color="#ffffff" />
+              <ThemedText style={styles.voucherDetailCategoryText}>COACH CLASS</ThemedText>
             </View>
-
-            {/* Floating Yellow Circle Badge */}
-            <View style={styles.kakaoYellowBadge}>
-              <ThemedText style={styles.kakaoYellowBadgeText} numberOfLines={1}>VOUCHER</ThemedText>
-              <ThemedText style={styles.kakaoYellowBadgeText} numberOfLines={1}>CLAIM</ThemedText>
-              <Ionicons name="arrow-down" size={13} color="#000000" style={{ marginTop: 1 }} />
+            <View style={[styles.voucherDetailDiscountTag, { backgroundColor: theme.primary }]}>
+              <ThemedText style={styles.voucherDetailDiscountTagText}>{discountText}</ThemedText>
             </View>
           </View>
 
-          {/* Center Discount Typography: 20% OFF */}
-          <View style={styles.kakaoDiscountCenter}>
-            <ThemedText style={styles.kakaoBigDiscount}>
-              {discountLabel}
+          {/* Banner Title & Code */}
+          <View style={styles.voucherDetailBottomContent}>
+            <ThemedText style={styles.voucherDetailTitle} numberOfLines={1}>
+              {voucherTitle}
             </ThemedText>
-            <ThemedText style={styles.kakaoBigOff}>OFF</ThemedText>
+            <ThemedText style={styles.voucherDetailSub} numberOfLines={1}>
+              {appliesTo}
+            </ThemedText>
           </View>
         </View>
 
-        {/* Bottom Tear-Off Stub (White) */}
-        <View style={styles.kakaoWhiteStub}>
-          <ThemedText style={styles.kakaoStubLabel}>VALIDITY PERIOD</ThemedText>
-          <ThemedText style={styles.kakaoStubDays}>
-            Valid for {days} Days · {cap > 0 ? `Limited to 1st ${cap} Students` : 'All Students'}
-          </ThemedText>
-
-          <View style={styles.kakaoStubFooter}>
-            <View style={{ flex: 1, paddingRight: 8 }}>
-              <ThemedText style={styles.kakaoStubCode}>
-                Code: <ThemedText style={{ fontFamily: 'Sora_500Medium', color: '#FF1E70' }}>{code}</ThemedText>
-                {minBook > 0 ? ` · Min ₹${minBook}` : ''}
+        {/* Details Spec Body */}
+        <View style={styles.voucherDetailBody}>
+          {/* Promo Code Copy Row */}
+          <View style={[styles.voucherDetailCodeRow, { backgroundColor: theme.surfaceLow, borderColor: theme.primary + '33' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="pricetag-outline" size={13} color={theme.primary} />
+              <ThemedText style={[styles.voucherDetailCodeText, { color: theme.primary }]}>
+                {code}
               </ThemedText>
-              <ThemedText style={styles.kakaoStubDesc} numberOfLines={1}>
-                {draft.description.trim() || 'Claim this voucher discount during enrollment checkout.'}
+            </View>
+            <View style={[styles.voucherDetailCopyBadge, { backgroundColor: theme.primary }]}>
+              <ThemedText style={styles.voucherDetailCopyText}>COUPON CODE</ThemedText>
+            </View>
+          </View>
+
+          {/* Terms / Description */}
+          {draft.description ? (
+            <ThemedText style={[styles.voucherDetailTerms, { color: theme.textSecondary }]} numberOfLines={2}>
+              &ldquo;{draft.description}&rdquo;
+            </ThemedText>
+          ) : null}
+
+          {/* Key Metrics Grid */}
+          <View style={[styles.voucherDetailGrid, { borderTopColor: theme.outlineVariant + '22' }]}>
+            <View style={styles.voucherDetailMetric}>
+              <ThemedText style={[styles.voucherDetailMetricLabel, { color: theme.textSecondary }]}>VALIDITY</ThemedText>
+              <ThemedText style={[styles.voucherDetailMetricVal, { color: theme.text }]} numberOfLines={1}>
+                {days} Days {endDate ? `(till ${endDate})` : ''}
               </ThemedText>
             </View>
 
-            {/* Barcode Graphic */}
-            <View style={styles.kakaoBarcode}>
-              {[2, 1, 3, 1, 2, 4, 1, 2, 3, 1, 2, 1].map((w, idx) => (
-                <View
-                  key={idx}
-                  style={{
-                    width: w,
-                    height: 22,
-                    backgroundColor: '#18181b',
-                    marginRight: idx % 2 === 0 ? 1.5 : 2,
-                  }}
-                />
-              ))}
+            <View style={styles.voucherDetailMetric}>
+              <ThemedText style={[styles.voucherDetailMetricLabel, { color: theme.textSecondary }]}>STUDENT LIMIT</ThemedText>
+              <ThemedText style={[styles.voucherDetailMetricVal, { color: theme.text }]}>
+                1st {cap} Students
+              </ThemedText>
+            </View>
+
+            <View style={styles.voucherDetailMetric}>
+              <ThemedText style={[styles.voucherDetailMetricLabel, { color: theme.textSecondary }]}>MIN FEE</ThemedText>
+              <ThemedText style={[styles.voucherDetailMetricVal, { color: theme.text }]}>
+                {minBook > 0 ? `₹${minBook}` : 'No Min'}
+              </ThemedText>
             </View>
           </View>
         </View>
@@ -805,14 +1052,14 @@ export default function CreateClassScreen() {
         <View style={styles.fieldGroup}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <ThemedText style={styles.fieldLabel}>Class Name <ThemedText style={{ color: '#ef4444' }}>*</ThemedText></ThemedText>
-            <ThemedText style={{ fontSize: 10, color: className.length >= 40 ? '#ef4444' : theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
-              {className.length}/40
+            <ThemedText style={{ fontSize: 10, color: className.length >= 25 ? '#ef4444' : theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
+              {className.length}/25
             </ThemedText>
           </View>
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             value={className}
             onChangeText={text => setClassName(text.replace(/[^a-zA-Z\s]/g, ''))}
-            maxLength={40}
+            maxLength={25}
             placeholder="e.g. Elite Football Academy"
             placeholderTextColor="#94a3b8"
             style={[
@@ -933,22 +1180,39 @@ export default function CreateClassScreen() {
           </ScrollView>
         </View>
 
-        {/* Age Group */}
+        {/* Age Group (Multi-select) */}
         <View style={styles.fieldGroup}>
-          <ThemedText style={styles.fieldLabel}>Age Group</ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <ThemedText style={styles.fieldLabel}>Age Group</ThemedText>
+            {selectedAgeGroups.length > 0 && (
+              <ThemedText style={[styles.fieldLabel, { color: theme.primary, fontSize: 10.5, fontFamily: 'Sora_500Medium' }]}>
+                {selectedAgeGroups.length} selected
+              </ThemedText>
+            )}
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
-            {AGE_GROUPS.map(a => (
-              <Pressable
-                key={a}
-                onPress={() => setAgeGroup(a)}
-                style={[
-                  styles.chip,
-                  { backgroundColor: ageGroup === a ? theme.primary : theme.surfaceLow, borderColor: ageGroup === a ? theme.primary : theme.outlineVariant + '44' }
-                ]}
-              >
-                <ThemedText style={[styles.chipText, { color: ageGroup === a ? '#fff' : theme.textSecondary }]}>{a}</ThemedText>
-              </Pressable>
-            ))}
+            {AGE_GROUPS.map(a => {
+              const isSelected = selectedAgeGroups.includes(a);
+              return (
+                <Pressable
+                  key={a}
+                  onPress={() => toggleAgeGroup(a)}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: isSelected ? theme.primary : theme.surfaceLow,
+                      borderColor: isSelected ? theme.primary : theme.outlineVariant + '44',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                    }
+                  ]}
+                >
+                  <ThemedText style={[styles.chipText, { color: isSelected ? '#fff' : theme.textSecondary }]}>{a}</ThemedText>
+                  {isSelected && <Ionicons name="checkmark-circle" size={11} color="#fff" />}
+                </Pressable>
+              );
+            })}
           </ScrollView>
         </View>
 
@@ -978,8 +1242,10 @@ export default function CreateClassScreen() {
 
         {/* Max Students */}
         <View style={styles.fieldGroup}>
-          <ThemedText style={styles.fieldLabel}>Max Students</ThemedText>
-          <TextInput
+          <ThemedText style={styles.fieldLabel}>
+            Max Students <ThemedText style={{ color: '#ef4444' }}>*</ThemedText>
+          </ThemedText>
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             value={maxStudents}
             onChangeText={text => setMaxStudents(text.replace(/[^0-9]/g, ''))}
             keyboardType="number-pad"
@@ -995,7 +1261,7 @@ export default function CreateClassScreen() {
 
           {/* Input + Add button */}
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               value={newCertInput}
               onChangeText={setNewCertInput}
               placeholder="Type cert (e.g. BWF Level 2) & tap + Add"
@@ -1126,20 +1392,15 @@ export default function CreateClassScreen() {
           <Pressable
             onPress={() => {
               setDatePickerField('start');
-              const parts = startDate.split('/');
-              if (parts.length === 3) {
-                const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                setPickerDate(isNaN(d.getTime()) ? new Date() : d);
-              } else {
-                setPickerDate(new Date());
-              }
+              const d = parseDateString(startDate);
+              setPickerDate(d || new Date());
             }}
             style={{ flex: 1 }}
           >
             <ThemedText style={styles.fieldLabel}>Start Date <ThemedText style={{ color: '#ef4444' }}>*</ThemedText></ThemedText>
             <View style={[styles.input, styles.dateInput, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44', justifyContent: 'center' }]}>
               <ThemedText style={{ color: startDate ? theme.text : theme.textSecondary + '77', fontSize: 13 }}>
-                {startDate || 'DD/MM/YYYY'}
+                {startDate || '09/Sep/2026'}
               </ThemedText>
             </View>
           </Pressable>
@@ -1147,20 +1408,15 @@ export default function CreateClassScreen() {
           <Pressable
             onPress={() => {
               setDatePickerField('end');
-              const parts = endDate.split('/');
-              if (parts.length === 3) {
-                const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                setPickerDate(isNaN(d.getTime()) ? new Date() : d);
-              } else {
-                setPickerDate(new Date());
-              }
+              const d = parseDateString(endDate);
+              setPickerDate(d || new Date());
             }}
             style={{ flex: 1 }}
           >
             <ThemedText style={styles.fieldLabel}>End Date <ThemedText style={{ color: '#ef4444' }}>*</ThemedText></ThemedText>
             <View style={[styles.input, styles.dateInput, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44', justifyContent: 'center' }]}>
               <ThemedText style={{ color: endDate ? theme.text : theme.textSecondary + '77', fontSize: 13 }}>
-                {endDate || 'DD/MM/YYYY'}
+                {endDate || '09/Sep/2026'}
               </ThemedText>
             </View>
           </Pressable>
@@ -1269,7 +1525,7 @@ export default function CreateClassScreen() {
               </ThemedText>
             </Pressable>
           </View>
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             value={venue}
             onChangeText={setVenue}
             placeholder="e.g. Wembley Training Grounds, London"
@@ -1282,10 +1538,25 @@ export default function CreateClassScreen() {
   );
 
   const renderStepThree = () => (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPad}>
-      <View style={[styles.formCard, { backgroundColor: theme.surface, borderRadius: BorderRadius.lg, padding: Spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }]}>
-        {/* Preview Card */}
-        <View style={[styles.previewCard, { backgroundColor: theme.primaryContainer }]}>
+    <View style={{ flex: 1 }}>
+      {/* Fixed Summary Preview Card at top */}
+      <View style={{ paddingHorizontal: Spacing.md, paddingTop: 4, paddingBottom: 6, backgroundColor: theme.background, zIndex: 10 }}>
+        <View style={[styles.previewCard, { backgroundColor: theme.primaryContainer, overflow: 'hidden', marginBottom: 0 }]}>
+          {classBannerImage ? (
+            <Image
+              source={{ uri: classBannerImage }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+            />
+          ) : null}
+          <LinearGradient
+            colors={
+              classBannerImage
+                ? ['rgba(0,0,0,0.45)', 'rgba(0,0,0,0.85)']
+                : [theme.primary, theme.primaryContainer]
+            }
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.previewCardTop}>
             <View style={{ flex: 1 }}>
               <ThemedText style={[styles.previewLabel, { color: 'rgba(255,255,255,0.7)' }]}>
@@ -1323,6 +1594,68 @@ export default function CreateClassScreen() {
             </View>
           </View>
         </View>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollPad, { paddingTop: 6 }]}>
+        <View style={[styles.formCard, { backgroundColor: theme.surface, borderRadius: BorderRadius.lg, padding: Spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }]}>
+          {/* Upload Class Background Banner Controls */}
+          <View style={{ marginBottom: Spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <ThemedText style={[styles.fieldLabel, { fontSize: 10.5, color: theme.primary, letterSpacing: 0.6 }]}>
+              CLASS BACKGROUND BANNER
+            </ThemedText>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              <Pressable
+                onPress={pickClassBanner}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.primary, paddingHorizontal: 10, paddingVertical: 5, borderRadius: BorderRadius.full }}
+              >
+                <Ionicons name="cloud-upload-outline" size={12} color="#ffffff" />
+                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: '#ffffff' }}>
+                  {classBannerImage ? 'Change Banner' : 'Upload Banner'}
+                </ThemedText>
+              </Pressable>
+              {classBannerImage ? (
+                <Pressable
+                  onPress={() => {
+                    setClassBannerImage('');
+                    triggerToast('Banner reset to default.');
+                  }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: theme.surfaceLow, paddingHorizontal: 8, paddingVertical: 5, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: theme.outlineVariant + '55' }}
+                >
+                  <Ionicons name="refresh-outline" size={11} color={theme.textSecondary} />
+                  <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: theme.textSecondary }}>Reset</ThemedText>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+
+          <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: theme.textSecondary, marginBottom: 8 }}>
+            Or select a curated sports preset:
+          </ThemedText>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 4 }}>
+            {VOUCHER_BANNER_PRESETS.map((p, idx) => (
+              <Pressable
+                key={idx}
+                onPress={() => {
+                  setClassBannerImage(p.uri);
+                  triggerToast(`Banner set to ${p.label}! 🎨`);
+                }}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: BorderRadius.full,
+                  backgroundColor: classBannerImage === p.uri ? theme.primary + '20' : theme.surfaceLow,
+                  borderWidth: 1,
+                  borderColor: classBannerImage === p.uri ? theme.primary : theme.outlineVariant + '55',
+                }}
+              >
+                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: classBannerImage === p.uri ? theme.primary : theme.text }}>
+                  {p.label}
+                </ThemedText>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
 
         {/* Fee Structure */}
         <View style={styles.fieldGroup}>
@@ -1345,7 +1678,7 @@ export default function CreateClassScreen() {
 
         <View style={styles.fieldGroup}>
           <ThemedText style={styles.fieldLabel}>Fee Amount (₹) <ThemedText style={{ color: '#ef4444' }}>*</ThemedText></ThemedText>
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             value={feeAmount}
             onChangeText={setFeeAmount}
             keyboardType="decimal-pad"
@@ -1472,7 +1805,7 @@ export default function CreateClassScreen() {
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={styles.fieldLabel}>PROMO CODE</ThemedText>
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       value={draft.code}
                       onChangeText={v => patchOffer(draft.localId, { code: v.toUpperCase() })}
                       placeholder="COACH20"
@@ -1482,11 +1815,17 @@ export default function CreateClassScreen() {
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <ThemedText style={styles.fieldLabel}>OFFER NAME</ThemedText>
-                    <TextInput
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <ThemedText style={styles.fieldLabel}>OFFER NAME</ThemedText>
+                      <ThemedText style={{ fontSize: 9, color: (draft.title?.length || 0) >= 12 ? '#ef4444' : theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
+                        {draft.title?.length || 0}/12
+                      </ThemedText>
+                    </View>
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       value={draft.title}
-                      onChangeText={v => patchOffer(draft.localId, { title: v })}
-                      placeholder="Early Bird 20%"
+                      onChangeText={v => patchOffer(draft.localId, { title: v.slice(0, 12) })}
+                      maxLength={12}
+                      placeholder="Early Bird"
                       placeholderTextColor="#94a3b8"
                       style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.outlineVariant + '44' }]}
                     />
@@ -1531,7 +1870,7 @@ export default function CreateClassScreen() {
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={styles.fieldLabel}>{draft.discountType === 'percent' ? 'DISCOUNT (%)' : 'DISCOUNT (₹)'}</ThemedText>
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       value={draft.discountValue}
                       onChangeText={v => patchOffer(draft.localId, { discountValue: v.replace(/[^0-9]/g, '') })}
                       placeholder={draft.discountType === 'percent' ? '20' : '200'}
@@ -1542,7 +1881,7 @@ export default function CreateClassScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={styles.fieldLabel}>MIN FEE (₹)</ThemedText>
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       value={draft.minBooking}
                       onChangeText={v => patchOffer(draft.localId, { minBooking: v.replace(/[^0-9]/g, '') })}
                       placeholder="0"
@@ -1557,10 +1896,10 @@ export default function CreateClassScreen() {
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={styles.fieldLabel}>VALID (DAYS)</ThemedText>
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       value={draft.validDays}
                       onChangeText={v => patchOffer(draft.localId, { validDays: v.replace(/[^0-9]/g, '') })}
-                      placeholder="30"
+                      placeholder={String(calculateScheduleDays(startDate, endDate))}
                       placeholderTextColor="#94a3b8"
                       keyboardType="numeric"
                       style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.outlineVariant + '44' }]}
@@ -1568,10 +1907,10 @@ export default function CreateClassScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={styles.fieldLabel}>FIRST N STUDENTS</ThemedText>
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       value={draft.maxRedemptions}
                       onChangeText={v => patchOffer(draft.localId, { maxRedemptions: v.replace(/[^0-9]/g, '') })}
-                      placeholder="Unlimited"
+                      placeholder={maxStudents.trim() ? `Max ${maxStudents.trim()}` : 'Unlimited'}
                       placeholderTextColor="#94a3b8"
                       keyboardType="numeric"
                       style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.outlineVariant + '44' }]}
@@ -1582,7 +1921,7 @@ export default function CreateClassScreen() {
                 {/* Description */}
                 <View style={{ marginTop: 10 }}>
                   <ThemedText style={styles.fieldLabel}>DESCRIPTION / TERMS</ThemedText>
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     value={draft.description}
                     onChangeText={v => patchOffer(draft.localId, { description: v })}
                     placeholder="What students get (e.g. 20% discount on academy enrollment)..."
@@ -1591,13 +1930,13 @@ export default function CreateClassScreen() {
                   />
                 </View>
 
-                {/* Live Voucher Design Output */}
+                {/* 1. Live Voucher Design Card Output */}
                 <View style={{ marginTop: 14 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Ionicons name="color-palette-outline" size={13} color={theme.primary} />
+                      <Ionicons name="ticket-outline" size={13} color={theme.primary} />
                       <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 10.5, color: theme.primary, letterSpacing: 0.3 }}>
-                        VOUCHER DESIGN OUTPUT
+                        VOUCHER CARD OUTPUT
                       </ThemedText>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: theme.primary + '18', paddingHorizontal: 6, paddingVertical: 2, borderRadius: BorderRadius.full }}>
@@ -1608,7 +1947,27 @@ export default function CreateClassScreen() {
                     </View>
                   </View>
 
-                  {renderVoucherDesignCard(draft)}
+                  {renderVoucherDesignCard(draft, idx)}
+                </View>
+
+                {/* 2. Live Voucher Details Output (Full Terms & Banner View) */}
+                <View style={{ marginTop: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="document-text-outline" size={13} color={theme.primary} />
+                      <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 10.5, color: theme.primary, letterSpacing: 0.3 }}>
+                        VOUCHER DETAILS OUTPUT
+                      </ThemedText>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: theme.primary + '18', paddingHorizontal: 6, paddingVertical: 2, borderRadius: BorderRadius.full }}>
+                      <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: theme.primary }} />
+                      <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: theme.primary }}>
+                        Live Bound
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  {renderVoucherDetailsOutput(draft, idx)}
                 </View>
               </View>
             ))
@@ -1628,7 +1987,7 @@ export default function CreateClassScreen() {
         {/* Description */}
         <View style={styles.fieldGroup}>
           <ThemedText style={styles.fieldLabel}>Class Description</ThemedText>
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             value={description}
             onChangeText={setDescription}
             placeholder="Describe the class — training focus, what students will learn, requirements..."
@@ -1645,6 +2004,7 @@ export default function CreateClassScreen() {
 
       </View>
     </ScrollView>
+  </View>
   );
 
   return (
@@ -1660,12 +2020,45 @@ export default function CreateClassScreen() {
           <ThemedText type="headlineMd" style={{ color: theme.text, flex: 1, marginLeft: 12 }}>
             {editId ? 'Edit Coaching Class' : 'Create Class'}
           </ThemedText>
-          <Pressable
-            style={[styles.backBtn, { marginRight: 8 }]}
-            onPress={() => setDraftsModalVisible(true)}
-          >
-            <Ionicons name="document-text-outline" size={18} color="#111c2c" />
-          </Pressable>
+
+          {/* Stepper Header Actions: Coach icon before Draft icon */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            {/* Coach Icon - Click to navigate back to Coach tab */}
+            <Pressable
+              onPress={() => router.replace('/(tabs)/coach')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Back to Coach"
+              style={[styles.headerIconBtn, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
+            >
+              <Ionicons name="school-outline" size={20} color={theme.primary} />
+            </Pressable>
+
+            {/* Draft Icon - Click to save draft (only enabled if data is entered) */}
+            {!editId && (
+              <Pressable
+                onPress={handleSaveDraft}
+                disabled={!hasDraftContent || isSavingDraft || isPublishing}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Save Class Draft"
+                style={[
+                  styles.headerIconBtn,
+                  {
+                    backgroundColor: theme.surfaceLowest,
+                    borderColor: theme.outlineVariant + '33',
+                    opacity: (!hasDraftContent || isSavingDraft || isPublishing) ? 0.35 : 1,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="save-outline"
+                  size={20}
+                  color={hasDraftContent ? theme.text : theme.textSecondary}
+                />
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {/* Step Progress Tracker */}
@@ -1722,11 +2115,28 @@ export default function CreateClassScreen() {
           <View style={[styles.bottomNav, { borderTopColor: theme.outlineVariant + '22', backgroundColor: theme.surfaceLowest }]}>
             <Pressable
               onPress={handleSaveDraft}
-              disabled={isSavingDraft || isPublishing}
-              style={[styles.draftBtn, { borderColor: theme.outlineVariant, opacity: (isSavingDraft || isPublishing) ? 0.6 : 1 }]}
+              disabled={!hasDraftContent || isSavingDraft || isPublishing}
+              style={[
+                styles.draftBtn,
+                {
+                  borderColor: theme.outlineVariant,
+                  opacity: (!hasDraftContent || isSavingDraft || isPublishing) ? 0.4 : 1,
+                },
+              ]}
             >
-              <Ionicons name="document-text-outline" size={16} color={theme.text} />
-              <ThemedText style={[styles.draftBtnText, { color: theme.text }]}>Save Draft</ThemedText>
+              <Ionicons
+                name="document-text-outline"
+                size={16}
+                color={hasDraftContent ? theme.text : theme.textSecondary}
+              />
+              <ThemedText
+                style={[
+                  styles.draftBtnText,
+                  { color: hasDraftContent ? theme.text : theme.textSecondary },
+                ]}
+              >
+                Save Draft
+              </ThemedText>
             </Pressable>
             <Pressable
               onPress={handlePublish}
@@ -1892,12 +2302,17 @@ export default function CreateClassScreen() {
                                 setStartDate(formatted);
                                 const newStart = parseDateString(formatted);
                                 const currEnd = parseDateString(endDate);
+                                const targetEnd = (newStart && currEnd && currEnd.getTime() < newStart.getTime()) ? formatted : endDate;
                                 if (newStart && currEnd && currEnd.getTime() < newStart.getTime()) {
                                   setEndDate(formatted);
                                   triggerToast('End Date updated to match Start Date 📅');
                                 }
+                                const newDays = calculateScheduleDays(formatted, targetEnd);
+                                setClassOffers(prev => prev.map(o => ({ ...o, validDays: String(newDays) })));
                               } else if (datePickerField === 'end') {
                                 setEndDate(formatted);
+                                const newDays = calculateScheduleDays(startDate, formatted);
+                                setClassOffers(prev => prev.map(o => ({ ...o, validDays: String(newDays) })));
                               }
                               setDatePickerField(null);
                             }}
@@ -1981,85 +2396,6 @@ export default function CreateClassScreen() {
             </View>
           </View>
         </Modal>
-
-        {/* Drafts List Modal */}
-        <Modal
-          visible={draftsModalVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setDraftsModalVisible(false)}
-        >
-          <View style={styles.modalBackdrop}>
-            <View style={[styles.modalSheet, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }]}>
-              {/* Modal Header */}
-              <View style={styles.modalHeader}>
-                <Ionicons name="document-text-outline" size={20} color={theme.primary} style={{ marginRight: 6 }} />
-                <ThemedText type="headlineSm" style={{ color: theme.text, flex: 1 }}>
-                  Saved Drafts
-                </ThemedText>
-                <Pressable style={styles.modalCloseBtn} onPress={() => setDraftsModalVisible(false)}>
-                  <Ionicons name="close" size={20} color={theme.text} />
-                </Pressable>
-              </View>
-
-              <ScrollView style={{ maxHeight: 300, marginBottom: 16 }} showsVerticalScrollIndicator={false}>
-                {savedDrafts.length === 0 ? (
-                  <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-                    <ThemedText style={{ color: theme.textSecondary, fontSize: 13 }}>No drafts saved yet.</ThemedText>
-                  </View>
-                ) : (
-                  savedDrafts.map((draft) => (
-                    <View
-                      key={draft.id}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        padding: 12,
-                        backgroundColor: theme.surfaceLow,
-                        borderRadius: BorderRadius.md,
-                        marginBottom: 8,
-                        borderWidth: 1,
-                        borderColor: theme.outlineVariant + '22'
-                      }}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 13 }}>
-                          {draft.className}
-                        </ThemedText>
-                        <ThemedText style={{ color: theme.textSecondary, fontSize: 10, marginTop: 2 }}>
-                          {draft.dateStr} • {draft.sportType || 'No Sport'}
-                        </ThemedText>
-                      </View>
-                      <Pressable
-                        onPress={() => loadDraft(draft)}
-                        style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: theme.primary, borderRadius: BorderRadius.sm, marginRight: 6 }}
-                      >
-                        <ThemedText style={{ color: '#fff', fontSize: 11, fontFamily: 'Sora_500Medium' }}>Load</ThemedText>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => deleteDraft(draft.id)}
-                        style={{ padding: 6 }}
-                      >
-                        <Ionicons name="trash-outline" size={16} color="#ef4444" />
-                      </Pressable>
-                    </View>
-                  ))
-                )}
-              </ScrollView>
-
-              <Pressable
-                style={[styles.modalButton, { backgroundColor: theme.primary, width: '100%', height: 48, borderRadius: BorderRadius.xl, marginBottom: 10, opacity: isSavingDraft ? 0.6 : 1 }]}
-                disabled={isSavingDraft}
-                onPress={async () => {
-                  await handleSaveDraft();
-                }}
-              >
-                <Ionicons name="save-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
-                <ThemedText style={{ color: '#fff', fontFamily: 'Sora_500Medium', fontSize: 13 }}>Save Current Form as Draft</ThemedText>
-              </Pressable>
-            </View>
-          </View>
-        </Modal>
       </SafeAreaView>
     </GradientContainer>
   );
@@ -2089,6 +2425,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   progressTrackerCard: {
     marginHorizontal: Spacing.containerMargin,
@@ -2163,6 +2512,8 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     borderWidth: 1,
     fontFamily: 'Sora_500Medium',
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   dateInput: {
     height: 38,
@@ -2171,6 +2522,8 @@ const styles = StyleSheet.create({
     height: 96,
     paddingTop: Spacing.sm,
     textAlignVertical: 'top',
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   rowFields: {
     flexDirection: 'row',
@@ -2496,16 +2849,13 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
   kakaoYellowBadge: {
-    // 46px could not hold "VOUCHER" at this size, so the word spilled past the
-    // circle's edge. Sized to the content instead, with padding so the text has
-    // room to centre inside the round shape rather than against it.
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#FEE500',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 5,
+    padding: 2,
     alignSelf: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -2515,11 +2865,12 @@ const styles = StyleSheet.create({
   },
   kakaoYellowBadgeText: {
     color: '#000000',
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_700Bold',
     fontSize: 7.5,
-    lineHeight: 10,
-    letterSpacing: 0.2,
+    lineHeight: 9,
+    letterSpacing: 0.1,
     textAlign: 'center',
+    includeFontPadding: false,
   },
   kakaoDiscountCenter: {
     flexDirection: 'row',
@@ -2688,5 +3039,131 @@ const styles = StyleSheet.create({
   addOfferButtonText: {
     fontSize: 12,
     fontFamily: 'Sora_500Medium',
+  },
+  voucherDetailOutputCard: {
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginTop: 6,
+    width: '100%',
+  },
+  voucherDetailBannerWrap: {
+    height: 100,
+    width: '100%',
+    position: 'relative',
+    justifyContent: 'space-between',
+    padding: Spacing.sm,
+  },
+  voucherDetailBannerImg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  voucherDetailTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    zIndex: 2,
+  },
+  voucherDetailCategoryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+  },
+  voucherDetailCategoryText: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontFamily: 'Sora_700Bold',
+    letterSpacing: 0.4,
+  },
+  voucherDetailDiscountTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  voucherDetailDiscountTagText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontFamily: 'Sora_700Bold',
+  },
+  voucherDetailBottomContent: {
+    zIndex: 2,
+  },
+  voucherDetailTitle: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontFamily: 'Sora_700Bold',
+  },
+  voucherDetailSub: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 10,
+    fontFamily: 'Sora_400Regular',
+    marginTop: 1,
+  },
+  voucherDetailBody: {
+    padding: Spacing.sm,
+    gap: 8,
+  },
+  voucherDetailCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  voucherDetailCodeText: {
+    fontSize: 12,
+    fontFamily: 'Sora_700Bold',
+    letterSpacing: 0.8,
+  },
+  voucherDetailCopyBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: BorderRadius.full,
+  },
+  voucherDetailCopyText: {
+    color: '#ffffff',
+    fontSize: 8.5,
+    fontFamily: 'Sora_700Bold',
+  },
+  voucherDetailTerms: {
+    fontSize: 10,
+    fontFamily: 'Sora_400Regular',
+    fontStyle: 'italic',
+    lineHeight: 14,
+  },
+  voucherDetailGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    paddingTop: 8,
+    marginTop: 2,
+  },
+  voucherDetailMetric: {
+    flex: 1,
+  },
+  voucherDetailMetricLabel: {
+    fontSize: 8,
+    fontFamily: 'Sora_600SemiBold',
+    letterSpacing: 0.3,
+  },
+  voucherDetailMetricVal: {
+    fontSize: 10,
+    fontFamily: 'Sora_600SemiBold',
+    marginTop: 2,
   },
 });

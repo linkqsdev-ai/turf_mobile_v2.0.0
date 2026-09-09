@@ -16,7 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { SPORTS_LIST } from '@/constants/sports';
@@ -944,7 +944,7 @@ export default function CreateTurfScreen() {
           <ThemedText style={styles.fieldLabel}>
             Turf Name <ThemedText style={styles.requiredStar}>*</ThemedText>
           </ThemedText>
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             value={turfName}
             maxLength={30}
             onChangeText={(t) => {
@@ -1118,7 +1118,7 @@ export default function CreateTurfScreen() {
               <Ionicons name="refresh-outline" size={16} color={theme.primary} />
             </Pressable>
           ) : (
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               value={manualAddress}
               onChangeText={(t) => {
                 setManualAddress(t);
@@ -1143,7 +1143,7 @@ export default function CreateTurfScreen() {
             <View style={[styles.countryCodeBadge, { backgroundColor: theme.primary + '18' }]}>
               <ThemedText style={[styles.countryCodeText, { color: theme.primary }]}>+91</ThemedText>
             </View>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               value={contactNumber}
               maxLength={11} // 10 digits + 1 space
               onChangeText={(t) => {
@@ -1169,7 +1169,7 @@ export default function CreateTurfScreen() {
           </ThemedText>
           <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: errors.pricePerSlot ? '#ef4444' : theme.outlineVariant + '44' }]}>
             <ThemedText style={[styles.currencyPrefix, { color: theme.secondary }]}>₹</ThemedText>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               value={pricePerSlot}
               onChangeText={(t) => {
                 const formatted = formatIndianCurrency(t);
@@ -1675,7 +1675,7 @@ export default function CreateTurfScreen() {
       return (
         <View style={{ flex: 1 }}>
           <ThemedText style={styles.fieldLabel}>{label}</ThemedText>
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             value={draft[key] as string}
             onChangeText={v => patchOffer(draft.localId, { [key]: v } as Partial<TurfOfferDraft>)}
             placeholder={opts.placeholder}
@@ -2039,7 +2039,7 @@ export default function CreateTurfScreen() {
           {/* Description */}
           <View style={styles.fieldGroup}>
             <ThemedText style={styles.fieldLabel}>Venue Description (Optional)</ThemedText>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               value={description}
               onChangeText={setDescription}
               placeholder="e.g. State-of-the-art turf with FIFA-standard shockpad rubber infill and LED night floodlights."
@@ -2385,12 +2385,20 @@ const styles = StyleSheet.create({
   filterRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 6, borderWidth: 1, height: 28, justifyContent: 'center' },
 
-  input: { height: 42, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.sm, fontSize: 13, borderWidth: 1, fontFamily: 'Sora_500Medium' },
+  input: { height: 42, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.sm, fontSize: 13, borderWidth: 1, fontFamily: 'Sora_500Medium',
+    includeFontPadding: false,
+    paddingVertical: 0,
+  },
   inputRow: { height: 42, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.sm, borderWidth: 1, flexDirection: 'row', alignItems: 'center' },
   countryCodeBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 8 },
   countryCodeText: { fontSize: 13, fontFamily: 'Sora_500Medium' },
-  inputRowInner: { flex: 1, fontSize: 13, fontFamily: 'Sora_500Medium' },
-  textArea: { height: 84, paddingTop: Spacing.sm, textAlignVertical: 'top' },
+  inputRowInner: { flex: 1, fontSize: 13, fontFamily: 'Sora_500Medium',
+    includeFontPadding: false,
+  },
+  textArea: { height: 84, paddingTop: Spacing.sm, textAlignVertical: 'top',
+    includeFontPadding: false,
+    paddingVertical: 0,
+  },
   currencyPrefix: { fontFamily: 'Sora_500Medium', fontSize: 15, marginRight: 6 },
   inputSuffix: { fontFamily: 'Sora_400Regular', fontSize: 11, marginLeft: 4 },
 

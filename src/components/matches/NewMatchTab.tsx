@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { CoinTossModal } from '@/components/coin-toss-modal';
@@ -63,7 +63,7 @@ export function NewMatchTab() {
             </View>
           </View>
           <ThemedText style={styles.teamSubLabel}>TEAM A</ThemedText>
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             style={[
               styles.teamInput,
               { borderBottomColor: isHomeFocused ? '#001b3d' : '#c4c6cf' }
@@ -89,7 +89,7 @@ export function NewMatchTab() {
             </View>
           </View>
           <ThemedText style={styles.teamSubLabel}>TEAM B</ThemedText>
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             style={[
               styles.teamInput,
               { borderBottomColor: isAwayFocused ? '#001b3d' : '#c4c6cf' }
@@ -146,7 +146,7 @@ export function NewMatchTab() {
           <ThemedText style={styles.bentoLabel}>VENUE SELECTION</ThemedText>
           <View style={styles.searchInputContainer}>
             <Ionicons name="location-outline" size={16} color="#74777f" style={styles.searchIcon} />
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={[
                 styles.searchInput,
                 { color: '#191c1e' }
@@ -165,7 +165,7 @@ export function NewMatchTab() {
         <View style={styles.twoColumnInputs}>
           <View style={[styles.inputGroup, { flex: 1 }]}>
             <ThemedText style={styles.bentoLabel}>MATCH DATE</ThemedText>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={[
                 styles.underlinedInput,
                 { borderBottomColor: isDateFocused ? '#001b3d' : '#c4c6cf' }
@@ -181,7 +181,7 @@ export function NewMatchTab() {
 
           <View style={[styles.inputGroup, { flex: 1 }]}>
             <ThemedText style={styles.bentoLabel}>TOSS TIME</ThemedText>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={[
                 styles.underlinedInput,
                 { borderBottomColor: isTimeFocused ? '#001b3d' : '#c4c6cf' }
@@ -320,6 +320,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderBottomWidth: 1.5,
     marginBottom: 8,
+    includeFontPadding: false,
   },
   teamActionFooter: {
     flexDirection: 'row',
@@ -389,6 +390,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'Sora_500Medium',
     fontSize: 13,
+    includeFontPadding: false,
   },
   twoColumnInputs: {
     flexDirection: 'row',
@@ -401,6 +403,7 @@ const styles = StyleSheet.create({
     color: '#191c1e',
     paddingVertical: 6,
     borderBottomWidth: 1.5,
+    includeFontPadding: false,
   },
 
   /* Finalization Hero Card */

@@ -13,7 +13,7 @@ import { Image } from 'expo-image';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
@@ -391,7 +391,7 @@ export default function BookingConfigurationScreen() {
     setCashbackOffer(null);
   };
 
-  // Split Bill states
+  // Split Bill states (Disabled in Free Plan)
   const [isSplitEnabled, setIsSplitEnabled] = useState<boolean>(false);
   const [splitPlayers, setSplitPlayers] = useState<Array<{ id: string; name: string; hours: number }>>([
     { id: '1', name: 'You', hours: 1 },
@@ -399,9 +399,13 @@ export default function BookingConfigurationScreen() {
   ]);
   const [newPlayerName, setNewPlayerName] = useState<string>('');
 
-  // Wallet deductions
-  const walletDeduction = useWallet ? Math.min(walletBalance, advanceAmount) : 0;
-  const finalPayable = advanceAmount - walletDeduction - couponDiscount;
+  // Wallet deductions with custom amount input (Max 25% cap)
+  const [walletInputAmount, setWalletInputAmount] = useState<string>('');
+  const maxAllowedFromAmount = Math.max(1, Math.round(advanceAmount * 0.25));
+  const maxWalletDeductible = Math.min(walletBalance, maxAllowedFromAmount);
+  const parsedWalletAmount = walletInputAmount === '' ? maxWalletDeductible : Math.min(maxWalletDeductible, Math.max(0, parseFloat(walletInputAmount) || 0));
+  const walletDeduction = useWallet ? parsedWalletAmount : 0;
+  const finalPayable = Math.max(0, advanceAmount - walletDeduction - couponDiscount);
   const remainingAmount = total - advanceAmount;
 
   const toggleSlot = (time: string) => {
@@ -1044,35 +1048,121 @@ export default function BookingConfigurationScreen() {
               </View>
             </View>
 
-            {/* Wallet Option Card */}
-            <View style={{ backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.lg, padding: 14, marginBottom: Spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', ...Shadows.level1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: theme.primary + '10', justifyContent: 'center', alignItems: 'center' }}>
-                  <Ionicons name="wallet-outline" size={20} color={theme.primary} />
+            {/* Wallet Option Card with Enter Amount to Reduce */}
+            <View style={{ backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.lg, padding: 14, marginBottom: Spacing.md, ...Shadows.level1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: theme.primary + '10', justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="wallet-outline" size={20} color={theme.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                      Pay with Wallet Balance
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 11, color: theme.textSecondary }}>
+                      Available Balance: ₹{walletBalance.toFixed(2)}
+                    </ThemedText>
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                    Pay with Wallet Balance
+                {walletBalance > 0 ? (
+                  <Pressable
+                    onPress={() => {
+                      if (!useWallet && walletInputAmount === '') {
+                        setWalletInputAmount(String(maxWalletDeductible));
+                      }
+                      setUseWallet(!useWallet);
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: useWallet ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 }}
+                  >
+                    <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: useWallet ? '#ffffff' : theme.textSecondary }}>
+                      {useWallet ? 'Applied' : 'Apply'}
+                    </ThemedText>
+                    <Ionicons name={useWallet ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={useWallet ? '#ffffff' : theme.textSecondary} />
+                  </Pressable>
+                ) : (
+                  <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontStyle: 'italic' }}>
+                    Empty
                   </ThemedText>
-                  <ThemedText style={{ fontSize: 11, color: theme.textSecondary }}>
-                    Available Balance: ₹{walletBalance.toFixed(2)}
-                  </ThemedText>
-                </View>
+                )}
               </View>
-              {walletBalance > 0 ? (
-                <Pressable
-                  onPress={() => setUseWallet(!useWallet)}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: useWallet ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 }}
-                >
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: useWallet ? '#ffffff' : theme.textSecondary }}>
-                    {useWallet ? 'Applied' : 'Apply'}
-                  </ThemedText>
-                  <Ionicons name={useWallet ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={useWallet ? '#ffffff' : theme.textSecondary} />
-                </Pressable>
-              ) : (
-                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontStyle: 'italic' }}>
-                  Empty
-                </ThemedText>
+
+              {useWallet && walletBalance > 0 && (
+                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '22' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>
+                      Enter amount to reduce (Max 25%):
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 11, color: theme.primary, fontFamily: 'Sora_500Medium' }}>
+                      Max: ₹{maxWalletDeductible.toFixed(2)}
+                    </ThemedText>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLow, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant + '33', paddingHorizontal: 10, height: 38 }}>
+                      <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginRight: 4 }}>₹</ThemedText>
+                      <TextInput
+                        maxFontSizeMultiplier={MAX_FONT_SCALE}
+                        keyboardType="decimal-pad"
+                        placeholder={String(maxWalletDeductible)}
+                        placeholderTextColor="#94a3b8"
+                        value={walletInputAmount}
+                        onChangeText={(txt) => {
+                          const sanitized = txt.replace(/[^0-9.]/g, '');
+                          setWalletInputAmount(sanitized);
+                        }}
+                        style={{ flex: 1, fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text, height: 36, ...({ outlineStyle: 'none' } as any) }}
+                      />
+                      {walletInputAmount !== '' && (
+                        <Pressable onPress={() => setWalletInputAmount('')}>
+                          <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+                        </Pressable>
+                      )}
+                    </View>
+
+                    <Pressable
+                      onPress={() => setWalletInputAmount(String(maxWalletDeductible))}
+                      style={{ backgroundColor: theme.primary + '15', borderWidth: 1, borderColor: theme.primary + '44', paddingHorizontal: 12, height: 38, borderRadius: BorderRadius.md, justifyContent: 'center', alignItems: 'center' }}
+                    >
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.primary }}>
+                        Max
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+
+                  {/* Quick deduction chips */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                    {[0.25, 0.5, 0.75, 1].map((ratio) => {
+                      const amount = Math.min(maxWalletDeductible, Math.max(1, Math.round(maxWalletDeductible * ratio)));
+                      if (amount <= 0) return null;
+                      const isSelected = parsedWalletAmount === amount;
+                      return (
+                        <Pressable
+                          key={ratio}
+                          onPress={() => setWalletInputAmount(String(amount))}
+                          style={{
+                            paddingVertical: 4,
+                            paddingHorizontal: 8,
+                            borderRadius: 6,
+                            backgroundColor: isSelected ? theme.primary : theme.surfaceLow,
+                            borderWidth: 1,
+                            borderColor: isSelected ? theme.primary : theme.outlineVariant + '22',
+                          }}
+                        >
+                          <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: isSelected ? '#ffffff' : theme.textSecondary }}>
+                            {ratio === 1 ? 'Use Max 25%' : `Use ${(ratio * 25).toFixed(0)}%`} (₹{amount})
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
+                    <Ionicons name="checkmark-circle" size={12} color="#10B981" />
+                    <ThemedText style={{ fontSize: 10.5, color: '#10B981', fontFamily: 'Sora_500Medium' }}>
+                      ₹{walletDeduction.toFixed(2)} will be reduced from your booking fee (Max 25% wallet limit).
+                    </ThemedText>
+                  </View>
+                </View>
               )}
             </View>
 
@@ -1115,21 +1205,21 @@ export default function BookingConfigurationScreen() {
                       {/* Expanded Payment Details */}
                       {isSelected && (pm.id === 'credit' || pm.id === 'debit') && (
                         <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignSelf: 'stretch' }}>
-                          <TextInput
+                          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                             placeholder="Card Number"
                             placeholderTextColor="#94a3b8"
-                            style={{ backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, marginBottom: Spacing.sm, alignSelf: 'stretch' }}
+                            style={{ backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, marginBottom: Spacing.sm, alignSelf: 'stretch', includeFontPadding: false,}}
                           />
                           <View style={{ flexDirection: 'row', gap: Spacing.sm, alignSelf: 'stretch' }}>
-                            <TextInput
+                            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                               placeholder="MM/YY"
                               placeholderTextColor="#94a3b8"
-                              style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }}
+                              style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, includeFontPadding: false,}}
                             />
-                            <TextInput
+                            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                               placeholder="CVV"
                               placeholderTextColor="#94a3b8"
-                              style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant }}
+                              style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, includeFontPadding: false,}}
                               secureTextEntry
                             />
                           </View>
@@ -1157,10 +1247,10 @@ export default function BookingConfigurationScreen() {
             )}
           </View>
 
-          {/* ── Split Booking Amount ── */}
+          {/* ── Split Booking Amount (Disabled in Free Plan) ── */}
           <View style={styles.section}>
             <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.lg, padding: 16, ...Shadows.level1 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
                 <View style={{ flex: 1, marginRight: 8 }}>
                   <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_500Medium', color: theme.text }}>
                     Split Cost among Players
@@ -1169,113 +1259,45 @@ export default function BookingConfigurationScreen() {
                     Split booking fee based on play hours (e.g., 1 hr, 2 hrs)
                   </ThemedText>
                 </View>
-                <Pressable
-                  onPress={() => setIsSplitEnabled(!isSplitEnabled)}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: isSplitEnabled ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 }}
-                >
-                  <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: isSplitEnabled ? '#ffffff' : theme.textSecondary }}>
-                    {isSplitEnabled ? 'Active' : 'Enable'}
-                  </ThemedText>
-                  <Ionicons name={isSplitEnabled ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={isSplitEnabled ? '#ffffff' : theme.textSecondary} />
-                </Pressable>
+                <ThemedText type="labelSm" style={{ color: theme.textSecondary, opacity: 0.7, fontSize: 10 }}>
+                  Disabled in Free Plan
+                </ThemedText>
               </View>
 
-              {isSplitEnabled && (
-                <View style={{ marginTop: Spacing.xs }}>
-                  {/* Players list */}
-                  <View style={{ gap: Spacing.sm, marginBottom: Spacing.md }}>
-                    {splitPlayers.map((player) => {
-                      const totalHours = splitPlayers.reduce((sum, p) => sum + p.hours, 0) || 1;
-                      const shareOfTotal = (player.hours / totalHours) * total;
-                      const shareOfAdvance = (player.hours / totalHours) * finalPayable;
-
-                      return (
-                        <View key={player.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: theme.outlineVariant + '15' }}>
-                          <View style={{ flex: 1 }}>
-                            <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                              {player.name}
-                            </ThemedText>
-                            <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 1 }}>
-                              Share: ₹{shareOfAdvance.toFixed(2)} Pay Now · ₹{shareOfTotal.toFixed(2)} Total
-                            </ThemedText>
-                          </View>
-
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                            {/* Hours Selector */}
-                            <Pressable
-                              onPress={() => {
-                                if (player.hours > 1) {
-                                  setSplitPlayers(splitPlayers.map(p => p.id === player.id ? { ...p, hours: p.hours - 1 } : p));
-                                } else if (player.name !== 'You') {
-                                  // Remove player if hours decremented to 0
-                                  setSplitPlayers(splitPlayers.filter(p => p.id !== player.id));
-                                }
-                              }}
-                              style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: theme.surfaceLow, justifyContent: 'center', alignItems: 'center' }}
-                            >
-                              <Ionicons name={player.hours > 1 ? "remove" : "trash-outline"} size={14} color={theme.text} />
-                            </Pressable>
-
-                            <ThemedText style={{ width: 32, textAlign: 'center', fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                              {player.hours} {player.hours === 1 ? 'hr' : 'hrs'}
-                            </ThemedText>
-
-                            <Pressable
-                              onPress={() => {
-                                setSplitPlayers(splitPlayers.map(p => p.id === player.id ? { ...p, hours: p.hours + 1 } : p));
-                              }}
-                              style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: theme.surfaceLow, justifyContent: 'center', alignItems: 'center' }}
-                            >
-                              <Ionicons name="add" size={14} color={theme.text} />
-                            </Pressable>
-                          </View>
-                        </View>
-                      );
-                    })}
+              <Pressable
+                onPress={() => showError('🔒 Pro Plan Required: Upgrade to Pro Plan to enable Split Cost among Players.')}
+                style={[
+                  styles.serviceRow,
+                  {
+                    backgroundColor: theme.surfaceLow,
+                    borderColor: theme.outlineVariant + '25',
+                    borderWidth: 1,
+                    opacity: 0.75,
+                    padding: 12,
+                    borderRadius: BorderRadius.md,
+                  }
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10 }}>
+                  <View style={[styles.serviceIconWrap, { backgroundColor: theme.outlineVariant + '20', width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' }]}>
+                    <Ionicons name="people" size={18} color={theme.textSecondary} />
                   </View>
-
-                  {/* Add Friend Input */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md }}>
-                    <TextInput
-                      value={newPlayerName}
-                      onChangeText={setNewPlayerName}
-                      placeholder="Enter player/friend's name..."
-                      placeholderTextColor="#94a3b8"
-                      style={[{ flex: 1, backgroundColor: theme.surfaceLow, color: theme.text, paddingHorizontal: 12, height: 38, borderRadius: BorderRadius.md, fontSize: 12.5 }, ...({ outlineStyle: 'none' } as any)]}
-                    />
-                    <Pressable
-                      onPress={() => {
-                        if (newPlayerName.trim()) {
-                          setSplitPlayers([...splitPlayers, {
-                            id: Date.now().toString(),
-                            name: newPlayerName.trim(),
-                            hours: 1
-                          }]);
-                          setNewPlayerName('');
-                        }
-                      }}
-                      style={{ backgroundColor: theme.primary, height: 38, paddingHorizontal: 14, borderRadius: BorderRadius.md, justifyContent: 'center', alignItems: 'center' }}
-                    >
-                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: '#ffffff' }}>
-                        + Add
-                      </ThemedText>
-                    </Pressable>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>
+                      Pro Plan Feature (Locked)
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 2 }}>
+                      Upgrade to Pro Plan to invite players & split payments dynamically.
+                    </ThemedText>
                   </View>
-
-                  {/* Proportional Split Info summary card */}
-                  <View style={{ backgroundColor: theme.primary + '10', borderRadius: BorderRadius.md, padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-                    <Ionicons name="calculator-outline" size={16} color={theme.primary} style={{ marginTop: 1 }} />
-                    <View style={{ flex: 1 }}>
-                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.primary }}>
-                        Proportional Split Calculation
-                      </ThemedText>
-                      <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 3, lineHeight: 15 }}>
-                        The total booking cost is dynamically split based on individual hours played. Players playing 2 hrs pay double the share of players playing 1 hr.
-                      </ThemedText>
-                    </View>
+                  <View style={{ backgroundColor: theme.outlineVariant + '30', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="lock-closed" size={12} color={theme.textSecondary} />
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>
+                      Pro Only
+                    </ThemedText>
                   </View>
                 </View>
-              )}
+              </Pressable>
             </View>
           </View>
 
@@ -1403,7 +1425,7 @@ export default function BookingConfigurationScreen() {
                   ) : (
                     // Input state
                     <View style={{ flexDirection: 'row', gap: 8 }}>
-                      <TextInput
+                      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                         style={[
                           styles.couponInput,
                           { backgroundColor: theme.surfaceLowest, color: theme.text, borderColor: couponError ? '#ef4444' : theme.outlineVariant + '44' }
@@ -2093,6 +2115,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 12,
     fontFamily: 'Sora_500Medium',
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   couponApplyBtn: {
     justifyContent: 'center',

@@ -35,7 +35,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { MotionView } from '@/components/motion';
 import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
 import { AVATAR_KEYS, getAvatarSource } from '@/constants/avatars';
@@ -417,7 +417,7 @@ export function ChangePlayerModal({
 
       <View style={[styles.search, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}>
         <Ionicons name="search" size={14} color={theme.textSecondary} />
-        <TextInput
+        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
           value={query}
           onChangeText={setQuery}
           placeholder="Search bench"
@@ -564,7 +564,7 @@ export function EditPlayerModal({ visible, onClose, player, onSave }: EditPlayer
         </Pressable>
         <View style={{ flex: 1, minWidth: 0 }}>
           <SectionLabel>NAME</SectionLabel>
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             value={name}
             onChangeText={setName}
             placeholder="Player name"
@@ -602,7 +602,7 @@ export function EditPlayerModal({ visible, onClose, player, onSave }: EditPlayer
       </View>
 
       <SectionLabel>JERSEY NUMBER</SectionLabel>
-      <TextInput
+      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
         value={jersey}
         onChangeText={(t) => setJersey(t.replace(/[^0-9]/g, '').slice(0, 3))}
         placeholder="e.g. 7"
@@ -885,7 +885,7 @@ export function AddPlayerModal({
         </Pressable>
         <View style={{ flex: 1, minWidth: 0 }}>
           <SectionLabel>NAME</SectionLabel>
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             ref={nameRef}
             value={name}
             onChangeText={(t) => { setName(t); if (error) setError(null); }}
@@ -965,7 +965,7 @@ export function AddPlayerModal({
           size={14}
           color={otpStage === 'verified' ? '#10B981' : (phoneOk ? theme.primary : theme.textSecondary)}
         />
-        <TextInput
+        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
           ref={phoneRef}
           value={phone}
           onChangeText={handlePhoneChange}
@@ -1002,7 +1002,7 @@ export function AddPlayerModal({
       {otpStage === 'sent' && (
         <View style={{ marginTop: 8, backgroundColor: theme.surfaceLow, borderRadius: 8, padding: 10, borderWidth: 1, borderColor: theme.primary + '44' }}>
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               value={otpInput}
               onChangeText={(t) => { setOtpInput(t.replace(/\D/g, '').slice(0, 6)); setOtpError(null); }}
               placeholder="Enter 6-digit OTP"
@@ -1176,13 +1176,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginBottom: Spacing.sm,
   },
-  searchInput: { flex: 1, height: 34, paddingVertical: 0 },
+  searchInput: {
+    flex: 1,
+    height: 34,
+    paddingVertical: 0,
+    includeFontPadding: false,
+  },
 
   input: {
     height: 38,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     paddingHorizontal: 11,
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
 
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

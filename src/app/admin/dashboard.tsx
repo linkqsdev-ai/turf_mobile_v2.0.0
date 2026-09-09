@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Section } from '@/components/ui/section';
 import { MotionView, Stagger } from '@/components/motion';
 import { useTokens } from '@/hooks/use-scheme';
+import { TicketVoucherCarousel } from '@/components/ticket-voucher-card';
 
 const MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
 const INCOME = [1200, 1500, 1100, 2000, 1800, 2500];
@@ -57,6 +58,12 @@ export default function AdminDashboard() {
         </Card>
       </Section>
 
+      <Section title="Live Vouchers & Promotions" className="mt-6">
+        <View style={{ marginHorizontal: -16 }}>
+          <TicketVoucherCarousel title="ACTIVE PLATFORM VOUCHERS" />
+        </View>
+      </Section>
+
       <Section title="Highlights" className="mt-6">
         <Card variant="surface" className="gap-3">
           <View className="flex-row items-center justify-between">
@@ -76,3 +83,4 @@ export default function AdminDashboard() {
     </Screen>
   );
 }
+

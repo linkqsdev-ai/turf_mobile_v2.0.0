@@ -51,10 +51,10 @@ export function FoFChainVisualizerModal({
                 <Ionicons name="git-network" size={20} color={conn.badgeColor} />
               </View>
               <View>
-                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                <ThemedText style={{ fontSize: 13.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
                   3-Chain FoF Network
                 </ThemedText>
-                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
+                <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, fontFamily: 'Sora_400Regular' }}>
                   Phone-Number Verified Social Graph
                 </ThemedText>
               </View>
@@ -70,23 +70,23 @@ export function FoFChainVisualizerModal({
               <Image source={{ uri: conn.targetAvatar }} style={styles.targetAvatar} />
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <ThemedText style={{ fontSize: 15, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                  <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
                     {conn.targetName}
                   </ThemedText>
                 </View>
 
                 <Pressable
                   onPress={() => copyToClipboard(conn.targetPhone, 'Phone Number')}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}
                 >
-                  <Ionicons name="call-outline" size={13} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.primary }}>
+                  <Ionicons name="call-outline" size={12} color={theme.primary} />
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: theme.primary }}>
                     {conn.targetPhone}
                   </ThemedText>
-                  <Ionicons name="copy-outline" size={11} color={theme.textSecondary} style={{ marginLeft: 2 }} />
+                  <Ionicons name="copy-outline" size={10} color={theme.textSecondary} style={{ marginLeft: 2 }} />
                 </Pressable>
 
-                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
+                <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginTop: 1 }}>
                   {conn.targetRole} • {conn.targetTeam}
                 </ThemedText>
               </View>

@@ -1,4 +1,4 @@
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { Shadows, Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { FontAwesome5, Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -495,7 +495,7 @@ export function BidMatchTab({
               </Pressable>
             );
           })}
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             style={[
               styles.bidChip,
               { color: theme.onPrimaryContainer, borderColor: theme.onPrimaryContainer + '22', fontFamily: 'Sora_500Medium', fontSize: 12, textAlign: 'center' },
@@ -656,7 +656,7 @@ export function BidMatchTab({
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLow, borderRadius: 8, borderWidth: 1, borderColor: showTurfDropdown ? theme.primary : theme.outlineVariant + '40', paddingHorizontal: 12, height: 42 }}>
               <Ionicons name="search-outline" size={16} color={theme.primary} style={{ marginRight: 8 }} />
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[
                   { flex: 1, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 12 },
                   Platform.OS === 'web' && ({ outlineStyle: 'none', outlineWidth: 0 } as any)
@@ -732,7 +732,7 @@ export function BidMatchTab({
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLow, borderRadius: 12, borderWidth: 1, borderColor: theme.outlineVariant + '40', paddingHorizontal: 12, height: 42 }}>
               <Ionicons name="location-outline" size={16} color={theme.textSecondary} style={{ marginRight: 8 }} />
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[
                   { flex: 1, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 12 },
                   Platform.OS === 'web' && ({ outlineStyle: 'none', outlineWidth: 0 } as any)
@@ -764,7 +764,7 @@ export function BidMatchTab({
             ]}
           >
             <Ionicons name="search" size={14} color={theme.textSecondary} />
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={[
                 styles.searchInput,
                 { color: theme.text },
@@ -887,7 +887,7 @@ export function BidMatchTab({
                               { backgroundColor: res === 'W' ? '#22c55e' : '#ef4444' }
                             ]}
                           >
-                            <ThemedText style={{ color: '#ffffff', fontSize: 7.5, fontFamily: 'Sora_500Medium' }}>
+                            <ThemedText style={{ color: '#ffffff', fontSize: 9, fontFamily: 'Sora_500Medium' }}>
                               {res}
                             </ThemedText>
                           </View>
@@ -1412,6 +1412,8 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
 
   /* Bento Card Container */
@@ -1470,6 +1472,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginLeft: 8,
     ...({ outlineStyle: 'none', outlineWidth: 0 } as any),
+    includeFontPadding: false,
   },
   teamCardContainer: {
     borderRadius: 16,

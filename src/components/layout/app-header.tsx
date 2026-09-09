@@ -40,20 +40,20 @@ export function AppHeader({
 
   if (large) {
     return (
-      <View className={cn('px-gutter pb-2 pt-1', className)}>
-        <View className="mb-2 flex-row items-center justify-between">
+      <View className={cn('px-gutter pb-1.5 pt-1', className)}>
+        <View className="mb-1.5 flex-row items-center justify-between">
           {canBack ? (
             <Pressable
               onPress={handleBack}
-              hitSlop={10}
-              className="h-8 w-8 items-center justify-center rounded-full bg-card"
+              hitSlop={8}
+              className="h-7 w-7 items-center justify-center rounded-full bg-card"
             >
-              <Ionicons name="chevron-back" size={18} color={t.foreground} />
+              <Ionicons name="chevron-back" size={16} color={t.foreground} />
             </Pressable>
           ) : (
-            <View className="h-8 w-8" />
+            <View className="h-7 w-7" />
           )}
-          {right ?? <View className="h-8 w-8" />}
+          {right ?? <View className="h-7 w-7" />}
         </View>
         {title ? <Text variant="title">{title}</Text> : null}
         {subtitle ? (
@@ -68,19 +68,19 @@ export function AppHeader({
   return (
     <View
       className={cn(
-        'h-11 flex-row items-center px-2',
+        'h-10 flex-row items-center px-2',
         !transparent && 'border-b border-border bg-background',
         className,
       )}
     >
-      <View className="w-10 items-start">
+      <View className="w-8 items-start">
         {canBack ? (
           <Pressable
             onPress={handleBack}
-            hitSlop={10}
-            className="h-8 w-8 items-center justify-center rounded-full active:bg-muted"
+            hitSlop={8}
+            className="h-7 w-7 items-center justify-center rounded-full active:bg-muted"
           >
-            <Ionicons name="chevron-back" size={19} color={t.foreground} />
+            <Ionicons name="chevron-back" size={17} color={t.foreground} />
           </Pressable>
         ) : null}
       </View>
@@ -96,7 +96,7 @@ export function AppHeader({
           </Text>
         ) : null}
       </View>
-      <View className="min-w-12 flex-row items-center justify-end pr-1">{right}</View>
+      <View className="min-w-10 flex-row items-center justify-end pr-1">{right}</View>
     </View>
   );
 }

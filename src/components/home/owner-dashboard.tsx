@@ -23,6 +23,7 @@ import {
 import { useOfferStore, useBookings, useTurfStore } from '@/store/app-store';
 import { isExpired } from '@/store/offer-store';
 import { computeTurfSlotMetrics } from '@/utils/turf-slot-sync';
+import { TicketVoucherCarousel } from '@/components/ticket-voucher-card';
 
 /** Announcement banners — tournament news surfaced in the feed. */
 const announcementBanners = (go: (path: any) => void): PromoBannerProps[] => [
@@ -689,27 +690,9 @@ export function OwnerDashboard({
             </View>
           </Reanimated.View>
 
-          {/* ── Special Deals & Vouchers ────────────────────────────── */}
+          {/* ── Active Offers & Vouchers ────────────────────────────── */}
           <Reanimated.View entering={FadeInDown.delay(420).duration(460)} style={styles.sectionBleed}>
-            <View style={styles.sectionInset}>
-              <SectionHeading title="Special Deals & Vouchers" />
-            </View>
-            <AutoScrollingHorizontalBanners
-              cardWidth={310}
-              gap={14}
-              banners={[
-                BANNER_DESIGNS_10.SALE_50_OFF_TURF(() => router.push('/booking')),
-                BANNER_DESIGNS_10.BIG_SALE_80_OFF(() => router.push('/booking')),
-                BANNER_DESIGNS_10.EXPLORE_YOUR_WORLD(() => router.push('/(tabs)/explore')),
-                BANNER_DESIGNS_10.PRO_CHAMPIONSHIP_DISCOUNT(() => router.push('/(tabs)/tournaments')),
-                BANNER_DESIGNS_10.MIDNIGHT_MADNESS_SLOTS(() => router.push('/booking')),
-                BANNER_DESIGNS_10.GIFT_GAME_VOUCHER(() => router.push('/wallet')),
-                BANNER_DESIGNS_10.COACH_MASTERCLASS_FREE(() => router.push('/(tabs)/coach')),
-                BANNER_DESIGNS_10.STUDENT_YOUTH_PASS(() => router.push('/booking')),
-                BANNER_DESIGNS_10.SUPER_BID_2X_REWARDS(() => router.push('/(tabs)/matches')),
-                BANNER_DESIGNS_10.REFER_EARN_CASH(() => router.push('/wallet')),
-              ]}
-            />
+            <TicketVoucherCarousel title="ACTIVE OFFERS & VOUCHERS" />
           </Reanimated.View>
 
           {/* ── Tournament Announcements ───────────────────────────── */}

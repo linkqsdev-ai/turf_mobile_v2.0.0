@@ -16,9 +16,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { toPersistableImage, durableImages } from '@/utils/persist-image';
+import { useRouter, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ThemedText } from '@/components/themed-text';
+import { EditIcon } from '@/components/ui/edit-icon';
 import { GradientContainer } from '@/components/gradient-container';
 import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -47,13 +50,72 @@ export default function CreateCupScreen() {
   const type = useTypeRamp();
   const router = useRouter();
   const { profile } = useUserProfile();
-  const { publishedTournaments, deleteTournament, updateTournament } = useTournamentStore();
+  const { publishedTournaments, registrations, deleteTournament, updateTournament } = useTournamentStore();
   /**
    * Deleting is confirmed with an in-app modal rather than Alert.alert:
    * react-native-web ignores Alert's button list, so on web the destructive
    * callback never fired and the button looked broken.
    */
   const [pendingDelete, setPendingDelete] = useState<PublishedTournament | null>(null);
+  const [mediaFor, setMediaFor] = useState<PublishedTournament | null>(null);
+  const [drafts, setDrafts] = useState<any[]>([]);
+  const [draftsOpen, setDraftsOpen] = useState(false);
+
+  /**
+   * A tournament whose roster has filled. Counted from real registrations
+   * rather than the denormalised `teamsCount`, which can drift.
+   */
+  const isFull = (t: PublishedTournament) => {
+    const max = Number(t.maxTeams) || 0;
+    if (max <= 0) return false;
+    const taken = (registrations || []).filter(
+      (r: any) => r.tournamentId === t.id && r.status !== 'rejected'
+    ).length;
+    return Math.max(taken, Number(t.teamsCount) || 0) >= max;
+  };
+
+  /**
+   * Open a draft straight into the wizard.
+   *
+   * The banner used to push to /create-tournament and open the picker on top,
+   * so an empty "Create Tournament" appeared before the draft was chosen. The
+   * draft is picked here, and the wizard opens already populated.
+   */
+  const openDraft = (draft: any) => {
+    setDraftsOpen(false);
+    router.push({ pathname: '/create-tournament', params: { draftId: draft.id } });
+  };
+
+  const deleteDraft = (id: string) => {
+    const next = drafts.filter(d => d.id !== id);
+    setDrafts(next);
+    AsyncStorage.setItem('@turf_tournament_drafts', JSON.stringify(next)).catch(() => {});
+  };
+
+  // Drafts live in AsyncStorage, written by the create wizard. Re-read on focus
+  // so publishing one makes the banner disappear without a restart.
+  useFocusEffect(
+    React.useCallback(() => {
+      let alive = true;
+      AsyncStorage.getItem('@turf_tournament_drafts')
+        .then(raw => {
+          if (!alive) return;
+          const parsed = raw ? JSON.parse(raw) : [];
+          setDrafts(Array.isArray(parsed) ? parsed : []);
+        })
+        .catch(() => setDrafts([]));
+      return () => {
+        alive = false;
+      };
+    }, [])
+  );
+
+  /**
+   * Only the photos that can still render. A gallery saved before the picker
+   * started base64-encoding holds revoked blob: URLs, which drew as empty grey
+   * boxes with a remove button and no image.
+   */
+  const mediaShown = useMemo(() => durableImages(mediaFor?.mediaImages), [mediaFor]);
   const [toast, setToast] = useState<string | null>(null);
   /** Which card is mid-upload — keeps the spinner on that row only. */
   const [uploadingId, setUploadingId] = useState<string | null>(null);
@@ -66,6 +128,13 @@ export default function CreateCupScreen() {
   /**
    * Adds photos straight to a cup's Media tab from its card, so an organizer
    * posting shots from the ground doesn't have to walk the whole edit wizard.
+   */
+  /**
+   * Add photos to the tournament open in the media manager.
+   *
+   * Images are converted to data URIs before storage: the picker returns a
+   * `blob:` uri on web that is revoked on reload, so a gallery saved from here
+   * came back empty next launch.
    */
   const addMediaFor = async (t: PublishedTournament) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -80,18 +149,45 @@ export default function CreateCupScreen() {
         allowsMultipleSelection: true,
         selectionLimit: 8,
         quality: 0.9,
+        base64: true,
       });
       if (result.canceled) return;
-      const uris = (result.assets || []).map(a => a.uri).filter(Boolean);
-      if (uris.length === 0) return;
+
+      const uris: string[] = [];
+      let tooLarge = 0;
+      for (const asset of result.assets || []) {
+        const persisted = toPersistableImage(asset as any);
+        if (persisted.ok) uris.push(persisted.uri);
+        else if (persisted.reason === 'too-large') tooLarge += 1;
+        else if (persisted.uri) uris.push(persisted.uri);
+      }
+      if (uris.length === 0) {
+        flashToast(tooLarge > 0 ? 'Those images are too large to save' : 'Nothing was added');
+        return;
+      }
+
       const existing = t.mediaImages || [];
       // Re-picking the same photo shouldn't duplicate it in the gallery.
       const merged = [...existing, ...uris.filter(u => !existing.includes(u))].slice(0, 12);
       updateTournament(t.id, { mediaImages: merged });
-      flashToast(`${merged.length - existing.length} photo${merged.length - existing.length === 1 ? '' : 's'} added to ${t.name}`);
+      setMediaFor(prev => (prev && prev.id === t.id ? { ...prev, mediaImages: merged } : prev));
+
+      const added = merged.length - existing.length;
+      flashToast(
+        tooLarge > 0
+          ? `${added} added · ${tooLarge} too large to save`
+          : `${added} photo${added === 1 ? '' : 's'} added to ${t.name}`
+      );
     } finally {
       setUploadingId(null);
     }
+  };
+
+  /** Drop one photo from the tournament's gallery. */
+  const removeMediaFrom = (t: PublishedTournament, uri: string) => {
+    const next = (t.mediaImages || []).filter(u => u !== uri);
+    updateTournament(t.id, { mediaImages: next });
+    setMediaFor(prev => (prev && prev.id === t.id ? { ...prev, mediaImages: next } : prev));
   };
 
   /**
@@ -168,6 +264,34 @@ export default function CreateCupScreen() {
             </View>
           </Pressable>
 
+          {/* Saved drafts — unfinished tournaments were only reachable from
+              inside the create wizard, so an organiser who left the screen had
+              no way back to them. */}
+          {drafts.length > 0 && (
+            <Pressable
+              onPress={() => setDraftsOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Continue from ${drafts.length} saved draft${drafts.length === 1 ? '' : 's'}`}
+              style={({ pressed }) => [
+                styles.draftBanner,
+                { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '55', opacity: pressed ? 0.9 : 1 },
+              ]}
+            >
+              <View style={[styles.draftIconBg, { backgroundColor: theme.primary + '18' }]}>
+                <Ionicons name="folder-open-outline" size={17} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <ThemedText style={[type.bodyStrong, { color: theme.text }]} numberOfLines={1}>
+                  {drafts.length} saved draft{drafts.length === 1 ? '' : 's'}
+                </ThemedText>
+                <ThemedText style={[type.small, { color: theme.textSecondary }]} numberOfLines={1}>
+                  Pick up where you left off — {drafts[0]?.name || 'Untitled Draft'}
+                </ThemedText>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+            </Pressable>
+          )}
+
           {/* Existing tournaments */}
           <ThemedText style={[type.micro, styles.sectionTitle, { color: theme.textSecondary }]}>
             YOUR TOURNAMENTS ({mine.length})
@@ -233,7 +357,7 @@ export default function CreateCupScreen() {
                     </View>
                     <View style={{ flex: 1 }} />
                     <Pressable
-                      onPress={() => addMediaFor(t)}
+                      onPress={() => setMediaFor(t)}
                       hitSlop={6}
                       disabled={uploadingId === t.id}
                       accessibilityLabel={`Add media to ${t.name}`}
@@ -244,9 +368,11 @@ export default function CreateCupScreen() {
                         size={16}
                         color={uploadingId === t.id ? theme.outlineVariant : theme.primary}
                       />
-                      {(t.mediaImages?.length ?? 0) > 0 && (
+                      {durableImages(t.mediaImages).length > 0 && (
                         <View style={[styles.mediaCountDot, { backgroundColor: theme.primary }]}>
-                          <ThemedText style={styles.mediaCountText}>{t.mediaImages?.length}</ThemedText>
+                          <ThemedText style={styles.mediaCountText}>
+                            {durableImages(t.mediaImages).length}
+                          </ThemedText>
                         </View>
                       )}
                     </Pressable>
@@ -264,15 +390,33 @@ export default function CreateCupScreen() {
                       accessibilityLabel={`Edit ${t.name}`}
                       style={styles.cardAction}
                     >
-                      <Ionicons name="create-outline" size={16} color={theme.textSecondary} />
+                      <EditIcon size={16} />
                     </Pressable>
+                    {/* Deleting is blocked once the roster is full: those teams
+                        have paid to enter, and removing the tournament would
+                        take their fixtures and entry fees with it. */}
                     <Pressable
-                      onPress={() => setPendingDelete(t)}
+                      onPress={() =>
+                        isFull(t)
+                          ? flashToast(`${t.name} is full — it can no longer be deleted`)
+                          : setPendingDelete(t)
+                      }
                       hitSlop={6}
-                      accessibilityLabel={`Delete ${t.name}`}
-                      style={styles.cardAction}
+                      disabled={isFull(t)}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: isFull(t) }}
+                      accessibilityLabel={
+                        isFull(t)
+                          ? `${t.name} is full and cannot be deleted`
+                          : `Delete ${t.name}`
+                      }
+                      style={[styles.cardAction, isFull(t) && { opacity: 0.35 }]}
                     >
-                      <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                      <Ionicons
+                        name={isFull(t) ? 'lock-closed-outline' : 'trash-outline'}
+                        size={16}
+                        color={isFull(t) ? theme.textSecondary : '#EF4444'}
+                      />
                     </Pressable>
                   </View>
                 </View>
@@ -286,6 +430,172 @@ export default function CreateCupScreen() {
             <ThemedText style={[type.micro, { color: theme.background }]} numberOfLines={2}>{toast}</ThemedText>
           </View>
         )}
+
+        {/* Media manager — opened from a tournament card's photo icon.
+            Tapping the icon used to launch the OS picker straight away, so
+            there was no way to see or remove what had already been added. */}
+        <Modal
+          visible={!!mediaFor}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setMediaFor(null)}
+        >
+          <View style={styles.confirmOverlay}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setMediaFor(null)}
+              accessibilityLabel="Close media manager"
+            />
+            <View style={[styles.mediaCard, { backgroundColor: theme.surfaceLowest }]}>
+              <View style={styles.mediaHeader}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <ThemedText style={[type.title, { color: theme.text }]} numberOfLines={1}>
+                    Media gallery
+                  </ThemedText>
+                  <ThemedText style={[type.small, { color: theme.textSecondary, marginTop: 2 }]} numberOfLines={1}>
+                    {mediaFor?.name} · {mediaShown.length}/12 photos
+                  </ThemedText>
+                </View>
+                <Pressable
+                  onPress={() => setMediaFor(null)}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close"
+                >
+                  <Ionicons name="close" size={22} color={theme.textSecondary} />
+                </Pressable>
+              </View>
+
+              <ScrollView
+                style={{ maxHeight: 320 }}
+                contentContainerStyle={styles.mediaGrid}
+                showsVerticalScrollIndicator={false}
+              >
+                {mediaShown.length === 0 ? (
+                  <Pressable
+                    onPress={() => mediaFor && addMediaFor(mediaFor)}
+                    style={[styles.mediaEmpty, { borderColor: theme.outlineVariant }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add the first photos"
+                  >
+                    <Ionicons name="images-outline" size={22} color={theme.textSecondary} />
+                    <ThemedText style={[type.small, { color: theme.textSecondary, textAlign: 'center', marginTop: 6 }]}>
+                      No photos yet. Add match shots, the ground, or your poster —
+                      they appear under the tournament's Media tab.
+                    </ThemedText>
+                  </Pressable>
+                ) : (
+                  mediaShown.map((uri) => (
+                    <View key={uri} style={styles.mediaThumbWrap}>
+                      <Image source={{ uri }} style={styles.mediaThumb} contentFit="cover" />
+                      <Pressable
+                        onPress={() => mediaFor && removeMediaFrom(mediaFor, uri)}
+                        style={styles.mediaRemove}
+                        hitSlop={6}
+                        accessibilityRole="button"
+                        accessibilityLabel="Remove this photo"
+                      >
+                        <Ionicons name="close" size={12} color="#ffffff" />
+                      </Pressable>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+
+              <Pressable
+                onPress={() => mediaFor && addMediaFor(mediaFor)}
+                disabled={uploadingId === mediaFor?.id || mediaShown.length >= 12}
+                style={({ pressed }) => [
+                  styles.mediaAddBtn,
+                  {
+                    backgroundColor: theme.primary,
+                    opacity:
+                      pressed || uploadingId === mediaFor?.id || mediaShown.length >= 12 ? 0.6 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Add photos"
+              >
+                <Ionicons
+                  name={uploadingId === mediaFor?.id ? 'hourglass-outline' : 'add'}
+                  size={17}
+                  color="#ffffff"
+                />
+                <ThemedText style={[type.bodyStrong, { color: '#ffffff' }]}>
+                  {uploadingId === mediaFor?.id
+                    ? 'Adding…'
+                    : mediaShown.length >= 12
+                      ? 'Gallery full (12)'
+                      : 'Add photos'}
+                </ThemedText>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Saved drafts picker */}
+        <Modal
+          visible={draftsOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setDraftsOpen(false)}
+        >
+          <View style={styles.confirmOverlay}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setDraftsOpen(false)}
+              accessibilityLabel="Close drafts"
+            />
+            <View style={[styles.mediaCard, { backgroundColor: theme.surfaceLowest }]}>
+              <View style={styles.mediaHeader}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <ThemedText style={[type.title, { color: theme.text }]}>Saved drafts</ThemedText>
+                  <ThemedText style={[type.small, { color: theme.textSecondary, marginTop: 2 }]}>
+                    Pick one to carry on where you left off
+                  </ThemedText>
+                </View>
+                <Pressable onPress={() => setDraftsOpen(false)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
+                  <Ionicons name="close" size={22} color={theme.textSecondary} />
+                </Pressable>
+              </View>
+
+              <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+                {drafts.map((d) => (
+                  <Pressable
+                    key={d.id}
+                    onPress={() => openDraft(d)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open draft ${d.name || 'Untitled Draft'}`}
+                    style={({ pressed }) => [
+                      styles.draftRow,
+                      { borderColor: theme.outlineVariant + '44', opacity: pressed ? 0.85 : 1 },
+                    ]}
+                  >
+                    <View style={[styles.draftIconBg, { backgroundColor: theme.primary + '18' }]}>
+                      <Ionicons name="document-text-outline" size={16} color={theme.primary} />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <ThemedText style={[type.bodyStrong, { color: theme.text }]} numberOfLines={1}>
+                        {d.name || 'Untitled Draft'}
+                      </ThemedText>
+                      <ThemedText style={[type.small, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {[d.sportType, d.selectedGround].filter(Boolean).join(' · ') || 'No details yet'}
+                      </ThemedText>
+                    </View>
+                    <Pressable
+                      onPress={() => deleteDraft(d.id)}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete draft ${d.name || 'Untitled'}`}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                    </Pressable>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
 
         {/* Delete confirmation */}
         <Modal visible={!!pendingDelete} transparent animationType="fade" onRequestClose={() => setPendingDelete(null)}>
@@ -329,6 +639,71 @@ export default function CreateCupScreen() {
 }
 
 const styles = StyleSheet.create({
+  draftBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    padding: Spacing.md,
+    marginTop: Spacing.base,
+  },
+  draftRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.sm,
+    marginBottom: 8,
+  },
+  draftIconBg: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.base,
+    ...Shadows.level3,
+  },
+  mediaHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: Spacing.sm },
+  mediaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 4 },
+  mediaEmpty: {
+    width: '100%',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: BorderRadius.lg,
+    paddingVertical: 26,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+  },
+  mediaThumbWrap: { width: 84, height: 84, borderRadius: 10, overflow: 'hidden', position: 'relative' },
+  mediaThumb: { width: '100%', height: '100%' },
+  mediaRemove: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    height: 46,
+    borderRadius: BorderRadius.full,
+    marginTop: Spacing.sm,
+  },
   body: { padding: Spacing.containerMargin, paddingBottom: 120 },
 
   heroCard: {

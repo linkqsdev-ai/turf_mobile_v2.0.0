@@ -17,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Reanimated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
@@ -291,7 +291,7 @@ export default function WalletScreen() {
             {/* Quick Redeem Promo Bar */}
             <View style={[styles.promoBarCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
               <Ionicons name="pricetag-outline" size={18} color={theme.primary} />
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 value={promoCodeInput}
                 onChangeText={setPromoCodeInput}
                 placeholder="Have a voucher code? (e.g. TURF100)"
@@ -563,7 +563,7 @@ export default function WalletScreen() {
               <ThemedText style={[styles.modalLabel, { color: theme.textSecondary }]}>Enter Amount (₹)</ThemedText>
               <View style={[styles.modalInputRow, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}>
                 <ThemedText style={[styles.currencyPrefix, { color: theme.text }]}>₹</ThemedText>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   value={customAmount}
                   onChangeText={setCustomAmount}
                   keyboardType="number-pad"
@@ -780,6 +780,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Sora_500Medium',
     marginLeft: 8,
     paddingVertical: 4,
+    includeFontPadding: false,
   },
   applyBtn: {
     paddingHorizontal: 16,
@@ -1037,24 +1038,25 @@ const styles = StyleSheet.create({
   modalInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    borderRadius: BorderRadius.lg,
+    paddingHorizontal: 10,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
-    height: 48,
+    height: 36,
   },
   currencyPrefix: {
-    fontSize: 18,
+    fontSize: 14.5,
     fontFamily: 'Sora_500Medium',
-    marginRight: 6,
+    marginRight: 4,
   },
   modalInput: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 14.5,
     fontFamily: 'Sora_500Medium',
+    includeFontPadding: false,
   },
   quickAmtChip: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 6,
     alignItems: 'center',
     borderRadius: BorderRadius.md,
     borderWidth: 1,
@@ -1062,24 +1064,24 @@ const styles = StyleSheet.create({
   paymentOptionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.lg,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
-    gap: 10,
+    gap: 8,
   },
   modalSubmitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    height: 48,
-    borderRadius: BorderRadius.lg,
-    marginTop: Spacing.md,
+    gap: 6,
+    height: 34,
+    borderRadius: BorderRadius.full,
+    marginTop: Spacing.sm,
   },
   modalSubmitText: {
     color: '#ffffff',
     fontFamily: 'Sora_500Medium',
-    fontSize: 13,
+    fontSize: 11.5,
   },
 });

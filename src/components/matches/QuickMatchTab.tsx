@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { FavouriteTeamIcon } from '@/components/favourite-team-icon';
 import { Shadows, Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -884,7 +884,7 @@ export function QuickMatchTab({
               </Pressable>
 
               <View style={{ width: 125, position: 'relative', zIndex: 100 }}>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[
                     {
                       backgroundColor: '#ffffff',
@@ -1001,7 +1001,7 @@ export function QuickMatchTab({
                           {team.isFavourite && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#fef3c7', paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 3 }}>
                               <FavouriteTeamIcon size={9} />
-                              <ThemedText style={{ color: '#d97706', fontSize: 7.5, fontFamily: 'Sora_500Medium' }}>FAV</ThemedText>
+                              <ThemedText style={{ color: '#d97706', fontSize: 9, fontFamily: 'Sora_500Medium' }}>FAV</ThemedText>
                             </View>
                           )}
                         </Pressable>
@@ -1056,7 +1056,7 @@ export function QuickMatchTab({
               </Pressable>
 
               <View style={{ width: 125, position: 'relative', zIndex: 100 }}>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[
                     {
                       backgroundColor: '#ffffff',
@@ -1170,7 +1170,7 @@ export function QuickMatchTab({
                           {team.isFavourite && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#fef3c7', paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 3 }}>
                               <FavouriteTeamIcon size={9} />
-                              <ThemedText style={{ color: '#d97706', fontSize: 7.5, fontFamily: 'Sora_500Medium' }}>FAV</ThemedText>
+                              <ThemedText style={{ color: '#d97706', fontSize: 9, fontFamily: 'Sora_500Medium' }}>FAV</ThemedText>
                             </View>
                           )}
                         </Pressable>
@@ -1269,7 +1269,7 @@ export function QuickMatchTab({
                 Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
               ]}>
                 <Ionicons name="search-outline" size={14} color={theme.primary} style={{ marginRight: 6 }} />
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[
                     { flex: 1, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 11 },
                     Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
@@ -1353,7 +1353,7 @@ export function QuickMatchTab({
                 Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
               ]}>
                 <Ionicons name="location-outline" size={14} color={theme.textSecondary} style={{ marginRight: 6 }} />
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[
                     { flex: 1, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 11 },
                     Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any }),
@@ -1654,7 +1654,7 @@ export function QuickMatchTab({
                   </Pressable>
                 ) : (
                   <View style={{ width: 75, flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 6, borderWidth: 1.5, borderColor: '#5D68E8', paddingHorizontal: 5, paddingVertical: 2 }}>
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       value={customOversValue}
                       onChangeText={(val) => {
                         const cleaned = val.replace(/[^0-9]/g, '').slice(0, 2);
@@ -1800,7 +1800,7 @@ export function QuickMatchTab({
               {/* Team Name Input */}
               <View style={styles.modalInputGroup}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Team name *</ThemedText>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[
                     styles.input,
                     { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isNameFocused ? theme.primary : theme.outlineVariant + '44' }
@@ -1821,7 +1821,7 @@ export function QuickMatchTab({
               <View style={styles.modalRow}>
                 <View style={[styles.modalInputGroup, { flex: 1 }]}>
                   <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Short name *</ThemedText>
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     style={[
                       styles.input,
                       { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isShortFocused ? theme.primary : theme.outlineVariant + '44' }
@@ -1838,7 +1838,7 @@ export function QuickMatchTab({
                 </View>
                 <View style={[styles.modalInputGroup, { flex: 2 }]}>
                   <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Phone *</ThemedText>
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     style={[
                       styles.input,
                       { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isPhoneFocused ? theme.primary : theme.outlineVariant + '44' }
@@ -2276,6 +2276,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     fontFamily: 'Sora_400Regular',
     fontSize: 11,
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   formDivider: {
     height: 1,

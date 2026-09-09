@@ -26,6 +26,7 @@ import { getAvatarSource } from '@/constants/avatars';
 import { MaterialIcons } from '@expo/vector-icons';
 import { PromoBanner, AutoScrollingHorizontalBanners, BANNER_DESIGNS_10 } from '@/components/promo-banner';
 import { SPORTS_LIST } from '@/constants/sports';
+import { TOURNAMENT_SPORTS, isTournamentSport } from '@/constants/tournament';
 import { useTournamentStore } from '@/store/app-store';
 import { MotionIllustration } from '@/components/motion-illustration';
 
@@ -150,7 +151,10 @@ export default function TournamentsScreen() {
 
   // State Management
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSport, setSelectedSport] = useState('Cricket');
+  // Defaults to every sport: a tournament the organiser just published must be
+// visible immediately, and defaulting to one sport hid newly created ones in
+// the other until the player happened to switch chips.
+  const [selectedSport, setSelectedSport] = useState('All');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [coinTossVisible, setCoinTossVisible] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('All');
@@ -200,7 +204,9 @@ export default function TournamentsScreen() {
   const mappedPublished = (publishedTournaments || []).map((t: any) => ({
     id: t.id,
     name: t.name,
-    sport: t.sport.charAt(0).toUpperCase() + t.sport.slice(1).toLowerCase(), // Normalize e.g. "football" to "Football"
+    // Normalise e.g. "football" to "Football". Guarded: a record with no
+    // sport used to throw here and blank the whole list.
+    sport: t.sport ? t.sport.charAt(0).toUpperCase() + t.sport.slice(1).toLowerCase() : 'Cricket',
     type: t.type,
     location: t.location,
     startDate: t.startDate,
@@ -213,6 +219,7 @@ export default function TournamentsScreen() {
     status: t.status === 'Draft' ? 'Upcoming' : (t.status === 'Completed' ? 'Finished' : t.status),
     isLive: t.status === 'Ongoing',
     isSponsored: false,
+    createdAt: t.createdAt,
     banner: t.banner || require('@/assets/images/sports/tournament_football.png'),
   }));
 
@@ -237,10 +244,13 @@ export default function TournamentsScreen() {
   }).sort((a, b) => {
     if (sortBy === 'Prize') {
       return b.prizePoolAmount - a.prizePoolAmount;
-    } else {
-      // Sort by startDate
-      return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
     }
+    // Newest first. Sorting by startDate put a cup starting next week above one
+    // published minutes ago, so a freshly created tournament landed mid-list.
+    const created = (t: any) =>
+      t.createdAt ? new Date(t.createdAt).getTime() : new Date(t.startDate).getTime();
+    const diff = created(b) - created(a);
+    return diff !== 0 ? diff : String(b.id ?? '').localeCompare(String(a.id ?? ''));
   });
 
   return (
@@ -269,6 +279,18 @@ export default function TournamentsScreen() {
             </View>
           </View>
           <View style={styles.headerRightActions}>
+            {/* Straight to the host screen. Organisers had to leave Cups and
+                find the Host tab to reach their own tournaments and drafts. */}
+            {(role === 'Organizer' || role === 'Super Admin') && (
+              <Pressable
+                style={styles.iconButton}
+                onPress={() => router.push('/(tabs)/club')}
+                accessibilityRole="button"
+                accessibilityLabel="Go to your host screen"
+              >
+                <Ionicons name="megaphone-outline" size={20} color={theme.secondaryContainer} />
+              </Pressable>
+            )}
 
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={20} color={theme.secondaryContainer} />
@@ -291,15 +313,28 @@ export default function TournamentsScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 6, paddingHorizontal: Spacing.containerMargin }}
             >
-              {[{ name: 'Cricket', icon: 'sports-cricket', color: '#ea580c' }, ...SPORTS_LIST.filter(s => s.name !== 'Cricket')].map((sport) => {
+              {/* Supported sports lead the row; the rest stay visible but
+                  disabled so the roadmap is legible. Kept in step with the
+                  create form via TOURNAMENT_SPORTS — a sport you can create a
+                  tournament in must be one you can filter for. */}
+              {[
+                { name: 'All', icon: 'apps', color: '#64748b' },
+                ...TOURNAMENT_SPORTS.map(
+                  name => SPORTS_LIST.find(s => s.name === name) || { name, icon: 'sports', color: '#64748b' }
+                ),
+                ...SPORTS_LIST.filter(s => !isTournamentSport(s.name)),
+              ].map((sport) => {
                 const isSelected = selectedSport === sport.name;
-                const isDisabled = sport.name !== 'Cricket';
+                const isDisabled = sport.name !== 'All' && !isTournamentSport(sport.name);
                 return (
                   <Pressable
                     key={sport.name}
                     onPress={() => {
                       if (isDisabled) {
-                        Alert.alert('Cricket Only Mode', `${sport.name} tournaments will be enabled in a future update.`);
+                        Alert.alert(
+                          'Not yet available',
+                          `${sport.name} tournaments will be enabled in a future update.`
+                        );
                         return;
                       }
                       setSelectedSport(sport.name);
@@ -541,10 +576,18 @@ export default function TournamentsScreen() {
                             {/* Team Progress Bar */}
                             <View style={styles.progressSection}>
                               <View style={styles.progressTextRow}>
-                                <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9.5, fontFamily: 'Sora_400Regular' }}>
+                                <ThemedText
+                                  type="labelSm"
+                                  numberOfLines={1}
+                                  style={{ color: theme.textSecondary, fontSize: 9.5, fontFamily: 'Sora_400Regular', flexShrink: 1, minWidth: 0 }}
+                                >
                                   Registration Progress
                                 </ThemedText>
-                                <ThemedText type="labelSm" style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 10 }}>
+                                <ThemedText
+                                  type="labelSm"
+                                  numberOfLines={1}
+                                  style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 10, flexShrink: 0 }}
+                                >
                                   {t.teamsCount}/{t.maxTeams} Teams
                                 </ThemedText>
                               </View>
@@ -561,7 +604,7 @@ export default function TournamentsScreen() {
                           <View style={styles.ticketRight}>
                             {/* TOP: Prize Pool Highlight Box */}
                             <View style={[styles.ticketPriceHighlight, { backgroundColor: theme.primary + '0a', borderColor: theme.primary + '22' }]}>
-                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 6.5, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>Prize Pool</ThemedText>
+                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>Prize Pool</ThemedText>
                               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 1 }}>
                                 <Image source={require('@/assets/images/illustrations/wallet_blue.png')} style={{ width: 13, height: 13 }} contentFit="contain" />
                                 {/* The stored label is free text ("₹2,500 + Gold
@@ -689,7 +732,7 @@ export default function TournamentsScreen() {
                           {/* Footer / Stub section */}
                           <View style={styles.gridCardFooter}>
                             <View style={[styles.gridPriceHighlight, { backgroundColor: theme.primary + '0a', borderColor: theme.primary + '22' }]}>
-                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 7 }}>Prize</ThemedText>
+                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9 }}>Prize</ThemedText>
                               <ThemedText type="bodySm" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium', fontSize: 11 }}>
                                 {t.prizePool}
                               </ThemedText>
@@ -857,7 +900,10 @@ const styles = StyleSheet.create({
   },
   statusScrollContainer: {
     gap: 6,
-    paddingRight: 8,
+    alignItems: 'center',
+    // Enough trailing room that the final chip scrolls clear of the sort
+    // button rather than stopping half-visible against it.
+    paddingRight: 14,
   },
   statusPill: {
     paddingHorizontal: 9,
@@ -874,6 +920,10 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     alignSelf: 'center',
+    // Never compressed by the chip row next to it, and never overlapped by
+    // chips scrolling underneath.
+    flexShrink: 0,
+    zIndex: 1,
   },
   listSection: {
     marginTop: Spacing.md,
@@ -1001,7 +1051,11 @@ const styles = StyleSheet.create({
   },
   progressTextRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    // A gap so the label and count can never touch, and the label shrinks
+    // while the count stays whole — the count is the informative half.
+    gap: 8,
     marginBottom: 3,
   },
   progressBarBg: {

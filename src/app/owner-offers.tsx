@@ -13,7 +13,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
+import { EditIcon } from '@/components/ui/edit-icon';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -336,7 +337,7 @@ export default function OwnerOffersScreen() {
             accessibilityLabel={`Edit ${offer.code}`}
             style={[styles.actionBtn, { backgroundColor: theme.primary }]}
           >
-            <Ionicons name="create-outline" size={13} color="#ffffff" />
+            <EditIcon size={13} />
             <ThemedText style={[styles.actionText, { color: '#ffffff' }]}>Edit</ThemedText>
           </Pressable>
 
@@ -361,7 +362,7 @@ export default function OwnerOffersScreen() {
   ) => (
     <View style={styles.fieldBlock}>
       <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>{label}</ThemedText>
-      <TextInput
+      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
         value={draft[key] as string}
         onChangeText={v => setDraft(prev => ({ ...prev, [key]: v }))}
         placeholder={opts.placeholder}
@@ -912,11 +913,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 13,
     fontFamily: 'Sora_500Medium',
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   inputMultiline: {
     height: 82,
     paddingTop: 12,
     textAlignVertical: 'top',
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   errorText: {
     color: '#ef4444',

@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -399,7 +399,7 @@ export default function LoginScreen() {
                     <ThemedText style={styles.label}>Mobile Number *</ThemedText>
                     <View style={[styles.inputWrapper, isPhoneFocused && styles.inputFocused]}>
                       <Ionicons name="call-outline" size={18} color={isPhoneFocused ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                      <TextInput
+                      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                         style={styles.input}
                         placeholder="98765 43210"
                         placeholderTextColor="#94a3b8"
@@ -443,7 +443,7 @@ export default function LoginScreen() {
                     <ThemedText style={styles.label}>Enter 6-Digit OTP Code *</ThemedText>
                     <View style={[styles.inputWrapper, isOtpFocused && styles.inputFocused]}>
                       <Ionicons name="key-outline" size={18} color={isOtpFocused ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                      <TextInput
+                      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                         style={[styles.input, { letterSpacing: 6, fontSize: 18, fontFamily: 'Sora_500Medium' }]}
                         placeholder="••••••"
                         placeholderTextColor="#cbd5e1"
@@ -491,7 +491,7 @@ export default function LoginScreen() {
                   <ThemedText style={styles.label}>Email</ThemedText>
                   <View style={[styles.inputWrapper, isEmailFocused && styles.inputFocused]}>
                     <Ionicons name="mail-outline" size={18} color={isEmailFocused ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       style={styles.input}
                       placeholder="Enter your email"
                       placeholderTextColor="#94a3b8"
@@ -509,7 +509,7 @@ export default function LoginScreen() {
                   <ThemedText style={styles.label}>Password</ThemedText>
                   <View style={[styles.inputWrapper, isPasswordFocused && styles.inputFocused]}>
                     <Ionicons name="lock-closed-outline" size={18} color={isPasswordFocused ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       style={styles.input}
                       placeholder="Enter your password"
                       placeholderTextColor="#94a3b8"
@@ -885,6 +885,7 @@ const styles = StyleSheet.create({
     color: TEXT_DARK,
     fontFamily: 'Sora_500Medium',
     height: '100%',
+    includeFontPadding: false,
   },
 
   // Options

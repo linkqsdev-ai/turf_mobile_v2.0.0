@@ -1,4 +1,4 @@
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { FavouriteTeamIcon } from '@/components/favourite-team-icon';
 import { Shadows, Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -272,7 +272,7 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
             <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
               Team name <ThemedText style={{ color: '#ef4444' }}>*</ThemedText>
             </ThemedText>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={[
                 styles.input,
                 { backgroundColor: 'transparent', color: theme.text, borderColor: teamNameError ? '#ef4444' : isNameFocused ? theme.primary : '#00000033' }
@@ -293,7 +293,7 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
             <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
               Short name <ThemedText style={{ color: '#ef4444' }}>*</ThemedText>
             </ThemedText>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={[
                 styles.input,
                 { backgroundColor: 'transparent', color: theme.text, borderColor: shortNameError ? '#ef4444' : isShortFocused ? theme.primary : '#00000033' }
@@ -312,7 +312,7 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
             <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
               Phone <ThemedText style={{ color: '#ef4444' }}>*</ThemedText>
             </ThemedText>
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={[
                 styles.input,
                 { backgroundColor: 'transparent', color: theme.text, borderColor: phoneError ? '#ef4444' : isPhoneFocused ? theme.primary : '#00000033' }
@@ -367,7 +367,7 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
 
         <View style={[styles.inputGroup, { marginTop: 12 }]}>
           <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Home ground</ThemedText>
-          <TextInput
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             style={[
               styles.input,
               { backgroundColor: 'transparent', color: theme.text, borderColor: isGroundFocused ? theme.primary : '#00000033' }
@@ -570,6 +570,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     fontFamily: 'Sora_400Regular',
     fontSize: 11.5,
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   sportList: {
     flexDirection: 'row',

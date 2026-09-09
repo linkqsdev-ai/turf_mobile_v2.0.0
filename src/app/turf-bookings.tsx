@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -233,7 +233,7 @@ export default function TurfBookingsScreen() {
           {/* Search */}
           <View style={[styles.searchBar, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }]}>
             <Ionicons name="search" size={16} color={theme.textSecondary} />
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               value={query}
               onChangeText={setQuery}
               placeholder="Search name, ref or venue"
@@ -343,7 +343,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginTop: Spacing.md,
   },
-  searchInput: { flex: 1, fontSize: 13, fontFamily: 'Sora_500Medium' },
+  searchInput: { flex: 1, fontSize: 13, fontFamily: 'Sora_500Medium',
+    includeFontPadding: false,
+  },
 
   filterRow: { flexDirection: 'row', gap: 8, paddingVertical: Spacing.md },
   filterChip: {

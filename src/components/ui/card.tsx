@@ -4,7 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import { Text } from './text';
 
-const cardVariants = cva('rounded-2xl border', {
+const cardVariants = cva('rounded-xl border', {
   variants: {
     variant: {
       surface: 'bg-card border-border',
@@ -14,7 +14,7 @@ const cardVariants = cva('rounded-2xl border', {
       primary: 'bg-primary-muted border-primary/25',
       glass: 'bg-card/70 border-border/60',
     },
-    padded: { true: 'p-4', false: '' },
+    padded: { true: 'p-3', false: '' },
   },
   defaultVariants: { variant: 'surface', padded: true },
 });
@@ -46,7 +46,7 @@ export const Card = React.forwardRef<View, CardProps>(
 Card.displayName = 'Card';
 
 export function CardHeader({ className, ...props }: ViewProps & { className?: string }) {
-  return <View className={cn('mb-3 gap-1', className)} {...props} />;
+  return <View className={cn('mb-2 gap-0.5', className)} {...props} />;
 }
 
 export function CardTitle({ className, children }: { className?: string; children: React.ReactNode }) {
@@ -72,11 +72,11 @@ export function CardDescription({
 }
 
 export function CardContent({ className, ...props }: ViewProps & { className?: string }) {
-  return <View className={cn('gap-2', className)} {...props} />;
+  return <View className={cn('gap-1.5', className)} {...props} />;
 }
 
 export function CardFooter({ className, ...props }: ViewProps & { className?: string }) {
-  return <View className={cn('mt-4 flex-row items-center gap-3', className)} {...props} />;
+  return <View className={cn('mt-2.5 flex-row items-center gap-2', className)} {...props} />;
 }
 
 export { cardVariants };

@@ -5,11 +5,13 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Booking, RescheduleResult, createBooking, findSlotClashes } from './booking-store';
 import { PublishedTournament, TournamentRegistration, createRegistration, canTransitionTournament } from './tournament-store';
 import { Team, Player, Match, createTeam, createMatch } from './match-store';
 import { PublishedTurf, createTurf } from './turf-store';
+import { ensureClassIdentity, sortByNewestFirst, generateClassId } from './class-list';
 import {
   OwnerOffer,
   OfferRedemptionResult,
@@ -26,6 +28,7 @@ import {
   isClassLocked,
 } from './enrollment-store';
 import { syncPlayersToFoF, loadFoFDatabase, registerFoFPlayer } from '@/services/fof-network';
+import { classApi } from '@/services/class-api';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
 const KEYS = {
@@ -127,6 +130,7 @@ interface AppStoreContextType {
    */
   setClassActive: (id: string, active: boolean) => void;
   isClassActive: (cls: any) => boolean;
+  refreshClasses: () => Promise<void>;
 
   // Class enrolments — the record that locks a class against edit/delete
   enrollments: ClassEnrollment[];
@@ -304,18 +308,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         if (tu) setOwnedTurfs(JSON.parse(tu));
         if (cl) {
           const parsed = JSON.parse(cl);
-          const seen = new Set();
-          const deduped = parsed.filter((item: any) => {
-            const key = `${item.className}-${item.classType}-${item.sportType}`;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          });
-          if (deduped.length !== parsed.length) {
-            AsyncStorage.setItem(KEYS.classes, JSON.stringify(deduped));
+          // Identity is the class id. This previously keyed on
+          // className-classType-sportType and wrote the survivors back, so a
+          // coach running a morning and an evening batch of one course lost
+          // one of them permanently on the next app start.
+          const { classes: repaired, changed } = ensureClassIdentity(parsed);
+          if (changed) {
+            AsyncStorage.setItem(KEYS.classes, JSON.stringify(repaired));
           }
-          setClasses(deduped);
+          setClasses(sortByNewestFirst(repaired));
         }
+        // Fetch any classes published to the backend by other coaches/admins
+        refreshClasses();
       } catch (e) {
         console.error('AppStore: Failed to load data', e);
       } finally {
@@ -323,6 +327,109 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       }
     })();
   }, []);
+
+function notifyCrossTabSync(key: string = KEYS.classes) {
+  if (Platform.OS === 'web') {
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        const channel = new BroadcastChannel('turf_sync_channel');
+        channel.postMessage({ type: 'SYNC_UPDATE', key });
+        channel.close();
+      } catch {}
+    }
+  }
+}
+
+  const refreshClasses = useCallback(async () => {
+    try {
+      const localStoredStr = await AsyncStorage.getItem(KEYS.classes);
+      const localStoredList: any[] = localStoredStr ? JSON.parse(localStoredStr) : [];
+      const { classes: cleanLocal } = ensureClassIdentity(localStoredList);
+
+      let backendList: any[] = [];
+      try {
+        backendList = await classApi.listClasses();
+      } catch (e) {
+        // Backend offline or unreachable, use local storage
+      }
+
+      if (Array.isArray(backendList) && backendList.length > 0) {
+        const mappedBackend = backendList.map((b: any) => ({
+          id: b.id,
+          className: b.title || b.className,
+          coachName: b.coach?.name || b.coachName || 'Coach Specialist',
+          avatar: b.coach?.avatarUrl || b.avatar || 'avatar_12',
+          sportType: b.sport || b.sportType || 'Cricket',
+          classType: b.classType || 'Regular Class',
+          venue: b.location || b.venue || 'Local Turf',
+          feeAmount: b.price || b.feeAmount || 0,
+          sessionTime: b.schedule || b.sessionTime,
+          maxStudents: b.maxStudents,
+          skillLevel: b.skillLevel || 'Intermediate',
+          ageGroup: b.ageGroup || 'All Ages',
+          isActive: b.status === 'Active' || b.isActive !== false,
+          isBackendSeed: true,
+          createdAt: b.createdAt || new Date(0).toISOString(),
+        }));
+
+        const existingIds = new Set(cleanLocal.map((c: any) => c.id));
+        const newFromBackend = mappedBackend.filter((b: any) => !existingIds.has(b.id));
+
+        const merged = cleanLocal.map((c: any) => {
+          const matched = mappedBackend.find((b: any) => b.id === c.id);
+          return matched ? { ...matched, ...c } : c;
+        });
+
+        // Coach-created classes in cleanLocal appear first, followed by backend-seeded classes
+        const localCreated = merged.filter((c: any) => !c.isBackendSeed);
+        const backendClasses = [...merged.filter((c: any) => c.isBackendSeed), ...newFromBackend];
+        const combined = [...sortByNewestFirst(localCreated), ...sortByNewestFirst(backendClasses)];
+
+        await AsyncStorage.setItem(KEYS.classes, JSON.stringify(combined));
+        setClasses(combined);
+      } else if (cleanLocal.length > 0) {
+        setClasses(sortByNewestFirst(cleanLocal));
+      }
+    } catch (err) {
+      console.warn('AppStore: Failed to refresh backend classes', err);
+    }
+  }, []);
+
+  // Listen for storage & BroadcastChannel events so multiple tabs / windows sync in real time
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const handleStorageChange = (e: StorageEvent) => {
+        if (!e.key || e.key === KEYS.classes) {
+          refreshClasses();
+        }
+      };
+
+      if (typeof window !== 'undefined') {
+        window.addEventListener('storage', handleStorageChange);
+      }
+
+      let channel: any = null;
+      if (typeof BroadcastChannel !== 'undefined') {
+        try {
+          channel = new BroadcastChannel('turf_sync_channel');
+          channel.onmessage = (event: any) => {
+            if (event.data?.key === KEYS.classes || event.data?.type === 'SYNC_UPDATE') {
+              refreshClasses();
+            }
+          };
+        } catch {}
+      }
+
+      return () => {
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('storage', handleStorageChange);
+        }
+        if (channel) {
+          channel.close();
+        }
+      };
+    }
+  }, [refreshClasses]);
 
   // ── Booking actions ─────────────────────────────────────────────────────────
   const addBooking = useCallback((params: Omit<Booking, 'id' | 'bookingRef' | 'createdAt' | 'status'>) => {
@@ -658,14 +765,30 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const addClass = useCallback((params: any) => {
     const newClass = {
       ...params,
-      id: `class-${Date.now()}`,
+      // Date.now() alone collides when two classes are saved in the same
+      // millisecond, and the id is the only identity a class has.
+      id: generateClassId(),
       createdAt: new Date().toISOString(),
     };
     setClasses(prev => {
-      const next = [newClass, ...prev];
+      const next = sortByNewestFirst([newClass, ...prev]);
       AsyncStorage.setItem(KEYS.classes, JSON.stringify(next));
+      notifyCrossTabSync(KEYS.classes);
       return next;
     });
+
+    // Asynchronously publish the new class to the backend API so it is accessible by any user/player
+    classApi.createClass({
+      title: newClass.className || newClass.title || 'Coaching Class',
+      sport: newClass.sportType || newClass.sport || 'Cricket',
+      schedule: newClass.sessionTime || newClass.schedule || 'Flexible',
+      maxStudents: Number(newClass.maxStudents || 20),
+      price: Number(newClass.feeAmount || newClass.price || 0),
+      location: newClass.venue || newClass.location || 'Local Turf',
+    }).catch(err => {
+      console.warn('AppStore: Failed to persist new class to backend', err);
+    });
+
     return newClass;
   }, []);
 
@@ -673,6 +796,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setClasses(prev => {
       const next = prev.map(c => c.id === id ? { ...c, ...params, updatedAt: new Date().toISOString() } : c);
       AsyncStorage.setItem(KEYS.classes, JSON.stringify(next));
+      notifyCrossTabSync(KEYS.classes);
       return next;
     });
   }, []);
@@ -687,6 +811,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setClasses(prev => {
       const next = prev.filter(c => c.id !== id);
       AsyncStorage.setItem(KEYS.classes, JSON.stringify(next));
+      notifyCrossTabSync(KEYS.classes);
       return next;
     });
     return true;
@@ -705,6 +830,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         c.id === id ? { ...c, isActive: active, updatedAt: new Date().toISOString() } : c
       );
       AsyncStorage.setItem(KEYS.classes, JSON.stringify(next));
+      notifyCrossTabSync(KEYS.classes);
       return next;
     });
   }, []);
@@ -864,7 +990,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       teams, addTeam, addPlayerToTeam, updateTeam, deleteTeam, toggleTeamFavourite, addPlayerToTeamById, removePlayerFromTeam, MAX_FAVOURITE_TEAMS,
       matches, addMatch, updateMatchScore, completeMatch,
       ownedTurfs, addTurf, updateTurf,
-      classes, addClass, updateClass, deleteClass, setClassActive, isClassActive,
+      classes, addClass, updateClass, deleteClass, setClassActive, isClassActive, refreshClasses,
       enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
       walletBalance, addWalletFunds, deductWalletFunds,
       bids, addBid, removeBid,
@@ -915,11 +1041,11 @@ export function useTurfStore() {
 
 export function useClassStore() {
   const {
-    classes, addClass, updateClass, deleteClass, setClassActive, isClassActive,
+    classes, addClass, updateClass, deleteClass, setClassActive, isClassActive, refreshClasses,
     enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
   } = useAppStore();
   return {
-    classes, addClass, updateClass, deleteClass, setClassActive, isClassActive,
+    classes, addClass, updateClass, deleteClass, setClassActive, isClassActive, refreshClasses,
     enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
   };
 }

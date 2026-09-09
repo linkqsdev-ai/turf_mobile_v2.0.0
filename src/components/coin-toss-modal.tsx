@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { MAX_FONT_SCALE } from '@/components/themed-text';
 import {
   StyleSheet,
   View,
@@ -677,7 +678,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                     </Pressable>
 
                     <View style={{ width: 125, position: 'relative', zIndex: 100 }}>
-                      <TextInput
+                      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                         style={{
                           backgroundColor: '#ffffff',
                           borderWidth: 1.5,
@@ -688,8 +689,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                           fontFamily: 'Sora_500Medium',
                           height: 30,
                           borderRadius: 6,
-                          paddingHorizontal: 6,
-                        }}
+                          paddingHorizontal: 6, includeFontPadding: false, paddingVertical: 0,}}
                         value={teamAName}
                         placeholder="Team A Name *"
                         placeholderTextColor="#94a3b8"
@@ -787,7 +787,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                                 {team.isFavourite && (
                                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#fef3c7', paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 3 }}>
                                     <FavouriteTeamIcon size={9} />
-                                    <ThemedText style={{ color: '#d97706', fontSize: 7.5, fontFamily: 'Sora_500Medium' }}>FAV</ThemedText>
+                                    <ThemedText style={{ color: '#d97706', fontSize: 9, fontFamily: 'Sora_500Medium' }}>FAV</ThemedText>
                                   </View>
                                 )}
                               </Pressable>
@@ -842,7 +842,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                     </Pressable>
 
                     <View style={{ width: 125, position: 'relative', zIndex: 100 }}>
-                      <TextInput
+                      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                         style={{
                           backgroundColor: '#ffffff',
                           borderWidth: 1.5,
@@ -853,8 +853,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                           fontFamily: 'Sora_500Medium',
                           height: 30,
                           borderRadius: 6,
-                          paddingHorizontal: 6,
-                        }}
+                          paddingHorizontal: 6, includeFontPadding: false, paddingVertical: 0,}}
                         value={teamBName}
                         placeholder="Team B Name *"
                         placeholderTextColor="#94a3b8"
@@ -950,7 +949,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                                 {team.isFavourite && (
                                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#fef3c7', paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 3 }}>
                                     <FavouriteTeamIcon size={9} />
-                                    <ThemedText style={{ color: '#d97706', fontSize: 7.5, fontFamily: 'Sora_500Medium' }}>FAV</ThemedText>
+                                    <ThemedText style={{ color: '#d97706', fontSize: 9, fontFamily: 'Sora_500Medium' }}>FAV</ThemedText>
                                   </View>
                                 )}
                               </Pressable>
@@ -1046,8 +1045,8 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 6, borderWidth: 1, borderColor: showTurfDropdown ? theme.primary : theme.outlineVariant + '40', paddingHorizontal: 10, height: 32 }}>
                       <Ionicons name="search-outline" size={14} color={theme.primary} style={{ marginRight: 6 }} />
-                      <TextInput
-                        style={{ flex: 1, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 11 }}
+                      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                        style={{ flex: 1, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 11, includeFontPadding: false,}}
                         placeholder="Search or select turf..."
                         placeholderTextColor="#94a3b8"
                         value={groundName}
@@ -1121,8 +1120,8 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 6, borderWidth: 1, borderColor: theme.outlineVariant + '40', paddingHorizontal: 10, height: 32 }}>
                       <Ionicons name="location-outline" size={14} color={theme.textSecondary} style={{ marginRight: 6 }} />
-                      <TextInput
-                        style={{ flex: 1, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 11 }}
+                      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                        style={{ flex: 1, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 11, includeFontPadding: false,}}
                         placeholder="e.g. Marina Cricket Ground"
                         placeholderTextColor="#94a3b8"
                         value={groundName}
@@ -1452,7 +1451,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                           paddingVertical: 1,
                           gap: 3,
                         }}>
-                          <TextInput
+                          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                             style={{
                               fontFamily: 'Sora_500Medium',
                               fontSize: 10,
@@ -1460,8 +1459,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                               minWidth: 26,
                               paddingVertical: 1,
                               paddingHorizontal: 0,
-                              textAlign: 'center',
-                            }}
+                              textAlign: 'center', includeFontPadding: false,}}
                             placeholder="e.g. 15"
                             placeholderTextColor="#94a3b8"
                             keyboardType="numeric"
@@ -1803,7 +1801,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
               {/* Team Name Input */}
               <View style={styles.modalInputGroup}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Team name *</ThemedText>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[
                     styles.input,
                     { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isNameFocused ? theme.primary : theme.outlineVariant + '44' }
@@ -1824,7 +1822,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
               <View style={styles.modalRow}>
                 <View style={[styles.modalInputGroup, { flex: 1 }]}>
                   <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Short name *</ThemedText>
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     style={[
                       styles.input,
                       { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isShortFocused ? theme.primary : theme.outlineVariant + '44' }
@@ -1841,7 +1839,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                 </View>
                 <View style={[styles.modalInputGroup, { flex: 2 }]}>
                   <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Phone *</ThemedText>
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     style={[
                       styles.input,
                       { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isPhoneFocused ? theme.primary : theme.outlineVariant + '44' }
@@ -2093,6 +2091,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
     width: '100%',
+    includeFontPadding: false,
   },
   modalRow: {
     flexDirection: 'row',

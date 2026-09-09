@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
+import { EditIcon } from '@/components/ui/edit-icon';
 import { MotionView } from '@/components/motion';
 import { BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -44,6 +45,7 @@ export interface RecordCardAction {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   accessibilityLabel: string;
+  destructive?: boolean;
 }
 
 /** One cell in the detail grid. Cells with no value are dropped, not blanked. */
@@ -54,6 +56,10 @@ export interface RecordCardDetail {
   value?: string | null;
   /** Span both columns — for values too long to sit in half the width. */
   full?: boolean;
+  /** Action handler when tapping this detail cell (e.g. Map direction) */
+  onPress?: () => void;
+  /** Custom icon when the cell is interactive */
+  actionIcon?: keyof typeof Ionicons.glyphMap;
 }
 
 export interface RecordCardProps {
@@ -145,24 +151,65 @@ export function RecordCard({
 
         {cells.length > 0 && (
           <View style={[styles.grid, { borderTopColor: theme.outlineVariant + '33' }]}>
-            {cells.map((d, i) => (
-              <View
-                key={`${d.icon}-${i}`}
-                style={[styles.cell, d.full ? styles.cellFull : styles.cellHalf]}
-              >
-                <View style={[styles.cellIcon, { backgroundColor: theme.primary + '14' }]}>
-                  <Ionicons name={d.icon} size={13} color={theme.primary} />
+            {cells.map((d, i) => {
+              const isPressable = typeof d.onPress === 'function';
+              if (isPressable) {
+                return (
+                  <Pressable
+                    key={`${d.icon}-${i}`}
+                    onPress={d.onPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${d.label}: ${d.value}. Tap for directions.`}
+                    style={({ pressed }) => [
+                      styles.cellFull,
+                      styles.venueDirectionCard,
+                      {
+                        backgroundColor: pressed ? theme.primary + '18' : theme.primary + '0A',
+                        borderColor: theme.primary + '35',
+                      },
+                    ]}
+                  >
+                    <View style={styles.venueDirectionHeader}>
+                      <View style={styles.venueBadge}>
+                        <Ionicons name="location-sharp" size={11} color={theme.primary} />
+                        <ThemedText style={[styles.venueBadgeText, { color: theme.primary }]}>
+                          VENUE LOCATION
+                        </ThemedText>
+                      </View>
+                      <View style={[styles.directionPill, { backgroundColor: theme.primary }]}>
+                        <Ionicons name="navigate" size={10} color="#ffffff" style={{ marginRight: 3 }} />
+                        <ThemedText style={styles.directionPillText}>Get Directions</ThemedText>
+                        <Ionicons name="arrow-forward" size={10} color="#ffffff" style={{ marginLeft: 2 }} />
+                      </View>
+                    </View>
+                    <View style={styles.venueDirectionBody}>
+                      <ThemedText style={[styles.venueNameText, { color: theme.text }]} numberOfLines={2}>
+                        {d.value}
+                      </ThemedText>
+                    </View>
+                  </Pressable>
+                );
+              }
+
+              return (
+                <View
+                  key={`${d.icon}-${i}`}
+                  style={[styles.cell, d.full ? styles.cellFull : styles.cellHalf]}
+                >
+                  <View style={[styles.cellIcon, { backgroundColor: theme.primary + '14' }]}>
+                    <Ionicons name={d.icon} size={13} color={theme.primary} />
+                  </View>
+                  <View style={styles.cellText}>
+                    <ThemedText style={[styles.cellLabel, { color: theme.textSecondary }]}>
+                      {d.label}
+                    </ThemedText>
+                    <ThemedText style={[styles.cellValue, { color: theme.text }]} numberOfLines={2}>
+                      {d.value}
+                    </ThemedText>
+                  </View>
                 </View>
-                <View style={styles.cellText}>
-                  <ThemedText style={[styles.cellLabel, { color: theme.textSecondary }]}>
-                    {d.label}
-                  </ThemedText>
-                  <ThemedText style={[styles.cellValue, { color: theme.text }]} numberOfLines={2}>
-                    {d.value}
-                  </ThemedText>
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -190,28 +237,44 @@ export function RecordCard({
                 accessibilityLabel={primary.accessibilityLabel ?? primary.label}
                 style={({ pressed }) => [
                   styles.primaryPill,
-                  { backgroundColor: dimmed ? '#94A3B8' : '#0F172A', opacity: pressed ? 0.85 : 1 },
+                  { backgroundColor: theme.primary, opacity: pressed ? 0.85 : 1 },
                 ]}
               >
-                <Ionicons name={primary.icon} size={16} color="#ffffff" />
+                <Ionicons name={primary.icon} size={15} color="#ffffff" />
                 <ThemedText style={styles.primaryPillText}>{primary.label}</ThemedText>
               </Pressable>
             )}
 
-            {actions.map((a, i) => (
-              <Pressable
-                key={`${a.icon}-${i}`}
-                onPress={a.onPress}
-                accessibilityRole="button"
-                accessibilityLabel={a.accessibilityLabel}
-                style={({ pressed }) => [
-                  styles.circleBtn,
-                  { borderColor: theme.outlineVariant + '66', opacity: pressed ? 0.7 : 1 },
-                ]}
-              >
-                <Ionicons name={a.icon} size={17} color={theme.text} />
-              </Pressable>
-            ))}
+            {actions.map((a, i) => {
+              const isDestructive = a.destructive || a.icon === 'trash-outline' || a.icon === 'trash';
+              const isEdit = a.icon === 'create-outline' || a.icon === 'create' || a.icon === 'pencil' || a.icon === 'pencil-outline';
+              return (
+                <Pressable
+                  key={`${a.icon}-${i}`}
+                  onPress={a.onPress}
+                  accessibilityRole="button"
+                  accessibilityLabel={a.accessibilityLabel}
+                  style={({ pressed }) => [
+                    styles.circleBtn,
+                    {
+                      borderColor: isDestructive ? '#ef444444' : theme.outlineVariant + '66',
+                      backgroundColor: isDestructive ? '#ef444410' : 'transparent',
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  {isEdit ? (
+                    <EditIcon size={16} />
+                  ) : (
+                    <Ionicons
+                      name={a.icon}
+                      size={17}
+                      color={isDestructive ? '#ef4444' : theme.text}
+                    />
+                  )}
+                </Pressable>
+              );
+            })}
           </View>
         )}
       </View>
@@ -219,23 +282,23 @@ export function RecordCard({
   );
 }
 
-const AVATAR = 54;
+const AVATAR = 40;
 
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    marginBottom: 14,
-    borderRadius: 22,
+    marginBottom: 10,
+    borderRadius: 14,
     borderWidth: 1,
-    padding: 16,
+    padding: 12,
     shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
     elevation: 2,
   },
 
-  head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatarRing: {
     width: AVATAR,
     height: AVATAR,
@@ -247,62 +310,106 @@ const styles = StyleSheet.create({
   headText: { flex: 1, minWidth: 0 },
 
   // ── Type scale, matched to the Player Home Dashboard ──────────────────────
-  title: { fontSize: 15, lineHeight: 20, fontFamily: 'Sora_500Medium' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
-  chip: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: BorderRadius.full },
-  chipText: { fontSize: 10.5, fontFamily: 'Sora_500Medium' },
-  description: { fontSize: 12.5, lineHeight: 18, fontFamily: 'Sora_400Regular', marginTop: 12 },
+  title: { fontSize: 13.5, lineHeight: 17, fontFamily: 'Sora_500Medium' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 },
+  chip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: BorderRadius.full },
+  chipText: { fontSize: 9.5, fontFamily: 'Sora_500Medium' },
+  description: { fontSize: 10.5, lineHeight: 15, fontFamily: 'Sora_400Regular', marginTop: 8 },
 
   // ── Detail grid ───────────────────────────────────────────────────────────
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    rowGap: 14,
-    marginTop: 14,
-    paddingTop: 14,
+    rowGap: 8,
+    marginTop: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
   },
-  cell: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingRight: 8 },
+  cell: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingRight: 6 },
   cellHalf: { width: '50%' },
   cellFull: { width: '100%' },
+  venueDirectionCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginTop: 2,
+    gap: 6,
+  },
+  venueDirectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  venueBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  venueBadgeText: {
+    fontSize: 9,
+    fontFamily: 'Sora_600SemiBold',
+    letterSpacing: 0.5,
+  },
+  directionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+  },
+  directionPillText: {
+    fontSize: 9,
+    fontFamily: 'Sora_600SemiBold',
+    color: '#ffffff',
+  },
+  venueDirectionBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  venueNameText: {
+    fontSize: 12.5,
+    lineHeight: 16,
+    fontFamily: 'Sora_600SemiBold',
+  },
   cellIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cellText: { flex: 1, minWidth: 0 },
-  cellLabel: { fontSize: 9.5, lineHeight: 13, fontFamily: 'Sora_400Regular', letterSpacing: 0.3 },
-  cellValue: { fontSize: 12.5, lineHeight: 17, fontFamily: 'Sora_500Medium' },
+  cellLabel: { fontSize: 8.5, lineHeight: 12, fontFamily: 'Sora_400Regular', letterSpacing: 0.2 },
+  cellValue: { fontSize: 11.5, lineHeight: 15, fontFamily: 'Sora_500Medium' },
 
   statRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
-    marginTop: 14,
-    paddingTop: 12,
+    gap: 6,
+    marginTop: 10,
+    paddingTop: 8,
     borderTopWidth: 1,
   },
-  statStrong: { fontSize: 12.5, fontFamily: 'Sora_500Medium', flexShrink: 1 },
-  statMuted: { fontSize: 11.5, fontFamily: 'Sora_400Regular' },
+  statStrong: { fontSize: 11.5, fontFamily: 'Sora_500Medium', flexShrink: 1 },
+  statMuted: { fontSize: 9.5, fontFamily: 'Sora_400Regular' },
 
-  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 14 },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
   primaryPill: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    height: 46,
-    borderRadius: 23,
+    gap: 6,
+    height: 32,
+    borderRadius: 16,
   },
-  primaryPillText: { color: '#ffffff', fontSize: 13.5, fontFamily: 'Sora_500Medium' },
+  primaryPillText: { color: '#ffffff', fontSize: 11.5, fontFamily: 'Sora_500Medium' },
   circleBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',

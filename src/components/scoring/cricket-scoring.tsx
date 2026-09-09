@@ -17,7 +17,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { Colors, Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { getAvatarSource } from '@/constants/avatars';
@@ -381,7 +381,7 @@ function NewPlayerModal({
               <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.text, marginBottom: 5 }}>
                 Player Full Name <ThemedText style={{ color: '#ef4444', fontFamily: 'Sora_500Medium' }}>*</ThemedText>
               </ThemedText>
-              <TextInput
+              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 value={name}
                 onChangeText={(val) => setName(val.replace(/[^a-zA-Z\s]/g, ''))}
                 placeholder="e.g. Arun Prakash"
@@ -396,8 +396,7 @@ function NewPlayerModal({
                   height: 38,
                   fontSize: 13,
                   fontFamily: 'Sora_500Medium',
-                  color: theme.text,
-                }}
+                  color: theme.text, includeFontPadding: false, paddingVertical: 0,}}
               />
             </View>
 
@@ -412,7 +411,7 @@ function NewPlayerModal({
                     🇮🇳 +91
                   </ThemedText>
                 </View>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   value={mobile}
                   onChangeText={(val) => {
                     setMobile(val.replace(/[^0-9]/g, ''));
@@ -434,8 +433,7 @@ function NewPlayerModal({
                     height: 38,
                     fontSize: 13,
                     fontFamily: 'Sora_500Medium',
-                    color: theme.text,
-                  }}
+                    color: theme.text, includeFontPadding: false, paddingVertical: 0,}}
                 />
               </View>
             </View>
@@ -470,7 +468,7 @@ function NewPlayerModal({
                     Enter 4-Digit Code (Demo OTP: 1234)
                   </ThemedText>
                   <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       value={otpCode}
                       onChangeText={(val) => setOtpCode(val.replace(/[^0-9]/g, ''))}
                       placeholder="1234"
@@ -487,8 +485,7 @@ function NewPlayerModal({
                         fontSize: 12,
                         fontFamily: 'Sora_500Medium',
                         textAlign: 'center',
-                        letterSpacing: 4,
-                      }}
+                        letterSpacing: 4, includeFontPadding: false, paddingVertical: 0,}}
                     />
                     <Pressable
                       onPress={handleVerifyOtp}
@@ -801,7 +798,7 @@ function PlayerDropdownSelector({
             }}
           >
             <Ionicons name="search" size={14} color={theme.textSecondary} style={{ marginRight: 6 }} />
-            <TextInput
+            <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search by name or phone..."
@@ -812,8 +809,7 @@ function PlayerDropdownSelector({
                 fontSize: 12.5,
                 fontFamily: 'Sora_500Medium',
                 color: theme.text,
-                padding: 0,
-              }}
+                padding: 0, includeFontPadding: false, paddingVertical: 0,}}
             />
             {searchQuery.length > 0 && (
               <Pressable onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
@@ -5473,7 +5469,7 @@ export default function CricketScoring({
                                 {b.name}
                               </ThemedText>
                               <View style={{ backgroundColor: idx === 0 ? '#10B98118' : '#8B5CF618', paddingVertical: 1.5, paddingHorizontal: 6, borderRadius: BorderRadius.full }}>
-                                <ThemedText style={{ fontSize: 7.5, color: idx === 0 ? '#10B981' : '#8B5CF6', fontFamily: 'Sora_500Medium', letterSpacing: 0.5 }}>
+                                <ThemedText style={{ fontSize: 9, color: idx === 0 ? '#10B981' : '#8B5CF6', fontFamily: 'Sora_500Medium', letterSpacing: 0.5 }}>
                                   {idx === 0 ? 'RECOMMENDED' : 'NEXT UP'}
                                 </ThemedText>
                               </View>
@@ -6717,7 +6713,7 @@ export default function CricketScoring({
 
                 {/* Name & Mobile Inputs Column */}
                 <View style={{ flex: 1, gap: 8 }}>
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     value={newSquadPlayerName}
                     onChangeText={setNewSquadPlayerName}
                     placeholder="Full Player Name *"
@@ -6730,12 +6726,11 @@ export default function CricketScoring({
                       fontSize: 12,
                       color: theme.text,
                       borderWidth: 1,
-                      borderColor: theme.outlineVariant + '44',
-                    }}
+                      borderColor: theme.outlineVariant + '44', includeFontPadding: false, paddingVertical: 0,}}
                   />
 
                   <View style={{ flexDirection: 'row', gap: 6 }}>
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       value={newSquadPlayerMobile}
                       onChangeText={(val) => setNewSquadPlayerMobile(val.replace(/[^0-9]/g, ''))}
                       placeholder="Mobile (10 Digits) *"
@@ -6751,8 +6746,7 @@ export default function CricketScoring({
                         fontSize: 12,
                         color: theme.text,
                         borderWidth: 1,
-                        borderColor: theme.outlineVariant + '44',
-                      }}
+                        borderColor: theme.outlineVariant + '44', includeFontPadding: false, paddingVertical: 0,}}
                     />
 
                     <Pressable
@@ -7106,7 +7100,7 @@ export default function CricketScoring({
                     })}
                   </View>
 
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     style={{
                       height: 38,
                       borderWidth: 1,
@@ -7115,8 +7109,7 @@ export default function CricketScoring({
                       paddingHorizontal: 10,
                       fontSize: 12,
                       color: theme.text,
-                      backgroundColor: theme.surfaceLowest,
-                    }}
+                      backgroundColor: theme.surfaceLowest, includeFontPadding: false, paddingVertical: 0,}}
                     placeholder="Or enter custom fielder name..."
                     placeholderTextColor={theme.textSecondary + '99'}
                     value={wicketFielderName}
@@ -7174,7 +7167,7 @@ export default function CricketScoring({
                     })}
                   </View>
 
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     style={{
                       height: 38,
                       borderWidth: 1,
@@ -7183,8 +7176,7 @@ export default function CricketScoring({
                       paddingHorizontal: 10,
                       fontSize: 12,
                       color: theme.text,
-                      backgroundColor: theme.surfaceLowest,
-                    }}
+                      backgroundColor: theme.surfaceLowest, includeFontPadding: false, paddingVertical: 0,}}
                     placeholder="Or enter wicket-keeper name..."
                     placeholderTextColor={theme.textSecondary + '99'}
                     value={wicketFielderName}
@@ -7243,7 +7235,7 @@ export default function CricketScoring({
                   </View>
 
                   {isWicketCustomRunsMode && (
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       style={{
                         height: 38,
                         borderWidth: 1,
@@ -7253,8 +7245,7 @@ export default function CricketScoring({
                         fontSize: 13,
                         color: theme.text,
                         backgroundColor: theme.surfaceLowest,
-                        marginBottom: 12,
-                      }}
+                        marginBottom: 12, includeFontPadding: false, paddingVertical: 0,}}
                       placeholder="Enter custom runs completed..."
                       placeholderTextColor={theme.textSecondary + '99'}
                       keyboardType="number-pad"
@@ -7351,7 +7342,7 @@ export default function CricketScoring({
                       );
                     })}
                   </View>
-                  <TextInput
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                     style={{
                       height: 38,
                       borderWidth: 1,
@@ -7360,8 +7351,7 @@ export default function CricketScoring({
                       paddingHorizontal: 10,
                       fontSize: 12,
                       color: theme.text,
-                      backgroundColor: theme.surfaceLowest,
-                    }}
+                      backgroundColor: theme.surfaceLowest, includeFontPadding: false, paddingVertical: 0,}}
                     placeholder="Or enter fielder / thrower name..."
                     placeholderTextColor={theme.textSecondary + '99'}
                     value={wicketFielderName}
@@ -7684,7 +7674,7 @@ export default function CricketScoring({
                     ENTER CUSTOM RUNS:
                   </ThemedText>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       style={{
                         flex: 1,
                         height: 42,
@@ -7696,8 +7686,7 @@ export default function CricketScoring({
                         fontFamily: 'Sora_700Bold',
                         color: theme.text,
                         backgroundColor: theme.surfaceLowest,
-                        textAlign: 'center',
-                      }}
+                        textAlign: 'center', includeFontPadding: false, paddingVertical: 0,}}
                       placeholder="e.g. 5, 7, 8"
                       placeholderTextColor={theme.textSecondary + '88'}
                       keyboardType="number-pad"
@@ -8435,7 +8424,7 @@ export default function CricketScoring({
                 backgroundColor: theme.primary + '18',
                 borderColor: theme.primary,
               }]}>
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   value={editTotalOversInput}
                   editable={!isMatchUnderway}
                   onChangeText={(val) => {

@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 14.5,
     fontFamily: 'Sora_500Medium',
     flex: 1,
     textAlign: 'center',
@@ -409,8 +409,8 @@ const styles = StyleSheet.create({
   },
   storeName: {
     color: '#0f172a',
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 13.5,
+    lineHeight: 18,
     fontFamily: 'Sora_500Medium',
   },
   validRow: {

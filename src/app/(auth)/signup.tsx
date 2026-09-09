@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { ThemedText } from '@/components/themed-text';
+import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useLocation } from '@/hooks/use-location';
@@ -329,7 +329,7 @@ export default function SignUpScreen() {
               <ThemedText style={styles.label}>Full Name</ThemedText>
               <View style={[styles.inputWrapper, isFocused('name') && styles.inputFocused]}>
                 <Ionicons name="person-outline" size={17} color={isFocused('name') ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={styles.input}
                   placeholder="Your full name"
                   placeholderTextColor="#94a3b8"
@@ -344,7 +344,7 @@ export default function SignUpScreen() {
               <ThemedText style={styles.label}>Email</ThemedText>
               <View style={[styles.inputWrapper, isFocused('email') && styles.inputFocused]}>
                 <Ionicons name="mail-outline" size={17} color={isFocused('email') ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={styles.input}
                   placeholder="Your email address"
                   placeholderTextColor="#94a3b8"
@@ -366,7 +366,7 @@ export default function SignUpScreen() {
                 otpStage === 'verified' && styles.inputVerified,
               ]}>
                 <Ionicons name="call-outline" size={17} color={isFocused('phone') ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={styles.input}
                   placeholder="10-digit mobile number"
                   placeholderTextColor="#94a3b8"
@@ -398,7 +398,7 @@ export default function SignUpScreen() {
               {otpStage === 'sent' && (
                 <View style={styles.otpBlock}>
                   <View style={styles.otpRow}>
-                    <TextInput
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                       style={styles.otpInput}
                       placeholder="6-digit code"
                       placeholderTextColor="#94a3b8"
@@ -451,7 +451,7 @@ export default function SignUpScreen() {
               <ThemedText style={styles.label}>Password</ThemedText>
               <View style={[styles.inputWrapper, isFocused('password') && styles.inputFocused]}>
                 <Ionicons name="lock-closed-outline" size={17} color={isFocused('password') ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                <TextInput
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={styles.input}
                   placeholder="8–12 characters"
                   placeholderTextColor="#94a3b8"
@@ -764,6 +764,7 @@ const styles = StyleSheet.create({
     color: TEXT_DARK,
     fontFamily: 'Sora_500Medium',
     height: '100%',
+    includeFontPadding: false,
   },
 
   otpTriggerText: {
@@ -796,6 +797,8 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     color: TEXT_DARK,
     fontFamily: 'Sora_500Medium',
+    includeFontPadding: false,
+    paddingVertical: 0,
   },
   otpVerifyBtn: {
     height: 40,

@@ -105,8 +105,8 @@ export const Typography = {
   // Scaled down by 3-4px for compact, ultra-clean mobile view resolution
   displayLg: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 18,
-    lineHeight: 23,
+    fontSize: 17,
+    lineHeight: 21,
     letterSpacing: -0.3,
   },
   displayLgMobile: {
@@ -162,23 +162,23 @@ export const Typography = {
   // Semantic Type Styles
   subheading: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 13,
-    lineHeight: 17,
+    fontSize: 12.5,
+    lineHeight: 16,
   },
   heading: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11.5,
+    lineHeight: 15,
   },
   body: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 10.5,
+    lineHeight: 14,
   },
   smallBody: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 9.5,
+    lineHeight: 13,
   },
   caption: {
     fontFamily: 'Sora_400Regular',
@@ -192,7 +192,7 @@ export const Typography = {
   },
   micro: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 7.5,
+    fontSize: 8,
     lineHeight: 10,
   },
 };
