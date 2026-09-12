@@ -26,7 +26,7 @@ export default function NewMatchScreen() {
               router.canGoBack() ? router.back() : router.replace('/(tabs)/matches')
             }
           >
-            <Ionicons name="arrow-back" size={22} color={theme.text} />
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
           <ThemedText style={[styles.headerTitle, { color: theme.text }]}>Quick Match</ThemedText>
           <View style={styles.backBtn} />

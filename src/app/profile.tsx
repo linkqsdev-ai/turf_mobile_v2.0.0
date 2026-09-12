@@ -19,7 +19,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { EditIcon } from '@/components/ui/edit-icon';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -67,8 +66,6 @@ export default function ProfileScreen() {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 600);
   }, []);
-  // Settings state
-  const [signOutModalVisible, setSignOutModalVisible] = useState(false);
 
   const handleSelectBanner = () => {
     Alert.alert(
@@ -85,35 +82,11 @@ export default function ProfileScreen() {
     );
   };
 
-
-  const logOut = async () => {
-    try {
-      if (Platform.OS === 'web') {
-        try {
-          localStorage.removeItem('@turf_auth_token');
-          localStorage.removeItem('@turf_user_profile');
-        } catch (e) {
-          console.error('localStorage error during sign out:', e);
-        }
-      }
-      await AsyncStorage.removeItem('@turf_user_profile');
-      await setAuthToken(null);
-    } catch (err) {
-      console.error('Sign out client call failed, redirecting anyway:', err);
-    } finally {
-      router.replace('/(auth)/landing');
-    }
-  };
-
-  const handleSignOut = () => {
-    setSignOutModalVisible(true);
-  };
-
   return (
     <GradientContainer screenName="profile" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header Bar */}
-        <View style={[styles.header, { backgroundColor: 'transparent' }]}>
+        <View style={styles.header}>
           <Pressable 
             onPress={() => {
               if (router.canGoBack()) {
@@ -122,11 +95,13 @@ export default function ProfileScreen() {
                 router.replace('/(tabs)');
               }
             }} 
-            style={styles.backButton}
+            style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
-          <ThemedText type="headlineSm" style={styles.headerTitle}>
+          <ThemedText style={[styles.headerTitle, { color: theme.text }]}>
             {role === 'Owner' 
               ? 'Arena Owner Profile' 
               : role === 'Coach' 
@@ -135,40 +110,12 @@ export default function ProfileScreen() {
               ? 'Organizer Profile' 
               : 'Player Profile'}
           </ThemedText>
-          <View style={styles.headerActionsRow}>
-            <Pressable
-              onPress={() => router.push('/wallet')}
-              style={[styles.iconButtonSmall, { backgroundColor: '#f59e0b1f' }]}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel="Wallet & offers"
-            >
-              <Ionicons name="pricetag-outline" size={16} color="#f59e0b" />
-            </Pressable>
-            <Pressable
-              onPress={() => router.push('/settings')}
-              style={[styles.iconButtonSmall, { backgroundColor: theme.surfaceLow }]}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel="Settings"
-            >
-              <Ionicons name="settings-outline" size={16} color={theme.text} />
-            </Pressable>
-            <Pressable
-              onPress={handleSignOut}
-              style={[styles.iconButtonSmall, { backgroundColor: '#ef44441f' }]}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel="Sign out"
-            >
-              <Ionicons name="power-outline" size={16} color="#ef4444" />
-            </Pressable>
-          </View>
+          <View style={{ width: 36 }} />
         </View>
 
-        {/* Fixed Hero Profile Card (Mock-Matched Premium Layout) */}
+        {/* Fixed Hero Profile Card */}
         <View style={styles.heroSection}>
-          <View style={[styles.heroCard, { backgroundColor: '#0f1721', borderWidth: 0 }, Shadows.level2]}>
+          <View style={[styles.heroCard, { backgroundColor: '#0B131E', borderColor: 'rgba(255, 255, 255, 0.08)' }, Shadows.level2]}>
             {/* Banner Image */}
             <Image 
               source={BANNERS[profile.bannerImage || 'football']} 
@@ -179,19 +126,21 @@ export default function ProfileScreen() {
             {/* Edit Banner Option */}
             <Pressable 
               onPress={handleSelectBanner}
-              style={styles.editBannerBtn}
+              style={({ pressed }) => [styles.editBannerBtn, pressed && { opacity: 0.8 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Change banner"
             >
-              <Ionicons name="camera" size={14} color="#ffffff" />
+              <Ionicons name="camera" size={13} color="#ffffff" />
             </Pressable>
             
-            {/* Scrim so the avatar edge and banner meet cleanly instead of cutting hard */}
+            {/* Ambient floodlight gradient scrim */}
             <LinearGradient
-              colors={['rgba(15, 23, 33, 0)', 'rgba(15, 23, 33, 0.55)', '#0f1721']}
+              colors={['rgba(11, 19, 30, 0)', 'rgba(11, 19, 30, 0.7)', '#0B131E']}
               style={styles.bannerScrim}
               pointerEvents="none"
             />
 
-            {/* Profile identity block — avatar overlaps the banner, text sits clear below it */}
+            {/* Profile identity block */}
             <View style={styles.profileHeaderBlock}>
               <View style={styles.avatarWrapper}>
                 <Image
@@ -200,126 +149,109 @@ export default function ProfileScreen() {
                 />
                 <Pressable
                   onPress={() => router.push('/edit-profile')}
-                  style={[styles.avatarUploadBtn, { backgroundColor: theme.secondaryContainer }]}
-                  hitSlop={10}
+                  style={[styles.avatarUploadBtn, { backgroundColor: theme.primary }]}
+                  hitSlop={8}
                   accessibilityRole="button"
                   accessibilityLabel="Change profile photo"
                 >
-                  <Ionicons name="camera" size={11} color={theme.onSecondaryContainer} />
+                  <Ionicons name="camera" size={10} color="#ffffff" />
                 </Pressable>
               </View>
 
               <View style={styles.profileTextDetails}>
-                <ThemedText
-                  type="headlineMd"
-                  numberOfLines={2}
-                  style={styles.profileNameText}
-                >
-                  {profile.name}
-                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <ThemedText
+                    numberOfLines={1}
+                    style={styles.profileNameText}
+                  >
+                    {profile.name}
+                  </ThemedText>
+                  <View style={[styles.verifiedMiniBadge, { backgroundColor: '#10B981' }]}>
+                    <Ionicons name="checkmark" size={9} color="#ffffff" />
+                  </View>
+                </View>
 
                 <View style={styles.profileMetaRow}>
-                  <Ionicons name="location-sharp" size={13} color="#cbd5e1" style={{ marginTop: 1 }} />
-                  <ThemedText type="bodySm" style={styles.profileMetaText} numberOfLines={2}>
+                  <Ionicons name="location-sharp" size={12} color="#94A3B8" />
+                  <ThemedText style={styles.profileMetaText} numberOfLines={1}>
                     {getShortLocation(profile.location)}
                   </ThemedText>
                   <View style={styles.metaDot} />
-                  <ThemedText type="labelSm" style={styles.profileMemberText} numberOfLines={2}>
+                  <ThemedText style={styles.profileMemberText} numberOfLines={1}>
                     Since {profile.memberSince.split(' ')[0]} {profile.memberSince.split(' ')[1]}
                   </ThemedText>
                 </View>
               </View>
             </View>
 
-            {/* Pill Action Button Row */}
-            <View style={styles.pillActionRow}>
-              <Pressable 
-                onPress={() => router.push('/edit-profile')}
-                style={[styles.pillActionBtn, { flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.15)', borderWidth: 1 }]}
-              >
-                <EditIcon size={14} style={{ marginRight: 6 }} />
-                <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '500' }}>Edit Profile</ThemedText>
-              </Pressable>
-
-              <Pressable 
-                onPress={() => {
-                  Alert.alert('Share Stats', 'Your profile stats link has been copied to your clipboard!');
-                }}
-                style={[styles.pillActionBtn, { flex: 1, backgroundColor: theme.secondaryContainer }]}
-              >
-                <Ionicons name="share-social-outline" size={14} color={theme.onSecondaryContainer} style={{ marginRight: 6 }} />
-                <ThemedText type="labelSm" style={{ color: theme.onSecondaryContainer, fontWeight: '500' }}>Share Stats</ThemedText>
-              </Pressable>
-            </View>
-
-            {/* Card Stats Grid (Mock Reference Alignment) */}
+            {/* Card Stats Grid */}
             <View style={[styles.cardStatsRow, { borderTopColor: 'rgba(255, 255, 255, 0.08)', borderBottomColor: 'rgba(255, 255, 255, 0.08)' }]}>
               {role === 'Owner' ? (
                 <>
                   <View style={styles.cardStatItem}>
-                    <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>1.2k</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 3, fontSize: 9, letterSpacing: 0.3 }}>Bookings</ThemedText>
+                    <ThemedText style={styles.heroStatValue}>1.2k</ThemedText>
+                    <ThemedText style={styles.heroStatLabel}>BOOKINGS</ThemedText>
                   </View>
                   <View style={[styles.verticalDivider, { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
                   <View style={styles.cardStatItem}>
-                    <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>8.4k</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 3, fontSize: 9, letterSpacing: 0.3 }}>Visitors</ThemedText>
+                    <ThemedText style={styles.heroStatValue}>8.4k</ThemedText>
+                    <ThemedText style={styles.heroStatLabel}>VISITORS</ThemedText>
                   </View>
                   <View style={[styles.verticalDivider, { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
                   <View style={styles.cardStatItem}>
-                    <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>3</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 3, fontSize: 9, letterSpacing: 0.3 }}>Pitches</ThemedText>
+                    <ThemedText style={styles.heroStatValue}>3</ThemedText>
+                    <ThemedText style={styles.heroStatLabel}>PITCHES</ThemedText>
                   </View>
                 </>
               ) : role === 'Coach' ? (
                 <>
                   <View style={styles.cardStatItem}>
-                    <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>48</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 3, fontSize: 9, letterSpacing: 0.3 }}>Trainees</ThemedText>
+                    <ThemedText style={styles.heroStatValue}>48</ThemedText>
+                    <ThemedText style={styles.heroStatLabel}>TRAINEES</ThemedText>
                   </View>
                   <View style={[styles.verticalDivider, { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
                   <View style={styles.cardStatItem}>
-                    <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>320</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 3, fontSize: 9, letterSpacing: 0.3 }}>Coached Hrs</ThemedText>
+                    <ThemedText style={styles.heroStatValue}>320</ThemedText>
+                    <ThemedText style={styles.heroStatLabel}>COACHED HRS</ThemedText>
                   </View>
                   <View style={[styles.verticalDivider, { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
                   <View style={styles.cardStatItem}>
-                    <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>18</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 3, fontSize: 9, letterSpacing: 0.3 }}>Batches</ThemedText>
+                    <ThemedText style={styles.heroStatValue}>18</ThemedText>
+                    <ThemedText style={styles.heroStatLabel}>BATCHES</ThemedText>
                   </View>
                 </>
               ) : role === 'Organizer' ? (
                 <>
                   <View style={styles.cardStatItem}>
-                    <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>12</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 3, fontSize: 9, letterSpacing: 0.3 }}>Leagues</ThemedText>
+                    <ThemedText style={styles.heroStatValue}>12</ThemedText>
+                    <ThemedText style={styles.heroStatLabel}>LEAGUES</ThemedText>
                   </View>
                   <View style={[styles.verticalDivider, { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
                   <View style={styles.cardStatItem}>
-                    <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>96</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 3, fontSize: 9, letterSpacing: 0.3 }}>Teams</ThemedText>
+                    <ThemedText style={styles.heroStatValue}>96</ThemedText>
+                    <ThemedText style={styles.heroStatLabel}>TEAMS</ThemedText>
                   </View>
                   <View style={[styles.verticalDivider, { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
                   <View style={styles.cardStatItem}>
-                    <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>24</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 3, fontSize: 9, letterSpacing: 0.3 }}>Hosted</ThemedText>
+                    <ThemedText style={styles.heroStatValue}>24</ThemedText>
+                    <ThemedText style={styles.heroStatLabel}>HOSTED</ThemedText>
                   </View>
                 </>
               ) : (
                 <>
                   <View style={styles.cardStatItem}>
-                    <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>142</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 3, fontSize: 9, letterSpacing: 0.3 }}>Matches</ThemedText>
+                    <ThemedText style={styles.heroStatValue}>142</ThemedText>
+                    <ThemedText style={styles.heroStatLabel}>MATCHES</ThemedText>
                   </View>
                   <View style={[styles.verticalDivider, { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
                   <View style={styles.cardStatItem}>
-                    <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>12.4k</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 3, fontSize: 9, letterSpacing: 0.3 }}>Followers</ThemedText>
+                    <ThemedText style={styles.heroStatValue}>12.4k</ThemedText>
+                    <ThemedText style={styles.heroStatLabel}>FOLLOWERS</ThemedText>
                   </View>
                   <View style={[styles.verticalDivider, { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
                   <View style={styles.cardStatItem}>
-                    <ThemedText type="displayLgMobile" style={{ color: '#ffffff' }}>89</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: '#94a3b8', marginTop: 3, fontSize: 9, letterSpacing: 0.3 }}>Wins</ThemedText>
+                    <ThemedText style={styles.heroStatValue}>89</ThemedText>
+                    <ThemedText style={styles.heroStatLabel}>WINS</ThemedText>
                   </View>
                 </>
               )}
@@ -327,10 +259,10 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Fixed Dynamic Tab Navigation Bar — segmented control, Profile leads and is prominent by default */}
+        {/* Dynamic Segmented Pill Tab Bar */}
         <View style={[styles.tabsContainer, { backgroundColor: theme.surfaceLow }]}>
           {TABS.map((tab) => {
-            const isProDisabled = tab !== 'Profile';
+            const isDisabled = tab !== 'Profile';
             const isActive = activeTab === tab;
             const iconMap: Record<string, string> = {
               'Profile': isActive ? 'person' : 'person-outline',
@@ -341,37 +273,34 @@ export default function ProfileScreen() {
             return (
               <Pressable
                 key={tab}
+                disabled={isDisabled}
                 onPress={() => {
-                  if (isProDisabled) {
-                    Alert.alert('🔒 PRO Feature', `${tab} analytics is an exclusive PRO feature. Upgrade to unlock!`);
-                  } else {
+                  if (!isDisabled) {
                     setActiveTab(tab);
                   }
                 }}
                 style={[
                   styles.tabButton,
                   isActive && [styles.tabButtonActive, { backgroundColor: theme.primary }],
+                  isDisabled && { opacity: 0.45 },
                 ]}
               >
                 <Ionicons
                   name={iconMap[tab] as any}
-                  size={isActive ? 14 : 12}
+                  size={isActive ? 13 : 11.5}
                   color={isActive ? '#ffffff' : theme.textSecondary}
                 />
                 <ThemedText
                   style={{
                     color: isActive ? '#ffffff' : theme.textSecondary,
-                    fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_600SemiBold',
-                    fontSize: isActive ? 10.5 : 9,
-                    marginLeft: 3,
+                    fontFamily: isActive ? 'Sora_500Medium' : 'Sora_400Regular',
+                    fontSize: isActive ? 10.5 : 9.5,
+                    marginLeft: 4,
                     letterSpacing: 0.2,
                   }}
                 >
                   {tab}
                 </ThemedText>
-                {isProDisabled && (
-                  <Ionicons name="lock-closed" size={8} color={theme.textSecondary} style={{ marginLeft: 3, opacity: 0.7 }} />
-                )}
               </Pressable>
             );
           })}
@@ -406,10 +335,9 @@ export default function ProfileScreen() {
 
             {/* Stats Bento Grid */}
             <View style={[styles.section, { marginTop: 0 }]}>
-              {/* Tab Header with Icon */}
-              <View style={styles.tabHeaderRow}>
-                <Ionicons name="stats-chart-outline" size={18} color={theme.secondary} />
-                <ThemedText type="labelMd" style={[styles.tabHeaderTitle, { color: theme.text }]}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={[styles.verticalIndicator, { backgroundColor: '#5D68E8' }]} />
+                <ThemedText style={[styles.sectionTitleText, { color: theme.textSecondary }]}>
                   {role === 'Owner' 
                     ? 'BUSINESS OVERVIEW' 
                     : role === 'Coach' 
@@ -646,10 +574,9 @@ export default function ProfileScreen() {
             }
           >
             <View style={[styles.section, { paddingBottom: 40 }]}>
-              {/* Tab Header with Icon */}
-              <View style={styles.tabHeaderRow}>
-                <Ionicons name="time-outline" size={18} color={theme.secondary} />
-                <ThemedText type="labelMd" style={[styles.tabHeaderTitle, { color: theme.text }]}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={[styles.verticalIndicator, { backgroundColor: '#F59E0B' }]} />
+                <ThemedText style={[styles.sectionTitleText, { color: theme.textSecondary }]}>
                   RECENT ACTIVITY
                 </ThemedText>
               </View>
@@ -883,10 +810,9 @@ export default function ProfileScreen() {
             <View style={[styles.section, { paddingBottom: 40 }]}>
               {/* Ranking Header Row with Illustration */}
               <View style={styles.rankingHeaderRow}>
-                {/* Tab Header with Icon */}
-                <View style={styles.tabHeaderRow}>
-                  <Ionicons name="trophy-outline" size={18} color={theme.secondary} />
-                  <ThemedText type="labelMd" style={[styles.tabHeaderTitle, { color: theme.text }]}>
+                <View style={styles.sectionHeaderRow}>
+                  <View style={[styles.verticalIndicator, { backgroundColor: '#EAB308' }]} />
+                  <ThemedText style={[styles.sectionTitleText, { color: theme.textSecondary }]}>
                     {role === 'Owner' 
                       ? 'TOP ARENA BOOKINGS RATING' 
                       : role === 'Coach' 
@@ -1151,132 +1077,50 @@ export default function ProfileScreen() {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
             }
           >
-            {/* ── Redesigned Wallet Card Section ── */}
+            {/* ── Redesigned Bookings Section ── */}
             <View style={styles.section}>
-              <View style={styles.tabHeaderRow}>
-                <Ionicons name="wallet-outline" size={18} color={theme.secondary} />
-                <ThemedText type="labelMd" style={[styles.tabHeaderTitle, { color: theme.text }]}>
-                  MY SPORTS WALLET
+              <View style={styles.sectionHeaderRow}>
+                <View style={[styles.verticalIndicator, { backgroundColor: '#5D68E8' }]} />
+                <ThemedText style={[styles.sectionTitleText, { color: theme.textSecondary }]}>
+                  MY BOOKINGS
                 </ThemedText>
-              </View>
-
-              <View
-                style={{
-                  backgroundColor: theme.surfaceLowest,
-                  borderRadius: BorderRadius.premium,
-                  padding: 16,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderWidth: 1,
-                  borderColor: theme.outlineVariant + '33',
-                  ...Shadows.level2,
-                }}
-              >
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <ThemedText style={{ color: theme.textSecondary, fontSize: 9, fontFamily: 'Sora_500Medium', letterSpacing: 0.6 }}>
-                    WALLET BALANCE
-                  </ThemedText>
-                  <ThemedText style={{ color: theme.text, fontSize: 20, fontFamily: 'Sora_500Medium', marginTop: 2 }}>
-                    ₹{walletBalance.toFixed(2)}
-                  </ThemedText>
-
-                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                    <Pressable 
-                      onPress={() => router.push('/wallet')}
-                      style={{
-                        backgroundColor: theme.primary,
-                        borderRadius: 8,
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                      }}
-                    >
-                      <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_500Medium' }}>
-                        View Wallet & Offers →
-                      </ThemedText>
-                    </Pressable>
-                  </View>
-                </View>
-
-                {/* New Blue Wallet Illustration */}
-                <Image 
-                  source={require('@/assets/images/illustrations/wallet_blue.png')}
-                  style={{ width: 75, height: 75 }}
-                  contentFit="contain"
-                />
               </View>
 
               {/* My Booking History Card */}
               <Pressable
                 onPress={() => router.push('/booking-history')}
-                style={{
-                  backgroundColor: theme.surfaceLowest,
-                  borderRadius: BorderRadius.lg,
-                  padding: 12,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderWidth: 1,
-                  borderColor: theme.outlineVariant + '33',
-                  marginTop: 10,
-                  ...Shadows.level1,
-                }}
+                style={({ pressed }) => [
+                  styles.bookingCard,
+                  {
+                    backgroundColor: theme.surfaceLowest,
+                    borderColor: theme.outlineVariant + '33',
+                  },
+                  Shadows.level2,
+                  pressed && { opacity: 0.85 },
+                ]}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: theme.primary + '18', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                  <View style={[styles.iconBadge, { backgroundColor: theme.primary + '18' }]}>
                     <Ionicons name="calendar" size={17} color={theme.primary} />
                   </View>
-                  <View>
-                    <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 12.5, color: theme.text }}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={[styles.cardItemTitle, { color: theme.text }]}>
                       My Booking History
                     </ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary, marginTop: 1, fontFamily: 'Sora_500Medium' }}>
+                    <ThemedText style={[styles.cardItemSubtitle, { color: theme.textSecondary }]}>
                       View all active, completed & cancelled turf slots
                     </ThemedText>
                   </View>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
-              </Pressable>
-
-              {/* Offers & Vouchers Action Card */}
-              <Pressable
-                onPress={() => router.push('/wallet')}
-                style={{
-                  backgroundColor: theme.surfaceLowest,
-                  borderRadius: BorderRadius.lg,
-                  padding: 12,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderWidth: 1,
-                  borderColor: theme.outlineVariant + '33',
-                  marginTop: 10,
-                  ...Shadows.level1,
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: '#f59e0b18', alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="pricetag" size={17} color="#f59e0b" />
-                  </View>
-                  <View>
-                    <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 12.5, color: theme.text }}>
-                      Offers, Vouchers & Rewards
-                    </ThemedText>
-                    <ThemedText style={{ fontSize: 10, color: theme.textSecondary, marginTop: 1, fontFamily: 'Sora_500Medium' }}>
-                      4 Active Vouchers Available • Up to 50% Cashback
-                    </ThemedText>
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={theme.textSecondary} />
+                <Ionicons name="chevron-forward" size={16} color={theme.outline} />
               </Pressable>
             </View>
 
             {/* Bio Details Card */}
             <View style={styles.section}>
-              {/* Tab Header with Icon */}
-              <View style={styles.tabHeaderRow}>
-                <Ionicons name="person-outline" size={18} color={theme.secondary} />
-                <ThemedText type="labelMd" style={[styles.tabHeaderTitle, { color: theme.text }]}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={[styles.verticalIndicator, { backgroundColor: '#10B981' }]} />
+                <ThemedText style={[styles.sectionTitleText, { color: theme.textSecondary }]}>
                   {role === 'Owner' 
                     ? 'FACILITY DETAILS & ANNOUNCEMENTS' 
                     : role === 'Coach' 
@@ -1288,9 +1132,15 @@ export default function ProfileScreen() {
               </View>
 
               <View style={[styles.bioDetailsCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
+                <LinearGradient
+                  colors={['#10B9810A', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
                 <View style={styles.bioHeaderRow}>
                   <View style={{ flex: 1 }}>
-                    <ThemedText type="headlineSm">
+                    <ThemedText style={[styles.cardHeaderTitle, { color: theme.text }]}>
                       {role === 'Owner' 
                         ? 'Business Details' 
                         : role === 'Coach' 
@@ -1318,83 +1168,83 @@ export default function ProfileScreen() {
                 {role === 'Owner' ? (
                   <View style={styles.bioGrid}>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>FACILITY PITCHES</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>3 Astro, 1 Woodcourt</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>FACILITY PITCHES</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>3 Astro, 1 Woodcourt</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>CATEGORY</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>Turf Provider</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>CATEGORY</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>Turf Provider</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>PEAK HOURS</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>17:00-22:00 Daily</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>PEAK HOURS</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>17:00-22:00 Daily</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>OPERATING SINCE</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>March 2023</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>OPERATING SINCE</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>March 2023</ThemedText>
                     </View>
                   </View>
                 ) : role === 'Coach' ? (
                   <View style={styles.bioGrid}>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>FOCUS AGE GROUP</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>U12, U16, Adults</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>FOCUS AGE GROUP</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>U12, U16, Adults</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>CERTIFICATIONS</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>UEFA A, FA L3</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>CERTIFICATIONS</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>UEFA A, FA L3</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>TRAINING RATE</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>₹800/hr (Indiv)</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>TRAINING RATE</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>₹800/hr (Indiv)</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>COACHING EXP</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>8+ Years</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>COACHING EXP</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>8+ Years</ThemedText>
                     </View>
                   </View>
                 ) : role === 'Organizer' ? (
                   <View style={styles.bioGrid}>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>TOURNAMENT TYPES</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>Knockout, Leagues</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>TOURNAMENT TYPES</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>Knockout, Leagues</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>HOSTING SCOPE</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>Local, Corporate</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>HOSTING SCOPE</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>Local, Corporate</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>ENTRY FEE RULES</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>Paid / Sponsored</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>ENTRY FEE RULES</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>Paid / Sponsored</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>EQUIPMENT</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>Refs, Balls, Kits</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>EQUIPMENT</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>Refs, Balls, Kits</ThemedText>
                     </View>
                   </View>
                 ) : (
                   <View style={styles.bioGrid}>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>PREFERRED FOOT</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>{profile.preferredFoot}</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>PREFERRED FOOT</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>{profile.preferredFoot}</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>PLAYING POSITION</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>{profile.position}</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>PLAYING POSITION</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>{profile.position}</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>PREFERRED STYLE</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>{profile.playingStyle}</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>PREFERRED STYLE</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>{profile.playingStyle}</ThemedText>
                     </View>
                     <View style={styles.bioGridItem}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 9 }}>MEMBER SINCE</ThemedText>
-                      <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', marginTop: 4, fontSize: 12 }}>{profile.memberSince}</ThemedText>
+                      <ThemedText style={[styles.bioLabel, { color: theme.textSecondary }]}>MEMBER SINCE</ThemedText>
+                      <ThemedText style={[styles.bioVal, { color: theme.text }]}>{profile.memberSince}</ThemedText>
                     </View>
                   </View>
                 )}
                 
-                <View style={{ borderTopWidth: 1, borderTopColor: theme.outlineVariant + '33', paddingTop: Spacing.md, marginTop: Spacing.md }}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: Spacing.sm, fontFamily: 'Sora_500Medium', letterSpacing: 0.5, fontSize: 9 }}>
+                <View style={{ borderTopWidth: 1, borderTopColor: theme.outlineVariant + '25', paddingTop: Spacing.md, marginTop: Spacing.md }}>
+                  <ThemedText style={[styles.bioLabel, { color: theme.textSecondary, marginBottom: 4 }]}>
                     {role === 'Owner' 
                       ? 'FACILITY DESCRIPTION' 
                       : role === 'Coach' 
@@ -1403,7 +1253,7 @@ export default function ProfileScreen() {
                       ? 'LEAGUE STATEMENT' 
                       : 'BIO DESCRIPTION'}
                   </ThemedText>
-                  <ThemedText type="bodyMd" style={{ color: theme.textSecondary, lineHeight: 18, fontSize: 12 }}>
+                  <ThemedText style={[styles.bioDescText, { color: theme.textSecondary }]}>
                     {role === 'Owner' 
                       ? 'Providing premium, state-of-the-art sports facilities with high-grade infill turf and high-intensity LED floodlights for night play. Our courts are sanitized daily.' 
                       : role === 'Coach' 
@@ -1420,31 +1270,31 @@ export default function ProfileScreen() {
               <>
                 <View style={styles.section}>
                   <View style={styles.rowBetween}>
-                    <ThemedText type="headlineSm">Active Pitch Reservations</ThemedText>
+                    <ThemedText style={[styles.cardHeaderTitle, { color: theme.text }]}>Active Pitch Reservations</ThemedText>
                     <Pressable>
-                      <ThemedText type="labelMd" style={{ color: theme.secondary }}>VIEW ALL</ThemedText>
+                      <ThemedText style={[styles.viewAllText, { color: theme.primary }]}>VIEW ALL</ThemedText>
                     </Pressable>
                   </View>
 
                   <View style={styles.teamList}>
                     <View style={[styles.teamItemCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
-                      <View style={[styles.feedIconBadge, { backgroundColor: theme.primaryContainer + '11', borderRadius: 6, marginRight: Spacing.md, width: 34, height: 34, justifyContent: 'center', alignItems: 'center' }]}>
-                        <Ionicons name="football" size={18} color={theme.primary} />
+                      <View style={[styles.feedIconBadge, { backgroundColor: theme.primary + '18' }]}>
+                        <Ionicons name="football" size={17} color={theme.primary} />
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Footy Club Match Booking</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Pitch A • 17:00 - 18:00</ThemedText>
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <ThemedText style={[styles.cardItemTitle, { color: theme.text }]}>Footy Club Match Booking</ThemedText>
+                        <ThemedText style={[styles.cardItemSubtitle, { color: theme.textSecondary }]}>Pitch A • 17:00 - 18:00</ThemedText>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.outline} />
                     </View>
 
                     <View style={[styles.teamItemCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
-                      <View style={[styles.feedIconBadge, { backgroundColor: theme.secondaryContainer + '11', borderRadius: 6, marginRight: Spacing.md, width: 34, height: 34, justifyContent: 'center', alignItems: 'center' }]}>
-                        <MaterialCommunityIcons name="cricket" size={18} color={theme.secondary} />
+                      <View style={[styles.feedIconBadge, { backgroundColor: theme.secondary + '18' }]}>
+                        <MaterialCommunityIcons name="cricket" size={17} color={theme.secondary} />
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Corporate Cricket Match</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Pitch B • 18:30 - 20:00</ThemedText>
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <ThemedText style={[styles.cardItemTitle, { color: theme.text }]}>Corporate Cricket Match</ThemedText>
+                        <ThemedText style={[styles.cardItemSubtitle, { color: theme.textSecondary }]}>Pitch B • 18:30 - 20:00</ThemedText>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.outline} />
                     </View>
@@ -1452,17 +1302,19 @@ export default function ProfileScreen() {
                 </View>
 
                 <View style={[styles.section, { paddingBottom: 60 }]}>
-                  <View style={[styles.upcomingCard, { backgroundColor: theme.primaryContainer }]}>
-                    <ThemedText type="labelSm" style={{ color: '#ffffff' }}>TODAY&apos;S ESTIMATED REVENUE</ThemedText>
-                    <ThemedText type="headlineLg" style={{ color: '#ffffff', marginTop: Spacing.half, fontFamily: 'Sora_500Medium' }}>
+                  <View style={[styles.upcomingCard, { backgroundColor: theme.primaryContainer }, Shadows.level2]}>
+                    <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_700Bold', letterSpacing: 0.7 }}>
+                      TODAY&apos;S ESTIMATED REVENUE
+                    </ThemedText>
+                    <ThemedText style={{ color: '#ffffff', marginTop: 4, fontFamily: 'Sora_700Bold', fontSize: 19 }}>
                       ₹20,900
                     </ThemedText>
-                    <ThemedText type="bodySm" style={{ color: '#ffffff', opacity: 0.8, marginTop: 4 }}>
+                    <ThemedText style={{ color: '#ffffff', opacity: 0.85, marginTop: 4, fontSize: 11.5, fontFamily: 'Sora_400Regular' }}>
                       12/12 Slots Fully Reserved Today
                     </ThemedText>
                     
                     <Pressable style={[styles.briefBtn, { backgroundColor: '#ffffff', marginTop: Spacing.md }]}>
-                      <ThemedText type="labelMd" style={{ color: theme.primary, fontWeight: '500' }}>
+                      <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
                         VIEW DAILY INVOICES
                       </ThemedText>
                     </Pressable>
@@ -1473,31 +1325,31 @@ export default function ProfileScreen() {
               <>
                 <View style={styles.section}>
                   <View style={styles.rowBetween}>
-                    <ThemedText type="headlineSm">Active Trainee Batches</ThemedText>
+                    <ThemedText style={[styles.cardHeaderTitle, { color: theme.text }]}>Active Trainee Batches</ThemedText>
                     <Pressable>
-                      <ThemedText type="labelMd" style={{ color: theme.secondary }}>VIEW ALL</ThemedText>
+                      <ThemedText style={[styles.viewAllText, { color: theme.primary }]}>VIEW ALL</ThemedText>
                     </Pressable>
                   </View>
 
                   <View style={styles.teamList}>
                     <View style={[styles.teamItemCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
-                      <View style={[styles.feedIconBadge, { backgroundColor: theme.primaryContainer + '11', borderRadius: 6, marginRight: Spacing.md, width: 34, height: 34, justifyContent: 'center', alignItems: 'center' }]}>
-                        <Ionicons name="people-outline" size={18} color={theme.primary} />
+                      <View style={[styles.feedIconBadge, { backgroundColor: theme.primary + '18' }]}>
+                        <Ionicons name="people-outline" size={17} color={theme.primary} />
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Under-16 Advanced Class</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Pitch A • 15:30 - 17:00</ThemedText>
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <ThemedText style={[styles.cardItemTitle, { color: theme.text }]}>Under-16 Advanced Class</ThemedText>
+                        <ThemedText style={[styles.cardItemSubtitle, { color: theme.textSecondary }]}>Pitch A • 15:30 - 17:00</ThemedText>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.outline} />
                     </View>
 
                     <View style={[styles.teamItemCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
-                      <View style={[styles.feedIconBadge, { backgroundColor: theme.secondaryContainer + '11', borderRadius: 6, marginRight: Spacing.md, width: 34, height: 34, justifyContent: 'center', alignItems: 'center' }]}>
-                        <Ionicons name="person-outline" size={18} color={theme.secondary} />
+                      <View style={[styles.feedIconBadge, { backgroundColor: theme.secondary + '18' }]}>
+                        <Ionicons name="person-outline" size={17} color={theme.secondary} />
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Individual Mentoring Class</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Gym Area • 18:00 - 19:30</ThemedText>
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <ThemedText style={[styles.cardItemTitle, { color: theme.text }]}>Individual Mentoring Class</ThemedText>
+                        <ThemedText style={[styles.cardItemSubtitle, { color: theme.textSecondary }]}>Gym Area • 18:00 - 19:30</ThemedText>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.outline} />
                     </View>
@@ -1505,17 +1357,19 @@ export default function ProfileScreen() {
                 </View>
 
                 <View style={[styles.section, { paddingBottom: 60 }]}>
-                  <View style={[styles.upcomingCard, { backgroundColor: theme.primaryContainer }]}>
-                    <ThemedText type="labelSm" style={{ color: '#ffffff' }}>UPCOMING ACADEMY WORKSHOP</ThemedText>
-                    <ThemedText type="labelMd" style={{ color: '#ffffff', marginTop: Spacing.half, fontFamily: 'Sora_500Medium' }}>
+                  <View style={[styles.upcomingCard, { backgroundColor: theme.primaryContainer }, Shadows.level2]}>
+                    <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_700Bold', letterSpacing: 0.7 }}>
+                      UPCOMING ACADEMY WORKSHOP
+                    </ThemedText>
+                    <ThemedText style={{ color: '#ffffff', marginTop: 4, fontFamily: 'Sora_700Bold', fontSize: 14.5 }}>
                       SUNDAY, 10:00 GMT
                     </ThemedText>
-                    <ThemedText type="bodySm" style={{ color: '#ffffff', opacity: 0.8, marginTop: 4 }}>
+                    <ThemedText style={{ color: '#ffffff', opacity: 0.85, marginTop: 4, fontSize: 11.5, fontFamily: 'Sora_400Regular' }}>
                       Trainee Orientation & Tactical Breakdown
                     </ThemedText>
                     
                     <Pressable style={[styles.briefBtn, { backgroundColor: '#ffffff', marginTop: Spacing.md }]}>
-                      <ThemedText type="labelMd" style={{ color: theme.primary, fontWeight: '500' }}>
+                      <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
                         SHARE SIGNUP LINK
                       </ThemedText>
                     </Pressable>
@@ -1526,31 +1380,31 @@ export default function ProfileScreen() {
               <>
                 <View style={styles.section}>
                   <View style={styles.rowBetween}>
-                    <ThemedText type="headlineSm">Active Tournament Brackets</ThemedText>
+                    <ThemedText style={[styles.cardHeaderTitle, { color: theme.text }]}>Active Tournament Brackets</ThemedText>
                     <Pressable>
-                      <ThemedText type="labelMd" style={{ color: theme.secondary }}>VIEW ALL</ThemedText>
+                      <ThemedText style={[styles.viewAllText, { color: theme.primary }]}>VIEW ALL</ThemedText>
                     </Pressable>
                   </View>
 
                   <View style={styles.teamList}>
                     <View style={[styles.teamItemCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
-                      <View style={[styles.feedIconBadge, { backgroundColor: theme.primaryContainer + '11', borderRadius: 6, marginRight: Spacing.md, width: 34, height: 34, justifyContent: 'center', alignItems: 'center' }]}>
-                        <Ionicons name="trophy-outline" size={18} color={theme.primary} />
+                      <View style={[styles.feedIconBadge, { backgroundColor: theme.primary + '18' }]}>
+                        <Ionicons name="trophy-outline" size={17} color={theme.primary} />
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Regents T10 Super League</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Falcons FC vs Wolves (Bracket)</ThemedText>
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <ThemedText style={[styles.cardItemTitle, { color: theme.text }]}>Regents T10 Super League</ThemedText>
+                        <ThemedText style={[styles.cardItemSubtitle, { color: theme.textSecondary }]}>Falcons FC vs Wolves (Bracket)</ThemedText>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.outline} />
                     </View>
 
                     <View style={[styles.teamItemCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
-                      <View style={[styles.feedIconBadge, { backgroundColor: theme.secondaryContainer + '11', borderRadius: 6, marginRight: Spacing.md, width: 34, height: 34, justifyContent: 'center', alignItems: 'center' }]}>
-                        <Ionicons name="flag-outline" size={18} color={theme.secondary} />
+                      <View style={[styles.feedIconBadge, { backgroundColor: theme.secondary + '18' }]}>
+                        <Ionicons name="flag-outline" size={17} color={theme.secondary} />
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>London Futsal Fete Cup</ThemedText>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Tigers XI vs Mavericks (Futsal)</ThemedText>
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <ThemedText style={[styles.cardItemTitle, { color: theme.text }]}>London Futsal Fete Cup</ThemedText>
+                        <ThemedText style={[styles.cardItemSubtitle, { color: theme.textSecondary }]}>Tigers XI vs Mavericks (Futsal)</ThemedText>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.outline} />
                     </View>
@@ -1558,17 +1412,19 @@ export default function ProfileScreen() {
                 </View>
 
                 <View style={[styles.section, { paddingBottom: 60 }]}>
-                  <View style={[styles.upcomingCard, { backgroundColor: theme.primaryContainer }]}>
-                    <ThemedText type="labelSm" style={{ color: '#ffffff' }}>UPCOMING LEAGUE FINALS</ThemedText>
-                    <ThemedText type="labelMd" style={{ color: '#ffffff', marginTop: Spacing.half, fontFamily: 'Sora_500Medium' }}>
+                  <View style={[styles.upcomingCard, { backgroundColor: theme.primaryContainer }, Shadows.level2]}>
+                    <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_700Bold', letterSpacing: 0.7 }}>
+                      UPCOMING LEAGUE FINALS
+                    </ThemedText>
+                    <ThemedText style={{ color: '#ffffff', marginTop: 4, fontFamily: 'Sora_700Bold', fontSize: 14.5 }}>
                       SATURDAY, 15:00 GMT
                     </ThemedText>
-                    <ThemedText type="bodySm" style={{ color: '#ffffff', opacity: 0.8, marginTop: 4 }}>
+                    <ThemedText style={{ color: '#ffffff', opacity: 0.85, marginTop: 4, fontSize: 11.5, fontFamily: 'Sora_400Regular' }}>
                       Regents T10 Super League Championship Cup
                     </ThemedText>
                     
                     <Pressable style={[styles.briefBtn, { backgroundColor: '#ffffff', marginTop: Spacing.md }]}>
-                      <ThemedText type="labelMd" style={{ color: theme.primary, fontWeight: '500' }}>
+                      <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
                         VIEW BRACKET & RULES
                       </ThemedText>
                     </Pressable>
@@ -1577,12 +1433,17 @@ export default function ProfileScreen() {
               </>
             ) : (
               <>
-                {/* Favourite Team List — tap a team to view its squad */}
+                {/* Favourite Team List */}
                 <View style={styles.section}>
                   <View style={styles.rowBetween}>
-                    <ThemedText type="headlineSm">Favourite Team List</ThemedText>
+                    <View style={styles.sectionHeaderRow}>
+                      <View style={[styles.verticalIndicator, { backgroundColor: '#F59E0B' }]} />
+                      <ThemedText style={[styles.sectionTitleText, { color: theme.textSecondary }]}>
+                        FAVOURITE TEAM LIST
+                      </ThemedText>
+                    </View>
                     <Pressable onPress={() => router.push('/team-management')}>
-                      <ThemedText type="labelMd" style={{ color: theme.secondary }}>MANAGE</ThemedText>
+                      <ThemedText style={[styles.viewAllText, { color: theme.primary }]}>MANAGE</ThemedText>
                     </Pressable>
                   </View>
 
@@ -1591,13 +1452,20 @@ export default function ProfileScreen() {
                       {favouriteTeams.map((team) => (
                         <Pressable
                           key={team.id}
-                          style={[styles.teamItemCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}
+                          style={({ pressed }) => [
+                            styles.teamItemCard,
+                            { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
+                            Shadows.level2,
+                            pressed && { opacity: 0.85 },
+                          ]}
                           onPress={() => setSquadTeam(team)}
                         >
                           <Image source={getMascotImage(team.mascot)} style={styles.teamItemLogo} contentFit="cover" />
-                          <View style={{ flex: 1, marginLeft: Spacing.md }}>
-                            <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }} numberOfLines={1}>{team.name}</ThemedText>
-                            <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>
+                          <View style={{ flex: 1, marginLeft: 12 }}>
+                            <ThemedText style={[styles.cardItemTitle, { color: theme.text }]} numberOfLines={1}>
+                              {team.name}
+                            </ThemedText>
+                            <ThemedText style={[styles.cardItemSubtitle, { color: theme.textSecondary }]}>
                               {team.sport} • {team.players.length} squad members
                             </ThemedText>
                           </View>
@@ -1608,20 +1476,25 @@ export default function ProfileScreen() {
                     </View>
                   ) : (
                     <Pressable
-                      style={[styles.favTeamEmptyCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
+                      style={[styles.favTeamEmptyCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}
                       onPress={() => router.push('/team-management')}
                     >
-                      <Ionicons name="bookmark-outline" size={22} color={theme.textSecondary} />
-                      <ThemedText type="bodyMd" style={{ color: theme.textSecondary, marginTop: 6, textAlign: 'center' }}>
+                      <Ionicons name="bookmark-outline" size={20} color={theme.textSecondary} />
+                      <ThemedText style={{ color: theme.textSecondary, marginTop: 6, textAlign: 'center', fontSize: 12, fontFamily: 'Sora_400Regular' }}>
                         Mark a team as your favourite to see it here
                       </ThemedText>
                     </Pressable>
                   )}
                 </View>
 
-                {/* Played Teams — top 5 previous opponents, stats only, view-only (not tappable) */}
+                {/* Played Teams */}
                 <View style={[styles.section, { paddingBottom: 60 }]}>
-                  <ThemedText type="headlineSm">Played Teams</ThemedText>
+                  <View style={styles.sectionHeaderRow}>
+                    <View style={[styles.verticalIndicator, { backgroundColor: '#8B5CF6' }]} />
+                    <ThemedText style={[styles.sectionTitleText, { color: theme.textSecondary }]}>
+                      PLAYED TEAMS
+                    </ThemedText>
+                  </View>
                   <View style={styles.playedTeamList}>
                     {PLAYED_TEAMS.slice(0, 5).map((pt) => (
                       <View
@@ -1629,9 +1502,9 @@ export default function ProfileScreen() {
                         style={[styles.playedTeamRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}
                       >
                         <Image source={getMascotImage(pt.mascot)} style={styles.playedTeamCrest} contentFit="contain" />
-                        <View style={{ flex: 1, marginLeft: Spacing.sm }}>
-                          <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }} numberOfLines={1}>{pt.name}</ThemedText>
-                          <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>{pt.sport}</ThemedText>
+                        <View style={{ flex: 1, marginLeft: 10 }}>
+                          <ThemedText style={[styles.cardItemTitle, { color: theme.text }]} numberOfLines={1}>{pt.name}</ThemedText>
+                          <ThemedText style={[styles.cardItemSubtitle, { color: theme.textSecondary }]}>{pt.sport}</ThemedText>
                         </View>
                         <View style={styles.playedTeamStats}>
                           <View style={styles.playedTeamStatCol}>
@@ -1658,49 +1531,6 @@ export default function ProfileScreen() {
 
       </SafeAreaView>
 
-      {/* Sign Out Confirmation Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={signOutModalVisible}
-        onRequestClose={() => setSignOutModalVisible(false)}
-      >
-        <View style={styles.confirmModalBackdrop}>
-          <View style={[styles.confirmModalCard, { backgroundColor: theme.surfaceLowest }]}>
-            <View style={[styles.confirmIconContainer, { backgroundColor: theme.error + '15' }]}>
-              <Ionicons name="power" size={26} color={theme.error} />
-            </View>
-            <ThemedText type="headlineSm" style={styles.confirmTitle}>
-              Sign Out
-            </ThemedText>
-            <ThemedText type="bodyMd" style={[styles.confirmText, { color: theme.textSecondary }]}>
-              Are you sure you want to sign out from NonStricker?
-            </ThemedText>
-            <View style={styles.confirmActionsRow}>
-              <Pressable
-                onPress={() => setSignOutModalVisible(false)}
-                style={[styles.confirmBtn, styles.cancelBtn, { borderColor: theme.outlineVariant + '55' }]}
-              >
-                <ThemedText type="labelMd" style={{ color: theme.text }}>
-                  Cancel
-                </ThemedText>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setSignOutModalVisible(false);
-                  logOut();
-                }}
-                style={[styles.confirmBtn, styles.actionConfirmBtn, { backgroundColor: theme.error }]}
-              >
-                <ThemedText type="labelMd" style={{ color: '#ffffff' }}>
-                  Sign Out
-                </ThemedText>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
       {/* Favourite Team Squad Modal */}
       <Modal
         animationType="slide"
@@ -1725,7 +1555,7 @@ export default function ProfileScreen() {
                 </View>
               </View>
               <Pressable onPress={() => setSquadTeam(null)} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={22} color={theme.text} />
+                <Ionicons name="close" size={20} color={theme.text} />
               </Pressable>
             </View>
 
@@ -1759,7 +1589,7 @@ export default function ProfileScreen() {
                 })
               ) : (
                 <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-                  <Ionicons name="people-outline" size={24} color={theme.textSecondary} />
+                  <Ionicons name="people-outline" size={20} color={theme.textSecondary} />
                   <ThemedText type="bodyMd" style={{ color: theme.textSecondary, marginTop: 8, textAlign: 'center' }}>
                     No squad members added yet
                   </ThemedText>
@@ -1784,14 +1614,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    height: 56,
-    borderBottomWidth: 1,
-    borderBottomColor: '#0000000a',
+    paddingHorizontal: 16,
+    height: 48,
     zIndex: 10,
   },
   backButton: {
-    padding: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontFamily: 'Sora_500Medium',
@@ -1806,30 +1638,31 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconButtonSmall: {
-    width: 33,
-    height: 33,
-    borderRadius: 16.5,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroSection: {
-    paddingHorizontal: Spacing.containerMargin,
-    marginTop: Spacing.xs,
+    paddingHorizontal: 16,
+    marginTop: 4,
   },
   heroCard: {
-    borderRadius: BorderRadius.premium,
-    padding: Spacing.md,
+    borderRadius: 22,
+    borderWidth: 1.2,
+    padding: 14,
     alignItems: 'center',
     overflow: 'hidden',
     position: 'relative',
-    paddingTop: 80, // Allow banner height layout offset
+    paddingTop: 80,
   },
   heroBannerImage: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 115,
+    height: 120,
     width: '100%',
   },
   avatarRow: {
@@ -1844,21 +1677,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     zIndex: 10,
-    paddingHorizontal: Spacing.xs,
   },
   profileTextDetails: {
     flex: 1,
-    marginLeft: Spacing.md,
+    marginLeft: 14,
     justifyContent: 'center',
   },
   pillActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: 10,
     width: '100%',
-    marginTop: Spacing.md,
-    marginBottom: Spacing.xs,
-    paddingHorizontal: Spacing.xs,
+    marginTop: 12,
+    marginBottom: 4,
     zIndex: 10,
   },
   pillActionBtn: {
@@ -1866,7 +1697,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    borderRadius: BorderRadius.xl,
+    borderRadius: 999,
   },
   circularActionBtn: {
     width: 30,
@@ -1881,22 +1712,22 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatarImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: '#5D68E8',
   },
   avatarUploadBtn: {
     position: 'absolute',
     bottom: -1,
     right: -1,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#ffffff',
   },
   badgeRow: {
@@ -1916,16 +1747,29 @@ const styles = StyleSheet.create({
     width: '100%',
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    paddingVertical: 12,
-    marginTop: Spacing.sm,
+    paddingVertical: 10,
+    marginTop: 8,
   },
   cardStatItem: {
     alignItems: 'center',
     flex: 1,
   },
+  heroStatValue: {
+    fontSize: 14.5,
+    fontFamily: 'Sora_500Medium',
+    color: '#ffffff',
+  },
+  heroStatLabel: {
+    fontSize: 8.5,
+    fontFamily: 'Sora_500Medium',
+    color: '#94A3B8',
+    marginTop: 2,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
   verticalDivider: {
     width: 1,
-    height: 30,
+    height: 26,
   },
   heroActionIconsRow: {
     flexDirection: 'row',
@@ -1952,27 +1796,27 @@ const styles = StyleSheet.create({
   },
   editBannerBtn: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(15, 23, 33, 0.85)',
+    top: 10,
+    right: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(11, 19, 30, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     zIndex: 30,
   },
   
-  // Tab Bar Styles — compact segmented control (mirrors the app's other segmented pickers)
+  // Segmented Tab Bar
   tabsContainer: {
     flexDirection: 'row',
-    marginHorizontal: Spacing.containerMargin,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.sm,
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 4,
     padding: 4,
-    borderRadius: BorderRadius.lg,
+    borderRadius: 14,
     gap: 4,
   },
   tabButton: {
@@ -1980,8 +1824,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 9,
-    borderRadius: BorderRadius.md,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
   tabButtonActive: {
     shadowColor: '#000000',
@@ -1991,11 +1835,11 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   tabText: {
-    fontSize: 10,
+    fontSize: 10.5,
+    fontFamily: 'Sora_500Medium',
     letterSpacing: 0.2,
   },
 
-  // Independent Scroll Tab style
   tabScrollView: {
     flex: 1,
   },
@@ -2004,11 +1848,29 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   section: {
-    marginTop: Spacing.lg,
-    paddingHorizontal: Spacing.containerMargin,
+    marginTop: 16,
+    paddingHorizontal: 16,
   },
 
-  // Tab Content Header Style
+  // Vertical Indicator Section Header
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  verticalIndicator: {
+    width: 3.5,
+    height: 14,
+    borderRadius: 2,
+    marginRight: 7,
+  },
+  sectionTitleText: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 10,
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
+  },
+
   tabHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2017,7 +1879,7 @@ const styles = StyleSheet.create({
   },
   tabHeaderTitle: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 12,
+    fontSize: 11.5,
     letterSpacing: 0.6,
   },
 
@@ -2025,53 +1887,53 @@ const styles = StyleSheet.create({
   illustrationBanner: {
     width: '100%',
     height: 100,
-    borderRadius: BorderRadius.xl,
+    borderRadius: 18,
   },
   trophyIllustration: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
   },
   bioIllustration: {
     width: 44,
     height: 44,
-    marginTop: -Spacing.xs,
+    marginTop: -4,
   },
   huddleIllustration: {
     width: 100,
     height: 60,
   },
   feedFooterCard: {
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
+    borderRadius: 20,
+    padding: 16,
     alignItems: 'center',
-    marginTop: Spacing.lg,
-    borderWidth: 1,
+    marginTop: 16,
+    borderWidth: 1.2,
   },
 
   // Bento Styles
   bentoContainer: {
-    gap: Spacing.sm,
-    marginTop: Spacing.xs,
+    gap: 10,
+    marginTop: 4,
   },
   bentoRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    gap: 10,
   },
   bentoCell: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: BorderRadius.xl,
+    borderWidth: 1.2,
+    borderRadius: 18,
     padding: 12,
   },
   bentoValRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginTop: Spacing.half,
+    marginTop: 6,
   },
   skillCard: {
-    borderRadius: BorderRadius.xl,
-    padding: 14,
+    borderRadius: 20,
+    padding: 16,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -2082,11 +1944,151 @@ const styles = StyleSheet.create({
   },
   skillValRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginTop: Spacing.xs,
+    marginTop: 6,
+  },
+  skillBarTrack: {
+    height: 6,
+    borderRadius: 3,
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+  skillBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  skillBadgePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  roleSummaryText: {
+    fontSize: 11,
+    fontFamily: 'Sora_400Regular',
+    marginTop: 4,
+  },
+  roleMetricRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  roleMetricItem: {
+    flex: 1,
+  },
+
+  // Compact Stats Styles
+  compactStatsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  compactStatCell: {
+    flex: 1,
+    borderWidth: 1.2,
+    borderRadius: 16,
+    padding: 12,
+    alignItems: 'center',
+  },
+  compactStatIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  compactStatValue: {
+    fontSize: 14.5,
+    fontFamily: 'Sora_500Medium',
+  },
+  compactStatLabel: {
+    fontSize: 8.5,
+    fontFamily: 'Sora_500Medium',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginTop: 2,
+  },
+
+  // Action Cards Styles
+  actionCardsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  actionMiniCard: {
+    flex: 1,
+    borderWidth: 1.2,
+    borderRadius: 16,
+    padding: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionCardIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionCardTitle: {
+    fontSize: 11.5,
+    fontFamily: 'Sora_500Medium',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+
+  // Empty State Styles
+  emptyTabCard: {
+    borderRadius: 20,
+    borderWidth: 1.2,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  emptyTabIllustration: {
+    width: 80,
+    height: 80,
+    marginBottom: 8,
+  },
+  emptyTabTitle: {
+    fontSize: 14,
+    fontFamily: 'Sora_500Medium',
+    textAlign: 'center',
+  },
+  emptyTabSubtitle: {
+    fontSize: 11,
+    fontFamily: 'Sora_400Regular',
+    marginTop: 4,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  tabCTAButton: {
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: 999,
+    marginTop: 14,
+  },
+  tabCTAButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontFamily: 'Sora_500Medium',
+  },
+  emptySubText: {
+    fontSize: 11,
+    fontFamily: 'Sora_400Regular',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 13,
+    fontFamily: 'Sora_500Medium',
+    marginTop: 4,
+    textAlign: 'center',
   },
   progressContainer: {
-    marginTop: Spacing.md,
+    marginTop: 12,
   },
   progressTrack: {
     height: 6,
@@ -2101,36 +2103,36 @@ const styles = StyleSheet.create({
   
   // Vitals Styles
   vitalsCard: {
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    padding: 12,
+    borderRadius: 20,
+    borderWidth: 1.2,
+    padding: 14,
   },
   vitalsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: Spacing.xs,
-    marginTop: Spacing.sm,
+    gap: 8,
+    marginTop: 10,
   },
   vitalItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(93, 104, 232, 0.05)',
-    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(93, 104, 232, 0.06)',
+    borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 4,
     borderWidth: 1,
-    borderColor: 'rgba(93, 104, 232, 0.08)',
+    borderColor: 'rgba(93, 104, 232, 0.1)',
   },
   vitalLabel: {
-    fontFamily: 'Sora_500Medium',
+    fontFamily: 'Sora_600SemiBold',
     fontSize: 9.5,
     textTransform: 'uppercase',
     textAlign: 'center',
     letterSpacing: 0.3,
   },
   vitalValue: {
-    fontFamily: 'Sora_500Medium',
+    fontFamily: 'Sora_700Bold',
     fontSize: 13.5,
     marginTop: 4,
     textAlign: 'center',
@@ -2138,35 +2140,34 @@ const styles = StyleSheet.create({
  
   // Feed Styles
   feedList: {
-    gap: Spacing.sm,
-    marginTop: Spacing.xs,
+    gap: 10,
+    marginTop: 4,
   },
   feedItemCard: {
     flexDirection: 'row',
-    borderRadius: BorderRadius.xl,
+    borderRadius: 18,
     padding: 12,
-    borderWidth: 1,
+    borderWidth: 1.2,
     alignItems: 'flex-start',
   },
   feedIconBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: BorderRadius.md,
+    width: 36,
+    height: 36,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.md,
   },
   feedContent: {
     flex: 1,
   },
   loadMoreBtn: {
     width: '100%',
-    height: 38,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1.5,
+    height: 40,
+    borderRadius: 999,
+    borderWidth: 1.2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: Spacing.md,
+    marginTop: 14,
   },
  
   // Leaderboard Styles
@@ -2176,26 +2177,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   leaderboardList: {
-    gap: Spacing.sm,
-    marginTop: Spacing.xs,
+    gap: 10,
+    marginTop: 4,
   },
   leaderboardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: BorderRadius.xl,
+    borderRadius: 18,
     padding: 12,
-    borderWidth: 1,
+    borderWidth: 1.2,
   },
   rankNumber: {
     width: 24,
     textAlign: 'center',
     fontFamily: 'Sora_500Medium',
-    marginRight: Spacing.xs,
+    fontSize: 14,
+    marginRight: 6,
   },
   rankAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
   },
   rankScoreCol: {
     alignItems: 'flex-end',
@@ -2203,31 +2205,81 @@ const styles = StyleSheet.create({
   leagueBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: BorderRadius.md,
+    borderRadius: 8,
   },
 
-  // Bio Details Styles
+  // Bookings & Bio Card Styles
+  bookingCard: {
+    borderRadius: 18,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1.2,
+  },
+  iconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardHeaderTitle: {
+    fontSize: 15,
+    fontFamily: 'Sora_500Medium',
+  },
+  cardItemTitle: {
+    fontSize: 13,
+    fontFamily: 'Sora_500Medium',
+  },
+  cardItemSubtitle: {
+    fontSize: 10.5,
+    fontFamily: 'Sora_400Regular',
+    marginTop: 2,
+  },
+  viewAllText: {
+    fontSize: 11,
+    fontFamily: 'Sora_500Medium',
+    letterSpacing: 0.5,
+  },
+
   bioHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
+    marginBottom: 10,
   },
   bioDetailsCard: {
-    borderRadius: BorderRadius['2xl'],
-    borderWidth: 1,
+    borderRadius: 20,
+    borderWidth: 1.2,
     padding: 14,
-    marginTop: Spacing.xs,
+    overflow: 'hidden',
   },
   bioGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    rowGap: Spacing.md,
-    marginTop: Spacing.xs,
+    rowGap: 12,
+    marginTop: 4,
   },
   bioGridItem: {
     width: '50%',
-    paddingRight: Spacing.sm,
+    paddingRight: 8,
+  },
+  bioLabel: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 9.5,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  bioVal: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 12.5,
+    marginTop: 2,
+  },
+  bioDescText: {
+    fontSize: 11.5,
+    fontFamily: 'Sora_400Regular',
+    lineHeight: 16,
   },
  
   // Team Styles
@@ -2235,63 +2287,63 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: 8,
   },
   teamList: {
-    gap: Spacing.sm,
+    gap: 10,
   },
   teamItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: BorderRadius.xl,
+    borderRadius: 18,
     padding: 12,
-    borderWidth: 1,
+    borderWidth: 1.2,
   },
   teamItemLogo: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
   },
   
   // Upcoming Styles
   upcomingCard: {
-    borderRadius: BorderRadius.xl,
-    padding: 14,
+    borderRadius: 20,
+    padding: 16,
     alignItems: 'center',
   },
   briefBtn: {
     width: '100%',
-    height: 38,
-    borderRadius: BorderRadius.xl,
+    height: 40,
+    borderRadius: 999,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   // Favourite Team Styles
   favTeamEmptyCard: {
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
+    borderRadius: 18,
+    borderWidth: 1.2,
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Spacing.xs,
+    marginTop: 4,
   },
 
-  // Played Teams Styles — view-only stat rows (no chevron, not pressable)
+  // Played Teams Styles
   playedTeamList: {
-    gap: Spacing.sm,
-    marginTop: Spacing.xs,
+    gap: 8,
+    marginTop: 4,
   },
   playedTeamRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
+    borderRadius: 16,
+    borderWidth: 1.2,
     padding: 10,
   },
   playedTeamCrest: {
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
   },
   playedTeamStats: {
     flexDirection: 'row',
@@ -2306,9 +2358,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Sora_500Medium',
   },
   playedTeamStatLabel: {
-    fontSize: 8,
+    fontSize: 8.5,
     fontFamily: 'Sora_500Medium',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
     marginTop: 1,
   },
 
@@ -2316,10 +2369,10 @@ const styles = StyleSheet.create({
   squadPlayerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: BorderRadius.lg,
+    borderRadius: 14,
     padding: 10,
-    marginBottom: Spacing.xs,
-    borderWidth: 1,
+    marginBottom: 8,
+    borderWidth: 1.2,
   },
   squadAvatarCircle: {
     width: 38,
@@ -2335,14 +2388,15 @@ const styles = StyleSheet.create({
   },
   squadPlayerInfo: {
     flex: 1,
-    marginLeft: Spacing.sm,
+    marginLeft: 10,
   },
   squadPlayerName: {
     fontSize: 13,
     fontFamily: 'Sora_500Medium',
   },
   squadPlayerPosition: {
-    fontSize: 11,
+    fontSize: 10.5,
+    fontFamily: 'Sora_400Regular',
     marginTop: 1,
   },
   squadJerseyChip: {
@@ -2354,49 +2408,23 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   squadJerseyText: {
-    fontSize: 10.5,
-    fontFamily: 'Sora_500Medium',
-  },
-  themeCard: {
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
-    borderWidth: 1,
-  },
-  themeSelectorRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-  },
-  themeOptionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1.5,
-  },
-  themeOptionText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: 'Sora_500Medium',
   },
 
   // Modal Sheet Styles
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 33, 0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalKeyboardAvoiding: {
-    width: '100%',
-    flex: 1,
+    backgroundColor: 'rgba(5, 21, 30, 0.65)',
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    borderTopLeftRadius: BorderRadius.premium,
-    borderTopRightRadius: BorderRadius.premium,
-    padding: Spacing.lg,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1.2,
+    borderLeftWidth: 1.2,
+    borderRightWidth: 1.2,
+    padding: 18,
     maxHeight: '85%',
     width: '100%',
   },
@@ -2404,208 +2432,111 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',
-    paddingBottom: Spacing.sm,
+    paddingBottom: 8,
   },
   modalCloseBtn: {
     padding: 4,
   },
   modalScrollContent: {
-    paddingBottom: Spacing.xl,
+    paddingBottom: 24,
   },
-  modalSection: {
-    marginTop: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: '#00000005',
-    paddingBottom: Spacing.md,
-  },
-  modalSectionLabel: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 10,
-    letterSpacing: 0.8,
-    marginBottom: Spacing.sm,
-    textTransform: 'uppercase',
-  },
-  modalSwitchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.md,
-  },
-  inputContainer: {
-    marginBottom: Spacing.md,
-  },
-  inputLabel: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 10,
-    letterSpacing: 0.6,
-    marginBottom: Spacing.xs,
-    textTransform: 'uppercase',
-  },
-  textInput: {
-    height: 44,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.md,
-    fontSize: 13,
-    fontFamily: 'Sora_500Medium',
-    borderWidth: 1,
-    borderColor: '#0000000a',
-  },
-  modalActionRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-    paddingBottom: Spacing.md,
-  },
-  primaryActionBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: BorderRadius.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  secondaryActionBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dropdownTrigger: {
-    height: 44,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.md,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dropdownValue: {
-    fontSize: 13,
-    fontFamily: 'Sora_500Medium',
-  },
-  dropdownList: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    marginTop: 4,
-    overflow: 'hidden',
-  },
-  dropdownItem: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dropdownItemText: {
-    fontSize: 13,
-    fontFamily: 'Sora_500Medium',
-  },
-  signOutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 48,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1.5,
-    width: '100%',
-  },
+
   confirmModalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 33, 0.65)',
+    backgroundColor: 'rgba(5, 21, 30, 0.65)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.xl,
+    padding: 20,
   },
   confirmModalCard: {
     width: '100%',
     maxWidth: 320,
-    borderRadius: 12,
-    padding: Spacing.lg,
+    borderRadius: 20,
+    borderWidth: 1.2,
+    padding: 20,
     alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
   },
   confirmIconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: 12,
   },
   confirmTitle: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 14.5,
-    marginBottom: Spacing.xs,
+    fontSize: 15.5,
+    marginBottom: 6,
     textAlign: 'center',
   },
   confirmText: {
-    fontSize: 11.5,
+    fontSize: 11,
+    fontFamily: 'Sora_400Regular',
     textAlign: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: 16,
     lineHeight: 16,
   },
   confirmActionsRow: {
     flexDirection: 'row',
-    gap: Spacing.xs,
+    gap: 10,
     width: '100%',
   },
   confirmBtn: {
     flex: 1,
-    height: 32,
-    borderRadius: 8,
+    height: 38,
+    borderRadius: 999,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cancelBtn: {
-    borderWidth: 1,
+    borderWidth: 1.2,
   },
-  actionConfirmBtn: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
-  },
+  actionConfirmBtn: {},
+
   bannerScrim: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: 48,
+    height: 55,
   },
   profileNameText: {
     color: '#ffffff',
-    fontSize: 16.5,
+    fontSize: 14.5,
     fontFamily: 'Sora_500Medium',
+  },
+  verifiedMiniBadge: {
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   profileMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: 3,
   },
   profileMetaText: {
-    color: '#cbd5e1',
+    color: '#94A3B8',
     fontSize: 10.5,
-    marginLeft: 3,
+    fontFamily: 'Sora_400Regular',
+    marginLeft: 4,
   },
   metaDot: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#94a3b8',
+    backgroundColor: '#94A3B8',
     marginHorizontal: 6,
   },
   profileMemberText: {
-    color: '#94a3b8',
-    fontSize: 11,
+    color: '#94A3B8',
+    fontSize: 10.5,
+    fontFamily: 'Sora_400Regular',
   },
 });
-

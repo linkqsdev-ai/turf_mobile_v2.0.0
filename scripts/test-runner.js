@@ -67,6 +67,78 @@ if (typeof runTournamentRulesTests === 'function') {
   failures += (result && result.failed) || 0;
 }
 
+const { runDirectorySearchTests } = require('../src/__tests__/directory-search.test.ts');
+if (typeof runDirectorySearchTests === 'function') {
+  const result = runDirectorySearchTests();
+  failures += (result && result.failed) || 0;
+}
+
+const { runTurfVenueTests } = require('../src/__tests__/turf-venues.test.ts');
+if (typeof runTurfVenueTests === 'function') {
+  const result = runTurfVenueTests();
+  failures += (result && result.failed) || 0;
+}
+
+const { runDrawerLinkTests } = require('../src/__tests__/drawer-links.test.ts');
+if (typeof runDrawerLinkTests === 'function') {
+  const result = runDrawerLinkTests();
+  failures += (result && result.failed) || 0;
+}
+
+const { runPasswordRuleTests } = require('../src/__tests__/password-rules.test.ts');
+if (typeof runPasswordRuleTests === 'function') {
+  const result = runPasswordRuleTests();
+  failures += (result && result.failed) || 0;
+}
+
+const { runOwnBoardDisplayTests } = require('../src/__tests__/own-board-display.test.ts');
+if (typeof runOwnBoardDisplayTests === 'function') {
+  const result = runOwnBoardDisplayTests();
+  failures += (result && result.failed) || 0;
+}
+
+const { runCupDisplayTests } = require('../src/__tests__/cup-display.test.ts');
+if (typeof runCupDisplayTests === 'function') {
+  const result = runCupDisplayTests();
+  failures += (result && result.failed) || 0;
+}
+
+const { runWalletDealsTests } = require('../src/__tests__/wallet-deals.test.ts');
+if (typeof runWalletDealsTests === 'function') {
+  const result = runWalletDealsTests();
+  failures += (result && result.failed) || 0;
+}
+
+const { runDuckTests } = require('../src/__tests__/duck.test.ts');
+if (typeof runDuckTests === 'function') {
+  const result = runDuckTests();
+  failures += (result && result.failed) || 0;
+}
+
+const { runPhoneUtilsTests } = require('../src/__tests__/phone-utils.test.ts');
+if (typeof runPhoneUtilsTests === 'function') {
+  const result = runPhoneUtilsTests();
+  failures += (result && result.failed) || 0;
+}
+
+const { runBookingHistoryTests } = require('../src/__tests__/booking-history.test.ts');
+if (typeof runBookingHistoryTests === 'function') {
+  const result = runBookingHistoryTests();
+  failures += (result && result.failed) || 0;
+}
+
+const { runRemoteConfigTests } = require('../src/__tests__/remote-config.test.ts');
+if (typeof runRemoteConfigTests === 'function') {
+  const result = runRemoteConfigTests();
+  failures += (result && result.failed) || 0;
+}
+
+const { runBackendSyncTests } = require('../src/__tests__/backend-sync.test.ts');
+if (typeof runBackendSyncTests === 'function') {
+  const result = runBackendSyncTests();
+  failures += (result && result.failed) || 0;
+}
+
 // A red suite must fail the command, or CI and pre-commit hooks will pass over it.
 if (failures > 0) {
   console.error(`\n${failures} test(s) failed.`);

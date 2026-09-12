@@ -5,11 +5,15 @@ import Constants from 'expo-constants';
 // Live Production VPS Backend (Secure HTTPS on Hostinger VPS)
 const PRODUCTION_VPS_URL = 'https://srv1939048.hstgr.cloud/api';
 
-export const API_BASE_URL = PRODUCTION_VPS_URL;
+// Point the app at another backend — e.g. your machine while developing — by
+// setting EXPO_PUBLIC_API_URL in .env.local (http://192.168.1.20:3000/api) and
+// reloading. Expo inlines it into the bundle, so it must never hold a secret.
+const OVERRIDE_API_URL = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/$/, '');
 
-// Base candidate URLs pointing directly to live Hostinger VPS backend
+export const API_BASE_URL = OVERRIDE_API_URL || PRODUCTION_VPS_URL;
+
 function getCandidateBaseUrls(): string[] {
-  return [PRODUCTION_VPS_URL];
+  return [API_BASE_URL];
 }
 
 const TOKEN_KEY = '@turf_auth_token';
@@ -79,11 +83,18 @@ async function request(endpoint: string, options: FetchOptions = {}) {
 
       if (!response.ok) {
         console.warn(`[API Error] ${response.status} - ${data.message || response.statusText}`);
-        throw new Error(data.message || `Request failed with status ${response.status}`);
+        // The server answered, so another candidate URL would only repeat it.
+        // Retrying replaced messages like "Current password is incorrect" with
+        // the network error of the last, unreachable candidate.
+        const error: any = new Error(data.message || `Request failed with status ${response.status}`);
+        error.status = response.status;
+        error.fromServer = true;
+        throw error;
       }
 
       return data;
     } catch (err: any) {
+      if (err?.fromServer) throw err;
       lastError = err;
       console.warn(`[API Candidate Failed] (${fullUrl}): ${err.message}. Trying next candidate...`);
     }

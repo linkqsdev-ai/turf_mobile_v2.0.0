@@ -116,11 +116,11 @@ export function WicketCelebrationModal({
 
           {/* Floating Confetti Particles Header */}
           <Animated.View style={[styles.particlesRow, animatedSparksStyle]}>
-            <ThemedText style={{ fontSize: 20 }}>💥</ThemedText>
-            <ThemedText style={{ fontSize: 22 }}>⚡</ThemedText>
-            <ThemedText style={{ fontSize: 24 }}>🎉</ThemedText>
-            <ThemedText style={{ fontSize: 22 }}>🔥</ThemedText>
-            <ThemedText style={{ fontSize: 20 }}>💥</ThemedText>
+            <ThemedText style={{ fontSize: 16.5 }}>💥</ThemedText>
+            <ThemedText style={{ fontSize: 18 }}>⚡</ThemedText>
+            <ThemedText style={{ fontSize: 19 }}>🎉</ThemedText>
+            <ThemedText style={{ fontSize: 18 }}>🔥</ThemedText>
+            <ThemedText style={{ fontSize: 16.5 }}>💥</ThemedText>
           </Animated.View>
 
           {/* Animated Monkey Bowler Illustration */}

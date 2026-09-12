@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -13,24 +13,34 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import Reanimated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
-import { useWalletStore, useOfferStore } from '@/store/app-store';
+import { useClassStore, useOfferStore, useWalletStore } from '@/store/app-store';
 import { paymentApi, PaymentsUnavailableError } from '@/services/payment-api';
 import { useToast } from '@/context/ToastContext';
+import { VOUCHERS, VOUCHER_CATEGORIES, vouchersByCategory } from '@/constants/vouchers';
+import { CASHBACK_DEALS, TOURNAMENT_PASSES } from '@/constants/platform-deals';
 import {
-  VOUCHERS,
-  VOUCHER_CATEGORIES,
-  VoucherCategory,
-  vouchersByCategory,
-  getVoucherByCode,
-} from '@/constants/vouchers';
+  OFFER_GROUPS,
+  liveOfferDeals,
+  resolveCashbackCode,
+  type OfferDeal,
+  type OfferGroup,
+} from '@/utils/wallet-deals';
+import {
+  DashboardCard,
+  DashboardChip,
+  DashboardSectionLabel,
+  DashboardTabs,
+  StatTiles,
+} from '@/components/dashboard/analytics-kit';
+import { ACCENTS, type Accent } from '@/constants/dashboard-accents';
 
 interface Transaction {
   id: string;
@@ -50,17 +60,51 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
   { id: 'tx-5', title: 'Grid Futsal Advance Payment', type: 'debit', amount: 300, date: '28 Jul 2026, 09:20 AM', category: 'Booking' },
 ];
 
+/** Cashback codes already credited on this device. */
+const REDEEMED_CASHBACK_KEY = '@turf_redeemed_cashback';
+
+const OFFER_LOOK: Record<OfferGroup, { accent: Accent; icon: keyof typeof Ionicons.glyphMap; emoji: string }> = {
+  'Venue Offers': { accent: ACCENTS.primary, icon: 'football', emoji: '🏟️' },
+  'Class Offers': { accent: ACCENTS.green, icon: 'school', emoji: '🎓' },
+  'Tournament Passes': { accent: ACCENTS.orange, icon: 'trophy', emoji: '🏆' },
+};
 
 export default function WalletScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { showSuccess, showError, showInfo } = useToast();
-  const { walletBalance, addWalletFunds } = useWalletStore();
-  const { redeemOffer } = useOfferStore();
+  const { walletBalance, addWalletFunds, cashbackCredits } = useWalletStore();
+  const { offers } = useOfferStore();
+  const { classes } = useClassStore();
 
-  const [activeTab, setActiveTab] = useState<'vouchers' | 'offers' | 'history'>('vouchers');
-  // Each category shows two coupons until "View All" expands it.
-  const [expandedCategory, setExpandedCategory] = useState<VoucherCategory | null>(null);
+  const [activeTab, setActiveTab] = useState<'vouchers' | 'offers' | 'cashback' | 'history'>('vouchers');
+
+  // Cashback codes already credited, so each code pays out once. Redemption
+  // checks the ref, so a quick double tap can't credit the same code twice.
+  const [redeemedCashback, setRedeemedCashback] = useState<string[]>([]);
+  const redeemedRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(REDEEMED_CASHBACK_KEY)
+      .then((raw) => {
+        const stored = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(stored)) return;
+        const merged = Array.from(new Set([...stored, ...redeemedRef.current]));
+        redeemedRef.current = merged;
+        setRedeemedCashback(merged);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Every offer a player can use right now: venue and class offers, and tournament passes.
+  const offerDeals = useMemo(() => liveOfferDeals(offers || [], classes || [], TOURNAMENT_PASSES), [offers, classes]);
+  // Discount codes, which the redeem box sends to checkout instead of crediting.
+  const bookingCodes = useMemo(
+    () => [...VOUCHERS.map((v) => v.code), ...(offers || []).map((o) => o.code), ...offerDeals.map((d) => d.code)],
+    [offers, offerDeals]
+  );
+  const cashbackLeft = CASHBACK_DEALS.filter((d) => !redeemedCashback.includes(d.code)).length;
+  const dealsCount = VOUCHERS.length + offerDeals.length + CASHBACK_DEALS.length;
   const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
   const [historyFilter, setHistoryFilter] = useState<'all' | 'credit' | 'debit'>('all');
 
@@ -127,91 +171,99 @@ export default function WalletScreen() {
     }
   };
 
-  const handleApplyPromoCode = () => {
-    const clean = promoCodeInput.trim().toUpperCase();
-    if (!clean) {
-      showError('Please enter a coupon or promo code');
-      triggerToast('⚠️ Enter a valid coupon code');
-      return;
+  /**
+   * Redeem — cashback only. A cashback code credits its fixed amount once.
+   * Vouchers and offers are booking discounts taken at checkout, so they are
+   * turned away here rather than paid out as wallet cash (which also used to
+   * spend one of a capped offer's claims for nothing).
+   */
+  const redeemCashback = (input: string) => {
+    const result = resolveCashbackCode(input, CASHBACK_DEALS, redeemedRef.current, bookingCodes);
+    switch (result.status) {
+      case 'empty':
+        showError('Enter a cashback code');
+        triggerToast('⚠️ Enter a cashback code');
+        return;
+      case 'already_redeemed':
+        showError('Already redeemed', `${result.deal.code} has already been credited to your wallet.`);
+        triggerToast(`❌ ${result.deal.code} was already redeemed`);
+        return;
+      case 'not_cashback':
+        showInfo(
+          'Use this code at checkout',
+          `${result.code} is a booking voucher, not cashback — apply it when you book or register.`
+        );
+        triggerToast(`🎟️ ${result.code} applies at checkout`);
+        return;
+      case 'invalid':
+        showError('Invalid cashback code', 'Check the code, or pick one from the Cashback tab.');
+        triggerToast('❌ Invalid cashback code');
+        return;
+      case 'credit': {
+        const { deal } = result;
+        const next = [...redeemedRef.current, deal.code];
+        redeemedRef.current = next;
+        setRedeemedCashback(next);
+        AsyncStorage.setItem(REDEEMED_CASHBACK_KEY, JSON.stringify(next)).catch(() => {});
+        addWalletFunds(deal.amount);
+        setTransactions((prev) => [
+          {
+            id: `tx-${Date.now()}`,
+            title: `${deal.title} (${deal.code})`,
+            type: 'credit',
+            amount: deal.amount,
+            date: 'Just Now',
+            category: 'Cashback',
+          },
+          ...prev,
+        ]);
+        setPromoCodeInput('');
+        showSuccess(`💰 ₹${deal.amount} cashback credited`, `${deal.code} · ${deal.title}`);
+        triggerToast(`💰 ₹${deal.amount} cashback credited to your wallet`);
+        return;
+      }
     }
-    const creditVoucher = (label: string, note?: string) => {
-      addWalletFunds(100);
-      const newTx: Transaction = {
-        id: `tx-${Date.now()}`,
-        title: `Voucher Applied (${label})`,
-        type: 'credit',
-        amount: 100,
-        date: 'Just Now',
-        category: 'Voucher',
-      };
-      setTransactions(prev => [newTx, ...prev]);
-      setPromoCodeInput('');
-      showSuccess(`🎟️ Voucher '${label}' applied! ₹100 credited to wallet.`, note);
-      triggerToast(`🎟️ Voucher '${label}' applied! ₹100 credited.`);
-    };
-
-    // Owner-published codes are checked first, because those carry a real
-    // "first N users" cap that has to be claimed atomically.
-    const claim = redeemOffer(clean);
-    if (claim.ok) {
-      const left = claim.remaining;
-      creditVoucher(
-        clean,
-        left === null || left === undefined
-          ? undefined
-          : left > 0
-            ? `${left} redemption${left === 1 ? '' : 's'} left on this code.`
-            : 'That was the last one — this code is now fully claimed.'
-      );
-      return;
-    }
-
-    if (claim.reason === 'exhausted') {
-      const cap = claim.offer?.maxRedemptions ?? 0;
-      showError(
-        'Offer fully claimed',
-        `'${clean}' was limited to the first ${cap} user${cap === 1 ? '' : 's'}.`
-      );
-      triggerToast('❌ This code has been fully claimed');
-      return;
-    }
-    if (claim.reason === 'expired') {
-      showError('Offer expired', `'${clean}' is past its valid-until date.`);
-      triggerToast('❌ This code has expired');
-      return;
-    }
-    if (claim.reason === 'paused') {
-      showError('Offer paused', `'${clean}' has been paused by the venue.`);
-      triggerToast('❌ This code is currently paused');
-      return;
-    }
-
-    // Fall back to the sample catalogue shown in the vouchers grid.
-    if (getVoucherByCode(clean)) {
-      creditVoucher(clean);
-      return;
-    }
-
-    showError('Invalid or expired promo code. Try SALE50 or NIGHTOWL40');
-    triggerToast('❌ Invalid code. Try SALE50 or NIGHTOWL40');
   };
 
-  const copyToClipboard = (code: string) => {
+  const copyCode = (code: string) => {
     if (Platform.OS === 'web') {
       navigator.clipboard?.writeText(code);
     } else {
       Clipboard.setString(code);
     }
-    setPromoCodeInput(code);
-    showInfo(`📋 Code '${code}' copied & applied below!`);
-    triggerToast(`📋 Code '${code}' copied & applied!`);
+    showInfo(`📋 Code '${code}' copied`, 'Apply it at checkout when you book.');
+    triggerToast(`📋 Code '${code}' copied`);
   };
+
+  const openOffer = (deal: OfferDeal) => {
+    if (deal.classId) {
+      router.push({ pathname: '/enroll', params: { classId: deal.classId, title: deal.appliesTo } });
+    } else if (deal.group === 'Tournament Passes') {
+      router.push('/(tabs)/tournaments');
+    } else if (deal.appliesTo && deal.appliesTo !== 'All Turfs') {
+      router.push({ pathname: '/explore', params: { search: deal.appliesTo } });
+    } else {
+      router.push('/(tabs)/explore');
+    }
+  };
+
+  const renderCodePill = (code: string, color: string) => (
+    <View style={[styles.codePill, { borderColor: color + '66' }]}>
+      <ThemedText style={[styles.codePillText, { color }]} numberOfLines={1}>
+        {code}
+      </ThemedText>
+    </View>
+  );
 
   const filteredTransactions = transactions.filter(t => {
     if (historyFilter === 'credit') return t.type === 'credit';
     if (historyFilter === 'debit') return t.type === 'debit';
     return true;
   });
+
+  const credits = transactions.filter(t => t.type === 'credit').reduce((sum, t) => sum + t.amount, 0);
+  const debits = transactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);
+  const filteredNet = filteredTransactions.reduce((sum, t) => sum + (t.type === 'credit' ? t.amount : -t.amount), 0);
 
   return (
     <GradientContainer screenName="wallet" style={styles.container}>
@@ -226,8 +278,8 @@ export default function WalletScreen() {
 
         {/* Top Header */}
         <View style={styles.header}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color={theme.text} />
+          <Pressable style={styles.backBtn} onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}>
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
           <View style={{ flex: 1, marginLeft: 10 }}>
             <ThemedText style={[styles.headerTitle, { color: theme.text }]}>Wallet & Offers</ThemedText>
@@ -240,183 +292,225 @@ export default function WalletScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPad}>
           <View style={{ paddingHorizontal: Spacing.containerMargin }}>
 
-            {/* Vibrant Hero Wallet Card */}
-            <Reanimated.View entering={FadeInDown.duration(600).damping(14)}>
-              <LinearGradient
-                colors={['#3b3691', '#211d57', '#16143b']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+            {/* Balance — the dashboard card, with money in and out at a glance */}
+            <Reanimated.View entering={FadeInDown.duration(500)}>
+              <DashboardCard
                 style={styles.heroCard}
+                title="Wallet Balance"
+                metric={`₹${walletBalance.toFixed(2)} available`}
+                tag="💳 Instant cashback"
+                icon="wallet"
+                accent={ACCENTS.primary}
+                footer={{
+                  label: 'Transactions',
+                  value: String(transactions.length),
+                  status: '🔒 Credited only after payment',
+                }}
               >
-                <Image
-                  source={require('@/assets/images/illustrations/wallet_blue.png')}
-                  style={styles.heroCardIllustration}
-                  contentFit="contain"
+                <StatTiles
+                  items={[
+                    { value: `+₹${credits.toFixed(0)}`, label: 'Credits', color: ACCENTS.green.dark },
+                    { value: `−₹${debits.toFixed(0)}`, label: 'Spent', color: ACCENTS.red.dark },
+                    { value: String(dealsCount), label: 'Deals', color: ACCENTS.primary.dark },
+                  ]}
                 />
+                <View style={styles.heroActionRow}>
+                  <Pressable
+                    onPress={() => setTopUpModalVisible(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add money to wallet"
+                    style={({ pressed }) => [styles.heroAddBtn, { backgroundColor: theme.primary }, pressed && { opacity: 0.9 }]}
+                  >
+                    <Ionicons name="add-circle" size={16} color="#ffffff" />
+                    <ThemedText style={styles.heroAddBtnText}>Add Money</ThemedText>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setActiveTab('vouchers')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Show vouchers"
+                    style={({ pressed }) => [
+                      styles.heroVoucherBtn,
+                      { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
+                      pressed && { opacity: 0.85 },
+                    ]}
+                  >
+                    <Ionicons name="ticket-outline" size={15} color={ACCENTS.primary.dark} />
+                    <ThemedText style={[styles.heroVoucherBtnText, { color: ACCENTS.primary.dark }]}>Vouchers</ThemedText>
+                  </Pressable>
+                </View>
+              </DashboardCard>
+            </Reanimated.View>
 
-                <View style={styles.heroCardHeader}>
-                  <View>
-                    <ThemedText style={styles.heroCardLabel}>AVAILABLE WALLET BALANCE</ThemedText>
-                    <ThemedText style={styles.heroCardBalance}>₹{walletBalance.toFixed(2)}</ThemedText>
+            {/* Dedicated Class/Turf Cashback Breakdown */}
+            {cashbackCredits && cashbackCredits.length > 0 && (
+              <View style={[styles.cardGap, { backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: '#10b98144', padding: 14 }, Shadows.level1]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="wallet" size={16} color="#10b981" />
+                    <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_700Bold', color: theme.text }}>
+                      Cashback Rewards Earned
+                    </ThemedText>
+                  </View>
+                  <View style={{ backgroundColor: '#10b98118', paddingHorizontal: 7, paddingVertical: 2, borderRadius: BorderRadius.full }}>
+                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#10b981' }}>
+                      {cashbackCredits.length} Active {cashbackCredits.length === 1 ? 'Reward' : 'Rewards'}
+                    </ThemedText>
                   </View>
                 </View>
 
-                {/* Quick Action Buttons */}
-                <View style={styles.heroActionRow}>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.heroAddBtn,
-                      pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }
-                    ]}
-                    onPress={() => setTopUpModalVisible(true)}
-                  >
-                    <Ionicons name="add-circle" size={17} color="#3b3691" />
-                    <ThemedText style={styles.heroAddBtnText}>+ Add Money</ThemedText>
-                  </Pressable>
+                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: theme.textSecondary, marginBottom: 10 }}>
+                  Cashback earned is added directly to your universal wallet and can be used on any turf booking or class enrollment.
+                </ThemedText>
 
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.heroVoucherBtn,
-                      pressed && { opacity: 0.9 }
-                    ]}
-                    onPress={() => setActiveTab('vouchers')}
-                  >
-                    <Ionicons name="ticket" size={15} color="#ffffff" />
-                    <ThemedText style={styles.heroVoucherBtnText}>Vouchers</ThemedText>
-                  </Pressable>
+                <View style={{ gap: 8 }}>
+                  {cashbackCredits.map((c) => (
+                    <View
+                      key={c.id}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: theme.surfaceLow,
+                        padding: 10,
+                        borderRadius: BorderRadius.md,
+                        borderWidth: 1,
+                        borderColor: theme.outlineVariant + '25',
+                      }}
+                    >
+                      <View style={{ flex: 1, marginRight: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Ionicons
+                            name={c.entityType === 'class' ? 'school-outline' : 'football-outline'}
+                            size={12}
+                            color="#10b981"
+                          />
+                          <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: theme.text }} numberOfLines={1}>
+                            {c.entityName}
+                          </ThemedText>
+                        </View>
+                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_400Regular', color: theme.textSecondary, marginTop: 2 }}>
+                          Earned from {c.entityName} · Usable anywhere
+                        </ThemedText>
+                      </View>
+
+                      <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_700Bold', color: '#10b981' }}>
+                        +₹{c.amount}
+                      </ThemedText>
+                    </View>
+                  ))}
                 </View>
-              </LinearGradient>
-            </Reanimated.View>
+              </View>
+            )}
 
-            {/* Quick Redeem Promo Bar */}
-            <View style={[styles.promoBarCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-              <Ionicons name="pricetag-outline" size={18} color={theme.primary} />
-              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                value={promoCodeInput}
-                onChangeText={setPromoCodeInput}
-                placeholder="Have a voucher code? (e.g. TURF100)"
-                placeholderTextColor={theme.textSecondary + '77'}
-                autoCapitalize="characters"
-                style={[styles.promoInput, { color: theme.text }]}
-              />
-              <Pressable
-                onPress={handleApplyPromoCode}
-                style={[styles.applyBtn, { backgroundColor: theme.primary }]}
-              >
-                <ThemedText style={styles.applyBtnText}>Apply</ThemedText>
-              </Pressable>
-            </View>
+            {/* Redeem — cashback codes only */}
+            <DashboardCard
+              style={styles.cardGap}
+              title="Redeem Cashback"
+              metric="Cashback codes credit your wallet"
+              tag={cashbackLeft > 0 ? `💰 ${cashbackLeft} to redeem` : '✅ All redeemed'}
+              icon="cash"
+              accent={ACCENTS.green}
+            >
+              <View style={[styles.promoRow, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
+                <Ionicons name="cash-outline" size={16} color={theme.textSecondary} />
+                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                  value={promoCodeInput}
+                  onChangeText={setPromoCodeInput}
+                  onSubmitEditing={() => redeemCashback(promoCodeInput)}
+                  returnKeyType="done"
+                  placeholder={`Cashback code (e.g. ${CASHBACK_DEALS[0]?.code ?? 'WALLETCASH100'})`}
+                  placeholderTextColor={theme.textSecondary + '77'}
+                  autoCapitalize="characters"
+                  accessibilityLabel="Cashback code"
+                  style={[styles.promoInput, { color: theme.text }]}
+                />
+                <Pressable
+                  onPress={() => redeemCashback(promoCodeInput)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Redeem cashback code"
+                  style={({ pressed }) => [styles.applyBtn, { backgroundColor: ACCENTS.green.main }, pressed && { opacity: 0.9 }]}
+                >
+                  <ThemedText style={styles.applyBtnText}>Apply</ThemedText>
+                </Pressable>
+              </View>
+              <View style={styles.redeemHint}>
+                <Ionicons name="information-circle-outline" size={13} color={theme.textSecondary} />
+                <ThemedText style={[styles.redeemHintText, { color: theme.textSecondary }]}>
+                  Vouchers and offers are booking discounts — apply them at checkout.
+                </ThemedText>
+              </View>
+            </DashboardCard>
 
-            {/* Tab Filter Bar */}
-            <View style={[styles.tabBarContainer, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}>
-              {[
-                { key: 'vouchers', label: '🎟️ Vouchers' },
-                { key: 'offers', label: '🔥 Offers' },
-                { key: 'history', label: '📜 History' },
-              ].map(t => {
-                const isActive = activeTab === t.key;
-                return (
-                  <Pressable
-                    key={t.key}
-                    onPress={() => setActiveTab(t.key as any)}
-                    style={[
-                      styles.tabItem,
-                      isActive && { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', ...Shadows.level1 }
-                    ]}
-                  >
-                    <ThemedText style={[styles.tabItemText, { color: isActive ? theme.primary : theme.textSecondary, fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_600SemiBold' }]}>
-                      {t.label}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </View>
+            {/* Tabs */}
+            <DashboardTabs
+              compact
+              style={styles.tabs}
+              options={[
+                { key: 'vouchers', label: 'Vouchers', emoji: '🎟️', accent: ACCENTS.primary },
+                { key: 'offers', label: 'Offers', emoji: '🔥', accent: ACCENTS.orange },
+                { key: 'cashback', label: 'Cashback', emoji: '💰', accent: ACCENTS.green },
+                { key: 'history', label: 'History', emoji: '📜', accent: ACCENTS.primary },
+              ]}
+              active={activeTab}
+              onChange={setActiveTab}
+            />
 
-            {/* 🎟️ Active Vouchers Tab */}
+            {/* 🎟️ Vouchers Tab — the whole catalogue, every category */}
             {activeTab === 'vouchers' && (
               <View style={styles.tabSectionContainer}>
                 {VOUCHER_CATEGORIES.map((category, ci) => {
                   const items = vouchersByCategory(category);
                   if (items.length === 0) return null;
-                  const shown = expandedCategory === category ? items : items.slice(0, 2);
 
                   return (
-                    <View key={category} style={{ marginBottom: Spacing.lg }}>
-                      <View style={styles.couponSectionHeader}>
-                        <ThemedText style={[styles.couponSectionTitle, { color: theme.text }]}>
-                          {category}
-                        </ThemedText>
-                        {items.length > 2 && (
-                          <Pressable
-                            onPress={() =>
-                              setExpandedCategory(prev => (prev === category ? null : category))
-                            }
-                            hitSlop={8}
-                            accessibilityRole="button"
-                            accessibilityLabel={
-                              expandedCategory === category
-                                ? `Show fewer ${category} vouchers`
-                                : `View all ${category} vouchers`
-                            }
-                            style={styles.viewAllBtn}
-                          >
-                            <ThemedText style={[styles.viewAllText, { color: theme.textSecondary }]}>
-                              {expandedCategory === category ? 'Show Less' : 'View All'}
-                            </ThemedText>
-                            <Ionicons
-                              name={expandedCategory === category ? 'chevron-up' : 'chevron-forward'}
-                              size={13}
-                              color={theme.textSecondary}
-                            />
-                          </Pressable>
-                        )}
-                      </View>
+                    <View key={category} style={styles.dealGroup}>
+                      <DashboardSectionLabel
+                        label={category}
+                        color={ACCENTS.primary.main}
+                        style={styles.couponSectionHeader}
+                        right={
+                          <ThemedText style={[styles.sectionCount, { color: theme.textSecondary }]}>
+                            {items.length} {items.length === 1 ? 'voucher' : 'vouchers'}
+                          </ThemedText>
+                        }
+                      />
 
                       <View style={styles.couponGrid}>
-                        {shown.map((v, i) => (
+                        {items.map((v, i) => (
                           <Reanimated.View
                             key={v.id}
                             entering={FadeInUp.delay(ci * 60 + i * 60).duration(380)}
                             style={styles.couponCell}
                           >
                             <Pressable
-                              onPress={() =>
-                                router.push({ pathname: '/voucher-redeem', params: { id: v.id } })
-                              }
+                              onPress={() => router.push({ pathname: '/voucher-redeem', params: { id: v.id } })}
                               accessibilityRole="button"
                               accessibilityLabel={`${v.title}, ${v.discountLabel} ${v.discountSuffix}, valid until ${v.validUntil}`}
-                              style={[
+                              style={({ pressed }) => [
                                 styles.couponCard,
-                                {
-                                  backgroundColor: theme.surfaceLowest,
-                                  borderColor: theme.outlineVariant + '22',
-                                },
+                                { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
+                                Shadows.level2,
+                                pressed && { transform: [{ scale: 0.98 }] },
                               ]}
                             >
-                              {/* Discount flag, mirroring the reference's corner badge */}
-                              <View style={[styles.couponBadge, { backgroundColor: theme.primary }]}>
-                                <ThemedText style={styles.couponBadgeText}>
-                                  {v.discountLabel}
-                                </ThemedText>
+                              {/* Discount flag in the corner */}
+                              <View style={[styles.couponBadge, { backgroundColor: ACCENTS.green.main }]}>
+                                <ThemedText style={styles.couponBadgeText}>{v.discountLabel}</ThemedText>
                               </View>
 
                               <View style={styles.couponLogoBox}>
-                                <Image
-                                  source={v.logo}
-                                  style={styles.couponLogo}
-                                  contentFit="contain"
-                                />
+                                <Image source={v.logo} style={styles.couponLogo} contentFit="contain" />
                               </View>
 
-                              <ThemedText
-                                style={[styles.couponTitle, { color: theme.text }]}
-                                numberOfLines={2}
-                              >
+                              <ThemedText style={[styles.couponTitle, { color: theme.text }]} numberOfLines={2}>
                                 {v.title}
                               </ThemedText>
-                              <ThemedText style={[styles.couponValid, { color: theme.textSecondary }]}>
-                                Valid until: {v.validUntil}
-                              </ThemedText>
+                              <View style={[styles.couponFooter, { borderTopColor: theme.outlineVariant + '1A' }]}>
+                                <Ionicons name="time-outline" size={11} color={theme.textSecondary} />
+                                <ThemedText style={[styles.couponValid, { color: theme.textSecondary }]} numberOfLines={1}>
+                                  Valid until {v.validUntil}
+                                </ThemedText>
+                              </View>
                             </Pressable>
                           </Reanimated.View>
                         ))}
@@ -427,113 +521,196 @@ export default function WalletScreen() {
               </View>
             )}
 
-            {/* 🔥 Special Offers Tab */}
+            {/* 🔥 Offers Tab — every live venue offer, class voucher and tournament pass */}
             {activeTab === 'offers' && (
               <View style={styles.tabSectionContainer}>
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: Spacing.xs, letterSpacing: 0.5 }}>
-                  HOT CASHBACK & REFERRAL DEALS
-                </ThemedText>
+                {offerDeals.length === 0 ? (
+                  <DashboardCard
+                    title="No live offers right now"
+                    metric="New venue and class offers appear here"
+                    icon="pricetags-outline"
+                    accent={ACCENTS.slate}
+                  />
+                ) : (
+                  OFFER_GROUPS.map((group) => {
+                    const items = offerDeals.filter((d) => d.group === group);
+                    if (items.length === 0) return null;
+                    const look = OFFER_LOOK[group];
 
-                {[
-                  {
-                    title: '₹50 Auto Wallet Cashback',
-                    sub: 'Use Turf Wallet on any booking & get ₹50 credited back instantly!',
-                    badge: 'WALLET DEAL',
-                    icon: 'wallet-outline',
-                    color: ['#10b981', '#059669'],
-                  },
-                  {
-                    title: 'Refer a Teammate & Earn ₹100',
-                    sub: 'Share your referral code with sports friends & earn ₹100 per signup.',
-                    badge: 'REFERRAL',
-                    icon: 'people-outline',
-                    color: ['#8b5cf6', '#7c3aed'],
-                  },
-                  {
-                    title: '3-Match Streak Pass',
-                    sub: 'Book 3 turf slots this week to unlock a 100% Free Booking Voucher!',
-                    badge: 'STREAK',
-                    icon: 'trophy-outline',
-                    color: ['#f59e0b', '#d97706'],
-                  },
-                ].map((offer, idx) => (
-                  <Reanimated.View key={idx} entering={FadeInUp.delay(idx * 80).duration(400)}>
-                    <LinearGradient
-                      colors={offer.color as [string, string]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.offerCard}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
-                        <Ionicons name={offer.icon as any} size={22} color="#ffffff" />
+                    return (
+                      <View key={group} style={styles.dealGroup}>
+                        <DashboardSectionLabel
+                          label={group}
+                          color={look.accent.main}
+                          style={styles.couponSectionHeader}
+                          right={
+                            <ThemedText style={[styles.sectionCount, { color: theme.textSecondary }]}>
+                              {items.length} {items.length === 1 ? 'offer' : 'offers'}
+                            </ThemedText>
+                          }
+                        />
+                        <View style={styles.dealList}>
+                          {items.map((deal, idx) => (
+                            <Reanimated.View key={deal.id} entering={FadeInUp.delay(idx * 60).duration(360)}>
+                              <DashboardCard
+                                title={deal.title}
+                                metric={deal.appliesTo}
+                                tag={`${look.emoji} ${deal.headline}`}
+                                icon={look.icon}
+                                accent={look.accent}
+                                onPress={() => openOffer(deal)}
+                                accessibilityLabel={`${deal.title}, ${deal.headline}, ${deal.appliesTo}. Code ${deal.code}`}
+                                footer={{
+                                  left: renderCodePill(deal.code, look.accent.dark),
+                                  status: (
+                                    <Pressable
+                                      onPress={() => copyCode(deal.code)}
+                                      hitSlop={6}
+                                      accessibilityRole="button"
+                                      accessibilityLabel={`Copy code ${deal.code}`}
+                                      style={({ pressed }) => [
+                                        styles.copyBtn,
+                                        { backgroundColor: look.accent.main + '1A' },
+                                        pressed && { opacity: 0.8 },
+                                      ]}
+                                    >
+                                      <Ionicons name="copy-outline" size={12} color={look.accent.dark} />
+                                      <ThemedText style={[styles.copyBtnText, { color: look.accent.dark }]}>Copy</ThemedText>
+                                    </Pressable>
+                                  ),
+                                }}
+                              >
+                                {!!deal.detail && (
+                                  <ThemedText style={[styles.offerSub, { color: theme.textSecondary }]}>{deal.detail}</ThemedText>
+                                )}
+                              </DashboardCard>
+                            </Reanimated.View>
+                          ))}
+                        </View>
                       </View>
+                    );
+                  })
+                )}
+              </View>
+            )}
 
-                      <ThemedText style={styles.offerTitle}>{offer.title}</ThemedText>
-                      <ThemedText style={styles.offerSub}>{offer.sub}</ThemedText>
-
-                      <Pressable
-                        onPress={() => showSuccess('🔥 Offer activated! Apply at checkout.')}
-                        style={styles.claimBtn}
-                      >
-                        <ThemedText style={styles.claimBtnText}>Claim Offer →</ThemedText>
-                      </Pressable>
-                    </LinearGradient>
-                  </Reanimated.View>
-                ))}
+            {/* 💰 Cashback Tab — the only codes the redeem box credits */}
+            {activeTab === 'cashback' && (
+              <View style={styles.tabSectionContainer}>
+                <DashboardSectionLabel
+                  label="Wallet Cashback"
+                  color={ACCENTS.green.main}
+                  style={styles.couponSectionHeader}
+                  right={
+                    <ThemedText style={[styles.sectionCount, { color: theme.textSecondary }]}>
+                      {cashbackLeft} of {CASHBACK_DEALS.length} left
+                    </ThemedText>
+                  }
+                />
+                <View style={styles.dealList}>
+                  {CASHBACK_DEALS.map((deal, idx) => {
+                    const redeemed = redeemedCashback.includes(deal.code);
+                    const accent = redeemed ? ACCENTS.slate : ACCENTS.green;
+                    return (
+                      <Reanimated.View key={deal.id} entering={FadeInUp.delay(idx * 60).duration(360)}>
+                        <DashboardCard
+                          title={deal.title}
+                          metric={`₹${deal.amount} to your wallet`}
+                          tag={redeemed ? '✅ Redeemed' : `💰 ₹${deal.amount} BACK`}
+                          icon="cash"
+                          accent={accent}
+                          footer={{
+                            left: renderCodePill(deal.code, accent.dark),
+                            status: redeemed ? (
+                              'Credited to your wallet'
+                            ) : (
+                              <Pressable
+                                onPress={() => redeemCashback(deal.code)}
+                                hitSlop={6}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Redeem ${deal.code} for ₹${deal.amount}`}
+                                style={({ pressed }) => [
+                                  styles.copyBtn,
+                                  { backgroundColor: ACCENTS.green.main },
+                                  pressed && { opacity: 0.85 },
+                                ]}
+                              >
+                                <Ionicons name="wallet-outline" size={12} color="#ffffff" />
+                                <ThemedText style={[styles.copyBtnText, { color: '#ffffff' }]}>Redeem</ThemedText>
+                              </Pressable>
+                            ),
+                          }}
+                        >
+                          <ThemedText style={[styles.offerSub, { color: theme.textSecondary }]}>{deal.description}</ThemedText>
+                        </DashboardCard>
+                      </Reanimated.View>
+                    );
+                  })}
+                </View>
               </View>
             )}
 
             {/* 📜 Wallet History Tab */}
             {activeTab === 'history' && (
               <View style={styles.tabSectionContainer}>
-                {/* Filter Pills */}
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: Spacing.sm }}>
-                  {[
+                <View style={styles.chipRow}>
+                  {([
                     { key: 'all', label: 'All' },
                     { key: 'credit', label: 'Credits (+)' },
-                    { key: 'debit', label: 'Debits (-)' },
-                  ].map(f => (
-                    <Pressable
+                    { key: 'debit', label: 'Debits (−)' },
+                  ] as const).map(f => (
+                    <DashboardChip
                       key={f.key}
-                      onPress={() => setHistoryFilter(f.key as any)}
-                      style={[
-                        styles.historyFilterChip,
-                        { backgroundColor: historyFilter === f.key ? theme.primary : theme.surfaceLow, borderColor: historyFilter === f.key ? theme.primary : theme.outlineVariant + '33' }
-                      ]}
-                    >
-                      <ThemedText style={{ fontSize: 11, color: historyFilter === f.key ? '#fff' : theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
-                        {f.label}
-                      </ThemedText>
-                    </Pressable>
+                      label={f.label}
+                      selected={historyFilter === f.key}
+                      onPress={() => setHistoryFilter(f.key)}
+                    />
                   ))}
                 </View>
 
-                {filteredTransactions.map((tx) => {
-                  const isCredit = tx.type === 'credit';
-                  return (
-                    <View
-                      key={tx.id}
-                      style={[styles.txItemCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
-                    >
-                      <View style={[styles.txIconCircle, { backgroundColor: isCredit ? '#10b98115' : '#ef444415' }]}>
-                        <Ionicons
-                          name={isCredit ? 'arrow-down' : 'arrow-up'}
-                          size={16}
-                          color={isCredit ? '#10b981' : '#ef4444'}
-                        />
-                      </View>
-
-                      <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-                        <ThemedText numberOfLines={1} style={[styles.txTitle, { color: theme.text }]}>{tx.title}</ThemedText>
-                        <ThemedText numberOfLines={1} style={[styles.txDate, { color: theme.textSecondary }]}>{tx.date}</ThemedText>
-                      </View>
-
-                      <ThemedText style={[styles.txAmount, { color: isCredit ? '#10b981' : '#ef4444' }]}>
-                        {isCredit ? '+' : '-'}₹{tx.amount.toFixed(2)}
-                      </ThemedText>
+                <DashboardCard
+                  title="Wallet Activity"
+                  metric={`${filteredTransactions.length} ${filteredTransactions.length === 1 ? 'transaction' : 'transactions'}`}
+                  icon="time"
+                  accent={ACCENTS.green}
+                  footer={{
+                    label: 'Net',
+                    value: `${filteredNet >= 0 ? '+' : '−'}₹${Math.abs(filteredNet).toFixed(2)}`,
+                    status: historyFilter === 'all' ? 'All activity' : historyFilter === 'credit' ? 'Credits only' : 'Debits only',
+                  }}
+                >
+                  {filteredTransactions.length === 0 ? (
+                    <ThemedText style={[styles.txEmpty, { color: theme.textSecondary }]}>
+                      No transactions for this filter.
+                    </ThemedText>
+                  ) : (
+                    <View>
+                      {filteredTransactions.map((tx, i) => {
+                        const isCredit = tx.type === 'credit';
+                        const accent = isCredit ? ACCENTS.green : ACCENTS.red;
+                        return (
+                          <View
+                            key={tx.id}
+                            style={[styles.txRow, i > 0 && { borderTopWidth: 1, borderTopColor: theme.outlineVariant + '1A' }]}
+                          >
+                            <View style={[styles.txIconTile, { backgroundColor: accent.main + '1A' }]}>
+                              <Ionicons name={isCredit ? 'arrow-down' : 'arrow-up'} size={15} color={accent.main} />
+                            </View>
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <ThemedText numberOfLines={1} style={[styles.txTitle, { color: theme.text }]}>{tx.title}</ThemedText>
+                              <ThemedText numberOfLines={1} style={[styles.txDate, { color: theme.textSecondary }]}>
+                                {tx.date} · {tx.category}
+                              </ThemedText>
+                            </View>
+                            <ThemedText style={[styles.txAmount, { color: accent.dark }]}>
+                              {isCredit ? '+' : '−'}₹{tx.amount.toFixed(2)}
+                            </ThemedText>
+                          </View>
+                        );
+                      })}
                     </View>
-                  );
-                })}
+                  )}
+                </DashboardCard>
               </View>
             )}
 
@@ -555,7 +732,7 @@ export default function WalletScreen() {
                   + Add Wallet Funds
                 </ThemedText>
                 <Pressable onPress={() => setTopUpModalVisible(false)}>
-                  <Ionicons name="close" size={22} color={theme.textSecondary} />
+                  <Ionicons name="close" size={20} color={theme.textSecondary} />
                 </Pressable>
               </View>
 
@@ -579,10 +756,12 @@ export default function WalletScreen() {
                     onPress={() => setCustomAmount(String(amt))}
                     style={[
                       styles.quickAmtChip,
-                      { backgroundColor: customAmount === String(amt) ? theme.primary + '18' : theme.surfaceLow, borderColor: customAmount === String(amt) ? theme.primary : theme.outlineVariant + '33' }
+                      customAmount === String(amt)
+                        ? [{ backgroundColor: theme.surfaceLowest, borderColor: ACCENTS.primary.main + '40' }, Shadows.level1]
+                        : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
                     ]}
                   >
-                    <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: customAmount === String(amt) ? theme.primary : theme.text }}>
+                    <ThemedText style={{ fontSize: 12, fontFamily: customAmount === String(amt) ? 'Sora_600SemiBold' : 'Sora_500Medium', color: customAmount === String(amt) ? ACCENTS.primary.dark : theme.text }}>
                       +₹{amt}
                     </ThemedText>
                   </Pressable>
@@ -678,163 +857,26 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 16,
-  },
-  vipBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-  },
-  vipBadgeText: {
-    fontSize: 10,
-    fontFamily: 'Sora_500Medium',
-    letterSpacing: 0.4,
+    fontSize: 14.5,
   },
   scrollPad: {
     paddingBottom: Spacing.xl * 2,
   },
-  heroCard: {
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
-    marginTop: Spacing.xs,
-    position: 'relative',
-    overflow: 'hidden',
-    ...Shadows.level3,
-  },
-  heroCardIllustration: {
-    position: 'absolute',
-    right: -20,
-    bottom: -20,
-    width: 145,
-    height: 145,
-    opacity: 0.25,
-  },
-  heroCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  heroCardLabel: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 9,
-    fontFamily: 'Sora_500Medium',
-    letterSpacing: 0.6,
-  },
-  heroCardBalance: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontFamily: 'Sora_500Medium',
-    marginTop: 2,
-  },
-  heroActionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: Spacing.md,
-  },
-  heroAddBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: BorderRadius.lg,
-  },
-  heroAddBtnText: {
-    color: '#3b3691',
-    fontFamily: 'Sora_500Medium',
-    fontSize: 11.5,
-  },
-  heroVoucherBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  heroVoucherBtnText: {
-    color: '#ffffff',
-    fontFamily: 'Sora_500Medium',
-    fontSize: 11.5,
-  },
-  promoBarCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    marginTop: Spacing.sm,
-  },
-  promoInput: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: 'Sora_500Medium',
-    marginLeft: 8,
-    paddingVertical: 4,
-    includeFontPadding: false,
-  },
-  applyBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: BorderRadius.md,
-  },
-  applyBtnText: {
-    color: '#ffffff',
-    fontFamily: 'Sora_500Medium',
-    fontSize: 11.5,
-  },
-  tabBarContainer: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    padding: 4,
-    borderWidth: 1,
-    marginTop: Spacing.md,
-    gap: 4,
-  },
-  tabItem: {
-    flex: 1,
-    paddingVertical: 9,
-    alignItems: 'center',
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  tabItemText: {
-    fontSize: 12,
-  },
+  heroCard: { marginTop: Spacing.xs },
+  heroActionRow: { flexDirection: 'row', gap: 10 },
+  heroAddBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 38, borderRadius: BorderRadius.md },
+  heroAddBtnText: { color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 12 },
+  heroVoucherBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 38, borderRadius: BorderRadius.md, borderWidth: 1 },
+  heroVoucherBtnText: { fontFamily: 'Sora_600SemiBold', fontSize: 12 },
+  promoInput: { flex: 1, minWidth: 0, fontSize: 12, fontFamily: 'Sora_500Medium', paddingVertical: 0, includeFontPadding: false },
+  applyBtn: { paddingHorizontal: 16, height: 36, justifyContent: 'center', borderRadius: BorderRadius.md },
+  applyBtnText: { color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 12 },
   tabSectionContainer: {
     marginTop: Spacing.md,
   },
 
   // ── Coupon grid (category sections of two-up cards) ──────────────────────
-  couponSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
-  },
-  couponSectionTitle: {
-    fontSize: 15,
-    fontFamily: 'Sora_500Medium',
-  },
-  viewAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  viewAllText: {
-    fontSize: 11.5,
-    fontFamily: 'Sora_500Medium',
-  },
+  couponSectionHeader: { marginBottom: Spacing.sm },
   couponGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -845,28 +887,9 @@ const styles = StyleSheet.create({
     width: '48%',
     flexGrow: 1,
   },
-  couponCard: {
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    padding: Spacing.sm,
-    paddingTop: Spacing.md,
-    overflow: 'hidden',
-    minHeight: 168,
-  },
-  couponBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderBottomLeftRadius: BorderRadius.lg,
-    borderTopRightRadius: BorderRadius.lg,
-  },
-  couponBadgeText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontFamily: 'Sora_500Medium',
-  },
+  couponCard: { borderRadius: BorderRadius.premium, borderWidth: 1, padding: Spacing.sm, paddingTop: Spacing.md, minHeight: 168 },
+  couponBadge: { position: 'absolute', top: -1, right: -1, paddingHorizontal: 9, paddingVertical: 4, borderBottomLeftRadius: 10, borderTopRightRadius: BorderRadius.premium },
+  couponBadgeText: { color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_600SemiBold' },
   couponLogoBox: {
     height: 66,
     alignItems: 'center',
@@ -884,132 +907,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Sora_500Medium',
     textAlign: 'center',
   },
-  couponValid: {
-    fontSize: 10,
-    fontFamily: 'Sora_400Regular',
-    textAlign: 'center',
-    marginTop: 5,
-  },
+  couponValid: { fontSize: 9.5, fontFamily: 'Sora_400Regular', flexShrink: 1 },
 
-  voucherCard: {
-    flexDirection: 'row',
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    marginBottom: Spacing.sm,
-    overflow: 'hidden',
-  },
-  voucherLeftBanner: {
-    width: 105,
-    padding: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  voucherDiscountText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontFamily: 'Sora_500Medium',
-    textAlign: 'center',
-  },
-  dashedDivider: {
-    borderLeftWidth: 1.5,
-    borderStyle: 'dashed',
-  },
-  voucherRightContent: {
-    flex: 1,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  voucherTitle: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 12.5,
-  },
-  voucherSub: {
-    fontSize: 11,
-    fontFamily: 'Sora_500Medium',
-    marginTop: 2,
-    lineHeight: 15,
-  },
-  copyCodeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    marginLeft: 8,
-  },
-  copyCodeText: {
-    fontSize: 10.5,
-    fontFamily: 'Sora_500Medium',
-  },
-  offerCard: {
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  offerTitle: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontFamily: 'Sora_500Medium',
-    marginTop: 8,
-  },
-  offerSub: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 11,
-    fontFamily: 'Sora_500Medium',
-    marginTop: 3,
-    lineHeight: 16,
-  },
-  claimBtn: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: BorderRadius.md,
-    marginTop: 10,
-  },
-  claimBtnText: {
-    color: '#111827',
-    fontFamily: 'Sora_500Medium',
-    fontSize: 11.5,
-  },
-  historyFilterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-  },
-  txItemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    marginBottom: 8,
-    gap: 10,
-  },
-  txIconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  txTitle: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 13,
-  },
-  txDate: {
-    fontSize: 10.5,
-    fontFamily: 'Sora_400Regular',
-    marginTop: 2,
-  },
-  txAmount: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 13.5,
-  },
+  offerSub: { fontSize: 11, fontFamily: 'Sora_400Regular', lineHeight: 16, marginTop: -4 },
+  txTitle: { fontFamily: 'Sora_500Medium', fontSize: 12.5 },
+  txDate: { fontSize: 10, fontFamily: 'Sora_400Regular', marginTop: 2 },
+  txAmount: { fontFamily: 'Sora_600SemiBold', fontSize: 12.5 },
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -1018,12 +921,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  modalSheet: {
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
+  modalSheet: { borderTopLeftRadius: BorderRadius.premium, borderTopRightRadius: BorderRadius.premium, padding: Spacing.lg, paddingBottom: Spacing.xl },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1035,14 +933,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Sora_500Medium',
     marginBottom: 6,
   },
-  modalInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    height: 36,
-  },
+  modalInputRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, borderRadius: BorderRadius.md, borderWidth: 1, height: 44 },
   currencyPrefix: {
     fontSize: 14.5,
     fontFamily: 'Sora_500Medium',
@@ -1054,34 +945,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Sora_500Medium',
     includeFontPadding: false,
   },
-  quickAmtChip: {
-    flex: 1,
-    paddingVertical: 6,
-    alignItems: 'center',
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-  },
-  paymentOptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    gap: 8,
-  },
-  modalSubmitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 34,
-    borderRadius: BorderRadius.full,
-    marginTop: Spacing.sm,
-  },
-  modalSubmitText: {
-    color: '#ffffff',
-    fontFamily: 'Sora_500Medium',
-    fontSize: 11.5,
-  },
+  quickAmtChip: { flex: 1, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: BorderRadius.md, borderWidth: 1 },
+  paymentOptionRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, height: 44, borderRadius: BorderRadius.md, borderWidth: 1, gap: 8 },
+  modalSubmitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 46, borderRadius: BorderRadius.premium, marginTop: Spacing.sm },
+  modalSubmitText: { color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 13 },
+  cardGap: { marginTop: 12 },
+  promoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingLeft: 12, paddingRight: 4, borderRadius: BorderRadius.md, borderWidth: 1 },
+  tabs: { marginTop: Spacing.md },
+  couponFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 8, paddingTop: 6, borderTopWidth: 1 },
+  chipRow: { flexDirection: 'row', gap: 8, marginBottom: Spacing.sm },
+  txRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
+  txIconTile: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  txEmpty: { fontSize: 11, fontFamily: 'Sora_400Regular', textAlign: 'center', paddingVertical: 12 },
+  redeemHint: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: -4 },
+  redeemHintText: { fontSize: 10, fontFamily: 'Sora_400Regular', flexShrink: 1 },
+  sectionCount: { fontSize: 10.5, fontFamily: 'Sora_500Medium' },
+  dealGroup: { marginBottom: Spacing.lg },
+  dealList: { gap: 12 },
+  codePill: { borderWidth: 1, borderStyle: 'dashed', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 1 },
+  codePillText: { fontSize: 10.5, fontFamily: 'Sora_600SemiBold', letterSpacing: 0.8 },
+  copyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, height: 28, borderRadius: BorderRadius.md },
+  copyBtnText: { fontFamily: 'Sora_600SemiBold', fontSize: 11 },
 });

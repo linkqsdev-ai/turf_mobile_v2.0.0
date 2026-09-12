@@ -184,6 +184,13 @@ export default function CreateClassScreen() {
   // Step 3 — Publish & Vouchers
   const [feeType, setFeeType] = useState('');
   const [feeAmount, setFeeAmount] = useState('');
+  const [cashbackEnabled, setCashbackEnabled] = useState(false);
+  const [cashbackType, setCashbackType] = useState<'flat' | 'percent'>('flat');
+  const [cashbackAmount, setCashbackAmount] = useState('');
+  const [cashbackName, setCashbackName] = useState('');
+  const [cashbackCode, setCashbackCode] = useState('');
+  const [cashbackMaxAmount, setCashbackMaxAmount] = useState('');
+  const [cashbackOneTime, setCashbackOneTime] = useState(true);
   const [description, setDescription] = useState('');
   const [classBannerImage, setClassBannerImage] = useState<string>('');
   const [classOffers, setClassOffers] = useState<ClassOfferDraft[]>([]);
@@ -195,6 +202,9 @@ export default function CreateClassScreen() {
     const hasDesc = Boolean(description && description.trim());
     const hasVenue = Boolean(venue && venue.trim());
     const hasFee = Boolean(feeAmount && feeAmount.trim());
+    const hasCashback = Boolean(cashbackAmount && cashbackAmount.trim());
+    const hasCashbackName = Boolean(cashbackName && cashbackName.trim());
+    const hasCashbackCode = Boolean(cashbackCode && cashbackCode.trim());
     const hasMaxStudents = Boolean(maxStudents && maxStudents.trim());
     const hasSessionTime = Boolean(sessionTime && sessionTime.trim());
     const hasSkill = Boolean(skillLevel && skillLevel.trim());
@@ -209,6 +219,9 @@ export default function CreateClassScreen() {
       hasDesc ||
       hasVenue ||
       hasFee ||
+      hasCashback ||
+      hasCashbackName ||
+      hasCashbackCode ||
       hasMaxStudents ||
       hasSessionTime ||
       hasSkill ||
@@ -223,6 +236,9 @@ export default function CreateClassScreen() {
     description,
     venue,
     feeAmount,
+    cashbackAmount,
+    cashbackName,
+    cashbackCode,
     maxStudents,
     sessionTime,
     skillLevel,
@@ -389,6 +405,16 @@ export default function CreateClassScreen() {
     if (draft.venue) setVenue(draft.venue);
     if (draft.feeType) setFeeType(draft.feeType);
     if (draft.feeAmount) setFeeAmount(draft.feeAmount);
+    if (draft.cashbackEnabled !== undefined) setCashbackEnabled(Boolean(draft.cashbackEnabled));
+    if (draft.cashbackType) setCashbackType(draft.cashbackType);
+    if (draft.cashbackAmount !== undefined) {
+      setCashbackAmount(String(draft.cashbackAmount));
+      if (Number(draft.cashbackAmount) > 0) setCashbackEnabled(true);
+    }
+    if (draft.cashbackName) setCashbackName(draft.cashbackName);
+    if (draft.cashbackCode) setCashbackCode(draft.cashbackCode);
+    if (draft.cashbackMaxAmount !== undefined) setCashbackMaxAmount(String(draft.cashbackMaxAmount));
+    if (draft.cashbackOneTime !== undefined) setCashbackOneTime(Boolean(draft.cashbackOneTime));
     if (draft.description) setDescription(draft.description);
     if (draft.bannerImage || draft.image || draft.classBannerImage) {
       setClassBannerImage(draft.bannerImage || draft.image || draft.classBannerImage);
@@ -459,6 +485,16 @@ export default function CreateClassScreen() {
         if (existing.venue) setVenue(existing.venue);
         if (existing.feeType) setFeeType(existing.feeType);
         if (existing.feeAmount) setFeeAmount(String(existing.feeAmount));
+        if (existing.cashbackEnabled !== undefined) setCashbackEnabled(Boolean(existing.cashbackEnabled));
+        if (existing.cashbackType) setCashbackType(existing.cashbackType);
+        if (existing.cashbackAmount !== undefined) {
+          setCashbackAmount(String(existing.cashbackAmount));
+          if (Number(existing.cashbackAmount) > 0) setCashbackEnabled(true);
+        }
+        if (existing.cashbackName) setCashbackName(existing.cashbackName);
+        if (existing.cashbackCode) setCashbackCode(existing.cashbackCode);
+        if (existing.cashbackMaxAmount !== undefined) setCashbackMaxAmount(String(existing.cashbackMaxAmount));
+        if (existing.cashbackOneTime !== undefined) setCashbackOneTime(Boolean(existing.cashbackOneTime));
         if (existing.description) setDescription(existing.description);
         if (existing.bannerImage || existing.image || existing.classBannerImage) {
           setClassBannerImage(existing.bannerImage || existing.image || existing.classBannerImage);
@@ -767,6 +803,9 @@ export default function CreateClassScreen() {
       }
     });
 
+    const parsedCashback = parseFloat(cashbackAmount) || 0;
+    const isCashbackActive = cashbackEnabled && parsedCashback > 0;
+
     const classPayload = {
       className,
       coachName: profile?.name || 'Coach Specialist',
@@ -784,6 +823,13 @@ export default function CreateClassScreen() {
       venue,
       feeType,
       feeAmount,
+      cashbackEnabled: isCashbackActive,
+      cashbackType,
+      cashbackAmount: isCashbackActive ? parsedCashback : 0,
+      cashbackName: isCashbackActive && cashbackName.trim() ? cashbackName.trim() : undefined,
+      cashbackCode: isCashbackActive && cashbackCode.trim() ? cashbackCode.trim().toUpperCase() : undefined,
+      cashbackMaxAmount: isCashbackActive && parseFloat(cashbackMaxAmount) > 0 ? parseFloat(cashbackMaxAmount) : undefined,
+      cashbackOneTime: isCashbackActive ? cashbackOneTime : undefined,
       description,
       bannerImage: classBannerImage,
       image: classBannerImage,
@@ -874,6 +920,13 @@ export default function CreateClassScreen() {
         venue,
         feeType,
         feeAmount,
+        cashbackEnabled,
+        cashbackType,
+        cashbackAmount,
+        cashbackName,
+        cashbackCode,
+        cashbackMaxAmount,
+        cashbackOneTime,
         description,
         bannerImage: classBannerImage,
         image: classBannerImage,
@@ -1035,6 +1088,174 @@ export default function CreateClassScreen() {
               <ThemedText style={[styles.voucherDetailMetricLabel, { color: theme.textSecondary }]}>MIN FEE</ThemedText>
               <ThemedText style={[styles.voucherDetailMetricVal, { color: theme.text }]}>
                 {minBook > 0 ? `₹${minBook}` : 'No Min'}
+              </ThemedText>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const activeCashbackCode = useMemo(() => {
+    if (cashbackCode.trim()) return cashbackCode.trim().toUpperCase();
+    const cleanPrefix = (className || 'CLASS').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase() || 'CLASS';
+    const numSuffix = cashbackType === 'percent' ? (cashbackAmount || '15') : (cashbackAmount || '100');
+    return `CB-${cleanPrefix}${numSuffix}`;
+  }, [cashbackCode, className, cashbackType, cashbackAmount]);
+
+  const activeCashbackTitle = useMemo(() => {
+    if (cashbackName.trim()) return cashbackName.trim();
+    return `${className.trim().slice(0, 16) || 'Coaching Class'} Cashback`;
+  }, [cashbackName, className]);
+
+  const handleCopyCashbackCode = (codeToCopy: string) => {
+    if (!codeToCopy) return;
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(codeToCopy);
+    }
+    triggerToast(`📋 Cashback code "${codeToCopy}" copied!`);
+  };
+
+  const renderCashbackDesignCard = () => {
+    const val = parseFloat(cashbackAmount) || 0;
+    const discountText = cashbackType === 'percent' ? `${val}% BACK` : `₹${val} BACK`;
+    const appliesTo = className.trim() || 'Coaching Academy Class';
+
+    return (
+      <View style={{ alignItems: 'center', marginVertical: 6, width: '100%' }}>
+        <TicketVoucherCard
+          item={{
+            id: 'cashback-preview',
+            code: activeCashbackCode,
+            title: activeCashbackTitle,
+            appliesTo,
+            discountText,
+            color: '#10b981',
+            subType: 'BACK',
+            category: 'wallet',
+          }}
+          index={3}
+        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 280, marginTop: 5, paddingHorizontal: 4 }}>
+          <Pressable
+            onPress={() => handleCopyCashbackCode(activeCashbackCode)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10b98118', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}
+          >
+            <Ionicons name="copy-outline" size={10} color="#10b981" />
+            <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#10b981' }}>
+              Copy {activeCashbackCode}
+            </ThemedText>
+          </Pressable>
+          <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
+            {cashbackOneTime ? '1x Per Student' : 'All Students'}
+            {cashbackMaxAmount && parseFloat(cashbackMaxAmount) > 0 ? ` · Max ₹${cashbackMaxAmount}` : ''}
+          </ThemedText>
+        </View>
+      </View>
+    );
+  };
+
+  const renderCashbackDetailsOutput = () => {
+    const val = parseFloat(cashbackAmount) || 0;
+    const isPercent = cashbackType === 'percent';
+    const cashbackText = isPercent ? `+${val}% CASHBACK` : `+₹${val} CASHBACK`;
+    const feeVal = parseFloat(feeAmount) || 0;
+    let estimatedAmt = isPercent ? Math.round((feeVal * val) / 100) : val;
+    if (cashbackMaxAmount && parseFloat(cashbackMaxAmount) > 0) {
+      estimatedAmt = Math.min(estimatedAmt, parseFloat(cashbackMaxAmount));
+    }
+    const bannerUri = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1200&auto=format&fit=crop&q=80';
+    const appliesTo = className.trim() || 'Coaching Academy Class';
+
+    return (
+      <View
+        style={[
+          styles.voucherDetailOutputCard,
+          { backgroundColor: theme.surfaceLowest, borderColor: '#10b98144' },
+          Shadows.level1,
+        ]}
+      >
+        {/* Banner with Emerald Gradient Overlay */}
+        <View style={styles.voucherDetailBannerWrap}>
+          <Image source={{ uri: bannerUri }} style={styles.voucherDetailBannerImg} contentFit="cover" />
+          <LinearGradient
+            colors={['rgba(6, 78, 59, 0.45)', 'rgba(6, 78, 59, 0.94)']}
+            style={StyleSheet.absoluteFill}
+          />
+
+          {/* Top Badges */}
+          <View style={styles.voucherDetailTopRow}>
+            <View style={[styles.voucherDetailCategoryBadge, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+              <Ionicons name="wallet-outline" size={11} color="#34d399" />
+              <ThemedText style={[styles.voucherDetailCategoryText, { color: '#34d399' }]}>WALLET REWARD</ThemedText>
+            </View>
+            <View style={[styles.voucherDetailDiscountTag, { backgroundColor: '#10b981' }]}>
+              <ThemedText style={styles.voucherDetailDiscountTagText}>{cashbackText}</ThemedText>
+            </View>
+          </View>
+
+          {/* Banner Title & Target */}
+          <View style={styles.voucherDetailBottomContent}>
+            <ThemedText style={styles.voucherDetailTitle} numberOfLines={1}>
+              {activeCashbackTitle}
+            </ThemedText>
+            <ThemedText style={styles.voucherDetailSub} numberOfLines={1}>
+              Auto-credited on payment completion for {appliesTo}
+            </ThemedText>
+          </View>
+        </View>
+
+        {/* Details Spec Body */}
+        <View style={styles.voucherDetailBody}>
+          {/* Trigger & Copy Row */}
+          <View style={[styles.voucherDetailCodeRow, { backgroundColor: '#10b98112', borderColor: '#10b98144' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="gift-outline" size={14} color="#10b981" />
+              <ThemedText style={[styles.voucherDetailCodeText, { color: '#10b981' }]}>
+                {activeCashbackCode}
+              </ThemedText>
+            </View>
+            <Pressable
+              onPress={() => handleCopyCashbackCode(activeCashbackCode)}
+              style={[styles.voucherDetailCopyBadge, { backgroundColor: '#10b981', flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+            >
+              <Ionicons name="copy-outline" size={11} color="#ffffff" />
+              <ThemedText style={styles.voucherDetailCopyText}>COPY CODE</ThemedText>
+            </Pressable>
+          </View>
+
+          {/* Terms note */}
+          <ThemedText style={[styles.voucherDetailTerms, { color: theme.textSecondary }]} numberOfLines={2}>
+            &ldquo;₹{estimatedAmt} cashback is auto-credited to student&apos;s wallet upon payment and can be used towards any turf booking or class enrollment ({cashbackOneTime ? '1x per student' : 'All enrollments'}).&rdquo;
+          </ThemedText>
+
+          {/* 4-Metric Spec Grid */}
+          <View style={[styles.voucherDetailGrid, { borderTopColor: theme.outlineVariant + '22' }]}>
+            <View style={styles.voucherDetailMetric}>
+              <ThemedText style={[styles.voucherDetailMetricLabel, { color: theme.textSecondary }]}>REWARD TYPE</ThemedText>
+              <ThemedText style={[styles.voucherDetailMetricVal, { color: theme.text }]} numberOfLines={1}>
+                {isPercent ? 'Percentage (%)' : 'Flat (₹)'}
+              </ThemedText>
+            </View>
+
+            <View style={styles.voucherDetailMetric}>
+              <ThemedText style={[styles.voucherDetailMetricLabel, { color: theme.textSecondary }]}>CASHBACK</ThemedText>
+              <ThemedText style={[styles.voucherDetailMetricVal, { color: '#10b981' }]}>
+                {isPercent ? `${val}%` : `₹${val}`}
+              </ThemedText>
+            </View>
+
+            <View style={styles.voucherDetailMetric}>
+              <ThemedText style={[styles.voucherDetailMetricLabel, { color: theme.textSecondary }]}>MAX CAP</ThemedText>
+              <ThemedText style={[styles.voucherDetailMetricVal, { color: theme.text }]}>
+                {cashbackMaxAmount && parseFloat(cashbackMaxAmount) > 0 ? `₹${cashbackMaxAmount}` : 'No Cap'}
+              </ThemedText>
+            </View>
+
+            <View style={styles.voucherDetailMetric}>
+              <ThemedText style={[styles.voucherDetailMetricLabel, { color: theme.textSecondary }]}>USAGE</ThemedText>
+              <ThemedText style={[styles.voucherDetailMetricVal, { color: theme.text }]} numberOfLines={1}>
+                {cashbackOneTime ? '1x / Student' : 'Unlimited'}
               </ThemedText>
             </View>
           </View>
@@ -1688,6 +1909,323 @@ export default function CreateClassScreen() {
           />
         </View>
 
+        {/* ── Cashback Reward Section ── */}
+        <View style={[styles.fieldGroup, { marginTop: Spacing.sm }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="wallet-outline" size={16} color="#10b981" />
+              <ThemedText style={[styles.fieldLabel, { fontSize: 10.5, color: '#10b981', letterSpacing: 0.6 }]}>
+                CASHBACK REWARD (WALLET CREDIT)
+              </ThemedText>
+            </View>
+            <Pressable
+              onPress={() => setCashbackEnabled(!cashbackEnabled)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                backgroundColor: cashbackEnabled ? '#10b98118' : theme.surfaceLow,
+                borderWidth: 1,
+                borderColor: cashbackEnabled ? '#10b981' : theme.outlineVariant + '44',
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: BorderRadius.full,
+              }}
+            >
+              <Ionicons
+                name={cashbackEnabled ? "checkbox" : "square-outline"}
+                size={14}
+                color={cashbackEnabled ? '#10b981' : theme.textSecondary}
+              />
+              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: cashbackEnabled ? '#10b981' : theme.textSecondary }}>
+                {cashbackEnabled ? 'Enabled' : 'Enable Cashback'}
+              </ThemedText>
+            </Pressable>
+          </View>
+          <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: theme.textSecondary, marginBottom: 8 }}>
+            Give students a cashback incentive when they complete class enrollment payment. Cashback is added directly to their Student Wallet.
+          </ThemedText>
+
+          {cashbackEnabled && (
+            <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant + '33', gap: 12 }}>
+              {/* 1. Cashback Name Input */}
+              <View>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                  Cashback Title / Campaign Name
+                </ThemedText>
+                <TextInput
+                  maxFontSizeMultiplier={MAX_FONT_SCALE}
+                  value={cashbackName}
+                  onChangeText={setCashbackName}
+                  placeholder={`e.g. ${className.trim().slice(0, 14) || 'Coaching'} Cashback Reward`}
+                  placeholderTextColor="#94a3b8"
+                  style={{
+                    backgroundColor: theme.surfaceLowest,
+                    color: theme.text,
+                    fontFamily: 'Sora_500Medium',
+                    fontSize: 13,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: theme.outlineVariant + '44',
+                    paddingHorizontal: 10,
+                    height: 42,
+                    ...({ outlineStyle: 'none' } as any),
+                  }}
+                />
+              </View>
+
+              {/* 2. Cashback Code Input + Copy Button */}
+              <View>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                  Cashback Code (Optional Custom Code)
+                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 8, borderWidth: 1, borderColor: theme.outlineVariant + '44', paddingHorizontal: 10, height: 42, gap: 8 }}>
+                  <Ionicons name="pricetag-outline" size={15} color="#10b981" />
+                  <TextInput
+                    maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    value={cashbackCode}
+                    onChangeText={(val) => setCashbackCode(val.toUpperCase())}
+                    placeholder={`e.g. ${activeCashbackCode}`}
+                    placeholderTextColor="#94a3b8"
+                    autoCapitalize="characters"
+                    style={{ flex: 1, fontSize: 13, fontFamily: 'Sora_600SemiBold', color: '#10b981', height: 40, letterSpacing: 0.8, ...({ outlineStyle: 'none' } as any) }}
+                  />
+                  <Pressable
+                    onPress={() => handleCopyCashbackCode(activeCashbackCode)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10b98120', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
+                  >
+                    <Ionicons name="copy-outline" size={12} color="#10b981" />
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: '#10b981' }}>
+                      Copy
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* 3. Type Switcher: Flat ₹ vs Percentage % */}
+              <View>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                  Cashback Type
+                </ThemedText>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    onPress={() => setCashbackType('flat')}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      backgroundColor: cashbackType === 'flat' ? '#10b981' : theme.surfaceLowest,
+                      borderWidth: 1,
+                      borderColor: cashbackType === 'flat' ? '#10b981' : theme.outlineVariant + '33',
+                    }}
+                  >
+                    <Ionicons name="cash-outline" size={14} color={cashbackType === 'flat' ? '#ffffff' : theme.text} />
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: cashbackType === 'flat' ? '#ffffff' : theme.text }}>
+                      Flat ₹ Cashback
+                    </ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => setCashbackType('percent')}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      backgroundColor: cashbackType === 'percent' ? '#10b981' : theme.surfaceLowest,
+                      borderWidth: 1,
+                      borderColor: cashbackType === 'percent' ? '#10b981' : theme.outlineVariant + '33',
+                    }}
+                  >
+                    <Ionicons name="pie-chart-outline" size={14} color={cashbackType === 'percent' ? '#ffffff' : theme.text} />
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: cashbackType === 'percent' ? '#ffffff' : theme.text }}>
+                      Percentage %
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* 4. Amount Input */}
+              <View>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                  {cashbackType === 'flat' ? 'Cashback Amount (₹)' : 'Cashback Percentage (%)'}
+                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 8, borderWidth: 1, borderColor: theme.outlineVariant + '44', paddingHorizontal: 10, height: 42 }}>
+                  <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: '#10b981', marginRight: 6 }}>
+                    {cashbackType === 'flat' ? '₹' : '%'}
+                  </ThemedText>
+                  <TextInput
+                    maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    value={cashbackAmount}
+                    onChangeText={setCashbackAmount}
+                    keyboardType="decimal-pad"
+                    placeholder={cashbackType === 'flat' ? 'e.g. 200' : 'e.g. 10'}
+                    placeholderTextColor="#94a3b8"
+                    style={{ flex: 1, fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text, height: 40, ...({ outlineStyle: 'none' } as any) }}
+                  />
+                  {cashbackAmount !== '' && (
+                    <Pressable onPress={() => setCashbackAmount('')}>
+                      <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+
+              {/* Quick suggestion chips */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {(cashbackType === 'flat' ? ['50', '100', '200', '500'] : ['5', '10', '15', '20']).map(chip => (
+                  <Pressable
+                    key={chip}
+                    onPress={() => setCashbackAmount(chip)}
+                    style={{
+                      paddingVertical: 3,
+                      paddingHorizontal: 8,
+                      borderRadius: 6,
+                      backgroundColor: cashbackAmount === chip ? '#10b98120' : theme.surfaceLowest,
+                      borderWidth: 1,
+                      borderColor: cashbackAmount === chip ? '#10b981' : theme.outlineVariant + '33',
+                    }}
+                  >
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: cashbackAmount === chip ? '#10b981' : theme.textSecondary }}>
+                      {cashbackType === 'flat' ? `₹${chip}` : `${chip}%`}
+                    </ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+
+              {/* 5. Restrictions: Max Amount Cap & One-Time Toggle */}
+              <View style={{ backgroundColor: theme.surfaceLowest, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: theme.outlineVariant + '33', gap: 10, marginTop: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="shield-checkmark-outline" size={14} color="#10b981" />
+                  <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                    CASHBACK RESTRICTIONS & GUARDRAILS
+                  </ThemedText>
+                </View>
+
+                {/* Max Cap Input */}
+                <View>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 5 }}>
+                    Maximum Cashback Cap (₹) — {cashbackType === 'percent' ? 'Recommended for % rates' : 'Optional Limit'}
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLow, borderRadius: 6, borderWidth: 1, borderColor: theme.outlineVariant + '44', paddingHorizontal: 10, height: 38 }}>
+                    <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, marginRight: 6 }}>₹</ThemedText>
+                    <TextInput
+                      maxFontSizeMultiplier={MAX_FONT_SCALE}
+                      value={cashbackMaxAmount}
+                      onChangeText={setCashbackMaxAmount}
+                      keyboardType="decimal-pad"
+                      placeholder="e.g. 250 (Leave blank for no limit)"
+                      placeholderTextColor="#94a3b8"
+                      style={{ flex: 1, fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text, height: 36, ...({ outlineStyle: 'none' } as any) }}
+                    />
+                    {cashbackMaxAmount !== '' && (
+                      <Pressable onPress={() => setCashbackMaxAmount('')}>
+                        <Ionicons name="close-circle" size={14} color={theme.textSecondary} />
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+
+                {/* One-Time Usage Switcher */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 2 }}>
+                  <View style={{ flex: 1, marginRight: 10 }}>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                      One-Time Usage per Student
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_400Regular', color: theme.textSecondary }}>
+                      {cashbackOneTime ? 'Only first enrollment gets cashback reward' : 'Student gets cashback on every enrollment payment'}
+                    </ThemedText>
+                  </View>
+                  <Pressable
+                    onPress={() => setCashbackOneTime(!cashbackOneTime)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 6,
+                      backgroundColor: cashbackOneTime ? '#10b98120' : theme.surfaceLow,
+                      borderWidth: 1,
+                      borderColor: cashbackOneTime ? '#10b981' : theme.outlineVariant + '44',
+                    }}
+                  >
+                    <Ionicons
+                      name={cashbackOneTime ? 'checkbox' : 'square-outline'}
+                      size={13}
+                      color={cashbackOneTime ? '#10b981' : theme.textSecondary}
+                    />
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: cashbackOneTime ? '#10b981' : theme.textSecondary }}>
+                      {cashbackOneTime ? '1x Only' : 'Multi-use'}
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Live Preview Callout */}
+              {parseFloat(cashbackAmount) > 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#10b98115', borderWidth: 1, borderColor: '#10b98133', padding: 8, borderRadius: 8 }}>
+                  <Ionicons name="gift" size={14} color="#10b981" />
+                  <ThemedText style={{ flex: 1, fontSize: 10.5, fontFamily: 'Sora_500Medium', color: '#10b981' }}>
+                    Student earns {cashbackType === 'flat' ? `₹${parseFloat(cashbackAmount) || 0}` : `${parseFloat(cashbackAmount) || 0}% (~₹${Math.round(((parseFloat(feeAmount) || 0) * (parseFloat(cashbackAmount) || 0)) / 100)})`}{cashbackMaxAmount && parseFloat(cashbackMaxAmount) > 0 ? ` (Max Cap ₹${cashbackMaxAmount})` : ''} Cashback into their wallet upon completing payment!
+                  </ThemedText>
+                </View>
+              )}
+
+              {/* 1. Live Cashback Design Card */}
+              {parseFloat(cashbackAmount) > 0 && (
+                <View style={{ marginTop: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="card-outline" size={13} color="#10b981" />
+                      <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 10.5, color: '#10b981', letterSpacing: 0.3 }}>
+                        LIVE CASHBACK CARD DESIGN
+                      </ThemedText>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#10b98118', paddingHorizontal: 6, paddingVertical: 2, borderRadius: BorderRadius.full }}>
+                      <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#10b981' }} />
+                      <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: '#10b981' }}>
+                        Live Bound
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  {renderCashbackDesignCard()}
+                </View>
+              )}
+
+              {/* 2. Live Cashback Details Output */}
+              {parseFloat(cashbackAmount) > 0 && (
+                <View style={{ marginTop: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="document-text-outline" size={13} color="#10b981" />
+                      <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 10.5, color: '#10b981', letterSpacing: 0.3 }}>
+                        CASHBACK DETAILS OUTPUT
+                      </ThemedText>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#10b98118', paddingHorizontal: 6, paddingVertical: 2, borderRadius: BorderRadius.full }}>
+                      <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#10b981' }} />
+                      <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: '#10b981' }}>
+                        Live Bound
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  {renderCashbackDetailsOutput()}
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+
         {/* ── Promotional Vouchers Section ── */}
         <View style={[styles.fieldGroup, { marginTop: Spacing.sm }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -1710,7 +2248,7 @@ export default function CreateClassScreen() {
 
           {classOffers.length === 0 ? (
             <View style={[styles.offerEmptyBox, { backgroundColor: theme.surfaceLow, borderRadius: BorderRadius.md }]}>
-              <Ionicons name="pricetags-outline" size={24} color={theme.textSecondary} />
+              <Ionicons name="pricetags-outline" size={20} color={theme.textSecondary} />
               <ThemedText style={[styles.offerEmptyText, { color: theme.textSecondary }]}>
                 No vouchers added. Tap &apos;+ Add Voucher&apos; to create one.
               </ThemedText>
@@ -2356,7 +2894,7 @@ export default function CreateClassScreen() {
             <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44', padding: 24, maxWidth: 340 }]}>
               <View style={{ alignItems: 'center', marginBottom: 16 }}>
                 <View style={{ backgroundColor: theme.primary + '15', padding: 12, borderRadius: BorderRadius.full, marginBottom: 12 }}>
-                  <Ionicons name="document-text" size={36} color={theme.primary} />
+                  <Ionicons name="document-text" size={30} color={theme.primary} />
                 </View>
                 <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_500Medium', color: theme.text, textAlign: 'center' }}>
                   Resume Draft? 📝
@@ -2655,7 +3193,7 @@ const styles = StyleSheet.create({
   },
   previewName: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 20,
+    fontSize: 16.5,
     color: '#ffffff',
     lineHeight: 26,
   },
@@ -2881,7 +3419,7 @@ const styles = StyleSheet.create({
   kakaoBigDiscount: {
     color: '#ffffff',
     fontFamily: 'Sora_500Medium',
-    fontSize: 28,
+    fontSize: 22,
     letterSpacing: -0.5,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
@@ -2890,7 +3428,7 @@ const styles = StyleSheet.create({
   kakaoBigOff: {
     color: '#FEE500',
     fontFamily: 'Sora_500Medium',
-    fontSize: 16,
+    fontSize: 14.5,
     letterSpacing: 0.5,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },

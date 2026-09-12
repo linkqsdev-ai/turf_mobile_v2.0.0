@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { openProfileDrawer } from '@/components/profile-drawer';
 import {
   StyleSheet,
   View,
@@ -355,7 +356,7 @@ export default function CoachTab() {
           {/* Top App Bar */}
           <View style={[styles.header, { backgroundColor: 'transparent' }]}>
             <View style={styles.headerLeft}>
-              <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
+              <Pressable style={styles.profileIconButton} onPress={openProfileDrawer}>
                 <Image
                   source={avatarSource}
                   style={styles.headerAvatar}
@@ -400,7 +401,7 @@ export default function CoachTab() {
           {/* Top App Bar */}
           <View style={[styles.header, { backgroundColor: 'transparent' }]}>
             <View style={styles.headerLeft}>
-              <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
+              <Pressable style={styles.profileIconButton} onPress={openProfileDrawer}>
                 <Image
                   source={avatarSource}
                   style={styles.headerAvatar}
@@ -566,6 +567,14 @@ export default function CoachTab() {
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                               <ThemedText style={{ color: '#d97706', fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
                                 🎟️ {cls.vouchers[0].discountValue ? `${cls.vouchers[0].discountValue}${cls.vouchers[0].discountType === 'flat' ? '₹ OFF' : '% OFF'}` : '15% OFF'} ({cls.vouchers[0].code})
+                              </ThemedText>
+                            </View>
+                          ) : null}
+
+                          {cls.cashbackAmount && Number(cls.cashbackAmount) > 0 ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                              <ThemedText style={{ color: '#10b981', fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
+                                💰 {cls.cashbackType === 'percent' ? `${cls.cashbackAmount}% Cashback` : `₹${cls.cashbackAmount} Cashback`}
                               </ThemedText>
                             </View>
                           ) : null}
@@ -1096,7 +1105,7 @@ export default function CoachTab() {
               end={{ x: 1, y: 1 }}
               style={styles.fabGradient}
             >
-              <MaterialCommunityIcons name="stadium-outline" size={24} color="#fff" />
+              <MaterialCommunityIcons name="stadium-outline" size={20} color="#fff" />
             </LinearGradient>
           </Pressable>
 
@@ -1125,7 +1134,7 @@ export default function CoachTab() {
         {/* Top App Bar */}
         <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <View style={styles.headerLeft}>
-            <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
+            <Pressable style={styles.profileIconButton} onPress={openProfileDrawer}>
               <Image
                 source={avatarSource}
                 style={styles.headerAvatar}
@@ -1208,7 +1217,7 @@ export default function CoachTab() {
                 <View style={[styles.matcherCard, { backgroundColor: theme.surfaceHigh, borderColor: theme.outlineVariant + '33' }]}>
                   <View style={styles.matcherAvatarContainer}>
                     <View style={[styles.matcherAvatarRing, { borderColor: theme.secondaryContainer }]}>
-                      <Ionicons name="star" size={24} color={theme.primary} />
+                      <Ionicons name="star" size={20} color={theme.primary} />
                     </View>
                   </View>
                   <ThemedText type="headlineSm" style={{ color: theme.text, marginTop: Spacing.sm }}>
@@ -1283,7 +1292,7 @@ export default function CoachTab() {
               <View style={styles.teamGrid}>
                 {visibleCoaches.length === 0 ? (
                   <View style={{ paddingVertical: 30, alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-                    <Ionicons name="school-outline" size={44} color={theme.textSecondary + '77'} style={{ marginBottom: 10 }} />
+                    <Ionicons name="school-outline" size={36} color={theme.textSecondary + '77'} style={{ marginBottom: 10 }} />
                     <ThemedText style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium', textAlign: 'center', fontSize: 13, lineHeight: 18 }}>
                       {"No self-created classes yet.\nTap the school icon button at the top right to create one!"}
                     </ThemedText>
@@ -1398,7 +1407,7 @@ export default function CoachTab() {
               end={{ x: 1, y: 1 }}
               style={styles.fabGradient}
             >
-              <Ionicons name="school" size={26} color="#ffffff" />
+              <Ionicons name="school" size={22} color="#ffffff" />
             </LinearGradient>
           </Pressable>
         )}

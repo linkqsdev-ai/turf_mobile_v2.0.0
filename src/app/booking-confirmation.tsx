@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ConfirmationView } from '@/components/confirmation-view';
+import { CashbackOutputCard } from '@/components/cashback-output-card';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -26,9 +27,15 @@ export default function BookingConfirmationScreen() {
     total: string;
     advancePaid: string;
     cashbackEarned?: string;
+    cashbackName?: string;
+    cashbackCode?: string;
+    cashbackType?: 'flat' | 'percent';
+    cashbackMaxAmount?: string;
+    cashbackOneTime?: string;
   }>();
 
   const slots = params.slots ? params.slots.split(',') : [];
+  const earnedAmount = params.cashbackEarned ? parseFloat(params.cashbackEarned) : 0;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
@@ -37,14 +44,21 @@ export default function BookingConfirmationScreen() {
         subtitle="Your turf slot has been successfully reserved."
         referenceLabel="BOOKING REFERENCE"
         reference={params.bookingRef || 'BK-TURF8821'}
-        highlight={
-          params.cashbackEarned
-            ? {
-                icon: 'gift',
-                title: `₹${params.cashbackEarned} Cashback Received!`,
-                subtitle: 'Added to your turf wallet for future sessions.',
-              }
-            : undefined
+        extraContent={
+          earnedAmount > 0 ? (
+            <View style={{ marginBottom: 14 }}>
+              <CashbackOutputCard
+                entityName={params.venueName || 'Turf Venue'}
+                entityType="turf"
+                cashbackAmount={earnedAmount}
+                cashbackType={params.cashbackType || 'flat'}
+                cashbackName={params.cashbackName || `${params.venueName || 'Turf'} Cashback Reward`}
+                cashbackCode={params.cashbackCode}
+                cashbackMaxAmount={params.cashbackMaxAmount ? parseFloat(params.cashbackMaxAmount) : undefined}
+                cashbackOneTime={params.cashbackOneTime === 'true'}
+              />
+            </View>
+          ) : undefined
         }
         infoRows={[
           { icon: 'business-outline', label: 'VENUE', value: params.venueName || 'Turf' },

@@ -47,8 +47,8 @@ export function FoFChainVisualizerModal({
           {/* Header */}
           <View style={styles.headerRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={[styles.networkIconBg, { backgroundColor: conn.badgeBg }]}>
-                <Ionicons name="git-network" size={20} color={conn.badgeColor} />
+              <View style={[styles.networkIconBg, { backgroundColor: theme.primary + '18' }]}>
+                <Ionicons name="git-network" size={20} color={theme.primary} />
               </View>
               <View>
                 <ThemedText style={{ fontSize: 13.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
@@ -60,7 +60,7 @@ export function FoFChainVisualizerModal({
               </View>
             </View>
             <Pressable onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={22} color={theme.text} />
+              <Ionicons name="close" size={20} color={theme.text} />
             </Pressable>
           </View>
 
@@ -93,15 +93,15 @@ export function FoFChainVisualizerModal({
             </View>
 
             {/* Trust Meter Box */}
-            <View style={[styles.trustBox, { backgroundColor: '#10B98112', borderColor: '#10B98133' }]}>
+            <View style={[styles.trustBox, { backgroundColor: theme.primary + '0f', borderColor: theme.primary + '28' }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="shield-checkmark" size={18} color="#10B981" />
-                  <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: '#10B981' }}>
+                  <Ionicons name="shield-checkmark" size={18} color={theme.primary} />
+                  <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.primary }}>
                     {conn.trustScore}% Network Trust Verified
                   </ThemedText>
                 </View>
-                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: '#10B981' }}>
+                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: theme.primary }}>
                   {conn.degree === 1 ? 'Direct Contact' : conn.degree === 2 ? '2-Hop Connection' : '3-Chain FoF'}
                 </ThemedText>
               </View>
@@ -119,22 +119,21 @@ export function FoFChainVisualizerModal({
               {conn.chainPath.map((node, index) => {
                 const isFirst = index === 0;
                 const isLast = index === conn.chainPath.length - 1;
-                const isIntermediate = !isFirst && !isLast;
 
                 return (
                   <View key={`node-${index}`} style={styles.chainNodeWrapper}>
                     {/* Node Row */}
                     <View style={[
                       styles.nodeCard,
-                      { backgroundColor: theme.surfaceLow, borderColor: isLast ? conn.badgeColor : theme.outlineVariant + '44' },
-                      isLast && { borderWidth: 1.5, backgroundColor: conn.badgeBg }
+                      { backgroundColor: theme.surfaceLow, borderColor: isLast ? theme.primary : theme.outlineVariant + '44' },
+                      isLast && { borderWidth: 1.5, backgroundColor: theme.primary + '10' }
                     ]}>
                       {/* Avatar / Icon */}
                       {node.avatar ? (
                         <Image source={{ uri: node.avatar }} style={styles.nodeAvatar} />
                       ) : (
-                        <View style={[styles.nodeIconFallback, { backgroundColor: isFirst ? theme.primary + '20' : '#8b5cf620' }]}>
-                          <Ionicons name={isFirst ? "person" : "people"} size={16} color={isFirst ? theme.primary : '#8b5cf6'} />
+                        <View style={[styles.nodeIconFallback, { backgroundColor: theme.primary + '20' }]}>
+                          <Ionicons name={isFirst ? "person" : "people"} size={16} color={theme.primary} />
                         </View>
                       )}
 
@@ -163,7 +162,7 @@ export function FoFChainVisualizerModal({
                     {/* Connecting Vertical Link / Arrow */}
                     {!isLast && (
                       <View style={styles.connectorRow}>
-                        <View style={[styles.connectorLine, { backgroundColor: conn.badgeColor }]} />
+                        <View style={[styles.connectorLine, { backgroundColor: theme.primary }]} />
                       </View>
                     )}
                   </View>

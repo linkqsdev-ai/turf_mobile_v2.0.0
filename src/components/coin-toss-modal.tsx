@@ -30,8 +30,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useMatchStore } from '@/store/app-store';
 import { InlineNotice, type Notice } from '@/components/ui/inline-notice';
 import { favouriteTeamDefaults, isSameTeam } from '@/lib/favourite-teams';
+import { formatPhoneNumber, getPhoneValidationError } from '@/utils/phone-utils';
 import { isTimeSlotPassed } from '@/utils/date-utils';
 import { turfApi } from '@/services/turf-api';
+import { MotionIllustration } from '@/components/motion-illustration';
+import { SectionHeading } from '@/components/home/dashboard-widgets';
 
 const MASCOTS_LIST = [
   { name: 'lion', asset: require('@/assets/images/mascots/lion.png') },
@@ -115,7 +118,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
   const [addingForTeam, setAddingForTeam] = useState<'A' | 'B' | null>(null);
   const [newTeamName, setNewTeamName] = useState('');
   const [newShortName, setNewShortName] = useState('');
-  const [newPhone, setNewPhone] = useState(profile.phone || '9876543210');
+  const [newPhone, setNewPhone] = useState(profile?.phone ? formatPhoneNumber(profile.phone) : '');
   const [newMascot, setNewMascot] = useState('lion');
   const [newIsFavourite, setNewIsFavourite] = useState(false);
   const [isNameFocused, setIsNameFocused] = useState(false);
@@ -124,11 +127,9 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
 
   const openNewTeamModal = (slot: 'A' | 'B') => {
     setAddingForTeam(slot);
-    // Allow user to enter custom team name (do not prefill from user profile)
     setNewTeamName('');
     setNewShortName('');
-    // Automatically place logged-in user phone
-    const autoPhone = profile.phone || '9876543210';
+    const autoPhone = profile?.phone ? formatPhoneNumber(profile.phone) : '';
     setNewPhone(autoPhone);
     setNewIsFavourite(false);
     setIsNewTeamModalOpen(true);
@@ -151,8 +152,14 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
   }, [isFavLimitReached, newIsFavourite]);
 
   const handleCreateTeamFromModal = () => {
-    if (!newTeamName.trim() || !newShortName.trim() || !newPhone.trim()) {
-      Alert.alert('Missing Fields', 'Please fill in all required fields.');
+    if (!newTeamName.trim() || !newShortName.trim()) {
+      notify('error', 'Missing Fields', 'Please enter team name and short name.');
+      return;
+    }
+
+    const phoneErr = getPhoneValidationError(newPhone, true);
+    if (phoneErr) {
+      notify('error', 'Invalid Mobile Number', phoneErr);
       return;
     }
 
@@ -464,7 +471,11 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
       setIsFlipping(false);
       setResult(tossResult);
       setDisplaySide(tossResult);
-      autoScrollToBottom(180);
+      // The result and decision pills sit beside the coin in the hero card —
+      // bring it back into view rather than scrolling past it.
+      setTimeout(() => {
+        tossScrollRef.current?.scrollTo({ y: 0, animated: true });
+      }, 180);
     });
   };
 
@@ -520,6 +531,209 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
     outputRange: [0, -50, 0, 0],
   });
 
+  // Home-dashboard palette — the same accents the player dashboard tints with.
+  const accent = '#F59E0B';
+  const info = '#3B82F6';
+  const success = '#10B981';
+  const danger = '#ef4444';
+
+  const setupSteps = [areTeamsValid, isTossDone, isRolePicked].filter(Boolean).length;
+  const oversLabel = totalOversInput.trim() || '5';
+  const matchedTeamA = teams.find(t => t.name.toLowerCase() === teamAName.trim().toLowerCase());
+  const matchedTeamB = teams.find(t => t.name.toLowerCase() === teamBName.trim().toLowerCase());
+
+  const heroTone = canStartMatch ? success : theme.primary;
+  const heroBadge = canStartMatch
+    ? 'READY TO START'
+    : isTossDone
+      ? 'TOSS DONE'
+      : areTeamsValid
+        ? 'TEAMS SET'
+        : 'KICKOFF TOSS';
+  const heroTitle = canStartMatch
+    ? 'All set to start'
+    : isTossDone
+      ? `${tossWinnerName} won the toss`
+      : areTeamsValid
+        ? 'Call it and flip the coin'
+        : 'Ready for a quick game?';
+  const heroSub = canStartMatch
+    ? `${tossWinnerName} · ${tossDecision} first · ${oversLabel} overs`
+    : isTossDone
+      ? 'Choose what they do first.'
+      : areTeamsValid
+        ? `${teamAName.trim()} vs ${teamBName.trim()}`
+        : 'Pick two teams, then tap the coin.';
+
+  const decisionOptions = selectedSport.toLowerCase() === 'cricket'
+    ? [
+        { value: 'Bat', label: '🏏 Batting' },
+        { value: 'Bowl', label: '🥎 Bowling' },
+      ]
+    : [
+        { value: 'Kickoff', label: '⚽ Serve / Kickoff' },
+        { value: 'Receive', label: '🛡️ Receive / Side' },
+      ];
+
+  const scoringRules = [
+    { key: 'wide', on: autoWideRule, toggle: () => setAutoWideRule(!autoWideRule), label: 'Wide Ball = 1 Extra Run (Supports Wide + 1, 2 runs)' },
+    { key: 'noball', on: autoNoBallRule, toggle: () => setAutoNoBallRule(!autoNoBallRule), label: 'No Ball = 1 Extra Run & Free Hit' },
+    { key: 'byes', on: allowByesRule, toggle: () => setAllowByesRule(!allowByesRule), label: 'Byes & Leg Byes Allowed' },
+    { key: 'wicketRuns', on: allowWicketRunsRule, toggle: () => setAllowWicketRunsRule(!allowWicketRunsRule), label: 'Wicket + Runs Allowed (Run Outs: W+1, W+2)' },
+  ];
+
+  const cardSurface = {
+    backgroundColor: theme.surfaceLowest,
+    borderColor: theme.outlineVariant + '33',
+  };
+  const webNoOutline = Platform.select({ web: { outlineStyle: 'none', outlineWidth: 0 } as any });
+
+  const renderLabel = (label: string, opts?: { required?: boolean }) => (
+    <View style={styles.labelRow}>
+      <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>{label}</ThemedText>
+      {opts?.required ? (
+        <ThemedText style={[styles.required, { color: danger }]}>*</ThemedText>
+      ) : null}
+    </View>
+  );
+
+  const renderTeamSlot = (slot: 'A' | 'B') => {
+    const isA = slot === 'A';
+    const name = isA ? teamAName : teamBName;
+    const otherName = isA ? teamBName : teamAName;
+    const error = isA ? teamAError : teamBError;
+    const open = isA ? dropdownAOpen : dropdownBOpen;
+    const options = isA ? suggestionsA : suggestionsB;
+    const matched = isA ? matchedTeamA : matchedTeamB;
+    const setName = isA ? setTeamAName : setTeamBName;
+    const setError = isA ? setTeamAError : setTeamBError;
+    const setOtherError = isA ? setTeamBError : setTeamAError;
+    const setOpen = isA ? setDropdownAOpen : setDropdownBOpen;
+    const setOtherOpen = isA ? setDropdownBOpen : setDropdownAOpen;
+
+    return (
+      <View style={[styles.teamSlot, { zIndex: open ? 100 : 1 }]}>
+        <Pressable
+          onPress={() => openNewTeamModal(slot)}
+          style={[styles.crest, { backgroundColor: theme.primary + '14', borderColor: theme.primary + '40' }]}
+        >
+          {matched?.mascot ? (
+            <Image source={getMascotAsset(matched.mascot)} style={styles.crestMascot} contentFit="contain" />
+          ) : (
+            <ThemedText style={[styles.crestText, { color: theme.primary }]}>
+              {generateShortName(name) || `T${slot}`}
+            </ThemedText>
+          )}
+          <View style={[styles.crestAdd, { backgroundColor: theme.primary, borderColor: theme.surfaceLowest }]}>
+            <Ionicons name="add" size={9} color="#ffffff" />
+          </View>
+        </Pressable>
+        <Pressable onPress={() => openNewTeamModal(slot)} hitSlop={6}>
+          <ThemedText style={[styles.newTeamLink, { color: theme.primary }]}>+ New team</ThemedText>
+        </Pressable>
+
+        <View style={styles.teamInputWrap}>
+          <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+            style={[
+              styles.teamInput,
+              {
+                backgroundColor: theme.surfaceLowest,
+                color: theme.text,
+                borderColor: error ? danger : !name.trim() ? theme.outlineVariant + '99' : theme.primary,
+              },
+              webNoOutline,
+            ]}
+            value={name}
+            placeholder={`Team ${slot} name *`}
+            placeholderTextColor="#94a3b8"
+            onChangeText={(val) => {
+              setName(val);
+              if (val.trim()) {
+                setError('');
+                if (otherName.trim() && val.trim().toLowerCase() === otherName.trim().toLowerCase()) {
+                  setError('Teams must be different');
+                } else {
+                  setOtherError('');
+                }
+              }
+              setOpen(true);
+              setOtherOpen(false);
+              setResult(null);
+              setTossDecision('');
+            }}
+            onFocus={() => {
+              setOpen(true);
+              setOtherOpen(false);
+            }}
+          />
+          {error !== '' && (
+            <ThemedText style={[styles.teamError, { color: danger }]}>{error}</ThemedText>
+          )}
+
+          {open && (
+            // Narrower than a full panel — the anchor input sits in a compact
+            // three-column row, so a wide menu would bury the coin.
+            <View
+              style={[
+                styles.teamMenu,
+                isA ? { left: 0 } : { right: 0 },
+                { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' },
+              ]}
+            >
+              <Pressable
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  {
+                    paddingVertical: 8,
+                    borderBottomColor: theme.outlineVariant + '26',
+                    backgroundColor: pressed ? theme.primary + '1A' : theme.primary + '0A',
+                  },
+                ]}
+                onPress={() => openNewTeamModal(slot)}
+              >
+                <Ionicons name="add-circle" size={14} color={theme.primary} />
+                <ThemedText style={[styles.menuAddText, { color: theme.primary }]}>Add new team</ThemedText>
+              </Pressable>
+
+              <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                {options.map((team) => (
+                  <Pressable
+                    key={team.id}
+                    style={({ pressed }) => [
+                      styles.menuItem,
+                      {
+                        borderBottomColor: theme.outlineVariant + '1F',
+                        backgroundColor: team.isFavourite
+                          ? pressed ? accent + '2E' : accent + '0F'
+                          : pressed ? theme.surfaceLow : 'transparent',
+                      },
+                    ]}
+                    onPress={() => selectTeamForSlot(slot, team.name)}
+                  >
+                    {team.mascot ? (
+                      <Image source={getMascotAsset(team.mascot)} style={styles.menuMascot} contentFit="contain" />
+                    ) : (
+                      <Ionicons name="shield" size={12} color={theme.primary} />
+                    )}
+                    <ThemedText style={[styles.menuItemText, { color: theme.text }]} numberOfLines={1}>
+                      {team.name}
+                    </ThemedText>
+                    {team.isFavourite && (
+                      <View style={[styles.favPill, { backgroundColor: accent + '22' }]}>
+                        <FavouriteTeamIcon size={9} />
+                        <ThemedText style={[styles.favPillText, { color: '#d97706' }]}>FAV</ThemedText>
+                      </View>
+                    )}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
   return (
     <>
       <Modal
@@ -530,39 +744,232 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
     >
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={handleClose} />
-        
-          <View style={[styles.modalBox, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-            <Pressable onPress={handleClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={20} color={theme.textSecondary} />
-            </Pressable>
+
+          <View style={[styles.modalBox, { backgroundColor: theme.background, borderColor: theme.outlineVariant + '33' }]}>
+            {/* Popup title bar */}
+            <View style={styles.sheetHead}>
+              <View style={[styles.sheetIcon, { backgroundColor: theme.primary + '1A' }]}>
+                <FontAwesome5 name="coins" size={13} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <ThemedText style={[styles.sheetTitle, { color: theme.text }]}>Kickoff Coin Toss</ThemedText>
+                <ThemedText style={[styles.sheetSub, { color: theme.textSecondary }]} numberOfLines={1}>
+                  Configure and start match live scoring
+                </ThemedText>
+              </View>
+              <Pressable
+                onPress={handleClose}
+                hitSlop={8}
+                style={[styles.sheetClose, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' }]}
+              >
+                <Ionicons name="close" size={16} color={theme.textSecondary} />
+              </Pressable>
+            </View>
 
             <ScrollView
               ref={tossScrollRef}
               showsVerticalScrollIndicator={false}
-              style={{ width: '100%' }}
+              style={styles.sheetScroll}
               contentContainerStyle={styles.scrollContent}
               bounces={false}
+              keyboardShouldPersistTaps="handled"
             >
-              {/* Modal Header */}
-              <View style={styles.header}>
-                <FontAwesome5 name="coins" size={18} color="#5D68E8" style={{ marginBottom: 3 }} />
-                <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 14 }}>
-                  Kickoff Coin Toss
-                </ThemedText>
-                <ThemedText style={{ color: theme.textSecondary, textAlign: 'center', fontSize: 9.5, marginTop: 1 }}>
-                  Configure and start match live scoring
-                </ThemedText>
+              {/* Transparent Overlay for outside click closing on native */}
+              {(showTurfDropdown || dropdownAOpen || dropdownBOpen) && (
+                <Pressable
+                  style={[StyleSheet.absoluteFill, { zIndex: 40 }]}
+                  onPress={() => {
+                    setShowTurfDropdown(false);
+                    setDropdownAOpen(false);
+                    setDropdownBOpen(false);
+                  }}
+                />
+              )}
+
+              {/* ── MATCH HERO: status, teams with the coin between them, toss call ──
+                  Everything needed to toss lives in this first card so the coin is
+                  on screen without scrolling. */}
+              <View style={[styles.heroCard, cardSurface, Shadows.level2, { zIndex: (dropdownAOpen || dropdownBOpen) ? 100 : 1 }]}>
+                {/* The wash carries its own radius so the card can stay
+                    overflow-visible for the team dropdowns. */}
+                <LinearGradient
+                  colors={[theme.primary + '26', info + '10', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[StyleSheet.absoluteFill, { borderRadius: HERO_RADIUS }]}
+                  pointerEvents="none"
+                />
+
+                <View style={styles.heroHead}>
+                  <View style={styles.heroText}>
+                    <View style={[styles.heroBadge, { backgroundColor: heroTone + '22' }]}>
+                      <ThemedText style={[styles.heroBadgeText, { color: heroTone }]}>{heroBadge}</ThemedText>
+                    </View>
+                    <ThemedText style={[styles.heroTitle, { color: theme.text }]} numberOfLines={1}>
+                      {heroTitle}
+                    </ThemedText>
+                    <ThemedText style={[styles.heroSub, { color: theme.textSecondary }]} numberOfLines={1}>
+                      {heroSub}
+                    </ThemedText>
+                    <View style={styles.progressRow}>
+                      <View style={[styles.progressTrack, { backgroundColor: theme.outlineVariant + '40' }]}>
+                        <View style={[styles.progressFill, { flex: setupSteps, backgroundColor: heroTone }]} />
+                        <View style={{ flex: 3 - setupSteps }} />
+                      </View>
+                      <ThemedText style={[styles.progressText, { color: theme.textSecondary }]}>
+                        {setupSteps}/3
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <MotionIllustration
+                    scenario="matches"
+                    size={58}
+                    glow={[theme.primary + '33', theme.primary + '00']}
+                    accents={[
+                      { name: 'flash', color: theme.primary },
+                      { name: 'trophy', color: accent },
+                      { name: 'star', color: info },
+                    ]}
+                    accessibilityLabel="Coin toss illustration"
+                  />
+                </View>
+
+                <View style={styles.vsRow}>
+                  {renderTeamSlot('A')}
+
+                  <View style={styles.coinCol}>
+                    <ThemedText style={[styles.vsText, { color: theme.textSecondary }]}>VS</ThemedText>
+                    <Pressable onPress={handleToss} disabled={isFlipping}>
+                      <Animated.View
+                        style={[
+                          styles.coin,
+                          { transform: [{ translateY: lift }, { rotateY: spin }] },
+                        ]}
+                      >
+                        <LinearGradient colors={['#FFE259', '#FACC15', '#FFE259']} style={styles.coinFace}>
+                          <ThemedText style={styles.coinSymbol}>{displaySide === 'HEADS' ? 'H' : 'T'}</ThemedText>
+                        </LinearGradient>
+                      </Animated.View>
+                    </Pressable>
+                    <ThemedText style={[styles.coinHint, { color: isFlipping ? accent : theme.textSecondary }]}>
+                      {isFlipping ? 'Flipping…' : result ? (result === 'HEADS' ? 'Heads' : 'Tails') : 'Tap to toss'}
+                    </ThemedText>
+                  </View>
+
+                  {renderTeamSlot('B')}
+                </View>
+
+                <View style={[styles.divider, { backgroundColor: theme.outlineVariant + '33' }]} />
+
+                <View style={styles.tossConfigRow}>
+                  <View style={styles.tossConfigCol}>
+                    {renderLabel('Caller')}
+                    <View style={styles.segmentRow}>
+                      {(['A', 'B'] as const).map((side) => {
+                        const active = tossCaller === side;
+                        return (
+                          <Pressable
+                            key={side}
+                            onPress={() => setTossCaller(side)}
+                            style={({ pressed }) => [
+                              styles.togglePill,
+                              active
+                                ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                                : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '55' },
+                              { opacity: pressed ? 0.85 : 1 },
+                            ]}
+                          >
+                            <ThemedText
+                              style={[styles.togglePillText, { color: active ? '#ffffff' : theme.text }]}
+                              numberOfLines={1}
+                            >
+                              {side === 'A' ? (teamAName.trim() || 'Team A') : (teamBName.trim() || 'Team B')}
+                            </ThemedText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <View style={styles.tossConfigCol}>
+                    {renderLabel('Call')}
+                    <View style={styles.segmentRow}>
+                      {(['HEADS', 'TAILS'] as const).map((side) => {
+                        const active = tossCall === side;
+                        return (
+                          <Pressable
+                            key={side}
+                            onPress={() => setTossCall(side)}
+                            style={({ pressed }) => [
+                              styles.togglePill,
+                              active
+                                ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                                : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '55' },
+                              { opacity: pressed ? 0.85 : 1 },
+                            ]}
+                          >
+                            <ThemedText style={[styles.togglePillText, { color: active ? '#ffffff' : theme.text }]}>
+                              {side === 'HEADS' ? 'Heads' : 'Tails'}
+                            </ThemedText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
+
+                {result && (
+                  <View style={[styles.resultPanel, { backgroundColor: theme.primary + '0A', borderColor: theme.primary + '26' }]}>
+                    <View style={styles.resultHead}>
+                      <View style={[styles.statusPill, { backgroundColor: accent + '22' }]}>
+                        <Ionicons name="sparkles" size={10} color={accent} />
+                        <ThemedText style={[styles.statusText, { color: '#B45309' }]}>Landed {result}</ThemedText>
+                      </View>
+                      <ThemedText style={[styles.resultSub, { color: theme.textSecondary }]} numberOfLines={1}>
+                        🎉 {tossWinnerName} chooses
+                      </ThemedText>
+                    </View>
+                    <View style={styles.segmentRow}>
+                      {decisionOptions.map((opt) => {
+                        const active = tossDecision === opt.value;
+                        return (
+                          <Pressable
+                            key={opt.value}
+                            onPress={() => {
+                              setTossDecision(opt.value);
+                              autoScrollToBottom(120);
+                            }}
+                            style={({ pressed }) => [
+                              styles.togglePill,
+                              active
+                                ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                                : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '55' },
+                              { opacity: pressed ? 0.85 : 1 },
+                            ]}
+                          >
+                            <ThemedText style={[styles.togglePillText, { color: active ? '#ffffff' : theme.text }]}>
+                              {opt.label}
+                            </ThemedText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
               </View>
 
-              {/* Feedback banner (favourite preselected / already selected) */}
-              <InlineNotice notice={notice} onDismiss={clearNotice} />
+              {/* Feedback banner (favourite preselected / already selected) —
+                  below the hero so it never pushes the coin off screen. */}
+              {notice ? (
+                <View style={styles.noticeWrap}>
+                  <InlineNotice notice={notice} onDismiss={clearNotice} />
+                </View>
+              ) : null}
 
-              {/* Sport selector */}
-              <View style={{ width: '100%', marginBottom: 8 }}>
-                <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: '#64748b', marginBottom: 4, letterSpacing: 0.8 }}>
-                  SPORT
-                </ThemedText>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 1 }}>
+              {/* ── SPORT ── */}
+              <View style={styles.section}>
+                <SectionHeading title="Sport" tint={theme.primary} />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipStrip}>
                   {SPORTS_LIST.map((sport) => {
                     const isActive = selectedSport === sport.name;
                     const isDisabled = sport.name !== 'Cricket';
@@ -578,31 +985,20 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                           setResult(null);
                           setTossDecision('');
                         }}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          paddingHorizontal: 9,
-                          paddingVertical: 4.5,
-                          borderRadius: 6,
-                          borderWidth: 1.5,
-                          backgroundColor: isActive ? '#5D68E8' : '#ffffff',
-                          borderColor: isActive ? '#5D68E8' : '#e2e8f0',
-                          gap: 5,
-                          opacity: isDisabled ? 0.45 : 1,
-                        }}
+                        style={({ pressed }) => [
+                          styles.sportPill,
+                          isActive
+                            ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                            : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '55' },
+                          { opacity: isDisabled ? 0.45 : pressed ? 0.85 : 1 },
+                        ]}
                       >
                         <MaterialIcons
                           name={sport.icon as any}
-                          size={12}
-                          color={isActive ? '#ffffff' : '#64748b'}
+                          size={13}
+                          color={isActive ? '#ffffff' : theme.textSecondary}
                         />
-                        <ThemedText
-                          style={{
-                            fontSize: 10,
-                            fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_600SemiBold',
-                            color: isActive ? '#ffffff' : '#475569',
-                          }}
-                        >
+                        <ThemedText style={[styles.sportPillText, { color: isActive ? '#ffffff' : theme.text }]}>
                           {sport.name}
                         </ThemedText>
                       </Pressable>
@@ -611,517 +1007,132 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                 </ScrollView>
               </View>
 
-              {/* Transparent Overlay for outside click closing on native */}
-              {(showTurfDropdown || dropdownAOpen || dropdownBOpen) && (
-                <Pressable
-                  style={[StyleSheet.absoluteFill, { zIndex: 40 }]}
-                  onPress={() => {
-                    setShowTurfDropdown(false);
-                    setDropdownAOpen(false);
-                    setDropdownBOpen(false);
-                  }}
-                />
-              )}
-
-              {/* ── MATCH VS CARD ── */}
-              <View
-                style={{
-                  backgroundColor: '#f8fafc',
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: '#e2e8f0',
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  marginBottom: 8,
-                  width: '100%',
-                  zIndex: (dropdownAOpen || dropdownBOpen) ? 100 : 1,
-                  overflow: (dropdownAOpen || dropdownBOpen) ? 'visible' : 'hidden',
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', zIndex: (dropdownAOpen || dropdownBOpen) ? 100 : 1 }}>
-                  {/* Team A Slot */}
-                  <View style={{ flex: 1, alignItems: 'center', zIndex: dropdownAOpen ? 100 : 1 }}>
-                    <Pressable
-                      onPress={() => openNewTeamModal('A')}
-                      style={{
-                        width: 40, height: 40, borderRadius: 6,
-                        backgroundColor: '#ffffff',
-                        borderWidth: 1.5,
-                        borderColor: '#5D68E8',
-                        justifyContent: 'center', alignItems: 'center',
-                        marginBottom: 2,
-                        position: 'relative',
-                      }}
-                    >
-                      {(() => {
-                        const matchedTeam = teams.find(t => t.name.toLowerCase() === teamAName.trim().toLowerCase());
-                        if (matchedTeam?.mascot) {
-                          return <Image source={getMascotAsset(matchedTeam.mascot)} style={{ width: 26, height: 26 }} contentFit="contain" />;
-                        }
-                        return (
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#5D68E8', letterSpacing: 0.5 }}>
-                            {generateShortName(teamAName) || 'TA'}
-                          </ThemedText>
-                        );
-                      })()}
-                      <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#5D68E8', borderRadius: 3, padding: 1.5 }}>
-                        <Ionicons name="add" size={8} color="#ffffff" />
-                      </View>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => openNewTeamModal('A')}
-                      style={{ marginBottom: 3 }}
-                    >
-                      <ThemedText style={{ fontSize: 8.5, color: '#5D68E8', fontFamily: 'Sora_500Medium' }}>
-                        + New Team
-                      </ThemedText>
-                    </Pressable>
-
-                    <View style={{ width: 125, position: 'relative', zIndex: 100 }}>
-                      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                        style={{
-                          backgroundColor: '#ffffff',
-                          borderWidth: 1.5,
-                          borderColor: teamAError ? '#ef4444' : (!teamAName.trim() ? '#cbd5e1' : '#5D68E8'),
-                          color: '#0f172a',
-                          textAlign: 'center',
-                          fontSize: 10.5,
-                          fontFamily: 'Sora_500Medium',
-                          height: 30,
-                          borderRadius: 6,
-                          paddingHorizontal: 6, includeFontPadding: false, paddingVertical: 0,}}
-                        value={teamAName}
-                        placeholder="Team A Name *"
-                        placeholderTextColor="#94a3b8"
-                        onChangeText={(val) => {
-                          setTeamAName(val);
-                          if (val.trim()) {
-                            setTeamAError('');
-                            if (teamBName.trim() && val.trim().toLowerCase() === teamBName.trim().toLowerCase()) {
-                              setTeamAError('Teams must be different');
-                            } else {
-                              setTeamBError('');
-                            }
-                          }
-                          setDropdownAOpen(true);
-                          setDropdownBOpen(false);
-                          setResult(null);
-                          setTossDecision('');
-                        }}
-                        onFocus={() => {
-                          setDropdownAOpen(true);
-                          setDropdownBOpen(false);
-                        }}
-                      />
-                      {teamAError !== '' && (
-                        <ThemedText style={{ color: '#ef4444', fontSize: 8, textAlign: 'center', marginTop: 1, fontFamily: 'Sora_500Medium' }}>
-                          {teamAError}
-                        </ThemedText>
-                      )}
-
-                      {dropdownAOpen && (
-                        <View style={{
-                          position: 'absolute',
-                          left: 0,
-                          // Anchor input is only 125px wide in this compact two-column
-                          // layout; a full 200px panel spilled into the "VS" divider.
-                          width: 170,
-                          top: 34,
-                          backgroundColor: '#ffffff',
-                          borderRadius: 6,
-                          borderWidth: 1.5,
-                          borderColor: '#e2e8f0',
-                          shadowColor: '#000',
-                          shadowOffset: { width: 0, height: 4 },
-                          shadowOpacity: 0.15,
-                          shadowRadius: 10,
-                          elevation: 10,
-                          zIndex: 999,
-                          overflow: 'hidden',
-                        }}>
-                          <Pressable
-                            style={({ pressed }) => [{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 6,
-                              paddingVertical: 8,
-                              paddingHorizontal: 10,
-                              borderBottomWidth: 1,
-                              borderBottomColor: '#f1f5f9',
-                              backgroundColor: pressed ? '#f0f3ff' : '#f8fafc',
-                            }]}
-                            onPress={() => openNewTeamModal('A')}
-                          >
-                            <Ionicons name="add-circle" size={14} color="#5D68E8" />
-                            <ThemedText style={{ color: '#5D68E8', fontFamily: 'Sora_500Medium', fontSize: 10.5 }}>
-                              + Add New Team
-                            </ThemedText>
-                          </Pressable>
-
-                          <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                            {suggestionsA.map((team) => (
-                              <Pressable
-                                key={team.id}
-                                style={({ pressed }) => [{
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: 6,
-                                  paddingVertical: 7,
-                                  paddingHorizontal: 10,
-                                  borderBottomWidth: 1,
-                                  borderBottomColor: '#f1f5f9',
-                                  backgroundColor: team.isFavourite
-                                    ? pressed ? '#fef3c7' : '#fffdf5'
-                                    : pressed ? '#f8fafc' : '#ffffff',
-                                }]}
-                                onPress={() => selectTeamForSlot('A', team.name)}
-                              >
-                                {team.mascot ? (
-                                  <Image source={getMascotAsset(team.mascot)} style={{ width: 14, height: 14, borderRadius: 2 }} contentFit="contain" />
-                                ) : (
-                                  <Ionicons name="shield" size={12} color="#5D68E8" />
-                                )}
-                                <ThemedText style={{ color: '#0f172a', fontSize: 10.5, fontFamily: team.isFavourite ? 'Sora_600SemiBold' : 'Sora_500Medium', flex: 1 }} numberOfLines={1}>
-                                  {team.name}
-                                </ThemedText>
-                                {team.isFavourite && (
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#fef3c7', paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 3 }}>
-                                    <FavouriteTeamIcon size={9} />
-                                    <ThemedText style={{ color: '#d97706', fontSize: 9, fontFamily: 'Sora_500Medium' }}>FAV</ThemedText>
-                                  </View>
-                                )}
-                              </Pressable>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )}
+              {/* ── MATCH DETAILS: timing, venue type, ground ── */}
+              <View style={[styles.section, { zIndex: showTurfDropdown ? 50 : 0 }]}>
+                <SectionHeading title="Match details" tint={success} />
+                <View style={[styles.card, cardSurface, Shadows.level1]}>
+                  <View style={styles.inlineRow}>
+                    <View style={styles.labelLeft}>
+                      <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Match timing</ThemedText>
+                      <ThemedText style={[styles.required, { color: danger }]}>*</ThemedText>
                     </View>
-                  </View>
-
-                  {/* VS Center */}
-                  <ThemedText style={{ color: '#94a3b8', fontSize: 11, fontFamily: 'Sora_500Medium', letterSpacing: 1, marginHorizontal: 2 }}>
-                    VS
-                  </ThemedText>
-
-                  {/* Team B Slot */}
-                  <View style={{ flex: 1, alignItems: 'center', zIndex: dropdownBOpen ? 100 : 1 }}>
-                    <Pressable
-                      onPress={() => openNewTeamModal('B')}
-                      style={{
-                        width: 40, height: 40, borderRadius: 6,
-                        backgroundColor: '#ffffff',
-                        borderWidth: 1.5,
-                        borderColor: '#5D68E8',
-                        justifyContent: 'center', alignItems: 'center',
-                        marginBottom: 2,
-                        position: 'relative',
-                      }}
-                    >
-                      {(() => {
-                        const matchedTeam = teams.find(t => t.name.toLowerCase() === teamBName.trim().toLowerCase());
-                        if (matchedTeam?.mascot) {
-                          return <Image source={getMascotAsset(matchedTeam.mascot)} style={{ width: 26, height: 26 }} contentFit="contain" />;
-                        }
-                        return (
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#5D68E8', letterSpacing: 0.5 }}>
-                            {generateShortName(teamBName) || 'TB'}
-                          </ThemedText>
-                        );
-                      })()}
-                      <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#5D68E8', borderRadius: 3, padding: 1.5 }}>
-                        <Ionicons name="add" size={8} color="#ffffff" />
-                      </View>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => openNewTeamModal('B')}
-                      style={{ marginBottom: 3 }}
-                    >
-                      <ThemedText style={{ fontSize: 8.5, color: '#5D68E8', fontFamily: 'Sora_500Medium' }}>
-                        + New Team
-                      </ThemedText>
-                    </Pressable>
-
-                    <View style={{ width: 125, position: 'relative', zIndex: 100 }}>
-                      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                        style={{
-                          backgroundColor: '#ffffff',
-                          borderWidth: 1.5,
-                          borderColor: teamBError ? '#ef4444' : (!teamBName.trim() ? '#cbd5e1' : '#5D68E8'),
-                          color: '#0f172a',
-                          textAlign: 'center',
-                          fontSize: 10.5,
-                          fontFamily: 'Sora_500Medium',
-                          height: 30,
-                          borderRadius: 6,
-                          paddingHorizontal: 6, includeFontPadding: false, paddingVertical: 0,}}
-                        value={teamBName}
-                        placeholder="Team B Name *"
-                        placeholderTextColor="#94a3b8"
-                        onChangeText={(val) => {
-                          setTeamBName(val);
-                          if (val.trim()) {
-                            setTeamBError('');
-                            if (teamAName.trim() && val.trim().toLowerCase() === teamAName.trim().toLowerCase()) {
-                              setTeamBError('Teams must be different');
-                            } else {
-                              setTeamAError('');
-                            }
-                          }
-                          setDropdownBOpen(true);
-                          setDropdownAOpen(false);
-                          setResult(null);
-                          setTossDecision('');
-                        }}
-                        onFocus={() => {
-                          setDropdownBOpen(true);
-                          setDropdownAOpen(false);
-                        }}
-                      />
-                      {teamBError !== '' && (
-                        <ThemedText style={{ color: '#ef4444', fontSize: 8, textAlign: 'center', marginTop: 1, fontFamily: 'Sora_500Medium' }}>
-                          {teamBError}
-                        </ThemedText>
-                      )}
-
-                      {dropdownBOpen && (
-                        <View style={{
-                          position: 'absolute',
-                          right: 0,
-                          width: 170,
-                          top: 34,
-                          backgroundColor: '#ffffff',
-                          borderRadius: 6,
-                          borderWidth: 1.5,
-                          borderColor: '#e2e8f0',
-                          shadowColor: '#000',
-                          shadowOffset: { width: 0, height: 4 },
-                          shadowOpacity: 0.15,
-                          shadowRadius: 10,
-                          elevation: 10,
-                          zIndex: 999,
-                          overflow: 'hidden',
-                        }}>
-                          <Pressable
-                            style={({ pressed }) => [{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 6,
-                              paddingVertical: 8,
-                              paddingHorizontal: 10,
-                              borderBottomWidth: 1,
-                              borderBottomColor: '#f1f5f9',
-                              backgroundColor: pressed ? '#f0f3ff' : '#f8fafc',
-                            }]}
-                            onPress={() => openNewTeamModal('B')}
-                          >
-                            <Ionicons name="add-circle" size={14} color="#5D68E8" />
-                            <ThemedText style={{ color: '#5D68E8', fontFamily: 'Sora_500Medium', fontSize: 10.5 }}>
-                              + Add New Team
-                            </ThemedText>
-                          </Pressable>
-
-                          <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                            {suggestionsB.map((team) => (
-                              <Pressable
-                                key={team.id}
-                                style={({ pressed }) => [{
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: 6,
-                                  paddingVertical: 7,
-                                  paddingHorizontal: 10,
-                                  borderBottomWidth: 1,
-                                  borderBottomColor: '#f1f5f9',
-                                  backgroundColor: team.isFavourite
-                                    ? pressed ? '#fef3c7' : '#fffdf5'
-                                    : pressed ? '#f8fafc' : '#ffffff',
-                                }]}
-                                onPress={() => selectTeamForSlot('B', team.name)}
-                              >
-                                {team.mascot ? (
-                                  <Image source={getMascotAsset(team.mascot)} style={{ width: 14, height: 14, borderRadius: 2 }} contentFit="contain" />
-                                ) : (
-                                  <Ionicons name="shield" size={12} color="#5D68E8" />
-                                )}
-                                <ThemedText style={{ color: '#0f172a', fontSize: 10.5, fontFamily: team.isFavourite ? 'Sora_600SemiBold' : 'Sora_500Medium', flex: 1 }} numberOfLines={1}>
-                                  {team.name}
-                                </ThemedText>
-                                {team.isFavourite && (
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#fef3c7', paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 3 }}>
-                                    <FavouriteTeamIcon size={9} />
-                                    <ThemedText style={{ color: '#d97706', fontSize: 9, fontFamily: 'Sora_500Medium' }}>FAV</ThemedText>
-                                  </View>
-                                )}
-                              </Pressable>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              {/* ── MATCH TIMING, TYPE, & GROUND NAME CONTROLS ── */}
-              <View style={{ width: '100%', marginBottom: 8, backgroundColor: theme.surfaceLow, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: theme.outlineVariant + '44' }}>
-                {/* Match Timing */}
-                <View style={{ marginBottom: 6 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>Match Timing</ThemedText>
-                      <ThemedText style={{ color: '#ef4444', fontSize: 12, fontFamily: 'Sora_500Medium', marginLeft: 3 }}>*</ThemedText>
-                    </View>
-
                     <Pressable
                       onPress={() => setShowDateTimePicker(true)}
                       style={({ pressed }) => [
-                        {
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 4,
-                          backgroundColor: theme.primary + '14',
-                          paddingHorizontal: 8,
-                          paddingVertical: 3,
-                          borderRadius: 6,
-                          opacity: pressed ? 0.85 : 1,
-                        }
+                        styles.valuePill,
+                        { backgroundColor: theme.primary + '14', opacity: pressed ? 0.85 : 1 },
                       ]}
                     >
                       <Ionicons name="time-outline" size={12} color={theme.primary} />
-                      <ThemedText style={{ color: theme.primary, fontSize: 11, fontFamily: 'Sora_500Medium' }}>
-                        {selectedTiming}
-                      </ThemedText>
+                      <ThemedText style={[styles.valuePillText, { color: theme.primary }]}>{selectedTiming}</ThemedText>
                       <Ionicons name="chevron-forward" size={11} color={theme.primary} />
                     </Pressable>
                   </View>
-                </View>
 
-                {/* Type Toggle */}
-                <View style={{ marginBottom: 6 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>Type</ThemedText>
-                    <ThemedText style={{ color: '#ef4444', fontSize: 12, fontFamily: 'Sora_500Medium', marginLeft: 3 }}>*</ThemedText>
+                  <View style={[styles.divider, { backgroundColor: theme.outlineVariant + '33' }]} />
+
+                  <View style={[styles.inlineRow, styles.venueRow]}>
+                    <View style={styles.labelLeft}>
+                      <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+                        {selectedTurfType === 'Turf' ? 'Turf name' : 'Ground name'}
+                      </ThemedText>
+                      {selectedTurfType !== 'Turf' ? (
+                        <ThemedText style={[styles.fieldHint, { color: theme.textSecondary }]}>Optional</ThemedText>
+                      ) : null}
+                    </View>
+                    <View style={styles.miniSegment}>
+                      {[
+                        { label: 'Turf 🌿', value: 'Turf' as const },
+                        { label: 'Ground 🏟️', value: 'Ground' as const },
+                      ].map((tType) => {
+                        const isActive = selectedTurfType === tType.value;
+                        return (
+                          <Pressable
+                            key={tType.value}
+                            onPress={() => handleTurfTypeChange(tType.value)}
+                            style={({ pressed }) => [
+                              styles.miniPill,
+                              isActive
+                                ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                                : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
+                              { opacity: pressed ? 0.85 : 1 },
+                            ]}
+                          >
+                            <ThemedText style={[styles.miniPillText, { color: isActive ? '#ffffff' : theme.text }]}>
+                              {tType.label}
+                            </ThemedText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
                   </View>
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    {[
-                      { label: 'Turf 🌿', value: 'Turf' as const },
-                      { label: 'Ground 🏟️', value: 'Ground' as const }
-                    ].map((tType) => {
-                      const isActive = selectedTurfType === tType.value;
-                      return (
-                        <Pressable
-                          key={tType.value}
-                          onPress={() => handleTurfTypeChange(tType.value)}
-                          style={({ pressed }) => [
-                            {
-                              flex: 1,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              paddingVertical: 4.5,
-                              borderRadius: 6,
-                              backgroundColor: isActive ? theme.primary + '18' : theme.surfaceLowest,
-                              borderColor: isActive ? theme.primary : theme.outlineVariant + '40',
-                              borderWidth: isActive ? 1.5 : 1,
-                              opacity: pressed ? 0.85 : 1,
-                            }
-                          ]}
-                        >
-                          <ThemedText style={{ color: isActive ? theme.primary : theme.text, fontSize: 11, fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_600SemiBold', textAlign: 'center', width: '100%' }}>
-                            {tType.label}
-                          </ThemedText>
+
+                  {selectedTurfType === 'Turf' ? (
+                    <View style={{ zIndex: 30, position: 'relative' }}>
+                      <View
+                        style={[
+                          styles.inputShell,
+                          { backgroundColor: theme.surfaceLow, borderColor: showTurfDropdown ? theme.primary : theme.outlineVariant + '33' },
+                        ]}
+                      >
+                        <Ionicons name="search-outline" size={14} color={theme.primary} />
+                        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                          style={[styles.inputField, { color: theme.text }, webNoOutline]}
+                          placeholder="Search or select turf..."
+                          placeholderTextColor="#94a3b8"
+                          value={groundName}
+                          onFocus={() => setShowTurfDropdown(true)}
+                          onChangeText={(text) => {
+                            setTurfName(text);
+                            setGroundName(text);
+                            setShowTurfDropdown(true);
+                          }}
+                        />
+                        <Pressable onPress={() => setShowTurfDropdown(!showTurfDropdown)} hitSlop={6} style={{ padding: 3 }}>
+                          <Ionicons name={showTurfDropdown ? 'chevron-up' : 'chevron-down'} size={13} color={theme.textSecondary} />
                         </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* Turf Name (Searchable Dropdown) or Ground Name */}
-                {selectedTurfType === 'Turf' ? (
-                  <View style={{ zIndex: 30, position: 'relative' }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>Turf Name</ThemedText>
-                      <ThemedText style={{ color: theme.primary, fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>Search & Select</ThemedText>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 6, borderWidth: 1, borderColor: showTurfDropdown ? theme.primary : theme.outlineVariant + '40', paddingHorizontal: 10, height: 32 }}>
-                      <Ionicons name="search-outline" size={14} color={theme.primary} style={{ marginRight: 6 }} />
-                      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                        style={{ flex: 1, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 11, includeFontPadding: false,}}
-                        placeholder="Search or select turf..."
-                        placeholderTextColor="#94a3b8"
-                        value={groundName}
-                        onFocus={() => setShowTurfDropdown(true)}
-                        onChangeText={(text) => {
-                          setTurfName(text);
-                          setGroundName(text);
-                          setShowTurfDropdown(true);
-                        }}
-                      />
-                      <Pressable onPress={() => setShowTurfDropdown(!showTurfDropdown)} style={{ padding: 3 }}>
-                        <Ionicons name={showTurfDropdown ? "chevron-up" : "chevron-down"} size={13} color={theme.textSecondary} />
-                      </Pressable>
-                    </View>
-
-                    {/* Dropdown Suggestions */}
-                    {showTurfDropdown && (
-                      <View style={{
-                        marginTop: 6,
-                        backgroundColor: '#ffffff',
-                        borderRadius: 6,
-                        borderWidth: 1.5,
-                        borderColor: theme.primary,
-                        maxHeight: 140,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.12,
-                        shadowRadius: 8,
-                        elevation: 8,
-                        overflow: 'hidden',
-                      }}>
-                        <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                          {turfsList
-                            .filter(t => !groundName.trim() || t.toLowerCase().includes(groundName.toLowerCase()))
-                            .map((tName, idx) => (
-                              <Pressable
-                                key={idx}
-                                onPress={() => {
-                                  setTurfName(tName);
-                                  setGroundName(tName);
-                                  setShowTurfDropdown(false);
-                                }}
-                                style={({ pressed }) => [
-                                  {
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    paddingHorizontal: 10,
-                                    paddingVertical: 7,
-                                    borderBottomWidth: idx < turfsList.length - 1 ? 1 : 0,
-                                    borderBottomColor: '#f1f5f9',
-                                    backgroundColor: pressed ? '#f1f5f9' : '#ffffff',
-                                  }
-                                ]}
-                              >
-                                <Ionicons name="location-sharp" size={13} color={theme.primary} />
-                                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#0f172a' }}>
-                                  {tName}
-                                </ThemedText>
-                              </Pressable>
-                            ))}
-                        </ScrollView>
                       </View>
-                    )}
-                  </View>
-                ) : (
-                  <View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>Ground Name</ThemedText>
-                      <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5 }}>Optional</ThemedText>
+
+                      {showTurfDropdown && (
+                        <View style={[styles.turfMenu, { backgroundColor: theme.surfaceLowest, borderColor: theme.primary + '55' }]}>
+                          <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                            {turfsList
+                              .filter(t => !groundName.trim() || t.toLowerCase().includes(groundName.toLowerCase()))
+                              .map((tName, idx) => (
+                                <Pressable
+                                  key={idx}
+                                  onPress={() => {
+                                    setTurfName(tName);
+                                    setGroundName(tName);
+                                    setShowTurfDropdown(false);
+                                  }}
+                                  style={({ pressed }) => [
+                                    styles.menuItem,
+                                    {
+                                      borderBottomWidth: idx < turfsList.length - 1 ? 1 : 0,
+                                      borderBottomColor: theme.outlineVariant + '1F',
+                                      backgroundColor: pressed ? theme.surfaceLow : 'transparent',
+                                    },
+                                  ]}
+                                >
+                                  <Ionicons name="location-sharp" size={13} color={theme.primary} />
+                                  <ThemedText style={[styles.menuItemText, { color: theme.text }]}>{tName}</ThemedText>
+                                </Pressable>
+                              ))}
+                          </ScrollView>
+                        </View>
+                      )}
                     </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 6, borderWidth: 1, borderColor: theme.outlineVariant + '40', paddingHorizontal: 10, height: 32 }}>
-                      <Ionicons name="location-outline" size={14} color={theme.textSecondary} style={{ marginRight: 6 }} />
+                  ) : (
+                    <View
+                      style={[
+                        styles.inputShell,
+                        { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
+                      ]}
+                    >
+                      <Ionicons name="location-outline" size={14} color={theme.textSecondary} />
                       <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                        style={{ flex: 1, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 11, includeFontPadding: false,}}
+                        style={[styles.inputField, { color: theme.text }, webNoOutline]}
                         placeholder="e.g. Marina Cricket Ground"
                         placeholderTextColor="#94a3b8"
                         value={groundName}
@@ -1131,264 +1142,29 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                         }}
                       />
                     </View>
-                  </View>
-                )}
-              </View>
-
-              {/* ── CALLER & CALL CONFIGURATION ── */}
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 6, width: '100%' }}>
-                {/* CALLER */}
-                <View style={{ flex: 1 }}>
-                  <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: '#64748b', marginBottom: 3, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                    CALLER:
-                  </ThemedText>
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    <Pressable
-                      onPress={() => setTossCaller('A')}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 5,
-                        borderRadius: 6,
-                        backgroundColor: tossCaller === 'A' ? '#FFE259' : '#ffffff',
-                        borderWidth: 1.5,
-                        borderColor: tossCaller === 'A' ? '#FFE259' : '#cbd5e1',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: tossCaller === 'A' ? '#000000' : '#475569' }} numberOfLines={1}>
-                        {teamAName.trim() || 'Team A'}
-                      </ThemedText>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => setTossCaller('B')}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 5,
-                        borderRadius: 6,
-                        backgroundColor: tossCaller === 'B' ? '#FFE259' : '#ffffff',
-                        borderWidth: 1.5,
-                        borderColor: tossCaller === 'B' ? '#FFE259' : '#cbd5e1',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: tossCaller === 'B' ? '#000000' : '#475569' }} numberOfLines={1}>
-                        {teamBName.trim() || 'Team B'}
-                      </ThemedText>
-                    </Pressable>
-                  </View>
-                </View>
-
-                {/* CALL */}
-                <View style={{ flex: 1 }}>
-                  <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: '#64748b', marginBottom: 3, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                    CALL:
-                  </ThemedText>
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    <Pressable
-                      onPress={() => setTossCall('HEADS')}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 5,
-                        borderRadius: 6,
-                        backgroundColor: tossCall === 'HEADS' ? '#FFE259' : '#ffffff',
-                        borderWidth: 1.5,
-                        borderColor: tossCall === 'HEADS' ? '#FFE259' : '#cbd5e1',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: tossCall === 'HEADS' ? '#000000' : '#475569' }}>
-                        H
-                      </ThemedText>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => setTossCall('TAILS')}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 5,
-                        borderRadius: 6,
-                        backgroundColor: tossCall === 'TAILS' ? '#FFE259' : '#ffffff',
-                        borderWidth: 1.5,
-                        borderColor: tossCall === 'TAILS' ? '#FFE259' : '#cbd5e1',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: tossCall === 'TAILS' ? '#000000' : '#475569' }}>
-                        T
-                      </ThemedText>
-                    </Pressable>
-                  </View>
+                  )}
                 </View>
               </View>
 
-              {/* ── COIN FLIP CENTER ── */}
-              <View style={{ alignItems: 'center', marginVertical: 4, width: '100%' }}>
-                <Pressable onPress={handleToss} disabled={isFlipping}>
-                  <Animated.View
-                    style={[
-                      {
-                        width: 58,
-                        height: 58,
-                        borderRadius: 29,
-                        backgroundColor: '#FFE259',
-                        borderWidth: 3,
-                        borderColor: '#EAB308',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        shadowColor: '#FFE259',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.35,
-                        shadowRadius: 8,
-                        elevation: 6,
-                      },
-                      {
-                        transform: [
-                          { translateY: lift },
-                          { rotateY: spin }
-                        ]
-                      }
-                    ]}
-                  >
-                    <LinearGradient
-                      colors={['#FFE259', '#FACC15', '#FFE259']}
-                      style={{ width: '100%', height: '100%', borderRadius: 29, justifyContent: 'center', alignItems: 'center' }}
-                    >
-                      <ThemedText style={{ fontSize: 24, fontFamily: 'Sora_500Medium', color: '#000000' }}>
-                        {displaySide === 'HEADS' ? 'H' : 'T'}
-                      </ThemedText>
-                    </LinearGradient>
-                  </Animated.View>
-                </Pressable>
-
-                <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: '#64748b', marginTop: 3 }}>
-                  Tap coin or Flip button below to toss
-                </ThemedText>
-              </View>
-
-              {/* ── Toss Result Banner ─────────────────────────── */}
-              {result && (
-                <LinearGradient
-                  colors={[theme.surfaceLowest, '#5D68E80c']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    width: '100%',
-                    borderRadius: 6,
-                    borderWidth: 1,
-                    borderLeftWidth: 4,
-                    borderColor: theme.outlineVariant + '33',
-                    borderLeftColor: theme.primary,
-                    padding: 8,
-                    marginVertical: 4,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Ionicons name="sparkles" size={13} color="#FFB800" />
-                      <ThemedText style={{ color: theme.textSecondary, fontSize: 10.5, fontFamily: 'Sora_500Medium' }}>Coin landed</ThemedText>
-                    </View>
-                    <View style={{ backgroundColor: theme.primary + '15', paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 4 }}>
-                      <ThemedText style={{ color: theme.primary, fontSize: 9, fontFamily: 'Sora_500Medium', letterSpacing: 0.5 }}>{result}</ThemedText>
-                    </View>
-                  </View>
-
-                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                    🎉 {tossWinnerName} won the toss!
-                  </ThemedText>
-
-                  <View style={{ marginTop: 4, borderTopWidth: 1, borderTopColor: '#00000008', paddingTop: 4 }}>
-                    <ThemedText style={{ color: theme.textSecondary, marginBottom: 4, fontSize: 9, fontFamily: 'Sora_500Medium' }}>Choose decision action</ThemedText>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      {selectedSport.toLowerCase() === 'cricket' ? (
-                        <>
-                          <Pressable
-                            onPress={() => {
-                              setTossDecision('Bat');
-                              autoScrollToBottom(120);
-                            }}
-                            style={[
-                              { flex: 1, borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 6, paddingVertical: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F6FA' },
-                              tossDecision === 'Bat' && { backgroundColor: theme.primary, borderColor: theme.primary }
-                            ]}
-                          >
-                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: tossDecision === 'Bat' ? '#ffffff' : '#64748b' }}>🏏 Batting</ThemedText>
-                          </Pressable>
-                          <Pressable
-                            onPress={() => {
-                              setTossDecision('Bowl');
-                              autoScrollToBottom(120);
-                            }}
-                            style={[
-                              { flex: 1, borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 6, paddingVertical: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F6FA' },
-                              tossDecision === 'Bowl' && { backgroundColor: theme.primary, borderColor: theme.primary }
-                            ]}
-                          >
-                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: tossDecision === 'Bowl' ? '#ffffff' : '#64748b' }}>🥎 Bowling</ThemedText>
-                          </Pressable>
-                        </>
-                      ) : (
-                        <>
-                          <Pressable
-                            onPress={() => {
-                              setTossDecision('Kickoff');
-                              autoScrollToBottom(120);
-                            }}
-                            style={[
-                              { flex: 1, borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 6, paddingVertical: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F6FA' },
-                              tossDecision === 'Kickoff' && { backgroundColor: theme.primary, borderColor: theme.primary }
-                            ]}
-                          >
-                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: tossDecision === 'Kickoff' ? '#ffffff' : '#64748b' }}>⚽ Serve / Kickoff</ThemedText>
-                          </Pressable>
-                          <Pressable
-                            onPress={() => {
-                              setTossDecision('Receive');
-                              autoScrollToBottom(120);
-                            }}
-                            style={[
-                              { flex: 1, borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 6, paddingVertical: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F6FA' },
-                              tossDecision === 'Receive' && { backgroundColor: theme.primary, borderColor: theme.primary }
-                            ]}
-                          >
-                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: tossDecision === 'Receive' ? '#ffffff' : '#64748b' }}>🛡️ Receive / Side</ThemedText>
-                          </Pressable>
-                        </>
-                      )}
-                    </View>
-                  </View>
-                </LinearGradient>
-              )}
-
-              {/* ── PRE-MATCH RULES & OVER VERIFICATION CARD (Shown after Batting/Bowling picked) ── */}
+              {/* ── MATCH RULES (shown once Batting or Bowling is picked) ── */}
               {Boolean(result && tossDecision) && (
-                <View style={{
-                  backgroundColor: '#f8fafc',
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: '#e2e8f0',
-                  padding: 8,
-                  marginTop: 6,
-                  marginBottom: 4,
-                  width: '100%',
-                }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <Ionicons name="options-outline" size={13} color="#5D68E8" />
-                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#1e293b' }}>
-                        Pre-Match Rules Verification
-                      </ThemedText>
+                <View style={styles.section}>
+                  <SectionHeading title="Match rules" tint={theme.primary} />
+                  <View style={[styles.card, cardSurface, Shadows.level1]}>
+                    <View style={styles.cardTitleRow}>
+                      <View style={[styles.cardIcon, { backgroundColor: theme.primary + '1A' }]}>
+                        <Ionicons name="options-outline" size={14} color={theme.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={[styles.cardTitle, { color: theme.text }]}>Pre-match rules</ThemedText>
+                        <ThemedText style={[styles.cardSub, { color: theme.textSecondary }]}>
+                          Confirm overs and scoring rules
+                        </ThemedText>
+                      </View>
                     </View>
-                  </View>
 
-                  {/* Total Overs Selector */}
-                  <View style={{ marginBottom: 6 }}>
-                    <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: '#64748b', textTransform: 'uppercase', marginBottom: 4 }}>
-                      Total Match Overs:
-                    </ThemedText>
-                    <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+                    {renderLabel('Total match overs')}
+                    <View style={styles.oversRow}>
                       {['5', '10', '20'].map((ov) => {
                         const isSelected = !isCustomOversSelected && totalOversInput === ov;
                         return (
@@ -1398,23 +1174,21 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                               setIsCustomOversSelected(false);
                               setTotalOversInput(ov);
                             }}
-                            style={{
-                              paddingHorizontal: 7,
-                              paddingVertical: 3.5,
-                              borderRadius: 5,
-                              backgroundColor: isSelected ? '#5D68E8' : '#ffffff',
-                              borderWidth: 1,
-                              borderColor: isSelected ? '#5D68E8' : '#cbd5e1',
-                            }}
+                            style={({ pressed }) => [
+                              styles.oversPill,
+                              isSelected
+                                ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                                : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
+                              { opacity: pressed ? 0.85 : 1 },
+                            ]}
                           >
-                            <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: isSelected ? '#ffffff' : '#334155' }}>
+                            <ThemedText style={[styles.oversPillText, { color: isSelected ? '#ffffff' : theme.text }]}>
                               {ov} Ov
                             </ThemedText>
                           </Pressable>
                         );
                       })}
 
-                      {/* Custom Over Chip / Inline Input on Same Line */}
                       {!isCustomOversSelected ? (
                         <Pressable
                           onPress={() => {
@@ -1423,43 +1197,18 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                               setTotalOversInput(customOversValue);
                             }
                           }}
-                          style={{
-                            paddingHorizontal: 7,
-                            paddingVertical: 3.5,
-                            borderRadius: 5,
-                            backgroundColor: '#ffffff',
-                            borderWidth: 1,
-                            borderColor: '#5D68E8',
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 2,
-                          }}
+                          style={({ pressed }) => [
+                            styles.oversPill,
+                            { backgroundColor: theme.surfaceLowest, borderColor: theme.primary, opacity: pressed ? 0.85 : 1 },
+                          ]}
                         >
-                          <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#5D68E8' }}>
-                            Custom +
-                          </ThemedText>
+                          <Ionicons name="create-outline" size={11} color={theme.primary} />
+                          <ThemedText style={[styles.oversPillText, { color: theme.primary }]}>Custom</ThemedText>
                         </Pressable>
                       ) : (
-                        <View style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          backgroundColor: '#ffffff',
-                          borderWidth: 1.5,
-                          borderColor: '#5D68E8',
-                          borderRadius: 5,
-                          paddingHorizontal: 5,
-                          paddingVertical: 1,
-                          gap: 3,
-                        }}>
+                        <View style={[styles.oversPill, styles.customOvers, { backgroundColor: theme.surfaceLowest, borderColor: theme.primary }]}>
                           <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                            style={{
-                              fontFamily: 'Sora_500Medium',
-                              fontSize: 10,
-                              color: '#1e293b',
-                              minWidth: 26,
-                              paddingVertical: 1,
-                              paddingHorizontal: 0,
-                              textAlign: 'center', includeFontPadding: false,}}
+                            style={[styles.customOversInput, { color: theme.text }, webNoOutline]}
                             placeholder="e.g. 15"
                             placeholderTextColor="#94a3b8"
                             keyboardType="numeric"
@@ -1474,155 +1223,121 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                               }
                             }}
                           />
-                          <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: '#5D68E8' }}>
-                            Ov
-                          </ThemedText>
+                          <ThemedText style={[styles.oversPillText, { color: theme.primary }]}>Ov</ThemedText>
                           <Pressable
                             onPress={() => {
                               setIsCustomOversSelected(false);
                               setTotalOversInput('20');
                             }}
+                            hitSlop={6}
                             style={{ padding: 1 }}
                           >
-                            <Ionicons name="close-circle" size={11} color="#94a3b8" />
+                            <Ionicons name="close-circle" size={13} color="#94a3b8" />
                           </Pressable>
                         </View>
                       )}
                     </View>
-                  </View>
 
-                  {/* Pre-Match Rules Verification Switches */}
-                  <View style={{ gap: 4 }}>
-                    <Pressable
-                      onPress={() => setAutoWideRule(!autoWideRule)}
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 1 }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <Ionicons name={autoWideRule ? 'checkbox' : 'square-outline'} size={14} color={autoWideRule ? '#5D68E8' : '#94a3b8'} />
-                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#334155' }}>
-                          Wide Ball = 1 Extra Run (Supports Wide + 1, 2 runs)
-                        </ThemedText>
-                      </View>
-                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: autoWideRule ? '#5D68E8' : '#94a3b8' }}>
-                        {autoWideRule ? 'ACTIVE' : 'OFF'}
+                    <View style={[styles.divider, { backgroundColor: theme.outlineVariant + '33' }]} />
+
+                    {renderLabel('Scoring rules')}
+                    <View style={styles.ruleList}>
+                      {scoringRules.map((rule) => (
+                        <Pressable
+                          key={rule.key}
+                          onPress={rule.toggle}
+                          style={({ pressed }) => [styles.ruleRow, { opacity: pressed ? 0.8 : 1 }]}
+                        >
+                          <Ionicons
+                            name={rule.on ? 'checkbox' : 'square-outline'}
+                            size={15}
+                            color={rule.on ? theme.primary : '#94a3b8'}
+                          />
+                          <ThemedText style={[styles.ruleText, { color: theme.text }]}>{rule.label}</ThemedText>
+                          <View style={[styles.statusPill, { backgroundColor: (rule.on ? success : '#94a3b8') + '22' }]}>
+                            <ThemedText style={[styles.statusText, { color: rule.on ? '#047857' : theme.textSecondary }]}>
+                              {rule.on ? 'Active' : 'Off'}
+                            </ThemedText>
+                          </View>
+                        </Pressable>
+                      ))}
+                    </View>
+
+                    {/* Guide Pill */}
+                    <View style={[styles.guidePill, { backgroundColor: theme.primary + '0F' }]}>
+                      <ThemedText style={[styles.guideText, { color: theme.textSecondary }]}>
+                        💡 <ThemedText style={[styles.guideText, { fontFamily: 'Sora_500Medium', color: theme.primary }]}>Match Scenarios:</ThemedText> Long-press 'WD' on pad for Wide + 1, 2 runs. Tap 'Wicket' → pick 'W+1' or 'W+2' for Run Outs.
                       </ThemedText>
-                    </Pressable>
-
-                    <Pressable
-                      onPress={() => setAutoNoBallRule(!autoNoBallRule)}
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 1 }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <Ionicons name={autoNoBallRule ? 'checkbox' : 'square-outline'} size={14} color={autoNoBallRule ? '#5D68E8' : '#94a3b8'} />
-                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#334155' }}>
-                          No Ball = 1 Extra Run & Free Hit
-                        </ThemedText>
-                      </View>
-                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: autoNoBallRule ? '#5D68E8' : '#94a3b8' }}>
-                        {autoNoBallRule ? 'ACTIVE' : 'OFF'}
-                      </ThemedText>
-                    </Pressable>
-
-                    <Pressable
-                      onPress={() => setAllowByesRule(!allowByesRule)}
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 1 }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <Ionicons name={allowByesRule ? 'checkbox' : 'square-outline'} size={14} color={allowByesRule ? '#5D68E8' : '#94a3b8'} />
-                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#334155' }}>
-                          Byes & Leg Byes Allowed
-                        </ThemedText>
-                      </View>
-                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: allowByesRule ? '#5D68E8' : '#94a3b8' }}>
-                        {allowByesRule ? 'ACTIVE' : 'OFF'}
-                      </ThemedText>
-                    </Pressable>
-
-                    <Pressable
-                      onPress={() => setAllowWicketRunsRule(!allowWicketRunsRule)}
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 1 }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <Ionicons name={allowWicketRunsRule ? 'checkbox' : 'square-outline'} size={14} color={allowWicketRunsRule ? '#5D68E8' : '#94a3b8'} />
-                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#334155' }}>
-                          Wicket + Runs Allowed (Run Outs: W+1, W+2)
-                        </ThemedText>
-                      </View>
-                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: allowWicketRunsRule ? '#5D68E8' : '#94a3b8' }}>
-                        {allowWicketRunsRule ? 'ACTIVE' : 'OFF'}
-                      </ThemedText>
-                    </Pressable>
-                  </View>
-
-                  {/* Guide Pill */}
-                  <View style={{ backgroundColor: '#5D68E812', borderRadius: 6, padding: 6, marginTop: 5 }}>
-                    <ThemedText style={{ fontSize: 8.5, color: '#475569', lineHeight: 12 }}>
-                      💡 <ThemedText style={{ fontFamily: 'Sora_500Medium', color: '#5D68E8' }}>Match Scenarios:</ThemedText> Long-press 'WD' on pad for Wide + 1, 2 runs. Tap 'Wicket' → pick 'W+1' or 'W+2' for Run Outs.
-                    </ThemedText>
+                    </View>
                   </View>
                 </View>
               )}
-
-              {/* ── Toss or Start Action Button ─────────────────────────── */}
-              <View style={{ width: '100%', marginTop: 4 }}>
-                {!result ? (
-                  <Pressable
-                    onPress={handleToss}
-                    disabled={isFlipping}
-                    style={[styles.tossBtn, { backgroundColor: areTeamsValid ? theme.primary : '#94a3b8' }, isFlipping && { opacity: 0.75 }]}
-                  >
-                    <View style={styles.tossBtnLeft}>
-                      <ThemedText style={[styles.tossBtnTitle, { color: '#ffffff' }]}>
-                        {isFlipping ? 'Flipping Coin...' : 'Toss the Coin 🪙'}
-                      </ThemedText>
-                      <ThemedText style={[styles.tossBtnSub, { color: 'rgba(255,255,255,0.85)' }]}>
-                        {!areTeamsValid ? 'Enter both team names to toss' : `${selectedSport} · Quick Match`}
-                      </ThemedText>
-                    </View>
-                    <View style={[styles.tossCoinCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                      <ThemedText style={{ fontSize: 15 }}>🪙</ThemedText>
-                    </View>
-                  </Pressable>
-                ) : !canStartMatch ? (
-                  <Pressable
-                    onPress={() => {
-                      if (!areTeamsValid) {
-                        Alert.alert('Validation Required', 'Please enter valid team names for both Team A and Team B.');
-                      } else if (!isRolePicked) {
-                        Alert.alert('Role Required', 'Please pick Batting or Bowling role above before starting the match.');
-                      }
-                    }}
-                    style={[styles.tossBtn, { backgroundColor: '#cbd5e1' }]}
-                  >
-                    <View style={styles.tossBtnLeft}>
-                      <ThemedText style={[styles.tossBtnTitle, { color: '#475569' }]}>
-                        Start the Match
-                      </ThemedText>
-                      <ThemedText style={[styles.tossBtnSub, { color: '#64748b' }]} numberOfLines={1}>
-                        {!areTeamsValid
-                          ? 'Team names required to enable'
-                          : 'Select Batting or Bowling above to start'}
-                      </ThemedText>
-                    </View>
-                    <View style={[styles.tossCoinCircle, { backgroundColor: '#e2e8f0' }]}>
-                      <Ionicons name="lock-closed" size={13} color="#64748b" />
-                    </View>
-                  </Pressable>
-                ) : (
-                  <Pressable onPress={handleStartMatch} style={[styles.tossBtn, { backgroundColor: theme.primary }]}>
-                    <View style={styles.tossBtnLeft}>
-                      <ThemedText style={[styles.tossBtnTitle, { color: '#ffffff' }]}>Start the Match</ThemedText>
-                      <ThemedText style={[styles.tossBtnSub, { color: 'rgba(255,255,255,0.9)' }]} numberOfLines={1}>
-                        {tossWinnerName} won toss · Choose to {tossDecision} · Verified ({totalOversInput} Ov)
-                      </ThemedText>
-                    </View>
-                    <View style={[styles.tossCoinCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                      <Ionicons name="play" size={15} color="#ffffff" />
-                    </View>
-                  </Pressable>
-                )}
-              </View>
             </ScrollView>
+
+            {/* ── Toss or Start Action Button — pinned under the scroll ── */}
+            <View style={[styles.actionsBar, { borderTopColor: theme.outlineVariant + '33' }]}>
+              {!result ? (
+                <Pressable
+                  onPress={handleToss}
+                  disabled={isFlipping}
+                  style={({ pressed }) => [
+                    styles.actionBtn,
+                    { backgroundColor: areTeamsValid ? theme.primary : '#94a3b8' },
+                    (isFlipping || pressed) && { opacity: 0.8 },
+                  ]}
+                >
+                  <View style={styles.actionText}>
+                    <ThemedText style={[styles.actionTitle, { color: '#ffffff' }]}>
+                      {isFlipping ? 'Flipping Coin...' : 'Toss the Coin'}
+                    </ThemedText>
+                    <ThemedText style={[styles.actionSub, { color: 'rgba(255,255,255,0.85)' }]} numberOfLines={1}>
+                      {!areTeamsValid ? 'Enter both team names to toss' : `${selectedSport} · Quick Match`}
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.actionIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                    <ThemedText style={{ fontSize: 14 }}>🪙</ThemedText>
+                  </View>
+                </Pressable>
+              ) : !canStartMatch ? (
+                <Pressable
+                  onPress={() => {
+                    if (!areTeamsValid) {
+                      Alert.alert('Validation Required', 'Please enter valid team names for both Team A and Team B.');
+                    } else if (!isRolePicked) {
+                      Alert.alert('Role Required', 'Please pick Batting or Bowling role above before starting the match.');
+                    }
+                  }}
+                  style={[styles.actionBtn, styles.actionBtnLocked, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '55' }]}
+                >
+                  <View style={styles.actionText}>
+                    <ThemedText style={[styles.actionTitle, { color: theme.textSecondary }]}>Start the Match</ThemedText>
+                    <ThemedText style={[styles.actionSub, { color: theme.textSecondary }]} numberOfLines={1}>
+                      {!areTeamsValid
+                        ? 'Team names required to enable'
+                        : 'Select Batting or Bowling above to start'}
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.actionIcon, { backgroundColor: theme.outlineVariant + '40' }]}>
+                    <Ionicons name="lock-closed" size={13} color={theme.textSecondary} />
+                  </View>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={handleStartMatch}
+                  style={({ pressed }) => [styles.actionBtn, { backgroundColor: theme.primary }, pressed && { opacity: 0.85 }]}
+                >
+                  <View style={styles.actionText}>
+                    <ThemedText style={[styles.actionTitle, { color: '#ffffff' }]}>Start the Match</ThemedText>
+                    <ThemedText style={[styles.actionSub, { color: 'rgba(255,255,255,0.9)' }]} numberOfLines={1}>
+                      {tossWinnerName} won toss · Choose to {tossDecision} · Verified ({totalOversInput} Ov)
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.actionIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                    <Ionicons name="play" size={14} color="#ffffff" />
+                  </View>
+                </Pressable>
+              )}
+            </View>
           </View>
         </View>
       </Modal>
@@ -1637,12 +1352,12 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                 <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center' }}>
                   <Ionicons name="calendar" size={18} color={theme.primary} />
                 </View>
-                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                <ThemedText style={{ fontSize: 14.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
                   Select Start Date
                 </ThemedText>
               </View>
               <Pressable onPress={() => setShowDateTimePicker(false)} style={{ padding: 4 }}>
-                <Ionicons name="close" size={22} color={theme.text} />
+                <Ionicons name="close" size={20} color={theme.text} />
               </Pressable>
             </View>
 
@@ -1651,7 +1366,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
               <Pressable style={{ padding: 6 }}>
                 <Ionicons name="chevron-back" size={20} color={theme.text} />
               </Pressable>
-              <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_500Medium', color: theme.text }}>
+              <ThemedText style={{ fontSize: 14.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
                 August 2026
               </ThemedText>
               <Pressable style={{ padding: 6 }}>
@@ -1702,7 +1417,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
 
             {/* Time Selection Header & Slots */}
             <View>
-              <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 8 }}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', letterSpacing: 0.6, color: theme.textSecondary, marginBottom: 8 }}>
                 SELECT MATCH TIME
               </ThemedText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
@@ -1719,7 +1434,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       style={{
                         paddingHorizontal: 12,
                         paddingVertical: 7,
-                        borderRadius: 6,
+                        borderRadius: 999,
                         backgroundColor: isSelected ? theme.primary + '20' : theme.surfaceLow,
                         borderWidth: 1,
                         borderColor: isSelected ? theme.primary : theme.outlineVariant + '40',
@@ -1748,9 +1463,9 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                 setSelectedTiming(`${selectedDay} Aug 2026, ${tempTime}`);
                 setShowDateTimePicker(false);
               }}
-              style={{ backgroundColor: theme.primary, paddingVertical: 13, borderRadius: 8, alignItems: 'center', marginTop: 4 }}
+              style={{ backgroundColor: theme.primary, paddingVertical: 13, borderRadius: 999, alignItems: 'center', marginTop: 4 }}
             >
-              <ThemedText style={{ color: '#ffffff', fontSize: 13.5, fontFamily: 'Sora_500Medium' }}>
+              <ThemedText style={{ color: '#ffffff', fontSize: 13, fontFamily: 'Sora_500Medium' }}>
                 Confirm Timing ({selectedDay} Aug 2026, {tempTime})
               </ThemedText>
             </Pressable>
@@ -1766,7 +1481,7 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
         onRequestClose={() => setIsNewTeamModalOpen(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
 
             {/* Modal Header */}
             <View style={styles.modalHeader}>
@@ -1844,16 +1559,19 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
                       styles.input,
                       { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: isPhoneFocused ? theme.primary : theme.outlineVariant + '44' }
                     ]}
-                    placeholder={profile.phone || '9876543210'}
+                    placeholder="98765 43210"
                     placeholderTextColor="#94a3b8"
                     value={newPhone}
-                    onChangeText={(t) => setNewPhone(t.replace(/[^0-9+\s\-()]/g, ''))}
+                    onChangeText={(t) => setNewPhone(formatPhoneNumber(t))}
                     onFocus={() => setIsPhoneFocused(true)}
                     onBlur={() => setIsPhoneFocused(false)}
                     keyboardType="phone-pad"
+                    maxLength={11}
                   />
-                  {newPhone !== '' && newPhone.replace(/[^0-9]/g, '').length < 7 ? (
-                    <ThemedText style={{ color: '#ef4444', fontSize: 10, marginTop: 3 }}>Min 7 digits required</ThemedText>
+                  {newPhone !== '' && getPhoneValidationError(newPhone, true) ? (
+                    <ThemedText style={{ color: '#ef4444', fontSize: 10, marginTop: 3 }}>
+                      {getPhoneValidationError(newPhone, true)}
+                    </ThemedText>
                   ) : (
                     <ThemedText style={{ color: '#10B981', fontSize: 10, fontFamily: 'Sora_500Medium', marginTop: 3 }}>
                       ✓ Auto-placed from logged user
@@ -1961,6 +1679,9 @@ export function CoinTossModal({ visible, onClose }: CoinTossModalProps) {
   );
 }
 
+const CARD_RADIUS = BorderRadius.premium;
+const HERO_RADIUS = 18;
+
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
@@ -1979,61 +1700,315 @@ const styles = StyleSheet.create({
     width: '94%',
     maxWidth: 440,
     maxHeight: '92%',
-    borderRadius: 14,
+    borderRadius: 22,
+    borderWidth: 1,
+    paddingTop: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    ...Shadows.level3,
+  },
+
+  // popup title bar
+  sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 10 },
+  sheetIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  sheetTitle: { fontFamily: 'Sora_500Medium', fontSize: 14 },
+  sheetSub: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
+  sheetClose: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetScroll: { flexGrow: 0, flexShrink: 1 },
+  scrollContent: { paddingBottom: 4 },
+
+  section: { marginTop: 12 },
+  noticeWrap: { marginTop: 10, marginBottom: -10 },
+
+  // hero match card — dashboard hero band with the toss built in
+  heroCard: { borderRadius: HERO_RADIUS, borderWidth: 1, padding: 11 },
+  heroHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  heroText: { flex: 1, paddingRight: 8 },
+  heroBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginBottom: 5,
+  },
+  heroBadgeText: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.8 },
+  heroTitle: { fontFamily: 'Sora_500Medium', fontSize: 14.5 },
+  heroSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1, lineHeight: 14 },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  progressTrack: { flex: 1, height: 5, borderRadius: 999, overflow: 'hidden', flexDirection: 'row' },
+  progressFill: { borderRadius: 999 },
+  progressText: { fontFamily: 'Sora_500Medium', fontSize: 9.5 },
+
+  // cards
+  card: { borderRadius: CARD_RADIUS, borderWidth: 1, padding: 11 },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 10 },
+  cardIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { fontFamily: 'Sora_500Medium', fontSize: 13 },
+  cardSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1 },
+  divider: { height: 1, marginVertical: 9 },
+
+  // labels
+  labelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
+  labelLeft: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 },
+  fieldLabel: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 9,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  required: { fontFamily: 'Sora_500Medium', fontSize: 11, marginLeft: -2 },
+  fieldHint: { fontFamily: 'Sora_400Regular', fontSize: 10 },
+
+  // sport chips
+  chipStrip: { gap: 6, paddingVertical: 2 },
+  sportPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    height: 30,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  sportPillText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+
+  // teams + coin row
+  vsRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  teamSlot: { flex: 1, alignItems: 'center' },
+  crest: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  crestMascot: { width: 26, height: 26 },
+  crestText: { fontFamily: 'Sora_500Medium', fontSize: 12, letterSpacing: 0.5 },
+  crestAdd: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 1.5,
-    padding: 12,
-    position: 'relative',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newTeamLink: { fontFamily: 'Sora_500Medium', fontSize: 9.5, marginTop: 5, marginBottom: 5 },
+  teamInputWrap: { width: '100%', maxWidth: 132, position: 'relative', zIndex: 100 },
+  teamInput: {
+    height: 30,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 0,
+    textAlign: 'center',
+    fontFamily: 'Sora_500Medium',
+    fontSize: 10.5,
+    includeFontPadding: false,
+  },
+  teamError: { fontFamily: 'Sora_500Medium', fontSize: 9, textAlign: 'center', marginTop: 3 },
+  teamMenu: {
+    position: 'absolute',
+    width: 170,
+    top: 34,
+    borderRadius: CARD_RADIUS,
+    borderWidth: 1,
+    shadowColor: '#181817',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
     shadowRadius: 16,
     elevation: 10,
+    zIndex: 999,
+    overflow: 'hidden',
   },
-  closeBtn: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    padding: 4,
-    zIndex: 20,
-  },
-  scrollContent: {
+  menuItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: 4,
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
   },
-  header: {
+  menuAddText: { fontFamily: 'Sora_500Medium', fontSize: 11 },
+  menuMascot: { width: 14, height: 14, borderRadius: 2 },
+  menuItemText: { fontFamily: 'Sora_400Regular', fontSize: 11, flex: 1 },
+  favPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    marginTop: 2,
+    gap: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 999,
   },
-  tossBtn: {
-    height: 44,
-    borderRadius: BorderRadius.xl,
+  favPillText: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.4 },
+  coinCol: { width: 74, alignItems: 'center' },
+  vsText: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 1, marginBottom: 3 },
+  coin: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFE259',
+    borderWidth: 3,
+    borderColor: '#EAB308',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#EAB308',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  coinFace: { width: '100%', height: '100%', borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  coinSymbol: { fontFamily: 'Sora_500Medium', fontSize: 18, color: '#1C2939' },
+  coinHint: { fontFamily: 'Sora_500Medium', fontSize: 9, marginTop: 5 },
+
+  // match details
+  inlineRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  venueRow: { marginBottom: 8 },
+  valuePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    flexShrink: 1,
+  },
+  valuePillText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+  miniSegment: { flexDirection: 'row', gap: 5 },
+  miniPill: {
+    height: 26,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniPillText: { fontFamily: 'Sora_500Medium', fontSize: 10 },
+  segmentRow: { flexDirection: 'row', gap: 6 },
+  togglePill: {
+    flex: 1,
+    height: 30,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  togglePillText: { fontFamily: 'Sora_500Medium', fontSize: 10.5, textAlign: 'center' },
+  inputShell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 34,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingLeft: 12,
+    paddingRight: 8,
+  },
+  inputField: {
+    flex: 1,
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11,
+    paddingVertical: 0,
+    includeFontPadding: false,
+  },
+  turfMenu: {
+    marginTop: 6,
+    maxHeight: 140,
+    borderRadius: CARD_RADIUS,
+    borderWidth: 1,
+    overflow: 'hidden',
+    ...Shadows.level2,
+  },
+
+  // toss
+  tossConfigRow: { flexDirection: 'row', gap: 10 },
+  tossConfigCol: { flex: 1 },
+  resultPanel: { marginTop: 9, padding: 8, borderRadius: CARD_RADIUS, borderWidth: 1 },
+  resultHead: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    width: '100%',
-    ...Shadows.level2,
+    gap: 8,
+    marginBottom: 7,
   },
-  tossBtnLeft: {
-    flexDirection: 'column',
-    flex: 1,
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 999,
   },
-  tossBtnTitle: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 12.5,
-  },
-  tossBtnSub: {
+  statusText: {
     fontFamily: 'Sora_500Medium',
     fontSize: 8.5,
-    marginTop: 1,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
-  tossCoinCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    justifyContent: 'center',
+  resultSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, flexShrink: 1 },
+
+  // match rules
+  oversRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  oversPill: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 3,
+    height: 28,
+    paddingHorizontal: 11,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  oversPillText: { fontFamily: 'Sora_500Medium', fontSize: 10 },
+  customOvers: { paddingHorizontal: 9 },
+  customOversInput: {
+    minWidth: 30,
+    fontFamily: 'Sora_500Medium',
+    fontSize: 10.5,
+    padding: 0,
+    height: 20,
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
+  ruleList: { gap: 7 },
+  ruleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  ruleText: { flex: 1, fontFamily: 'Sora_400Regular', fontSize: 10.5, lineHeight: 14 },
+  guidePill: { borderRadius: CARD_RADIUS, padding: 8, marginTop: 10 },
+  guideText: { fontFamily: 'Sora_400Regular', fontSize: 9.5, lineHeight: 13 },
+
+  // pinned action bar
+  actionsBar: { paddingTop: 10, marginTop: 2, borderTopWidth: 1 },
+  actionBtn: {
+    height: 48,
+    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingLeft: 18,
+    paddingRight: 7,
+    ...Shadows.level2,
+  },
+  actionBtnLocked: { borderWidth: 1, shadowOpacity: 0, elevation: 0 },
+  actionText: { flex: 1 },
+  actionTitle: { fontFamily: 'Sora_500Medium', fontSize: 13 },
+  actionSub: { fontFamily: 'Sora_400Regular', fontSize: 9.5, marginTop: 1 },
+  actionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   /* New Team Modal Styles */
@@ -2048,88 +2023,64 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 380,
-    borderRadius: BorderRadius.xl,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 20,
+    padding: 18,
     maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 15,
-    elevation: 10,
+    ...Shadows.level3,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 14,
   },
-  modalTitle: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 16,
-  },
-  modalCloseBtn: {
-    padding: 4,
-  },
-  modalScroll: {
-    gap: 16,
-    paddingBottom: 10,
-  },
-  modalInputGroup: {
-    flexDirection: 'column',
-    gap: 4,
-  },
-  fieldLabel: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 11,
-  },
+  modalTitle: { fontFamily: 'Sora_500Medium', fontSize: 15.5 },
+  modalCloseBtn: { padding: 4 },
+  modalScroll: { gap: 14, paddingBottom: 10 },
+  modalInputGroup: { flexDirection: 'column', gap: 2 },
   input: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 12,
-    borderRadius: BorderRadius.md,
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11,
+    height: 36,
+    borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 0,
     width: '100%',
     includeFontPadding: false,
   },
-  modalRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
+  modalRow: { flexDirection: 'row', gap: 10 },
   mascotThumbBtn: {
     width: 44,
     height: 44,
-    borderRadius: BorderRadius.md,
+    borderRadius: 14,
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 4,
   },
-  mascotThumbImg: {
-    width: '100%',
-    height: '100%',
-  },
+  mascotThumbImg: { width: '100%', height: '100%' },
   favToggleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: BorderRadius.md,
+    padding: 11,
+    borderRadius: CARD_RADIUS,
     borderWidth: 1,
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 16,
-    paddingTop: 16,
+    gap: 8,
+    marginTop: 14,
+    paddingTop: 14,
     borderTopWidth: 1,
   },
   modalBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: BorderRadius.md,
+    height: 36,
+    paddingHorizontal: 18,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2138,7 +2089,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     padding: 10,
-    borderRadius: BorderRadius.md,
+    borderRadius: CARD_RADIUS,
     borderWidth: 1,
     marginBottom: 4,
   },
@@ -2149,26 +2100,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  userLinkName: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 12.5,
-  },
+  userLinkName: { fontFamily: 'Sora_500Medium', fontSize: 12.5 },
   userLinkBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: BorderRadius.full,
+    borderRadius: 999,
   },
-  userLinkBadgeText: {
-    fontSize: 9.5,
-    fontFamily: 'Sora_500Medium',
-    color: '#10B981',
-  },
-  userLinkSub: {
-    fontFamily: 'Sora_400Regular',
-    fontSize: 10,
-    marginTop: 2,
-  },
+  userLinkBadgeText: { fontSize: 9, fontFamily: 'Sora_500Medium', color: '#10B981' },
+  userLinkSub: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 2 },
 });

@@ -200,7 +200,7 @@ export default function FootballScoring({ teamA = 'Lions FC', teamB = 'Titans Ut
               <ThemedText type="labelSm" style={{ color: '#ffffffaa', letterSpacing: 1 }}>
                 Match Time
               </ThemedText>
-              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 40, fontFamily: 'Sora_500Medium', marginTop: 4 }}>
+              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 32, fontFamily: 'Sora_500Medium', marginTop: 4 }}>
                 {String(Math.floor(seconds / 60)).padStart(2, '0')}:{String(seconds % 60).padStart(2, '0')}
               </ThemedText>
             </View>

@@ -15,6 +15,24 @@ export type PayeeRole = 'owner' | 'coach' | 'organizer';
 
 export type PayoutMethod = 'bank' | 'upi';
 
+/**
+ * The payee role that follows from the signed-in account, or null for an
+ * account without one of its own — a player isn't paid out, and an admin can
+ * act for any payee.
+ */
+export function payeeRoleFor(accountRole?: string | null): PayeeRole | null {
+  switch (accountRole) {
+    case 'Owner':
+      return 'owner';
+    case 'Coach':
+      return 'coach';
+    case 'Organizer':
+      return 'organizer';
+    default:
+      return null;
+  }
+}
+
 export interface PayeeAddress {
   line1: string;
   line2?: string;

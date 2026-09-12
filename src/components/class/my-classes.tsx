@@ -222,7 +222,7 @@ export function MyClasses() {
               <View style={[styles.empty, { borderColor: theme.outlineVariant + '55' }]}>
                 <Ionicons
                   name={bookings.length === 0 ? 'school-outline' : 'filter-outline'}
-                  size={40}
+                  size={32}
                   color={theme.textSecondary}
                 />
                 <ThemedText style={[styles.emptyTitle, { color: theme.text }]}>
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   body: { paddingTop: 6, paddingBottom: 100 },
 
   // Page-level heading
-  title: { fontSize: 17, fontFamily: 'Sora_500Medium', letterSpacing: -0.3 },
+  title: { fontSize: 15, fontFamily: 'Sora_500Medium', letterSpacing: -0.3 },
   subtitle: { fontSize: 10.5, fontFamily: 'Sora_400Regular', marginTop: 2, marginBottom: 12 },
 
   segmentWrap: {

@@ -144,7 +144,7 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
           </View>
           <View style={styles.timerRow}>
             <View style={styles.timerBlock}>
-              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 38, fontFamily: 'Sora_500Medium', marginTop: 4 }}>
+              <ThemedText type="displayLg" style={{ color: '#ffffff', fontSize: 30, fontFamily: 'Sora_500Medium', marginTop: 4 }}>
                 {formatTimer()}
               </ThemedText>
             </View>
@@ -177,7 +177,7 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
           <View style={styles.scoreboardRow}>
             <View style={styles.teamScoreSection}>
               <ThemedText type="headlineSm">{teamA}</ThemedText>
-              <ThemedText type="displayLg" style={{ fontSize: 50, fontFamily: 'Sora_500Medium', marginVertical: Spacing.sm }}>
+              <ThemedText type="displayLg" style={{ fontSize: 38, fontFamily: 'Sora_500Medium', marginVertical: Spacing.sm }}>
                 {scoreA}
               </ThemedText>
               <View style={styles.scoreButtonsRow}>
@@ -197,7 +197,7 @@ export default function BasketballScoring({ teamA = 'Lions FC', teamB = 'Titans 
 
             <View style={styles.teamScoreSection}>
               <ThemedText type="headlineSm">{teamB}</ThemedText>
-              <ThemedText type="displayLg" style={{ fontSize: 50, fontFamily: 'Sora_500Medium', marginVertical: Spacing.sm }}>
+              <ThemedText type="displayLg" style={{ fontSize: 38, fontFamily: 'Sora_500Medium', marginVertical: Spacing.sm }}>
                 {scoreB}
               </ThemedText>
               <View style={styles.scoreButtonsRow}>

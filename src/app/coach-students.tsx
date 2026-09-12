@@ -23,6 +23,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useClassStore } from '@/store/app-store';
 import { getAvatarSource } from '@/constants/avatars';
 import { formatSessionsShort, formatClassDate, formatReadableDate } from '@/utils/class-schedule';
+import { formatPhoneNumber, getPhoneValidationError } from '@/utils/phone-utils';
 
 export interface StudentRecord {
   id: string;
@@ -320,7 +321,7 @@ export default function CoachStudentsScreen() {
   const handleOpenEdit = (student: StudentRecord) => {
     setEditingStudent(student);
     setEditName(student.name);
-    setEditPhone(student.phone);
+    setEditPhone(student.phone ? formatPhoneNumber(student.phone) : '');
     setEditCategory(student.category || 'Adults');
     setEditClass(student.registeredClass);
     setEditNotes(student.notes || '');
@@ -334,11 +335,19 @@ export default function CoachStudentsScreen() {
       return;
     }
 
+    if (editPhone.trim()) {
+      const phoneErr = getPhoneValidationError(editPhone, false);
+      if (phoneErr) {
+        Alert.alert('Invalid Phone Number', phoneErr);
+        return;
+      }
+    }
+
     setStudentOverrides(prev => ({
       ...prev,
       [editingStudent.id]: {
         name: editName.trim(),
-        phone: editPhone.trim() || editingStudent.phone,
+        phone: editPhone.trim() ? formatPhoneNumber(editPhone) : editingStudent.phone,
         category: editCategory.trim(),
         role: `${editCategory.trim()} • Active Student`,
         registeredClass: editClass.trim() || editingStudent.registeredClass,
@@ -363,10 +372,10 @@ export default function CoachStudentsScreen() {
             onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/coach')}
             style={styles.backButton}
           >
-            <Ionicons name="arrow-back" size={22} color={theme.text} />
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
           <View style={{ flex: 1, marginLeft: 10 }}>
-            <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 17 }}>
+            <ThemedText style={{ color: theme.text, fontFamily: 'Sora_600SemiBold', fontSize: 15 }}>
               Academy Student Roster
             </ThemedText>
             <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontFamily: 'Sora_400Regular' }}>
@@ -522,7 +531,7 @@ export default function CoachStudentsScreen() {
           <View style={{ gap: 12, marginTop: 12 }}>
             {filteredStudents.length === 0 ? (
               <View style={[styles.emptyCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-                <Ionicons name="people-outline" size={40} color={theme.textSecondary} />
+                <Ionicons name="people-outline" size={32} color={theme.textSecondary} />
                 <ThemedText style={{ marginTop: 10, fontSize: 15, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
                   No Students Found
                 </ThemedText>
@@ -1013,10 +1022,11 @@ export default function CoachStudentsScreen() {
                       <TextInput
                         maxFontSizeMultiplier={MAX_FONT_SCALE}
                         value={editPhone}
-                        onChangeText={setEditPhone}
-                        placeholder="+91 98765 43210"
+                        onChangeText={(t) => setEditPhone(formatPhoneNumber(t))}
+                        placeholder="98765 43210"
                         placeholderTextColor={theme.textSecondary}
                         keyboardType="phone-pad"
+                        maxLength={11}
                         style={[styles.formTextInput, { color: theme.text }]}
                       />
                     </View>
@@ -1195,7 +1205,7 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 14.5,
     fontFamily: 'Sora_600SemiBold',
     marginTop: 2,
   },
@@ -1442,7 +1452,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 14.5,
     fontFamily: 'Sora_600SemiBold',
   },
   modalSubtitle: {
@@ -1502,7 +1512,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   heroPercent: {
-    fontSize: 26,
+    fontSize: 20,
     fontFamily: 'Sora_600SemiBold',
     color: '#ffffff',
     marginTop: 2,

@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 22,
+    fontSize: 18,
     color: '#191c1e',
   },
 
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
   },
   finalizationTitle: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 18,
+    fontSize: 15.5,
     color: '#ffffff',
     marginBottom: 4,
   },

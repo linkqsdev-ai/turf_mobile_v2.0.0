@@ -4,7 +4,7 @@ import { Shadows, Spacing, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Alert,
   Pressable,
@@ -16,7 +16,7 @@ import {
 import { Image } from 'expo-image';
 import { useMatchStore } from '@/store/app-store';
 import { useUserProfile } from '@/hooks/use-user-profile';
-
+import { formatPhoneNumber, getPhoneValidationError } from '@/utils/phone-utils';
 import { SPORTS_LIST } from '@/constants/sports';
 
 export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => void }) {
@@ -28,9 +28,16 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
   const [shortName, setShortName] = useState('');
   const [selectedSport, setSelectedSport] = useState('Cricket');
   const [homeGround, setHomeGround] = useState('');
-  const [captainPhone, setCaptainPhone] = useState(profile.phone || '9876543210');
+  const [captainPhone, setCaptainPhone] = useState(profile?.phone ? formatPhoneNumber(profile.phone) : '');
   const [crestImage, setCrestImage] = useState<any>(require('@/assets/images/mascots/lion.png'));
   const [isFavourite, setIsFavourite] = useState(false);
+
+  // Sync profile phone if it loads asynchronously
+  useEffect(() => {
+    if (profile?.phone && !captainPhone) {
+      setCaptainPhone(formatPhoneNumber(profile.phone));
+    }
+  }, [profile?.phone]);
 
   const cleanedPhone = captainPhone.replace(/[^0-9]/g, '');
   const favTeamsForUser = teams.filter(t => {
@@ -59,14 +66,10 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
   const [phoneError, setPhoneError] = useState('');
 
   const handlePhoneChange = (text: string) => {
-    // Strip all non-numeric chars except leading +
-    const cleaned = text.replace(/[^0-9+]/g, '').replace(/(?!^)\+/g, '');
-    setCaptainPhone(cleaned);
-    if (cleaned.length > 0 && cleaned.replace('+', '').length < 7) {
-      setPhoneError('Enter a valid phone number (min 7 digits)');
-    } else {
-      setPhoneError('');
-    }
+    const formatted = formatPhoneNumber(text);
+    setCaptainPhone(formatted);
+    const err = getPhoneValidationError(formatted, true);
+    setPhoneError(err || '');
   };
 
   const pickImage = () => {
@@ -128,8 +131,8 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
     let hasError = false;
     if (!teamName.trim()) { setTeamNameError('Team name is required'); hasError = true; } else { setTeamNameError(''); }
     if (!shortName.trim()) { setShortNameError('Short name is required'); hasError = true; } else { setShortNameError(''); }
-    if (!captainPhone.trim()) { setPhoneError('Phone number is required'); hasError = true; }
-    else if (captainPhone.replace('+','').length < 7) { setPhoneError('Enter a valid phone number (min 7 digits)'); hasError = true; }
+    const phoneValErr = getPhoneValidationError(captainPhone, true);
+    if (phoneValErr) { setPhoneError(phoneValErr); hasError = true; }
     else { setPhoneError(''); }
     if (hasError) return;
 
@@ -261,7 +264,7 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
               <Image source={typeof crestImage === 'string' ? { uri: crestImage } : crestImage} style={styles.logoImage} />
             ) : (
               <>
-                <Ionicons name="cloud-upload-outline" size={24} color={theme.textSecondary} />
+                <Ionicons name="cloud-upload-outline" size={20} color={theme.textSecondary} />
                 <ThemedText style={[styles.logoUploadTitle, { color: theme.text }]}>Team Logo</ThemedText>
                 <ThemedText style={[styles.logoUploadHint, { color: theme.textSecondary }]}>Tap to upload</ThemedText>
               </>
@@ -317,9 +320,10 @@ export function CreateTeamTab({ onNavigate }: { onNavigate?: (tab: string) => vo
                 styles.input,
                 { backgroundColor: 'transparent', color: theme.text, borderColor: phoneError ? '#ef4444' : isPhoneFocused ? theme.primary : '#00000033' }
               ]}
-              placeholder="+44 7000"
+              placeholder="98765 43210"
               placeholderTextColor="#94a3b8"
               keyboardType="phone-pad"
+              maxLength={11}
               value={captainPhone}
               onChangeText={handlePhoneChange}
               onFocus={() => setIsPhoneFocused(true)}
@@ -447,7 +451,7 @@ const styles = StyleSheet.create({
   },
   bannerTitle: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 24,
+    fontSize: 19,
     color: '#ffffff',
     marginBottom: 6,
   },

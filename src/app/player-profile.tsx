@@ -62,13 +62,13 @@ export default function PlayerProfileScreen() {
             }}
             style={styles.backButton}
           >
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
           <ThemedText type="headlineSm" style={styles.headerTitle}>
             Player Profile
           </ThemedText>
           <Pressable style={styles.iconButton}>
-            <Ionicons name="share-outline" size={22} color={theme.text} />
+            <Ionicons name="share-outline" size={20} color={theme.text} />
           </Pressable>
         </View>
 
@@ -166,7 +166,7 @@ export default function PlayerProfileScreen() {
                 {/* Batting Stats */}
                 <View style={[styles.bentoCell, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
                   <View style={styles.bentoCellHeader}>
-                    <ThemedText type="headlineSm" style={{ fontSize: 16 }}>Batting</ThemedText>
+                    <ThemedText type="headlineSm" style={{ fontSize: 14.5 }}>Batting</ThemedText>
                     <Ionicons name="fitness" size={18} color={theme.secondaryContainer} />
                   </View>
                   <View style={styles.metricsGrid}>
@@ -194,7 +194,7 @@ export default function PlayerProfileScreen() {
                 {/* Bowling Stats */}
                 <View style={[styles.bentoCell, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
                   <View style={styles.bentoCellHeader}>
-                    <ThemedText type="headlineSm" style={{ fontSize: 16 }}>Bowling</ThemedText>
+                    <ThemedText type="headlineSm" style={{ fontSize: 14.5 }}>Bowling</ThemedText>
                     <Ionicons name="baseball" size={18} color={theme.secondaryContainer} />
                   </View>
                   <View style={styles.metricsGrid}>
@@ -250,7 +250,7 @@ export default function PlayerProfileScreen() {
             <View style={styles.achievementRow}>
               <View style={[styles.achievementCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
                 <View style={[styles.achievementIconContainer, { backgroundColor: theme.secondaryContainer + '22' }]}>
-                  <Ionicons name="trophy" size={24} color={theme.secondaryContainer} />
+                  <Ionicons name="trophy" size={20} color={theme.secondaryContainer} />
                 </View>
                 <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_500Medium', color: theme.text, fontSize: 9 }}>
                   MVP 2024
@@ -259,7 +259,7 @@ export default function PlayerProfileScreen() {
 
               <View style={[styles.achievementCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
                 <View style={[styles.achievementIconContainer, { backgroundColor: theme.secondaryContainer + '22' }]}>
-                  <Ionicons name="ribbon" size={24} color={theme.secondaryContainer} />
+                  <Ionicons name="ribbon" size={20} color={theme.secondaryContainer} />
                 </View>
                 <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_500Medium', color: theme.text, fontSize: 9 }}>
                   CENTURY CLUB
@@ -268,7 +268,7 @@ export default function PlayerProfileScreen() {
 
               <View style={[styles.achievementCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
                 <View style={[styles.achievementIconContainer, { backgroundColor: theme.secondaryContainer + '22' }]}>
-                  <Ionicons name="medal" size={24} color={theme.secondaryContainer} />
+                  <Ionicons name="medal" size={20} color={theme.secondaryContainer} />
                 </View>
                 <ThemedText type="labelSm" style={{ marginTop: Spacing.sm, fontFamily: 'Sora_500Medium', color: theme.text, fontSize: 9 }}>
                   TOP BOWLER
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 16,
+    fontSize: 14.5,
   },
   iconButton: {
     padding: 6,
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   metricValue: {
-    fontSize: 18,
+    fontSize: 15.5,
     marginTop: 2,
     fontFamily: 'Sora_500Medium',
   },
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '45deg' }],
   },
   circularProgressText: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '500',
     color: '#ffffff',
     fontFamily: 'Sora_500Medium',

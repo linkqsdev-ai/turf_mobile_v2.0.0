@@ -32,6 +32,35 @@ interface NotificationContextType {
 const STORAGE_KEY = '@turf_role_notifications_v2';
 
 const INITIAL_NOTIFICATIONS: AppNotification[] = [
+  // Global & AI smart notifications
+  {
+    id: 'n-ai-1',
+    title: 'Your AI Just Got Smarter',
+    body: 'Adaptive learning speed increased by 27%. New feature: AI-driven trend forecasting & turf availability prediction.',
+    type: 'system',
+    targetRole: 'All',
+    isRead: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1h ago
+  },
+  {
+    id: 'n-ai-2',
+    title: 'Data Analysis Completed',
+    body: 'Your AI has processed 10,000+ records and identified key booking & match trends for your area.',
+    type: 'system',
+    targetRole: 'All',
+    isRead: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // 3h ago
+  },
+  {
+    id: 'n-ai-3',
+    title: 'System Maintenance',
+    body: 'Performance tuning & security updates will be applied tonight at 2:00 AM UTC.',
+    type: 'system',
+    targetRole: 'All',
+    isRead: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5h ago
+  },
+
   // Player notifications
   {
     id: 'n1',
@@ -58,7 +87,16 @@ const INITIAL_NOTIFICATIONS: AppNotification[] = [
     type: 'tournament',
     targetRole: 'Player',
     isRead: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 2 days ago (This Week)
+  },
+  {
+    id: 'n3-old',
+    title: 'Season 1 Rewards Distributed',
+    body: 'Your team finished in the Top 5% of the Premier League and earned 500 bonus wallet credits.',
+    type: 'tournament',
+    targetRole: 'Player',
+    isRead: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(), // 10 days ago (Earlier)
   },
 
   // Owner notifications

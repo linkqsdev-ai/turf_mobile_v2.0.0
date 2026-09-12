@@ -107,13 +107,13 @@ export default function CoachClassesScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/coach'))}
             hitSlop={10}
             style={styles.backBtn}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={22} color={theme.text} />
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
           <View style={{ flex: 1 }}>
             <ThemedText type="headlineLg" style={{ color: theme.text }}>
@@ -196,7 +196,7 @@ export default function CoachClassesScreen() {
           {/* List */}
           {visible.length === 0 ? (
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="school-outline" size={46} color={theme.textSecondary} />
+              <MaterialCommunityIcons name="school-outline" size={36} color={theme.textSecondary} />
               <ThemedText style={[styles.emptyTitle, { color: theme.text }]}>
                 {classes.length === 0 ? 'No classes yet' : `No ${filter} classes`}
               </ThemedText>
@@ -230,9 +230,16 @@ export default function CoachClassesScreen() {
                         {[cls.sportType, cls.classType, cls.venue].filter(Boolean).join(' • ')}
                       </ThemedText>
                     </View>
-                    <ThemedText style={[styles.classFee, { color: theme.primary }]}>
-                      {cls.feeAmount ? `₹${cls.feeAmount}` : 'Free'}
-                    </ThemedText>
+                    <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                      <ThemedText style={[styles.classFee, { color: theme.primary }]}>
+                        {cls.feeAmount ? `₹${cls.feeAmount}` : 'Free'}
+                      </ThemedText>
+                      {cls.cashbackAmount && Number(cls.cashbackAmount) > 0 ? (
+                        <ThemedText style={{ color: '#10b981', fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
+                          💰 {cls.cashbackType === 'percent' ? `${cls.cashbackAmount}% back` : `₹${cls.cashbackAmount} back`}
+                        </ThemedText>
+                      ) : null}
+                    </View>
                   </View>
 
                   <View style={styles.statusRow}>
@@ -377,7 +384,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   summaryCell: { flex: 1, alignItems: 'center' },
-  summaryValue: { color: '#ffffff', fontSize: 20, fontFamily: 'Sora_800ExtraBold' },
+  summaryValue: { color: '#ffffff', fontSize: 16.5, fontFamily: 'Sora_800ExtraBold' },
   summaryLabel: {
     color: 'rgba(255,255,255,0.82)',
     fontSize: 10.5,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,13 +9,15 @@ import {
   Alert,
   Modal,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { CoinTossModal } from '@/components/coin-toss-modal';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
+import { loadOwnBoardData, CompletedMatchRecord } from '@/store/own-board-store';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -32,8 +34,10 @@ import { isTimeSlotPassed } from '@/utils/date-utils';
 import { FoFAvatarStack } from '@/components/fof/FoFAvatarStack';
 import { getSportIllustration } from '@/constants/sports';
 import { MotionIllustration } from '@/components/motion-illustration';
+import { LinearGradient } from 'expo-linear-gradient';
+import { PulseDot } from '@/components/home/dashboard-widgets';
 
-const FILTERS = ['Me', 'All', 'Turf', 'Ground', 'Bid', 'Coaching', 'Tournament', 'Finished'];
+const FILTERS = ['Me', 'All', 'Turf', 'Bid', 'Ground', 'Finished'];
 
 export function MatchesHomeTab() {
   const theme = useTheme();
@@ -44,18 +48,60 @@ export function MatchesHomeTab() {
   const { bids, addBid, removeBid } = useBidStore();
   const { profile } = useUserProfile();
 
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 600);
-  }, []);
-
   // Modals state for Book, Bid Match, and Scorecard Details
   const [selectedBookMatch, setSelectedBookMatch] = useState<any>(null);
   const [selectedBidMatch, setSelectedBidMatch] = useState<any>(null);
   const [selectedScorecardMatch, setSelectedScorecardMatch] = useState<any>(null);
   const [acceptBidMatch, setAcceptBidMatch] = useState<any>(null);
+  const [selectedUserBidDetails, setSelectedUserBidDetails] = useState<any>(null);
+  const [bidSubTab, setBidSubTab] = useState<'Ask Bid' | 'Open Challenge' | 'Accepted'>('Ask Bid');
   const [bookTimeSlot, setBookTimeSlot] = useState('6:00 PM - 7:00 PM (₹150)');
   const [bidCoins, setBidCoins] = useState(100);
+  const [ownBoardMatches, setOwnBoardMatches] = useState<CompletedMatchRecord[]>([]);
+
+  const fetchOwnBoard = React.useCallback(async () => {
+    try {
+      const data = await loadOwnBoardData();
+      if (data && Array.isArray(data.matches)) {
+        setOwnBoardMatches(data.matches);
+      }
+    } catch (err) {
+      console.log('Error loading own board matches in MatchesHomeTab', err);
+    }
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchOwnBoard();
+    }, [fetchOwnBoard])
+  );
+
+  // Infinite Scroll Pagination State
+  const [visibleMatchesCount, setVisibleMatchesCount] = useState(6);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  useEffect(() => {
+    setVisibleMatchesCount(6);
+  }, [selectedFilter, bidSubTab]);
+
+  const handleScroll = (event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 220;
+    if (isCloseToBottom && !isLoadingMore) {
+      setIsLoadingMore(true);
+      setTimeout(() => {
+        setVisibleMatchesCount((prev) => prev + 4);
+        setIsLoadingMore(false);
+      }, 300);
+    }
+  };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    setVisibleMatchesCount(6);
+    await fetchOwnBoard();
+    setTimeout(() => setRefreshing(false), 600);
+  }, [fetchOwnBoard]);
 
   const renderFinishedBadge = (sport: string) => {
     let iconName: any = 'sports-kabaddi';
@@ -134,9 +180,68 @@ export function MatchesHomeTab() {
     }
 
     const matchId = typeof matchItem === 'string' ? matchItem : matchItem?.id || 'cricket-live-1';
+    const targetSport = typeof matchItem === 'object' && matchItem?.sport ? matchItem.sport.toLowerCase() : sport.toLowerCase();
+    const teamA = typeof matchItem === 'object' ? (matchItem.team1 || matchItem.teamA || 'London Lions') : 'London Lions';
+    const teamB = typeof matchItem === 'object' ? (matchItem.team2 || matchItem.teamB || 'Kent Kings') : 'Kent Kings';
+
+    let inn1 = typeof matchItem === 'object' ? matchItem.innings1 : undefined;
+    let inn2 = typeof matchItem === 'object' ? matchItem.innings2 : undefined;
+
+    // Fallback: If innings objects are not present, build them from card scores so the scoreboard loads fully!
+    if (!inn1 && typeof matchItem === 'object' && matchItem.team1Score) {
+      const rawScore = matchItem.team1Score || '0/0';
+      const rawOvers = (matchItem.team1Overs || '20.0').replace(/[() ov]/g, '');
+      const topScorerText = matchItem.team1TopScorer || `${teamA} Batsman 45* (25b)`;
+      const bestBowlerText = matchItem.team1BestBowler || 'Bowler 2/18 (4.0 ov)';
+      const topRuns = parseInt(topScorerText.match(/\d+/)?.[0] || '35', 10);
+      inn1 = {
+        team: teamA,
+        score: rawScore,
+        overs: rawOvers,
+        batsmen: [
+          { name: topScorerText.split(' ')[0] || 'Top Batter', runs: topRuns, balls: 22, fours: 4, sixes: 2, isOut: !topScorerText.includes('*'), status: topScorerText.includes('*') ? 'not out' : 'c & b', strikeRate: 159.0 },
+          { name: 'Support Batter', runs: 24, balls: 16, fours: 3, sixes: 0, isOut: true, status: 'bowled', strikeRate: 150.0 },
+        ],
+        bowlers: [
+          { name: bestBowlerText.split(' ')[0] || 'Lead Bowler', overs: 2.0, maidens: 0, runs: 16, wickets: 2, economy: 8.0, dots: 4 },
+        ],
+      };
+    }
+
+    if (!inn2 && typeof matchItem === 'object' && matchItem.team2Score) {
+      const rawScore = matchItem.team2Score || '0/0';
+      const rawOvers = (matchItem.team2Overs || '20.0').replace(/[() ov]/g, '');
+      const topScorerText = matchItem.team2TopScorer || `${teamB} Batsman 38 (24b)`;
+      const bestBowlerText = matchItem.team2BestBowler || 'Bowler 2/22 (4.0 ov)';
+      const topRuns = parseInt(topScorerText.match(/\d+/)?.[0] || '28', 10);
+      inn2 = {
+        team: teamB,
+        score: rawScore,
+        overs: rawOvers,
+        batsmen: [
+          { name: topScorerText.split(' ')[0] || 'Top Batter', runs: topRuns, balls: 20, fours: 3, sixes: 1, isOut: !topScorerText.includes('*'), status: topScorerText.includes('*') ? 'not out' : 'caught', strikeRate: 140.0 },
+          { name: 'Middle Order', runs: 18, balls: 12, fours: 2, sixes: 0, isOut: false, status: 'not out', strikeRate: 150.0 },
+        ],
+        bowlers: [
+          { name: bestBowlerText.split(' ')[0] || 'Lead Bowler', overs: 2.0, maidens: 0, runs: 14, wickets: 1, economy: 7.0, dots: 5 },
+        ],
+      };
+    }
+
     router.push({
       pathname: '/scoring',
-      params: { matchId, sport },
+      params: {
+        matchId,
+        sport: targetSport,
+        teamA,
+        teamB,
+        status: typeof matchItem === 'object' ? matchItem.status : 'Finished',
+        innings1: inn1 ? JSON.stringify(inn1) : undefined,
+        innings2: inn2 ? JSON.stringify(inn2) : undefined,
+        motmName: typeof matchItem === 'object' ? (matchItem.playerOfTheMatch || matchItem.motmName) : undefined,
+        winner: typeof matchItem === 'object' ? matchItem.winner : undefined,
+        winMargin: typeof matchItem === 'object' ? (matchItem.winMargin || matchItem.resultText) : undefined,
+      },
     });
   };
 
@@ -176,11 +281,51 @@ export function MatchesHomeTab() {
             );
           })}
         </ScrollView>
+
+        {/* Bid Sub-Tabs: Ask Bid (Default), Open Challenge, Accepted */}
+        {selectedFilter === 'Bid' && (
+          <View style={{ flexDirection: 'row', backgroundColor: theme.surfaceLow, borderRadius: 12, borderWidth: 1, borderColor: theme.outlineVariant + '25', padding: 3, marginHorizontal: 16, marginBottom: 10, gap: 4 }}>
+            {(['Ask Bid', 'Open Challenge', 'Accepted'] as const).map((sub) => {
+              const active = bidSubTab === sub;
+              return (
+                <Pressable
+                  key={sub}
+                  onPress={() => setBidSubTab(sub)}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 7,
+                    borderRadius: 9,
+                    backgroundColor: active ? theme.primary : 'transparent',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    shadowColor: active ? theme.primary : 'transparent',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: active ? 0.25 : 0,
+                    shadowRadius: 3,
+                    elevation: active ? 2 : 0,
+                  }}
+                >
+                  <ThemedText
+                    style={{
+                      fontSize: 11,
+                      fontFamily: active ? 'Sora_600SemiBold' : 'Sora_500Medium',
+                      color: active ? '#ffffff' : theme.textSecondary,
+                    }}
+                  >
+                    {sub}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </View>
       <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
           }
@@ -244,7 +389,7 @@ export function MatchesHomeTab() {
                         RCB
                       </ThemedText>
                     </View>
-                    <ThemedText style={{ fontSize: 20, fontFamily: 'Sora_500Medium', color: theme.primary, marginTop: 2 }}>
+                    <ThemedText style={{ fontSize: 16.5, fontFamily: 'Sora_500Medium', color: theme.primary, marginTop: 2 }}>
                       172/4
                     </ThemedText>
                     <ThemedText style={{ color: theme.textSecondary, fontSize: 10, fontFamily: 'Sora_500Medium', marginTop: 1 }}>
@@ -265,7 +410,7 @@ export function MatchesHomeTab() {
                         KXI
                       </ThemedText>
                     </View>
-                    <ThemedText style={{ fontSize: 20, color: theme.textSecondary, fontFamily: 'Sora_500Medium', marginTop: 2, textAlign: 'right' }}>
+                    <ThemedText style={{ fontSize: 16.5, color: theme.textSecondary, fontFamily: 'Sora_500Medium', marginTop: 2, textAlign: 'right' }}>
                       -
                     </ThemedText>
                     <ThemedText style={{ color: theme.textSecondary, fontSize: 10, fontFamily: 'Sora_500Medium', marginTop: 1, textAlign: 'right' }}>
@@ -445,11 +590,12 @@ export function MatchesHomeTab() {
                     tournament: 'T20 Cricket Premier League',
                     location: 'Lords Cricket Ground, London',
                     category: 'Turf',
+                    sport: 'Cricket',
                     type: 'Tournament',
                     status: 'Finished',
                     isMe: true,
                     playerName: currentUserName,
-                    avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+                    avatar: profile?.avatarUrl || 'https://randomuser.me/api/portraits/men/32.jpg',
                     team1: 'London Lions CC',
                     team1Code: 'LL',
                     team1Score: '178/4',
@@ -467,10 +613,38 @@ export function MatchesHomeTab() {
                     section: 'Today',
                   },
                   {
+                    id: 'cricket-today-me-2',
+                    tournament: 'Apex Super 8s Championship',
+                    location: 'Apex Turf Arena, Court #1',
+                    category: 'Turf',
+                    sport: 'Cricket',
+                    type: 'Tournament',
+                    status: 'Finished',
+                    isMe: true,
+                    playerName: currentUserName,
+                    avatar: profile?.avatarUrl || 'https://randomuser.me/api/portraits/men/32.jpg',
+                    team1: 'Chennai Super Turfs',
+                    team1Code: 'CST',
+                    team1Score: '112/2',
+                    team1Overs: '(8.0 ov)',
+                    team1TopScorer: `${currentUserName} 52* (22b)`,
+                    team1BestBowler: 'Karthik Raj 2/18 (2.0 ov)',
+                    team2: 'Velachery Blasters',
+                    team2Code: 'VB',
+                    team2Score: '98/5',
+                    team2Overs: '(8.0 ov)',
+                    team2TopScorer: 'Vikram Verma 36 (18b)',
+                    team2BestBowler: `${currentUserName} 2/12 (2.0 ov)`,
+                    playerOfTheMatch: currentUserName,
+                    resultText: 'Chennai Super Turfs won by 14 runs',
+                    section: 'Today',
+                  },
+                  {
                     id: 'cricket-2',
                     tournament: 'IPL T20 Super League',
                     location: 'Chinnaswamy Stadium, Bengaluru',
                     category: 'Ground',
+                    sport: 'Cricket',
                     type: 'Tournament',
                     status: 'Finished',
                     isMe: false,
@@ -497,6 +671,7 @@ export function MatchesHomeTab() {
                     tournament: 'National Ground Championship',
                     location: 'Central Sports Complex, Delhi',
                     category: 'Ground',
+                    sport: 'Cricket',
                     type: 'Tournament',
                     status: 'Upcoming',
                     isMe: false,
@@ -516,24 +691,25 @@ export function MatchesHomeTab() {
                     tournament: 'T20 Blast Cricket',
                     location: 'Ovals Turf Arena, London',
                     category: 'Turf',
+                    sport: 'Cricket',
                     type: 'Tournament',
                     status: 'Finished',
-                    isMe: false,
-                    playerName: 'Antony Das',
-                    avatar: 'https://randomuser.me/api/portraits/men/68.jpg',
+                    isMe: true,
+                    playerName: currentUserName,
+                    avatar: profile?.avatarUrl || 'https://randomuser.me/api/portraits/men/32.jpg',
                     team1: 'Middlesex Titans',
                     team1Code: 'MT',
                     team1Score: '145/6',
                     team1Overs: '(20.0 ov)',
-                    team1TopScorer: 'Antony Das 58 (40b)',
+                    team1TopScorer: `${currentUserName} 58 (40b)`,
                     team1BestBowler: 'Priya Patel 2/25 (4.0 ov)',
                     team2: 'Sussex Sharks',
                     team2Code: 'SS',
                     team2Score: '142/9',
                     team2Overs: '(19.4 ov)',
                     team2TopScorer: 'Vikram Verma 42 (30b)',
-                    team2BestBowler: 'Antony Das 3/20 (4.0 ov)',
-                    playerOfTheMatch: 'Antony Das',
+                    team2BestBowler: `${currentUserName} 3/20 (4.0 ov)`,
+                    playerOfTheMatch: currentUserName,
                     resultText: 'Middlesex Titans won by 3 runs',
                     section: 'Yesterday',
                   },
@@ -542,24 +718,25 @@ export function MatchesHomeTab() {
                     tournament: 'County Cricket League',
                     location: 'Yorkshire County Ground, Leeds',
                     category: 'Ground',
+                    sport: 'Cricket',
                     type: 'Tournament',
                     status: 'Finished',
-                    isMe: false,
-                    playerName: 'Priya Patel',
-                    avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
+                    isMe: true,
+                    playerName: currentUserName,
+                    avatar: profile?.avatarUrl || 'https://randomuser.me/api/portraits/men/32.jpg',
                     team1: 'London Giants',
                     team1Code: 'LG',
                     team1Score: '188/3',
                     team1Overs: '(20.0 ov)',
-                    team1TopScorer: 'Priya Patel 81* (52b)',
+                    team1TopScorer: `${currentUserName} 81* (52b)`,
                     team1BestBowler: 'Vikram Verma 2/34 (4.0 ov)',
                     team2: 'York Knights',
                     team2Code: 'YK',
                     team2Score: '185/8',
                     team2Overs: '(20.0 ov)',
                     team2TopScorer: 'Anish Hegde 66 (38b)',
-                    team2BestBowler: 'Priya Patel 2/29 (4.0 ov)',
-                    playerOfTheMatch: 'Priya Patel',
+                    team2BestBowler: `${currentUserName} 2/29 (4.0 ov)`,
+                    playerOfTheMatch: currentUserName,
                     resultText: 'London Giants won by 3 runs',
                     section: 'Yesterday',
                   },
@@ -568,6 +745,7 @@ export function MatchesHomeTab() {
                     tournament: 'Night Turf Challenge',
                     location: 'Skyline Turf Arena, Floodlight Pitch',
                     category: 'Turf',
+                    sport: 'Cricket',
                     type: 'Friendly',
                     status: 'Upcoming',
                     isMe: false,
@@ -587,11 +765,12 @@ export function MatchesHomeTab() {
                     tournament: 'Corporate Cricket Trophy',
                     location: 'Chepauk Stadium, Chennai',
                     category: 'Ground',
+                    sport: 'Cricket',
                     type: 'Tournament',
                     status: 'Finished',
                     isMe: true,
                     playerName: currentUserName,
-                    avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+                    avatar: profile?.avatarUrl || 'https://randomuser.me/api/portraits/men/32.jpg',
                     team1: 'Chennai Super Kings',
                     team1Code: 'CSK',
                     team1Score: '192/4',
@@ -606,6 +785,53 @@ export function MatchesHomeTab() {
                     team2BestBowler: `${currentUserName} 3/28 (4.0 ov)`,
                     playerOfTheMatch: currentUserName,
                     resultText: 'Chennai Super Kings won by 3 runs',
+                    section: 'Past Matches',
+                  },
+                  {
+                    id: 'past-cricket-me-2',
+                    tournament: 'South Zone Invitational Cup',
+                    location: 'Marina Sports Ground, Chennai',
+                    category: 'Ground',
+                    sport: 'Cricket',
+                    type: 'Tournament',
+                    status: 'Finished',
+                    isMe: true,
+                    playerName: currentUserName,
+                    avatar: profile?.avatarUrl || 'https://randomuser.me/api/portraits/men/32.jpg',
+                    team1: 'Tamil Nadu Strikers',
+                    team1Code: 'TNS',
+                    team1Score: '210/3',
+                    team1Overs: '(20.0 ov)',
+                    team1TopScorer: `${currentUserName} 102* (56b)`,
+                    team1BestBowler: 'Ravi Teja 2/32 (4.0 ov)',
+                    team2: 'Bengaluru Blasters',
+                    team2Code: 'BB',
+                    team2Score: '195/8',
+                    team2Overs: '(20.0 ov)',
+                    team2TopScorer: 'Vikram Verma 68 (39b)',
+                    team2BestBowler: `${currentUserName} 3/25 (4.0 ov)`,
+                    playerOfTheMatch: currentUserName,
+                    resultText: 'Tamil Nadu Strikers won by 15 runs',
+                    section: 'Past Matches',
+                  },
+                  {
+                    id: 'past-football-me-1',
+                    tournament: 'Chennai Futsal League',
+                    location: 'Skyline Turf Arena, Court #2',
+                    category: 'Turf',
+                    sport: 'Football',
+                    type: 'Tournament',
+                    status: 'Finished',
+                    isMe: true,
+                    playerName: currentUserName,
+                    avatar: profile?.avatarUrl || 'https://randomuser.me/api/portraits/men/32.jpg',
+                    team1: 'Red Devils FC',
+                    team1Code: 'RD',
+                    team1Score: '4',
+                    team2: 'City Strikers FC',
+                    team2Code: 'CS',
+                    team2Score: '2',
+                    resultText: 'Red Devils FC won 4 - 2',
                     section: 'Past Matches',
                   },
                   {
@@ -627,7 +853,7 @@ export function MatchesHomeTab() {
                     statusColor: '#f59e0b',
                     section: 'Upcoming Fixtures',
                   },
-                  /* ── Live Open Bid Challenges (Shown under 'Bid' Tab with 'Accept Bid' Action) ── */
+                  /* ── Live Open Bid Challenges ── */
                   {
                     id: 'bid-challenge-cricket-1',
                     tournament: 'Bid Challenge: Cricket',
@@ -635,7 +861,7 @@ export function MatchesHomeTab() {
                     category: 'Turf',
                     sport: 'Cricket',
                     type: 'Bid',
-                    status: 'Accept Bid',
+                    status: 'Open',
                     isMe: false,
                     isBid: true,
                     playerName: 'Rahul Sharma',
@@ -657,7 +883,7 @@ export function MatchesHomeTab() {
                     category: 'Turf',
                     sport: 'Football',
                     type: 'Bid',
-                    status: 'Accept Bid',
+                    status: 'Open',
                     isMe: false,
                     isBid: true,
                     playerName: 'Alex Rivera',
@@ -679,7 +905,7 @@ export function MatchesHomeTab() {
                     category: 'Turf',
                     sport: 'Badminton',
                     type: 'Bid',
-                    status: 'Accept Bid',
+                    status: 'Open',
                     isMe: false,
                     isBid: true,
                     playerName: 'Sarah Jenkins',
@@ -688,52 +914,159 @@ export function MatchesHomeTab() {
                     team1Code: 'SM',
                     team2: 'Open Opponent',
                     opponentTeam: 'Open Opponent',
-                    timeText: 'Tomorrow, 7:00 AM',
+                    timeText: 'Today, 10:00 PM',
                     subText: 'Bid Active • Stake: ₹100 (100 Coins)',
                     bidCoins: 100,
                     statusColor: '#8b5cf6',
-                    section: 'Upcoming Fixtures',
+                    section: 'Today',
                   },
+                  /* ── Logged-in User Entered Bid (Ask Bid) ── */
                   {
-                    id: 'bid-challenge-cricket-2',
+                    id: 'bid-user-1',
                     tournament: 'Bid Challenge: Super 11',
+                    location: 'Skyline Turf Arena, Court #1',
+                    category: 'Turf',
+                    sport: 'Cricket',
+                    type: 'Bid',
+                    status: 'Open',
+                    isMe: true,
+                    isBid: true,
+                    playerName: profile.name || 'Azarudeen',
+                    avatar: profile.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+                    team1: 'Chennai Super Turfs',
+                    team1Code: 'CST',
+                    team2: 'Waiting for Opponent',
+                    opponentTeam: 'Waiting for Opponent',
+                    timeText: 'Today, 8:00 PM',
+                    subText: 'Your Bid Active • Stake: 200 Coins (Waiting for Opponent)',
+                    bidCoins: 200,
+                    statusColor: '#10b981',
+                    section: 'Today',
+                  },
+                  /* ── Accepted Bid Matches (Accept Tab) ── */
+                  {
+                    id: 'bid-accepted-cricket-1',
+                    tournament: 'Accepted Bid: Marina Blasters vs CST',
                     location: 'Marina Turf Grounds',
                     category: 'Ground',
                     sport: 'Cricket',
                     type: 'Bid',
-                    status: 'Accept Bid',
-                    isMe: false,
+                    status: 'Accepted',
+                    isAccepted: true,
+                    isMe: true,
                     isBid: true,
                     playerName: 'Siva Kumar',
                     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
                     team1: 'Marina Blasters',
                     team1Code: 'MB',
-                    team2: 'Open Opponent',
-                    opponentTeam: 'Open Opponent',
-                    timeText: 'Tomorrow, 6:00 PM',
-                    subText: 'Bid Active • Stake: ₹350 (350 Coins)',
+                    team2: 'Chennai Super Turfs',
+                    team2Code: 'CST',
+                    opponentTeam: 'Chennai Super Turfs',
+                    timeText: 'Today, 7:30 PM',
+                    subText: 'Bid Accepted • 350 Coins Locked',
                     bidCoins: 350,
-                    statusColor: '#8b5cf6',
-                    section: 'Upcoming Fixtures',
+                    statusColor: '#10b981',
+                    section: 'Today',
+                  },
+                  {
+                    id: 'bid-accepted-badminton-1',
+                    tournament: 'Accepted Bid: Shuttle Clash',
+                    location: 'Skyline Badminton Hall',
+                    category: 'Turf',
+                    sport: 'Badminton',
+                    type: 'Bid',
+                    status: 'Accepted',
+                    isAccepted: true,
+                    isMe: false,
+                    isBid: true,
+                    playerName: 'Priya Sundaram',
+                    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80',
+                    team1: 'Apex Shuttle Club',
+                    team1Code: 'ASC',
+                    team2: 'Smash Strikers',
+                    team2Code: 'SS',
+                    section: 'Today',
                   },
                 ];
 
-                const fullMatchesList = [...bids, ...defaultMatchesList];
+                const mappedOwnBoardMatches = ownBoardMatches.map((m) => {
+                  const b1 = [...(m.innings1?.batsmen || [])].sort((a, b) => b.runs - a.runs)[0];
+                  const b2 = [...(m.innings2?.batsmen || [])].sort((a, b) => b.runs - a.runs)[0];
+                  const w1 = [...(m.innings1?.bowlers || [])].sort((a, b) => b.wickets - a.wickets || a.runs - b.runs)[0];
+                  const w2 = [...(m.innings2?.bowlers || [])].sort((a, b) => b.wickets - a.wickets || a.runs - b.runs)[0];
+
+                  const matchDate = new Date(m.completedAt);
+                  const isToday = matchDate.toDateString() === new Date().toDateString();
+                  const isYesterday = (new Date().getTime() - matchDate.getTime()) < 86400000 * 2;
+
+                  const section = isToday ? 'Today' : isYesterday ? 'Yesterday' : 'Past Matches';
+
+                  return {
+                    id: `own-board-${m.id}`,
+                    tournament: 'Own Board Match',
+                    location: 'Local Turf Arena',
+                    category: 'Turf',
+                    sport: 'Cricket',
+                    type: 'Friendly',
+                    status: 'Finished',
+                    isMe: true,
+                    playerName: currentUserName,
+                    avatar: profile?.avatarUrl || 'https://randomuser.me/api/portraits/men/32.jpg',
+                    team1: m.teamA || m.innings1?.team || 'Team A',
+                    team1Code: (m.teamA || 'Team A').split(' ').map((w: string) => w[0]).join('').slice(0, 3).toUpperCase() || 'TMA',
+                    team1Score: m.innings1?.score || '0/0',
+                    team1Overs: m.innings1?.overs ? `(${m.innings1.overs} ov)` : '',
+                    team1TopScorer: b1 ? `${b1.name} ${b1.runs}${!b1.isOut ? '*' : ''} (${b1.balls}b)` : `${currentUserName} 34*`,
+                    team1BestBowler: w2 ? `${w2.name} ${w2.wickets}/${w2.runs} (${typeof w2.overs === 'number' ? w2.overs.toFixed(1) : w2.overs} ov)` : (w1 ? `${w1.name} ${w1.wickets}/${w1.runs} (${typeof w1.overs === 'number' ? w1.overs.toFixed(1) : w1.overs} ov)` : undefined),
+                    team2: m.teamB || m.innings2?.team || 'Team B',
+                    team2Code: (m.teamB || 'Team B').split(' ').map((w: string) => w[0]).join('').slice(0, 3).toUpperCase() || 'TMB',
+                    team2Score: m.innings2?.score || '0/0',
+                    team2Overs: m.innings2?.overs ? `(${m.innings2.overs} ov)` : '',
+                    team2TopScorer: b2 ? `${b2.name} ${b2.runs}${!b2.isOut ? '*' : ''} (${b2.balls}b)` : undefined,
+                    team2BestBowler: w1 ? `${w1.name} ${w1.wickets}/${w1.runs} (${typeof w1.overs === 'number' ? w1.overs.toFixed(1) : w1.overs} ov)` : undefined,
+                    playerOfTheMatch: m.motmName || currentUserName,
+                    resultText: m.winner ? `${m.winner} ${m.winMargin || 'won'}` : 'Match Completed',
+                    winner: m.winner,
+                    winMargin: m.winMargin,
+                    motmName: m.motmName,
+                    section,
+                    innings1: m.innings1,
+                    innings2: m.innings2,
+                    completedAt: m.completedAt,
+                  };
+                });
+
+                const fullMatchesList = [...mappedOwnBoardMatches, ...bids, ...defaultMatchesList];
 
                 const filterMatch = (item: any) => {
                   if (selectedFilter === 'Bid') {
-                    // Under "Bid" tab, show ALL Bid matches with Accept Bid status!
-                    return item.isBid === true || item.type === 'Bid';
+                    const isBidItem = item.isBid === true || item.type === 'Bid';
+                    if (!isBidItem) return false;
+
+                    // 1. Ask Bid: Other user ask bid
+                    if (bidSubTab === 'Ask Bid') {
+                      return item.isMe === false && item.status !== 'Accepted' && !item.isAccepted;
+                    }
+                    // 2. Open Challenge: Logged user entered bid
+                    if (bidSubTab === 'Open Challenge') {
+                      return item.isMe === true && item.status !== 'Accepted' && !item.isAccepted;
+                    }
+                    // 3. Accepted: Logged user accepted bid & match details
+                    if (bidSubTab === 'Accepted') {
+                      return item.status === 'Accepted' || item.isAccepted === true;
+                    }
+                    return true;
                   }
 
-                  // Under all other tabs (Me, All, Turf, Ground, Tournament, Upcoming, Finished):
-                  // Exclude open/unaccepted Bid matches (so normal tabs remain clean with finalized fixtures only)
+                  // Under All tab: return all matches with full details (completed, bid challenges, tournaments, friendly)
+                  if (selectedFilter === 'All') return true;
+
+                  // Under all other tabs: exclude open/unaccepted Bid matches
                   if (item.isBid === true || item.type === 'Bid') {
                     return false;
                   }
 
-                  if (selectedFilter === 'All') return true;
-                  if (selectedFilter === 'Me') return item.isMe;
+                  if (selectedFilter === 'Me') return item.isMe === true && item.status === 'Finished';
                   if (selectedFilter === 'Turf') return item.category === 'Turf';
                   if (selectedFilter === 'Ground') return item.category === 'Ground';
                   if (selectedFilter === 'Tournament') return item.type === 'Tournament';
@@ -741,10 +1074,11 @@ export function MatchesHomeTab() {
                   return true;
                 };
 
-                const visibleMatches = fullMatchesList.filter(filterMatch);
+                const allFilteredMatches = fullMatchesList.filter(filterMatch);
+                const visibleMatches = allFilteredMatches.slice(0, visibleMatchesCount);
 
-                // Group by section
-                const sections = ['Today', 'Upcoming Fixtures', 'Yesterday', 'Past Matches'];
+                // Group by section — Hide 'Upcoming Fixtures' completely
+                const sections = ['Today', 'Yesterday', 'Past Matches'];
 
                 return (
                   <>
@@ -759,243 +1093,407 @@ export function MatchesHomeTab() {
                               {secName}
                             </ThemedText>
 
-                            {items.map((item, idx) => (
-                              <Pressable
-                                key={item.id}
-                                onPress={() => handleMatchCenterSelect(item, 'cricket')}
-                                style={[styles.matchCardShadowWrapper, Shadows.level2, idx > 0 ? { marginTop: 12 } : null]}
-                              >
-                                <View style={[styles.matchCardContent, { backgroundColor: theme.surfaceLowest }]}>
-                                  <View style={styles.cardHeader}>
-                                    <View style={{ flex: 1, marginRight: 8 }}>
-                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                        <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_500Medium', fontSize: 10 }}>
-                                          {item.tournament}
-                                        </ThemedText>
-                                      </View>
-                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 }}>
-                                        <Ionicons name="location-outline" size={10.5} color={theme.textSecondary} />
-                                        <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5, fontFamily: 'Sora_400Regular' }} numberOfLines={1}>
-                                          {item.location}
-                                        </ThemedText>
-                                      </View>
-                                    </View>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                                       <FoFAvatarStack
-                                         teamName={item.team1 || item.tournament}
-                                         captainName={item.playerName}
-                                         size={20}
-                                         showCountBadge={true}
-                                       />
-                                       <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>
-                                         {item.playerName}
-                                       </ThemedText>
-                                     </View>
-                                  </View>
+                            {items.map((item, idx) => {
+                              const isUnacceptedBid = item.isBid && item.status !== 'Accepted' && !item.isAccepted;
+                              const isAcceptedBid = item.isBid && (item.status === 'Accepted' || item.isAccepted);
+                              const isBidCard = item.isBid === true || item.type === 'Bid';
 
-                                  <View style={{ marginVertical: 6, gap: 6 }}>
-                                    {item.isBid ? (
-                                      /* Open Bid Challenge — Single Challenger Team Layout */
-                                      <>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
-                                            <View style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center', marginRight: 6 }}>
-                                              <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_500Medium' }}>{item.team1Code}</ThemedText>
-                                            </View>
-                                            <View style={{ flex: 1 }}>
-                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.text }} numberOfLines={1}>
-                                                  {item.team1}
-                                                </ThemedText>
-                                              </View>
-                                              <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5, marginTop: 1, fontFamily: 'Sora_400Regular' }}>
-                                                Challenger Team
+                              const bidColor = isAcceptedBid ? '#10b981' : item.isMe ? theme.primary : '#8b5cf6';
+
+                              return (
+                                <Pressable
+                                  key={item.id}
+                                  onPress={() => {
+                                    if (item.isBid && item.isMe && isUnacceptedBid) {
+                                      setSelectedUserBidDetails(item);
+                                    } else if (item.isBid && !item.isMe && isUnacceptedBid) {
+                                      setAcceptBidMatch(item);
+                                    } else {
+                                      handleMatchCenterSelect(item, item.sport?.toLowerCase() || 'cricket');
+                                    }
+                                  }}
+                                  style={[
+                                    styles.matchCardShadowWrapper,
+                                    Shadows.level2,
+                                    idx > 0 ? { marginTop: 12 } : null,
+                                  ]}
+                                >
+                                  <View
+                                    style={[
+                                      styles.matchCardContent,
+                                      {
+                                        backgroundColor: theme.surfaceLowest,
+                                        borderColor: isBidCard ? bidColor + '30' : theme.outlineVariant + '33',
+                                        borderRadius: 16,
+                                        overflow: 'hidden',
+                                        position: 'relative',
+                                      },
+                                    ]}
+                                  >
+                                    {/* Ambient gradient wash for Bid cards */}
+                                    {isBidCard && (
+                                      <LinearGradient
+                                        colors={[bidColor + '15', bidColor + '04', 'transparent']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                        style={StyleSheet.absoluteFill}
+                                        pointerEvents="none"
+                                      />
+                                    )}
+
+                                    <View style={styles.cardHeader}>
+                                      <View style={{ flex: 1, marginRight: 8 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                          {isBidCard ? (
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                              <View style={{ width: 3, height: 12, borderRadius: 2, backgroundColor: bidColor }} />
+                                              <ThemedText style={{ color: bidColor, fontFamily: 'Sora_600SemiBold', fontSize: 10, letterSpacing: 0.4 }}>
+                                                {isAcceptedBid ? 'ACCEPTED BID' : item.isMe ? 'OPEN CHALLENGE' : 'ASK BID'}
                                               </ThemedText>
                                             </View>
-                                          </View>
-                                          <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: theme.primary }}>
-                                            {item.timeText}
+                                          ) : (
+                                            <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_600SemiBold', fontSize: 10.5 }}>
+                                              {item.tournament}
+                                            </ThemedText>
+                                          )}
+
+                                          {/* Stake Coin Pill */}
+                                          {isBidCard && item.bidCoins && (
+                                            <View
+                                              style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                backgroundColor: '#f59e0b16',
+                                                borderColor: '#f59e0b38',
+                                                borderWidth: 1,
+                                                paddingHorizontal: 6.5,
+                                                paddingVertical: 2,
+                                                borderRadius: 999,
+                                                gap: 3,
+                                              }}
+                                            >
+                                              <Ionicons name="cash-outline" size={10} color="#d97706" />
+                                              <ThemedText style={{ color: '#d97706', fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
+                                                ₹{item.bidCoins}
+                                              </ThemedText>
+                                            </View>
+                                          )}
+                                        </View>
+
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 }}>
+                                          <Ionicons name="location-outline" size={11} color={theme.textSecondary} />
+                                          <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5, fontFamily: 'Sora_400Regular' }} numberOfLines={1}>
+                                            {item.location}
                                           </ThemedText>
                                         </View>
-                                      </>
-                                    ) : (
-                                      /* Standard 2-Team Match Layout */
-                                      <>
-                                        {/* Team 1 */}
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
-                                            <View style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: theme.surfaceHigh, justifyContent: 'center', alignItems: 'center', marginRight: 6 }}>
-                                              <ThemedText style={{ color: theme.text, fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>{item.team1Code}</ThemedText>
-                                            </View>
-                                            <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.text }} numberOfLines={1}>
-                                              {item.team1}
-                                            </ThemedText>
-                                          </View>
-                                          {item.status === 'Finished' ? (
-                                            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
-                                              <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                                                {item.team1Score}
-                                              </ThemedText>
-                                              <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, fontFamily: 'Sora_400Regular' }}>
-                                                {item.team1Overs}
-                                              </ThemedText>
-                                            </View>
-                                          ) : (
-                                            <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: theme.primary }}>
-                                              {item.timeText}
-                                            </ThemedText>
-                                          )}
-                                        </View>
-
-                                        {/* Team 2 */}
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
-                                            <View style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: theme.surfaceHigh, justifyContent: 'center', alignItems: 'center', marginRight: 6 }}>
-                                              <ThemedText style={{ color: theme.text, fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>{item.team2Code}</ThemedText>
-                                            </View>
-                                            <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.text }} numberOfLines={1}>
-                                              {item.team2}
-                                            </ThemedText>
-                                          </View>
-                                          {item.status === 'Finished' ? (
-                                            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
-                                              <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>
-                                                {item.team2Score}
-                                              </ThemedText>
-                                              <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, fontFamily: 'Sora_400Regular' }}>
-                                                {item.team2Overs}
-                                              </ThemedText>
-                                            </View>
-                                          ) : (
-                                            <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, fontFamily: 'Sora_400Regular' }}>
-                                              Upcoming
-                                            </ThemedText>
-                                          )}
-                                        </View>
-                                      </>
-                                    )}
-                                  </View>
-
-                                  <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '20', paddingTop: 6, marginTop: 3, flexWrap: 'wrap', gap: 6 }]}>
-                                    {item.status === 'Finished' ? (
-                                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4, flex: 1, minWidth: '100%' }}>
-                                        <MaterialCommunityIcons name="cricket" size={12} color="#eab308" style={{ marginTop: 1 }} />
-                                        <ThemedText style={{ color: '#d97706', fontSize: 9.5, fontFamily: 'Sora_500Medium', flexShrink: 1 }}>
-                                          {item.resultText}
-                                        </ThemedText>
                                       </View>
-                                    ) : (
-                                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4, flex: 1, minWidth: '100%' }}>
-                                        <Ionicons name="time-outline" size={12} color={item.statusColor || '#10b981'} style={{ marginTop: 1 }} />
-                                        <ThemedText style={{ color: item.statusColor || '#10b981', fontSize: 9.5, fontFamily: 'Sora_500Medium', flexShrink: 1 }}>
-                                          {item.subText}
-                                        </ThemedText>
+
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                         <FoFAvatarStack
+                                           teamName={item.team1 || item.tournament}
+                                           captainName={item.playerName}
+                                           size={28}
+                                           maxAvatars={2}
+                                           showCountBadge={false}
+                                         />
+                                         <View>
+                                           <ThemedText style={{ color: theme.text, fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }} numberOfLines={1}>
+                                             {item.isMe && isUnacceptedBid ? `${profile.name || 'You'} (Host)` : item.playerName}
+                                           </ThemedText>
+                                           <ThemedText style={{ color: isAcceptedBid ? '#10b981' : theme.primary, fontSize: 8.5, fontFamily: 'Sora_500Medium' }}>
+                                             {item.isMe && isUnacceptedBid ? 'Your Open Bid' : isAcceptedBid ? 'Match Confirmed' : '1 mutual friend'}
+                                           </ThemedText>
+                                         </View>
                                       </View>
-                                    )}
+                                    </View>
 
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                       {item.status !== 'Finished' && item.section !== 'Past Matches' && item.section !== 'Yesterday' && (
-                                         item.isBid ? (
-                                           item.isMe ? null : (
-                                             <Pressable
-                                               onPress={(e) => {
-                                                 e.stopPropagation();
-                                                 setAcceptBidMatch(item);
-                                               }}
-                                               style={{
-                                                 backgroundColor: '#10b981',
-                                                 paddingHorizontal: 8,
-                                                 paddingVertical: 3,
-                                                 borderRadius: 5,
-                                               }}
-                                             >
-                                               <ThemedText style={{ color: '#ffffff', fontSize: 9, fontFamily: 'Sora_500Medium' }}>
-                                                 Accept Bid
-                                               </ThemedText>
-                                             </Pressable>
-                                           )
-                                         ) : (
-                                           item.isMe ? (
-                                             <>
-                                               {item.category === 'Turf' && (
-                                                 <Pressable
-                                                   onPress={(e) => {
-                                                     e.stopPropagation();
-                                                     router.push({
-                                                       pathname: '/booking',
-                                                       params: { matchId: item.id, venue: item.location, title: item.tournament },
-                                                     });
-                                                   }}
-                                                   style={{
-                                                     backgroundColor: theme.primary,
-                                                     paddingHorizontal: 8,
-                                                     paddingVertical: 3,
-                                                     borderRadius: 5,
-                                                   }}
-                                                 >
-                                                   <ThemedText style={{ color: '#ffffff', fontSize: 9, fontFamily: 'Sora_500Medium' }}>
-                                                     Book
-                                                   </ThemedText>
-                                                 </Pressable>
-                                               )}
+                                    <View style={{ marginVertical: 6, gap: 6 }}>
+                                      {isUnacceptedBid ? (
+                                        /* Open / Ask Bid Challenge — Single Challenger Team Layout */
+                                        <>
+                                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+                                              <View style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: bidColor + '18', justifyContent: 'center', alignItems: 'center', marginRight: 6 }}>
+                                                <ThemedText style={{ color: bidColor, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>{item.team1Code || 'CH'}</ThemedText>
+                                              </View>
+                                              <View style={{ flex: 1 }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                  <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: theme.text }} numberOfLines={1}>
+                                                    {item.team1}
+                                                  </ThemedText>
+                                                </View>
+                                                <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5, marginTop: 1, fontFamily: 'Sora_400Regular' }}>
+                                                  {item.isMe ? 'Your Team (Open to Challenges)' : 'Challenger Team'}
+                                                </ThemedText>
+                                              </View>
+                                            </View>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3.5 }}>
+                                              <Ionicons name="time-outline" size={12} color={bidColor} />
+                                              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: bidColor }}>
+                                                {item.timeText}
+                                              </ThemedText>
+                                            </View>
+                                          </View>
+                                        </>
+                                      ) : (
+                                        /* Standard 2-Team Match Layout (Regular & Accepted Matches) */
+                                        <>
+                                          {/* Team 1 */}
+                                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+                                              <View style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: theme.surfaceHigh, justifyContent: 'center', alignItems: 'center', marginRight: 6 }}>
+                                                <ThemedText style={{ color: theme.text, fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>{item.team1Code}</ThemedText>
+                                              </View>
+                                              <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.text }} numberOfLines={1}>
+                                                {item.team1}
+                                              </ThemedText>
+                                            </View>
+                                            {item.status === 'Finished' ? (
+                                              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
+                                                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                                                  {item.team1Score}
+                                                </ThemedText>
+                                                <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, fontFamily: 'Sora_400Regular' }}>
+                                                  {item.team1Overs}
+                                                </ThemedText>
+                                              </View>
+                                            ) : (
+                                              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: theme.primary }}>
+                                                {item.timeText}
+                                              </ThemedText>
+                                            )}
+                                          </View>
 
-                                               {(item.category === 'Ground' || item.category === 'Turf') && (
-                                                 <Pressable
-                                                   onPress={(e) => {
-                                                     e.stopPropagation();
-                                                     setSelectedBidMatch(item);
-                                                   }}
-                                                   style={{
-                                                     backgroundColor: '#8b5cf6',
-                                                     paddingHorizontal: 8,
-                                                     paddingVertical: 3,
-                                                     borderRadius: 5,
-                                                   }}
-                                                 >
-                                                   <ThemedText style={{ color: '#ffffff', fontSize: 9, fontFamily: 'Sora_500Medium' }}>
-                                                     Bid Match
-                                                   </ThemedText>
-                                                 </Pressable>
-                                               )}
-                                             </>
-                                           ) : null
-                                         )
-                                       )}
+                                          {/* Team 2 */}
+                                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+                                              <View style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: theme.surfaceHigh, justifyContent: 'center', alignItems: 'center', marginRight: 6 }}>
+                                                <ThemedText style={{ color: theme.text, fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>{item.team2Code || 'T2'}</ThemedText>
+                                              </View>
+                                              <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.text }} numberOfLines={1}>
+                                                {item.team2}
+                                              </ThemedText>
+                                            </View>
+                                            {item.status === 'Finished' ? (
+                                              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
+                                                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>
+                                                  {item.team2Score}
+                                                </ThemedText>
+                                                <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, fontFamily: 'Sora_400Regular' }}>
+                                                  {item.team2Overs}
+                                                </ThemedText>
+                                              </View>
+                                            ) : (
+                                              <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, fontFamily: 'Sora_400Regular' }}>
+                                                {isAcceptedBid ? 'Opponent Team' : 'Upcoming'}
+                                              </ThemedText>
+                                            )}
+                                          </View>
 
-                                       <Pressable
-                                         onPress={(e) => {
-                                           e.stopPropagation();
-                                           handleMatchCenterSelect(item, 'cricket');
-                                         }}
-                                         style={{
-                                           paddingHorizontal: 4,
-                                           paddingVertical: 2,
-                                           flexDirection: 'row',
-                                           alignItems: 'center',
-                                           gap: 2,
-                                         }}
-                                       >
-                                         <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>
-                                           {item.status === 'Finished' ? 'Scorecard' : 'Details'}
-                                         </ThemedText>
-                                         <Ionicons name="chevron-forward" size={11} color={theme.textSecondary} />
-                                       </Pressable>
+                                          {/* Detailed scorecard statistics for finished matches */}
+                                          {item.status === 'Finished' && (item.team1TopScorer || item.team2TopScorer || item.team1BestBowler || item.team2BestBowler) && (
+                                            <View style={{ marginTop: 4, paddingTop: 5, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '18', gap: 3 }}>
+                                              {(item.team1TopScorer || item.team1BestBowler) && (
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                                  <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', minWidth: 24 }}>
+                                                    {item.team1Code || 'T1'}:
+                                                  </ThemedText>
+                                                  <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_400Regular', flex: 1 }} numberOfLines={1}>
+                                                    {item.team1TopScorer ? (
+                                                      <>🏏 <ThemedText style={{ fontSize: 9, color: theme.text, fontFamily: 'Sora_500Medium' }}>{item.team1TopScorer}</ThemedText></>
+                                                    ) : null}
+                                                    {item.team1TopScorer && item.team1BestBowler ? '   ' : ''}
+                                                    {item.team1BestBowler ? (
+                                                      <>🎯 <ThemedText style={{ fontSize: 9, color: theme.text, fontFamily: 'Sora_500Medium' }}>{item.team1BestBowler}</ThemedText></>
+                                                    ) : null}
+                                                  </ThemedText>
+                                                </View>
+                                              )}
+                                              {(item.team2TopScorer || item.team2BestBowler) && (
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                                  <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_600SemiBold', minWidth: 24 }}>
+                                                    {item.team2Code || 'T2'}:
+                                                  </ThemedText>
+                                                  <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_400Regular', flex: 1 }} numberOfLines={1}>
+                                                    {item.team2TopScorer ? (
+                                                      <>🏏 <ThemedText style={{ fontSize: 9, color: theme.text, fontFamily: 'Sora_500Medium' }}>{item.team2TopScorer}</ThemedText></>
+                                                    ) : null}
+                                                    {item.team2TopScorer && item.team2BestBowler ? '   ' : ''}
+                                                    {item.team2BestBowler ? (
+                                                      <>🎯 <ThemedText style={{ fontSize: 9, color: theme.text, fontFamily: 'Sora_500Medium' }}>{item.team2BestBowler}</ThemedText></>
+                                                    ) : null}
+                                                  </ThemedText>
+                                                </View>
+                                              )}
+                                            </View>
+                                          )}
+                                        </>
+                                      )}
+                                    </View>
+
+                                    <View style={[styles.cardFooter, { borderTopColor: theme.outlineVariant + '20', paddingTop: 6, marginTop: 3, flexWrap: 'wrap', gap: 6 }]}>
+                                      {item.status === 'Finished' ? (
+                                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4, flex: 1, minWidth: '100%' }}>
+                                          <MaterialCommunityIcons name="cricket" size={12} color="#eab308" style={{ marginTop: 1 }} />
+                                          <ThemedText style={{ color: '#d97706', fontSize: 9.5, fontFamily: 'Sora_500Medium', flexShrink: 1 }}>
+                                            {item.resultText}
+                                          </ThemedText>
+                                        </View>
+                                      ) : (
+                                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4, flex: 1, minWidth: '100%' }}>
+                                          <Ionicons name="time-outline" size={12} color={item.statusColor || '#10b981'} style={{ marginTop: 1 }} />
+                                          <ThemedText style={{ color: item.statusColor || '#10b981', fontSize: 9.5, fontFamily: 'Sora_500Medium', flexShrink: 1 }}>
+                                            {item.subText}
+                                          </ThemedText>
+                                        </View>
+                                      )}
+
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                         {/* Challenge Button for Other User Ask Bids */}
+                                         {item.isBid && !item.isMe && isUnacceptedBid && (
+                                           <Pressable
+                                             onPress={(e) => {
+                                               e.stopPropagation();
+                                               setAcceptBidMatch(item);
+                                             }}
+                                             style={{
+                                               backgroundColor: '#10b981',
+                                               paddingHorizontal: 12,
+                                               paddingVertical: 5,
+                                               borderRadius: 999,
+                                               flexDirection: 'row',
+                                               alignItems: 'center',
+                                               gap: 4,
+                                             }}
+                                           >
+                                             <ThemedText style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_600SemiBold' }}>
+                                               Challenge
+                                             </ThemedText>
+                                             <Ionicons name="arrow-forward" size={11} color="#ffffff" />
+                                           </Pressable>
+                                         )}
+
+                                         {/* View Entered Bid Button for Logged-In User Open Challenges */}
+                                         {item.isBid && item.isMe && isUnacceptedBid && (
+                                           <Pressable
+                                             onPress={(e) => {
+                                               e.stopPropagation();
+                                               setSelectedUserBidDetails(item);
+                                             }}
+                                             style={{
+                                               backgroundColor: theme.primary + '16',
+                                               borderColor: theme.primary + '38',
+                                               borderWidth: 1,
+                                               paddingHorizontal: 10,
+                                               paddingVertical: 4.5,
+                                               borderRadius: 999,
+                                               flexDirection: 'row',
+                                               alignItems: 'center',
+                                               gap: 4,
+                                             }}
+                                           >
+                                             <ThemedText style={{ color: theme.primary, fontSize: 10, fontFamily: 'Sora_600SemiBold' }}>
+                                               View Entered Bid
+                                             </ThemedText>
+                                             <Ionicons name="eye-outline" size={11} color={theme.primary} />
+                                           </Pressable>
+                                         )}
+
+                                         {/* Accepted Badge for Accepted Bids */}
+                                         {isAcceptedBid && (
+                                           <View
+                                             style={{
+                                               backgroundColor: '#10b98116',
+                                               borderColor: '#10b98138',
+                                               borderWidth: 1,
+                                               paddingHorizontal: 8,
+                                               paddingVertical: 3.5,
+                                               borderRadius: 999,
+                                               flexDirection: 'row',
+                                               alignItems: 'center',
+                                               gap: 3.5,
+                                             }}
+                                           >
+                                             <Ionicons name="checkmark-circle" size={11} color="#10b981" />
+                                             <ThemedText style={{ color: '#10b981', fontSize: 9.5, fontFamily: 'Sora_600SemiBold' }}>
+                                               Accepted
+                                             </ThemedText>
+                                           </View>
+                                         )}
+
+                                         <Pressable
+                                           onPress={(e) => {
+                                             e.stopPropagation();
+                                             if (item.isBid && item.isMe && isUnacceptedBid) {
+                                               setSelectedUserBidDetails(item);
+                                             } else if (item.isBid && !item.isMe && isUnacceptedBid) {
+                                               setAcceptBidMatch(item);
+                                             } else {
+                                               handleMatchCenterSelect(item, item.sport?.toLowerCase() || 'cricket');
+                                             }
+                                           }}
+                                           style={{
+                                             paddingHorizontal: 6,
+                                             paddingVertical: 3,
+                                             flexDirection: 'row',
+                                             alignItems: 'center',
+                                             gap: 2,
+                                           }}
+                                         >
+                                           <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>
+                                             {item.status === 'Finished' ? 'Scorecard' : 'Details'}
+                                           </ThemedText>
+                                           <Ionicons name="chevron-forward" size={11} color={theme.textSecondary} />
+                                         </Pressable>
+                                      </View>
                                     </View>
                                   </View>
-                                </View>
-                              </Pressable>
-                            ))}
+                                </Pressable>
+                              );
+                            })}
                           </View>
                         );
                       })
                     ) : (
                       <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center' }}>
-                        <Ionicons name="funnel-outline" size={38} color={theme.textSecondary + '60'} />
+                        <Ionicons name="funnel-outline" size={32} color={theme.textSecondary + '60'} />
                         <ThemedText style={{ color: theme.textSecondary, fontSize: 13, fontFamily: 'Sora_500Medium', marginTop: 10 }}>
                           No matches available for "{selectedFilter}"
                         </ThemedText>
                       </View>
                     )}
+
+                    {/* ── Auto-Load More Indicator / End of Matches List ── */}
+                    {allFilteredMatches.length > visibleMatchesCount ? (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          paddingVertical: 10,
+                          paddingHorizontal: 16,
+                          borderRadius: 12,
+                          backgroundColor: theme.surfaceLowest,
+                          borderWidth: 1,
+                          borderColor: theme.outlineVariant + '35',
+                          marginHorizontal: Spacing.containerMargin,
+                          marginTop: 10,
+                          marginBottom: 6,
+                          gap: 8,
+                        }}
+                      >
+                        <ActivityIndicator size="small" color={theme.primary} />
+                        <ThemedText style={{ color: theme.textSecondary, fontSize: 11, fontFamily: 'Sora_500Medium' }}>
+                          {isLoadingMore ? 'Loading more matches...' : `Scroll to auto-load (${allFilteredMatches.length - visibleMatchesCount} remaining)`}
+                        </ThemedText>
+                      </View>
+                    ) : allFilteredMatches.length > 6 ? (
+                      <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+                        <ThemedText style={{ color: theme.textSecondary + '80', fontSize: 10, fontFamily: 'Sora_400Regular' }}>
+                          ✓ All {allFilteredMatches.length} matches loaded
+                        </ThemedText>
+                      </View>
+                    ) : null}
                   </>
                 );
               })()}
@@ -1068,7 +1566,7 @@ export function MatchesHomeTab() {
           <Pressable style={[styles.modalCard, { backgroundColor: theme.surfaceLowest }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
               <View style={{ flex: 1, marginRight: 8 }}>
-                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                <ThemedText style={{ fontSize: 14.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
                   Book Turf Slot
                 </ThemedText>
                 <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontFamily: 'Sora_500Medium', marginTop: 2 }}>
@@ -1076,7 +1574,7 @@ export function MatchesHomeTab() {
                 </ThemedText>
               </View>
               <Pressable onPress={() => setSelectedBookMatch(null)}>
-                <Ionicons name="close-circle" size={24} color={theme.textSecondary} />
+                <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
               </Pressable>
             </View>
 
@@ -1162,7 +1660,7 @@ export function MatchesHomeTab() {
           <Pressable style={[styles.modalCard, { backgroundColor: theme.surfaceLowest }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
               <View style={{ flex: 1, marginRight: 8 }}>
-                <ThemedText style={{ fontSize: 16, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                <ThemedText style={{ fontSize: 14.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
                   Bid Match Challenge
                 </ThemedText>
                 <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontFamily: 'Sora_500Medium', marginTop: 2 }}>
@@ -1170,7 +1668,7 @@ export function MatchesHomeTab() {
                 </ThemedText>
               </View>
               <Pressable onPress={() => setSelectedBidMatch(null)}>
-                <Ionicons name="close-circle" size={24} color={theme.textSecondary} />
+                <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
               </Pressable>
             </View>
 
@@ -1281,7 +1779,7 @@ export function MatchesHomeTab() {
                 </View>
               </View>
               <Pressable onPress={() => setSelectedScorecardMatch(null)}>
-                <Ionicons name="close-circle" size={24} color={theme.textSecondary} />
+                <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
               </Pressable>
             </View>
 
@@ -1448,6 +1946,178 @@ export function MatchesHomeTab() {
           removeBid(matchId);
         }}
       />
+
+      {/* 4. User Entered Bid Details Inspection Modal */}
+      <Modal
+        visible={!!selectedUserBidDetails}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setSelectedUserBidDetails(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setSelectedUserBidDetails(null)}>
+          <Pressable style={[styles.modalCard, { backgroundColor: theme.surfaceLowest, maxHeight: '88%', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18 }]} onPress={(e) => e.stopPropagation()}>
+            
+            {/* Section Eyebrow: BID MATCH */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <View style={{ width: 3, height: 13, borderRadius: 2, backgroundColor: '#F59E0B' }} />
+              <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: theme.textSecondary }}>
+                BID MATCH
+              </ThemedText>
+            </View>
+
+            {/* Header / Hero Row */}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 15.5, color: theme.text }}>
+                    Challenge a team
+                  </ThemedText>
+                  <PulseDot color="#F59E0B" size={8} />
+                </View>
+                <ThemedText style={{ fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 2, lineHeight: 14, color: theme.textSecondary }}>
+                  Split the pitch cost, stake your coins and settle it on the field.
+                </ThemedText>
+                <View style={{ backgroundColor: '#F59E0B26', alignSelf: 'flex-start', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999, marginTop: 6 }}>
+                  <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 9, color: '#F59E0B' }}>
+                    1 LIVE BID
+                  </ThemedText>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => setSelectedUserBidDetails(null)}
+                style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.surfaceHigh, justifyContent: 'center', alignItems: 'center' }}
+              >
+                <Ionicons name="close" size={16} color={theme.textSecondary} />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ marginVertical: 12 }}>
+              {/* Stake & Reward Highlight Tile */}
+              <View style={{ borderRadius: 16, borderWidth: 1, borderColor: theme.outlineVariant + '33', overflow: 'hidden', backgroundColor: theme.surfaceLowest }}>
+                <LinearGradient
+                  colors={['#F59E0B2E', '#F59E0B08']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={{ flexDirection: 'row', padding: 14, justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View>
+                    <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.6, textTransform: 'uppercase', color: theme.textSecondary }}>
+                      YOUR STAKE
+                    </ThemedText>
+                    <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 15, color: '#D97706', marginTop: 1 }}>
+                      {selectedUserBidDetails?.bidCoins || 200} Coins
+                    </ThemedText>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.6, textTransform: 'uppercase', color: theme.textSecondary }}>
+                      WINNER POOL
+                    </ThemedText>
+                    <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 15, color: '#10B981', marginTop: 1 }}>
+                      {Number(selectedUserBidDetails?.bidCoins || 200) * 2} Coins
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+
+              {/* Section Eyebrow: MATCH & VENUE DETAILS */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, marginBottom: 8 }}>
+                <View style={{ width: 3, height: 13, borderRadius: 2, backgroundColor: '#3B82F6' }} />
+                <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: theme.textSecondary }}>
+                  MATCH & VENUE DETAILS
+                </ThemedText>
+              </View>
+
+              {/* Match & Venue Details Card */}
+              <View style={{ borderRadius: 16, borderWidth: 1, borderColor: theme.outlineVariant + '33', padding: 14, backgroundColor: theme.surfaceLowest, gap: 9 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 11, color: theme.textSecondary }}>Team Name:</ThemedText>
+                  <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 12.5, color: theme.text }}>
+                    {selectedUserBidDetails?.team1 || 'Your Team'} ({selectedUserBidDetails?.team1Code || 'MY'})
+                  </ThemedText>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 11, color: theme.textSecondary }}>Venue:</ThemedText>
+                  <ThemedText style={{ fontFamily: 'Sora_400Regular', fontSize: 11.5, color: theme.text, flex: 1, textAlign: 'right', marginLeft: 12 }} numberOfLines={1}>
+                    {selectedUserBidDetails?.location || 'Skyline Turf Arena, Court #1'}
+                  </ThemedText>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 11, color: theme.textSecondary }}>Match Time:</ThemedText>
+                  <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 12, color: '#3B82F6' }}>
+                    {selectedUserBidDetails?.timeText || 'Today, 8:00 PM'}
+                  </ThemedText>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 11, color: theme.textSecondary }}>Sport:</ThemedText>
+                  <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 12, color: theme.text }}>
+                    {selectedUserBidDetails?.sport || 'Cricket'}
+                  </ThemedText>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 11, color: theme.textSecondary }}>Opponent Status:</ThemedText>
+                  <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 12, color: '#F59E0B' }}>
+                    {selectedUserBidDetails?.opponentTeam || 'Waiting for Opponent'}
+                  </ThemedText>
+                </View>
+              </View>
+
+              {/* Status Note */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingHorizontal: 4, marginTop: 10, marginBottom: 4 }}>
+                <Ionicons name="information-circle-outline" size={15} color="#64748b" style={{ marginTop: 1 }} />
+                <ThemedText style={{ color: '#64748b', fontSize: 10.5, lineHeight: 15, fontFamily: 'Sora_400Regular', flex: 1 }}>
+                  Your bid is published to other players in the network. Once another team accepts the challenge, the match scoreboard will unlock automatically.
+                </ThemedText>
+              </View>
+            </ScrollView>
+
+            {/* Bottom Actions matching Dashboard Buttons */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+              <Pressable
+                onPress={() => {
+                  if (selectedUserBidDetails?.id) {
+                    removeBid(selectedUserBidDetails.id);
+                  }
+                  setSelectedUserBidDetails(null);
+                  Alert.alert('Bid Challenge Cancelled', 'Your bid challenge has been withdrawn and coins returned.');
+                }}
+                style={({ pressed }) => [{
+                  flex: 1,
+                  height: 36,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: '#ef444455',
+                  backgroundColor: '#ef444410',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: pressed ? 0.8 : 1,
+                }]}
+              >
+                <ThemedText style={{ color: '#ef4444', fontFamily: 'Sora_500Medium', fontSize: 11.5 }}>
+                  Withdraw bid
+                </ThemedText>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setSelectedUserBidDetails(null)}
+                style={({ pressed }) => [{
+                  flex: 1.2,
+                  height: 36,
+                  borderRadius: 999,
+                  backgroundColor: '#F59E0B',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: pressed ? 0.9 : 1,
+                }]}
+              >
+                <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 11.5 }}>
+                  Done
+                </ThemedText>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
     </View>
   );

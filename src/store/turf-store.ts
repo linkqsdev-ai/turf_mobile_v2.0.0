@@ -26,6 +26,13 @@ export interface PublishedTurf {
   ownerId: string;
   isActive: boolean;
   createdAt: string;
+  cashbackEnabled?: boolean;
+  cashbackType?: 'flat' | 'percent';
+  cashbackAmount?: number;
+  cashbackName?: string;
+  cashbackCode?: string;
+  cashbackMaxAmount?: number;
+  cashbackOneTime?: boolean;
 }
 
 export function generateTurfId(): string {

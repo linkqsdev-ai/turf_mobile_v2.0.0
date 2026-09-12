@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -44,7 +44,7 @@ export function PressCard({
   return (
     <AnimatedPressable
       onPress={onPress}
-      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityRole={Platform.OS === 'web' ? undefined : (onPress ? 'button' : undefined)}
       accessibilityLabel={accessibilityLabel}
       onPressIn={() => {
         scale.value = withTiming(scaleTo, { duration: 90, easing: EASE });
@@ -149,6 +149,7 @@ export function StatTile({
   suffix = '',
   icon,
   tint,
+  onPress,
 }: {
   label: string;
   value: number;
@@ -156,9 +157,10 @@ export function StatTile({
   suffix?: string;
   icon: keyof typeof Ionicons.glyphMap;
   tint: string;
+  onPress?: () => void;
 }) {
   const theme = useTheme();
-  return (
+  const tile = (
     <View
       style={[
         styles.statTile,
@@ -178,6 +180,16 @@ export function StatTile({
       <ThemedText style={[styles.statLabel, { color: theme.textSecondary }]}>{label}</ThemedText>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <PressCard style={{ flex: 1 }} onPress={onPress} accessibilityLabel={`${label} ${prefix}${value}${suffix}`}>
+        {tile}
+      </PressCard>
+    );
+  }
+
+  return tile;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -394,7 +406,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statValue: { fontFamily: 'Sora_500Medium', fontSize: 16 },
+  statValue: { fontFamily: 'Sora_500Medium', fontSize: 14.5 },
   statLabel: {
     fontFamily: 'Sora_500Medium',
     fontSize: 8.5,
@@ -432,7 +444,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   ticketStub: { width: 78, alignItems: 'center', justifyContent: 'center' },
-  ticketValue: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 19 },
+  ticketValue: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 16 },
   ticketSuffix: {
     color: 'rgba(255,255,255,0.85)',
     fontFamily: 'Sora_500Medium',

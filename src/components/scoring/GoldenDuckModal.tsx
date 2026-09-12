@@ -123,7 +123,7 @@ export function GoldenDuckModal({
 
             {/* Crying Tears Icon Indicator */}
             <Animated.View style={[styles.tearOverlay, animatedTearStyle]}>
-              <ThemedText style={{ fontSize: 18 }}>💧</ThemedText>
+              <ThemedText style={{ fontSize: 15.5 }}>💧</ThemedText>
             </Animated.View>
           </Animated.View>
 
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   batsmanName: {
-    fontSize: 18,
+    fontSize: 15.5,
     fontFamily: 'Sora_500Medium',
     color: '#0f172a',
     textAlign: 'center',

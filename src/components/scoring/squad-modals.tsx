@@ -969,8 +969,9 @@ export function AddPlayerModal({
           ref={phoneRef}
           value={phone}
           onChangeText={handlePhoneChange}
-          placeholder="10-digit mobile number"
+          placeholder="98765 43210"
           keyboardType="phone-pad"
+          maxLength={11}
           placeholderTextColor={theme.placeholder}
           editable={otpStage !== 'verified'}
           style={[

@@ -129,7 +129,7 @@ export default function ForgotPasswordScreen() {
                 // ── Success State ──────────────────────────────────────────
                 <View style={styles.successState}>
                   <View style={styles.successIconRing}>
-                    <Ionicons name="checkmark-circle" size={56} color={ACCENT} />
+                    <Ionicons name="checkmark-circle" size={44} color={ACCENT} />
                   </View>
                   <ThemedText style={styles.successTitle}>Instructions Sent!</ThemedText>
                   <ThemedText style={styles.successBody}>
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   titleNormal: {
-    fontSize: 30,
+    fontSize: 23,
     fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     lineHeight: 38,
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   },
   titleHighlightWrap: { position: 'relative' },
   titleHighlight: {
-    fontSize: 30,
+    fontSize: 23,
     fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     lineHeight: 38,
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   successTitle: {
-    fontSize: 24,
+    fontSize: 19,
     fontFamily: 'Sora_500Medium',
     color: TEXT_DARK,
     marginTop: 12,

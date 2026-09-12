@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -14,6 +14,8 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 import { useNotifications, AppNotification } from '@/context/NotificationContext';
 import { Shadows, Spacing } from '@/constants/theme';
 
+type TimeTab = 'Today' | 'This Week' | 'Earlier';
+
 export function NotificationModal() {
   const theme = useTheme();
   const { profile } = useUserProfile();
@@ -27,26 +29,66 @@ export function NotificationModal() {
     closeNotificationModal,
   } = useNotifications();
 
-  const [activeFilter, setActiveFilter] = useState<'All' | 'Unread'>('All');
+  const [activeTab, setActiveTab] = useState<TimeTab>('Today');
+  const [showAllUnfiltered, setShowAllUnfiltered] = useState(false);
   const roleName = profile?.role || 'Player';
 
-  const displayedList = notifications.filter(n => {
-    if (activeFilter === 'Unread') return !n.isRead;
-    return true;
-  });
+  // Categorize notifications by time periods
+  const { todayList, weekList, earlierList } = useMemo(() => {
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const sevenDaysMs = 7 * oneDayMs;
 
-  const getNotifIcon = (type: string) => {
+    const today: AppNotification[] = [];
+    const week: AppNotification[] = [];
+    const earlier: AppNotification[] = [];
+
+    for (const notif of notifications) {
+      const createdTime = new Date(notif.createdAt).getTime();
+      const diff = now - createdTime;
+
+      if (diff <= oneDayMs) {
+        today.push(notif);
+      } else if (diff <= sevenDaysMs) {
+        week.push(notif);
+      } else {
+        earlier.push(notif);
+      }
+    }
+
+    return { todayList: today, weekList: week, earlierList: earlier };
+  }, [notifications]);
+
+  const displayedList = useMemo(() => {
+    if (showAllUnfiltered) return notifications;
+    if (activeTab === 'Today') return todayList;
+    if (activeTab === 'This Week') return weekList;
+    return earlierList;
+  }, [showAllUnfiltered, activeTab, notifications, todayList, weekList, earlierList]);
+
+  const getNotifIcon = (type: string, title: string = '') => {
+    const t = title.toLowerCase();
+    if (t.includes('ai') || t.includes('smart') || t.includes('learning')) {
+      return { name: 'bulb-outline' as const, color: '#8b5cf6', dotColor: '#8b5cf6' };
+    }
+    if (t.includes('data') || t.includes('analysis') || t.includes('summary') || t.includes('revenue')) {
+      return { name: 'trending-up-outline' as const, color: '#3b82f6', dotColor: '#8b5cf6' };
+    }
+    if (t.includes('system') || t.includes('maintenance') || t.includes('update')) {
+      return { name: 'construct-outline' as const, color: '#64748b', dotColor: '#8b5cf6' };
+    }
+
     switch (type) {
       case 'bid':
-        return { name: 'hand-left' as const, color: '#5D68E8', bg: '#5D68E81A' };
+        return { name: 'flash-outline' as const, color: '#6366f1', dotColor: '#6366f1' };
       case 'booking':
-        return { name: 'calendar' as const, color: '#10B981', bg: '#10B9811A' };
+        return { name: 'calendar-outline' as const, color: '#10b981', dotColor: '#10b981' };
       case 'tournament':
-        return { name: 'trophy' as const, color: '#F59E0B', bg: '#F59E0B1A' };
+        return { name: 'trophy-outline' as const, color: '#f59e0b', dotColor: '#f59e0b' };
       case 'class':
-        return { name: 'school' as const, color: '#8B5CF6', bg: '#8B5CF61A' };
+        return { name: 'school-outline' as const, color: '#8b5cf6', dotColor: '#8b5cf6' };
       default:
-        return { name: 'notifications' as const, color: '#3B82F6', bg: '#3B82F61A' };
+        return { name: 'notifications-outline' as const, color: '#3b82f6', dotColor: '#8b5cf6' };
     }
   };
 
@@ -60,7 +102,9 @@ export function NotificationModal() {
       if (mins < 60) return `${mins}m ago`;
       const hours = Math.floor(mins / 60);
       if (hours < 24) return `${hours}h ago`;
-      return `${Math.floor(hours / 24)}d ago`;
+      const days = Math.floor(hours / 24);
+      if (days < 7) return `${days}d ago`;
+      return `${Math.floor(days / 7)}w ago`;
     } catch {
       return 'Recently';
     }
@@ -75,80 +119,105 @@ export function NotificationModal() {
     >
       <View style={styles.modalOverlay}>
         <SafeAreaView style={[styles.drawerContainer, { backgroundColor: theme.background }]}>
-          {/* Header */}
-          <View style={[styles.header, { borderBottomColor: theme.outlineVariant + '33' }]}>
-            <View style={styles.headerLeft}>
-              <View style={[styles.bellWrap, { backgroundColor: theme.primary + '18' }]}>
-                <Ionicons name="notifications" size={20} color={theme.primary} />
-              </View>
-              <View style={{ marginLeft: 10 }}>
-                <ThemedText type="headlineLg" style={{ fontFamily: 'Sora_500Medium' }}>
-                  Notifications
-                </ThemedText>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>
-                    {unreadCount} unread
-                  </ThemedText>
-                </View>
-              </View>
+          {/* Top Card Header */}
+          <View style={styles.header}>
+            <View style={styles.headerTitleRow}>
+              <ThemedText style={[styles.headerTitle, { color: theme.text }]}>
+                AI Notification Center
+              </ThemedText>
             </View>
 
-            <Pressable onPress={closeNotificationModal} style={styles.closeBtn}>
-              <Ionicons name="close" size={22} color={theme.text} />
-            </Pressable>
+            <View style={styles.headerRightActions}>
+              <Pressable
+                onPress={() => setShowAllUnfiltered((prev) => !prev)}
+                style={[
+                  styles.seeAllBtn,
+                  { borderColor: theme.outlineVariant + '40', backgroundColor: showAllUnfiltered ? theme.primary + '15' : 'transparent' },
+                ]}
+                hitSlop={6}
+              >
+                <ThemedText
+                  style={[
+                    styles.seeAllText,
+                    { color: showAllUnfiltered ? theme.primary : theme.textSecondary },
+                  ]}
+                >
+                  {showAllUnfiltered ? 'Filtered' : 'See All'}
+                </ThemedText>
+              </Pressable>
+
+              <Pressable
+                onPress={closeNotificationModal}
+                style={[styles.closeBtn, { backgroundColor: theme.surfaceLow }]}
+                hitSlop={8}
+                accessibilityLabel="Close notifications"
+              >
+                <Ionicons name="close" size={18} color={theme.text} />
+              </Pressable>
+            </View>
           </View>
 
-          {/* Filter Bar & Quick Actions */}
-          <View style={styles.actionRow}>
-            <View style={styles.tabGroup}>
-              <Pressable
-                onPress={() => setActiveFilter('All')}
-                style={[
-                  styles.tabChip,
-                  activeFilter === 'All' && { backgroundColor: theme.primary },
-                ]}
-              >
-                <ThemedText
-                  type="labelMd"
-                  style={{
-                    color: activeFilter === 'All' ? '#ffffff' : theme.textSecondary,
-                    fontFamily: 'Sora_500Medium',
-                  }}
-                >
-                  All ({notifications.length})
-                </ThemedText>
-              </Pressable>
-
-              <Pressable
-                onPress={() => setActiveFilter('Unread')}
-                style={[
-                  styles.tabChip,
-                  activeFilter === 'Unread' && { backgroundColor: theme.primary },
-                ]}
-              >
-                <ThemedText
-                  type="labelMd"
-                  style={{
-                    color: activeFilter === 'Unread' ? '#ffffff' : theme.textSecondary,
-                    fontFamily: 'Sora_500Medium',
-                  }}
-                >
-                  Unread ({unreadCount})
-                </ThemedText>
-              </Pressable>
+          {/* Segmented Time Capsule Tabs */}
+          {!showAllUnfiltered && (
+            <View style={[styles.tabCapsuleContainer, { backgroundColor: theme.surfaceLow }]}>
+              {(
+                [
+                  { key: 'Today', count: todayList.length },
+                  { key: 'This Week', count: weekList.length },
+                  { key: 'Earlier', count: earlierList.length },
+                ] as const
+              ).map((tab) => {
+                const isSelected = activeTab === tab.key;
+                return (
+                  <Pressable
+                    key={tab.key}
+                    onPress={() => setActiveTab(tab.key)}
+                    style={[
+                      styles.tabCapsuleItem,
+                      isSelected && [
+                        styles.tabCapsuleSelected,
+                        { backgroundColor: theme.surfaceLowest },
+                        Shadows.level1,
+                      ],
+                    ]}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.tabCapsuleText,
+                        {
+                          color: isSelected ? theme.text : theme.textSecondary,
+                          fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium',
+                        },
+                      ]}
+                    >
+                      {tab.key}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
             </View>
+          )}
 
-            <View style={{ flexDirection: 'row', gap: 10 }}>
+          {/* Quick Actions (Mark all read & Clear all) */}
+          <View style={styles.actionRow}>
+            <ThemedText style={[styles.badgeCountText, { color: theme.textSecondary }]}>
+              {showAllUnfiltered
+                ? `All Notifications (${notifications.length})`
+                : `${activeTab} • ${displayedList.length} updates`}
+              {unreadCount > 0 ? ` • ${unreadCount} unread` : ''}
+            </ThemedText>
+
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               {unreadCount > 0 && (
-                <Pressable onPress={markAllAsRead}>
-                  <ThemedText type="labelSm" style={{ color: theme.primary, fontFamily: 'Sora_500Medium' }}>
+                <Pressable onPress={markAllAsRead} hitSlop={6}>
+                  <ThemedText style={[styles.actionLink, { color: theme.primary }]}>
                     Mark all read
                   </ThemedText>
                 </Pressable>
               )}
               {notifications.length > 0 && (
-                <Pressable onPress={clearAll}>
-                  <ThemedText type="labelSm" style={{ color: '#EF4444', fontFamily: 'Sora_500Medium' }}>
+                <Pressable onPress={clearAll} hitSlop={6}>
+                  <ThemedText style={[styles.actionLink, { color: '#ef4444' }]}>
                     Clear all
                   </ThemedText>
                 </Pressable>
@@ -156,57 +225,81 @@ export function NotificationModal() {
             </View>
           </View>
 
-          {/* List Content */}
-          <ScrollView contentContainerStyle={styles.listContent}>
+          {/* Notification List Content */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+          >
             {displayedList.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="notifications-off-outline" size={48} color={theme.textSecondary} />
-                <ThemedText type="bodyMd" style={{ color: theme.textSecondary, marginTop: 12, textAlign: 'center' }}>
-                  No notifications for {roleName} role.
+              <View style={[styles.emptyState, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}>
+                <Ionicons name="notifications-outline" size={34} color={theme.textSecondary + '66'} />
+                <ThemedText style={[styles.emptyTitle, { color: theme.text }]}>
+                  No notifications for {showAllUnfiltered ? roleName : activeTab.toLowerCase()}
+                </ThemedText>
+                <ThemedText style={[styles.emptySub, { color: theme.textSecondary }]}>
+                  You're all caught up! New match alerts, slot bookings, and smart AI insights will appear here.
                 </ThemedText>
               </View>
             ) : (
-              displayedList.map(item => {
-                const iconMeta = getNotifIcon(item.type);
+              displayedList.map((item, idx) => {
+                const iconMeta = getNotifIcon(item.type, item.title);
+                const isLast = idx === displayedList.length - 1;
+
                 return (
                   <Pressable
                     key={item.id}
                     onPress={() => markAsRead(item.id)}
                     style={({ pressed }) => [
-                      styles.notifCard,
-                      Shadows.level1,
+                      styles.notifRow,
                       {
-                        backgroundColor: item.isRead ? theme.surfaceLowest : theme.primary + '0A',
-                        borderColor: item.isRead ? theme.outlineVariant + '33' : theme.primary + '40',
-                        transform: [{ scale: pressed ? 0.99 : 1 }],
+                        borderBottomColor: isLast ? 'transparent' : theme.outlineVariant + '20',
+                        opacity: pressed ? 0.85 : 1,
                       },
                     ]}
                   >
-                    {!item.isRead && <View style={[styles.unreadDot, { backgroundColor: theme.primary }]} />}
-                    <View style={[styles.iconBox, { backgroundColor: iconMeta.bg }]}>
-                      <Ionicons name={iconMeta.name} size={20} color={iconMeta.color} />
+                    {/* Left Circular Outline Icon Badge */}
+                    <View
+                      style={[
+                        styles.iconCircle,
+                        {
+                          backgroundColor: theme.surfaceLowest,
+                          borderColor: theme.outlineVariant + '35',
+                        },
+                        Shadows.level1,
+                      ]}
+                    >
+                      <Ionicons name={iconMeta.name} size={18} color={iconMeta.color} />
                     </View>
 
-                    <View style={styles.cardContent}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <ThemedText
-                          type="bodyMd"
-                          style={{
-                            fontFamily: item.isRead ? 'Sora_600SemiBold' : 'Sora_600SemiBold',
-                            flex: 1,
-                            marginRight: 6,
-                          }}
-                        >
-                          {item.title}
-                        </ThemedText>
-                        <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 10 }}>
+                    {/* Middle Content Column */}
+                    <View style={styles.contentColumn}>
+                      {/* Top Row: Dot + Title + Timestamp */}
+                      <View style={styles.titleRow}>
+                        <View style={styles.titleDotWrap}>
+                          <ThemedText style={[styles.purpleDot, { color: iconMeta.dotColor }]}>
+                            •
+                          </ThemedText>
+                          <ThemedText
+                            style={[
+                              styles.notifTitle,
+                              {
+                                color: theme.text,
+                                fontFamily: item.isRead ? 'Sora_500Medium' : 'Sora_600SemiBold',
+                              },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {item.title}
+                          </ThemedText>
+                        </View>
+                        <ThemedText style={[styles.timeText, { color: theme.textSecondary }]}>
                           {formatTime(item.createdAt)}
                         </ThemedText>
                       </View>
 
+                      {/* Description Text */}
                       <ThemedText
-                        type="bodySm"
-                        style={{ color: theme.textSecondary, marginTop: 3, fontSize: 11.5, lineHeight: 16 }}
+                        style={[styles.bodyText, { color: theme.textSecondary }]}
                       >
                         {item.body}
                       </ThemedText>
@@ -225,89 +318,174 @@ export function NotificationModal() {
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
     justifyContent: 'flex-end',
   },
   drawerContainer: {
-    height: '85%',
+    maxHeight: '85%',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    paddingTop: 12,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
+    paddingTop: 8,
+    paddingBottom: 14,
   },
-  headerLeft: {
+  headerTitleRow: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 14.5,
+    letterSpacing: -0.2,
+  },
+  headerRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
-  bellWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
+  seeAllBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  seeAllText: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 11.5,
   },
   closeBtn: {
-    padding: 6,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+
+  // Segmented Time Capsule Control
+  tabCapsuleContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    padding: 3.5,
+    borderRadius: 14,
+    marginBottom: 10,
+  },
+  tabCapsuleItem: {
+    flex: 1,
+    paddingVertical: 6.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+  },
+  tabCapsuleSelected: {
+    borderRadius: 11,
+  },
+  tabCapsuleText: {
+    fontSize: 12,
+  },
+
+  // Actions row
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  tabGroup: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  tabChip: {
-    paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    marginBottom: 6,
   },
+  badgeCountText: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11,
+  },
+  actionLink: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 11,
+  },
+
+  // List
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
-    gap: 10,
+    paddingBottom: 36,
   },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  notifCard: {
+  notifRow: {
     flexDirection: 'row',
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    position: 'relative',
     alignItems: 'flex-start',
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    gap: 12,
   },
-  unreadDot: {
-    position: 'absolute',
-    top: 14,
-    left: 6,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  iconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    justifyContent: 'center',
+  iconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
     alignItems: 'center',
-    marginRight: 12,
+    justifyContent: 'center',
+    marginTop: 2,
   },
-  cardContent: {
+  contentColumn: {
     flex: 1,
+    justifyContent: 'center',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  titleDotWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 4,
+  },
+  purpleDot: {
+    fontSize: 14,
+    lineHeight: 16,
+    fontWeight: 'bold',
+  },
+  notifTitle: {
+    fontSize: 13,
+    letterSpacing: -0.1,
+    flex: 1,
+  },
+  timeText: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11,
+  },
+  bodyText: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11.5,
+    lineHeight: 16.5,
+    marginTop: 3,
+  },
+
+  // Empty State
+  emptyState: {
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 42,
+    paddingHorizontal: 24,
+    marginTop: 12,
+  },
+  emptyTitle: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 13.5,
+    marginTop: 10,
+  },
+  emptySub: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11.5,
+    textAlign: 'center',
+    lineHeight: 16,
+    marginTop: 4,
   },
 });

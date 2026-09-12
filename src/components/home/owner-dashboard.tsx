@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { openProfileDrawer } from '@/components/profile-drawer';
 import { StyleSheet, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -19,6 +20,7 @@ import {
   IllustratedTile,
   SectionHeading,
   PulseDot,
+  PressCard,
 } from '@/components/home/dashboard-widgets';
 import { useOfferStore, useBookings, useTurfStore } from '@/store/app-store';
 import { isExpired } from '@/store/offer-store';
@@ -225,7 +227,7 @@ export function OwnerDashboard({
           {/* ── Top App Bar (Consistent across tabs) ────────────────── */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <Pressable style={styles.profileIconButton} onPress={() => go('/profile')}>
+              <Pressable style={styles.profileIconButton} onPress={openProfileDrawer}>
                 <Image
                   source={getAvatarSource(profile.avatarUrl)}
                   style={styles.headerAvatar}
@@ -320,10 +322,10 @@ export function OwnerDashboard({
 
           {/* ── Stat Ribbon ─────────────────────────────────────────── */}
           <Reanimated.View entering={FadeInDown.delay(170).duration(460)} style={styles.statRow}>
-            <StatTile label="Revenue" value={18500} prefix="₹" icon="trending-up-outline" tint={success} />
-            <StatTile label="Occupancy" value={todayTurfMetrics.occupancyPct} suffix="%" icon="pie-chart-outline" tint={theme.primary} />
-            <StatTile label="Bookings" value={todayTurfMetrics.totalBooked} icon="time-outline" tint={info} />
-            <StatTile label="Dues" value={2400} prefix="₹" icon="wallet-outline" tint={accent} />
+            <StatTile label="Revenue" value={18500} prefix="₹" icon="trending-up-outline" tint={success} onPress={() => go('/owner-earnings')} />
+            <StatTile label="Occupancy" value={todayTurfMetrics.occupancyPct} suffix="%" icon="pie-chart-outline" tint={theme.primary} onPress={() => go('/turf-bookings')} />
+            <StatTile label="Bookings" value={todayTurfMetrics.totalBooked} icon="time-outline" tint={info} onPress={() => go('/turf-bookings')} />
+            <StatTile label="Dues" value={2400} prefix="₹" icon="wallet-outline" tint={accent} onPress={() => go('/owner-earnings')} />
           </Reanimated.View>
 
           {/* ── Quick Action Destination Tiles ──────────────────────── */}
@@ -348,10 +350,14 @@ export function OwnerDashboard({
 
           {/* ── Business Analytics Bento Cards ──────────────────────── */}
           <Reanimated.View entering={FadeInDown.delay(260).duration(460)} style={styles.section}>
-            <SectionHeading title="Business Analytics" />
+            <SectionHeading title="Business Analytics" action={{ label: 'Earnings', onPress: () => go('/owner-earnings') }} />
             <View style={styles.bentoRow}>
               {/* Revenue Card */}
-              <View style={[styles.bentoCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
+              <PressCard
+                onPress={() => go('/owner-earnings')}
+                accessibilityLabel="Today's Revenue breakdown"
+                style={[styles.bentoCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}
+              >
                 <Image
                   source={require('@/assets/images/illustrations/business_analytics_revenue_bg.png')}
                   style={styles.bentoArt}
@@ -381,10 +387,14 @@ export function OwnerDashboard({
                     🔥 Peak: 6 - 9 PM
                   </ThemedText>
                 </View>
-              </View>
+              </PressCard>
 
               {/* Pending Payments Card */}
-              <View style={[styles.bentoCard, { backgroundColor: theme.primaryContainer }, Shadows.level3]}>
+              <PressCard
+                onPress={() => go('/owner-earnings')}
+                accessibilityLabel="Unpaid Dues and pending payments"
+                style={[styles.bentoCard, { backgroundColor: theme.primaryContainer }, Shadows.level3]}
+              >
                 <Image
                   source={require('@/assets/images/illustrations/business_analytics_dues_bg.png')}
                   style={styles.bentoArt}
@@ -414,7 +424,7 @@ export function OwnerDashboard({
                     ⚡ 2 Reminders Sent
                   </ThemedText>
                 </View>
-              </View>
+              </PressCard>
             </View>
           </Reanimated.View>
 
@@ -606,11 +616,15 @@ export function OwnerDashboard({
           <Reanimated.View entering={FadeInDown.delay(380).duration(460)} style={styles.section}>
             <SectionHeading
               title="Today's Turf Bookings"
-              action={{ label: 'Full schedule', onPress: () => go('/(tabs)/coach') }}
+              action={{ label: 'Full schedule', onPress: () => go('/turf-bookings') }}
             />
             <View style={{ gap: 10 }}>
               {/* Booking 1 */}
-              <View style={[styles.bookingCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '25' }, Shadows.level2]}>
+              <PressCard
+                onPress={() => go('/turf-bookings')}
+                accessibilityLabel="Footy Club Match Booking details"
+                style={[styles.bookingCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '25' }, Shadows.level2]}
+              >
                 <View style={[styles.bookingIconWrap, { backgroundColor: theme.primary + '18' }]}>
                   <Ionicons name="football" size={17} color={theme.primary} />
                 </View>
@@ -647,10 +661,14 @@ export function OwnerDashboard({
                   <PulseDot color="#ef4444" size={6} />
                   <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: '#ef4444' }}>LIVE</ThemedText>
                 </View>
-              </View>
+              </PressCard>
 
               {/* Booking 2 */}
-              <View style={[styles.bookingCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '25' }, Shadows.level2]}>
+              <PressCard
+                onPress={() => go('/turf-bookings')}
+                accessibilityLabel="Corporate Cricket Match booking details"
+                style={[styles.bookingCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '25' }, Shadows.level2]}
+              >
                 <View style={[styles.bookingIconWrap, { backgroundColor: accent + '18' }]}>
                   <MaterialCommunityIcons name="cricket" size={17} color="#d97706" />
                 </View>
@@ -686,7 +704,7 @@ export function OwnerDashboard({
                 <View style={[styles.statusTag, { backgroundColor: accent + '15' }]}>
                   <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: '#d97706' }}>UPCOMING</ThemedText>
                 </View>
-              </View>
+              </PressCard>
             </View>
           </Reanimated.View>
 

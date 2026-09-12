@@ -66,7 +66,7 @@ export function FoFPlayerSearchModal({
               </View>
             </View>
             <Pressable onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={22} color={theme.text} />
+              <Ionicons name="close" size={20} color={theme.text} />
             </Pressable>
           </View>
 
@@ -124,7 +124,7 @@ export function FoFPlayerSearchModal({
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 6, gap: 10 }}>
             {players.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="person-outline" size={36} color={theme.textSecondary} />
+                <Ionicons name="person-outline" size={30} color={theme.textSecondary} />
                 <ThemedText style={{ color: theme.textSecondary, marginTop: 8, fontSize: 13, textAlign: 'center' }}>
                   No players found matching "{searchQuery}". Try searching by name (Guna, Siva, Asif) or phone digits (11111, 22222, 33333).
                 </ThemedText>

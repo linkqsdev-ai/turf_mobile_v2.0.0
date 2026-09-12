@@ -48,7 +48,7 @@ export type ThemedTextProps = TextProps & {
  * headroom those fixed heights actually have. Pass `maxFontSizeMultiplier`
  * explicitly to override on text that has room to grow.
  */
-export const MAX_FONT_SCALE = 1.3;
+export const MAX_FONT_SCALE = 1.15;
 
 export function ThemedText({
   style,

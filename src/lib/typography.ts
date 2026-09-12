@@ -40,8 +40,8 @@ const BASE_RAMP: Record<TypeStep, Step> = {
   small: { size: 11, line: 15, family: 'Sora_500Medium' },
   body: { size: 12.5, line: 17, family: 'Sora_500Medium' },
   bodyStrong: { size: 12.5, line: 17, family: 'Sora_600SemiBold' },
-  title: { size: 14, line: 19, family: 'Sora_600SemiBold' },
-  display: { size: 17, line: 22, family: 'Sora_700Bold' },
+  title: { size: 13.5, line: 18, family: 'Sora_600SemiBold' },
+  display: { size: 15.5, line: 20, family: 'Sora_700Bold' },
 };
 
 /**

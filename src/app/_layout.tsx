@@ -1,15 +1,37 @@
+import 'react-native-gesture-handler';
 import '../../global.css';
 import '@/lib/nativewind-interop';
+import * as SplashScreen from 'expo-splash-screen';
 import { Stack, ThemeProvider, DarkTheme, DefaultTheme, useRouter, useSegments } from 'expo-router';
-import { ActivityIndicator, View, Platform } from 'react-native';
+import { ActivityIndicator, View, Platform, Text, TextInput, Pressable } from 'react-native';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// ── Globally enforce font scaling ceiling across all native Text & TextInput to prevent oversized UI on high-scaling devices ──
+try {
+  if ((Text as any).defaultProps == null) {
+    (Text as any).defaultProps = {};
+  }
+  (Text as any).defaultProps.maxFontSizeMultiplier = 1.15;
+
+  if ((TextInput as any).defaultProps == null) {
+    (TextInput as any).defaultProps = {};
+  }
+  (TextInput as any).defaultProps.maxFontSizeMultiplier = 1.15;
+} catch (e) {
+  // Ignored in environments where defaultProps are frozen
+}
 import { colorScheme as nativewindColorScheme } from 'nativewind';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PortalHost } from '@rn-primitives/portal';
 import { AppStoreProvider } from '@/store/app-store';
+import { RemoteConfigProvider } from '@/context/RemoteConfigContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { NotificationModal } from '@/components/ui/NotificationModal';
+import { ProfileDrawerHost } from '@/components/profile-drawer';
 import {
   useFonts,
   Sora_400Regular,
@@ -259,6 +281,13 @@ function RootNavigation() {
           presentation: 'card'
         }}
       />
+      <Stack.Screen
+        name="change-password"
+        options={{
+          animation: 'slide_from_right',
+          presentation: 'card'
+        }}
+      />
     </Stack>
   );
 }
@@ -301,6 +330,12 @@ export default function RootLayout() {
     Sora_600SemiBold,
     Sora_700Bold,
   });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded]);
 
   if (!fontsLoaded) {
     return (
@@ -355,16 +390,19 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppStoreProvider>
+        <RemoteConfigProvider>
         <ToastProvider>
           <NotificationProvider>
             <ThemeProvider value={activeNavigationTheme}>
               <StatusBar style={isDark ? "light" : "dark"} animated />
               <RootNavigation />
               <NotificationModal />
+              <ProfileDrawerHost />
               <PortalHost />
             </ThemeProvider>
           </NotificationProvider>
         </ToastProvider>
+        </RemoteConfigProvider>
       </AppStoreProvider>
     </GestureHandlerRootView>
   );

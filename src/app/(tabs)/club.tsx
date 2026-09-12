@@ -29,12 +29,17 @@ import { useTypeRamp } from '@/lib/typography';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useTournamentStore } from '@/store/app-store';
 import type { PublishedTournament } from '@/store/tournament-store';
+import { hostTournamentStatus } from '@/store/tournament-store';
 
 const STATUS_TINT: Record<string, string> = {
   Draft: '#6B7280',
+  Upcoming: '#0EA5E9',
   Registering: '#4F46E5',
+  Full: '#F59E0B',
+  'Registration closed': '#64748B',
   Ongoing: '#10B981',
   Completed: '#94A3B8',
+  Cancelled: '#EF4444',
 };
 
 /** The same four things the Create Turf hero promises, tuned for a cup. */
@@ -61,17 +66,18 @@ export default function CreateCupScreen() {
   const [drafts, setDrafts] = useState<any[]>([]);
   const [draftsOpen, setDraftsOpen] = useState(false);
 
+  /** Teams actually registered — a rejection frees its place. */
+  const registeredCount = (t: PublishedTournament) =>
+    (registrations || []).filter((r: any) => r.tournamentId === t.id && r.status !== 'rejected').length;
+
   /**
-   * A tournament whose roster has filled. Counted from real registrations
-   * rather than the denormalised `teamsCount`, which can drift.
+   * A tournament whose roster has filled, from real registrations. Taking the
+   * larger of this and the stored `teamsCount` let a stale counter lock a
+   * tournament that still had places, and disagree with the card's own count.
    */
   const isFull = (t: PublishedTournament) => {
     const max = Number(t.maxTeams) || 0;
-    if (max <= 0) return false;
-    const taken = (registrations || []).filter(
-      (r: any) => r.tournamentId === t.id && r.status !== 'rejected'
-    ).length;
-    return Math.max(taken, Number(t.teamsCount) || 0) >= max;
+    return max > 0 && registeredCount(t) >= max;
   };
 
   /**
@@ -231,7 +237,7 @@ export default function CreateCupScreen() {
               contentFit="contain"
             />
             <View style={[styles.heroIcon, { backgroundColor: theme.primary }]}>
-              <Ionicons name="add" size={22} color="#ffffff" />
+              <Ionicons name="add" size={20} color="#ffffff" />
             </View>
             <ThemedText style={[type.title, { color: theme.text, marginTop: Spacing.sm }]}>
               New tournament
@@ -306,8 +312,11 @@ export default function CreateCupScreen() {
             </View>
           ) : (
             mine.map((t) => {
-              const filled = t.maxTeams > 0 ? Math.min(1, t.teamsCount / t.maxTeams) : 0;
-              const tint = STATUS_TINT[t.status] || '#6B7280';
+              const taken = registeredCount(t);
+              const filled = t.maxTeams > 0 ? Math.min(1, taken / t.maxTeams) : 0;
+              // From dates and registrations; the stored status never moves on.
+              const status = hostTournamentStatus(t, taken);
+              const tint = STATUS_TINT[status] || '#6B7280';
               return (
                 <View
                   key={t.id}
@@ -327,7 +336,7 @@ export default function CreateCupScreen() {
                       </ThemedText>
                     </View>
                     <View style={[styles.statusPill, { backgroundColor: tint + '1F' }]}>
-                      <ThemedText style={[type.micro, { color: tint }]}>{t.status}</ThemedText>
+                      <ThemedText style={[type.micro, { color: tint }]} numberOfLines={1}>{status}</ThemedText>
                     </View>
                   </View>
 
@@ -337,7 +346,7 @@ export default function CreateCupScreen() {
                       <View style={[styles.cupProgressFill, { width: `${filled * 100}%`, backgroundColor: tint }]} />
                     </View>
                     <ThemedText style={[type.micro, { color: theme.textSecondary }]}>
-                      {t.teamsCount}/{t.maxTeams} teams
+                      {taken}/{t.maxTeams} teams
                     </ThemedText>
                   </View>
 
@@ -373,6 +382,22 @@ export default function CreateCupScreen() {
                           <ThemedText style={styles.mediaCountText}>
                             {durableImages(t.mediaImages).length}
                           </ThemedText>
+                        </View>
+                      )}
+                    </Pressable>
+                    {/* Fixtures — opens the planner to view, generate or update the
+                        draw. The badge counts the matches already drawn. */}
+                    <Pressable
+                      onPress={() => router.push({ pathname: '/fixture-management', params: { tournamentId: t.id } })}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${(t.fixtures?.length ?? 0) > 0 ? 'Update' : 'Open'} fixtures for ${t.name}`}
+                      style={styles.cardAction}
+                    >
+                      <Ionicons name="git-network-outline" size={16} color={theme.primary} />
+                      {(t.fixtures?.length ?? 0) > 0 && (
+                        <View style={[styles.mediaCountDot, { backgroundColor: '#10B981' }]}>
+                          <ThemedText style={styles.mediaCountText}>{t.fixtures!.length}</ThemedText>
                         </View>
                       )}
                     </Pressable>
@@ -462,7 +487,7 @@ export default function CreateCupScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Close"
                 >
-                  <Ionicons name="close" size={22} color={theme.textSecondary} />
+                  <Ionicons name="close" size={20} color={theme.textSecondary} />
                 </Pressable>
               </View>
 
@@ -478,7 +503,7 @@ export default function CreateCupScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Add the first photos"
                   >
-                    <Ionicons name="images-outline" size={22} color={theme.textSecondary} />
+                    <Ionicons name="images-outline" size={20} color={theme.textSecondary} />
                     <ThemedText style={[type.small, { color: theme.textSecondary, textAlign: 'center', marginTop: 6 }]}>
                       No photos yet. Add match shots, the ground, or your poster —
                       they appear under the tournament's Media tab.
@@ -555,7 +580,7 @@ export default function CreateCupScreen() {
                   </ThemedText>
                 </View>
                 <Pressable onPress={() => setDraftsOpen(false)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
-                  <Ionicons name="close" size={22} color={theme.textSecondary} />
+                  <Ionicons name="close" size={20} color={theme.textSecondary} />
                 </Pressable>
               </View>
 
@@ -609,8 +634,8 @@ export default function CreateCupScreen() {
                 Delete tournament?
               </ThemedText>
               <ThemedText style={[type.small, { color: theme.textSecondary, marginTop: 4 }]}>
-                {pendingDelete && pendingDelete.teamsCount > 0
-                  ? `${pendingDelete.name} has ${pendingDelete.teamsCount} team${pendingDelete.teamsCount === 1 ? '' : 's'} registered. Deleting removes them too, and cannot be undone.`
+                {pendingDelete && registeredCount(pendingDelete) > 0
+                  ? `${pendingDelete.name} has ${registeredCount(pendingDelete)} team${registeredCount(pendingDelete) === 1 ? '' : 's'} registered. Deleting removes them too, and cannot be undone.`
                   : `${pendingDelete?.name ?? ''} will be removed permanently.`}
               </ThemedText>
               <View style={styles.confirmActions}>

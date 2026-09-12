@@ -23,6 +23,7 @@ import { getAvatarSource } from '@/constants/avatars';
 import { RecordCard } from '@/components/record-card';
 import { formatSlotsRange } from '@/utils/date-utils';
 import type { Booking } from '@/store/booking-store';
+import { SectionHeading, StatTile } from '@/components/home/dashboard-widgets';
 
 type Filter = 'upcoming' | 'today' | 'past' | 'cancelled';
 
@@ -190,65 +191,53 @@ export default function TurfBookingsScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
             hitSlop={10}
-            style={styles.backBtn}
+            style={[styles.roundBtn, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' }]}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={22} color={theme.text} />
+            <Ionicons name="arrow-back" size={18} color={theme.text} />
           </Pressable>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="headlineLg" style={{ color: theme.text }}>
-              Turf Bookings
-            </ThemedText>
-            <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <ThemedText style={[styles.headerTitle, { color: theme.text }]}>Turf Bookings</ThemedText>
+            <ThemedText style={[styles.headerSub, { color: theme.textSecondary }]} numberOfLines={1}>
               {params.turfName ? `${params.turfName}` : 'Who has booked your venues'}
             </ThemedText>
           </View>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {/* Summary */}
-          <Reanimated.View
-            entering={FadeInDown.duration(400)}
-            style={[styles.summaryCard, { backgroundColor: theme.primaryContainer }, Shadows.level3]}
-          >
-            <View style={styles.summaryCell}>
-              <ThemedText style={styles.summaryValue}>{stats.count}</ThemedText>
-              <ThemedText style={styles.summaryLabel}>Bookings</ThemedText>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryCell}>
-              <ThemedText style={styles.summaryValue}>₹{stats.revenue}</ThemedText>
-              <ThemedText style={styles.summaryLabel}>Collected</ThemedText>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryCell}>
-              <ThemedText style={styles.summaryValue}>₹{stats.due}</ThemedText>
-              <ThemedText style={styles.summaryLabel}>Due</ThemedText>
-            </View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Summary — dashboard stat tiles */}
+          <Reanimated.View entering={FadeInDown.duration(400)} style={styles.statRow}>
+            <StatTile label="Bookings" value={stats.count} icon="calendar-outline" tint={theme.primary} />
+            <StatTile label="Collected" value={stats.revenue} prefix="₹" icon="wallet-outline" tint="#10B981" />
+            <StatTile label="Due" value={stats.due} prefix="₹" icon="time-outline" tint="#F59E0B" />
           </Reanimated.View>
 
           {/* Search */}
-          <View style={[styles.searchBar, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }]}>
-            <Ionicons name="search" size={16} color={theme.textSecondary} />
+          <View style={[styles.searchBar, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' }]}>
+            <Ionicons name="search" size={15} color={theme.textSecondary} />
             <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               value={query}
               onChangeText={setQuery}
               placeholder="Search name, ref or venue"
-              placeholderTextColor={theme.textSecondary + '99'}
+              placeholderTextColor="#94a3b8"
               style={[styles.searchInput, { color: theme.text }]}
             />
             {query.length > 0 && (
               <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel="Clear search">
-                <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+                <Ionicons name="close-circle" size={15} color={theme.textSecondary} />
               </Pressable>
             )}
           </View>
 
-          {/* Filters */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          {/* Filters — raised segmented control */}
+          <View style={[styles.filterRow, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '26' }]}>
             {FILTERS.map(f => {
               const active = filter === f.key;
               return (
@@ -257,31 +246,28 @@ export default function TurfBookingsScreen() {
                   onPress={() => setFilter(f.key)}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
-                  style={[
-                    styles.filterChip,
-                    {
-                      backgroundColor: active ? theme.primary : theme.surfaceLowest,
-                      borderColor: active ? theme.primary : theme.outlineVariant + '44',
-                    },
-                  ]}
+                  style={[styles.filterChip, active && [{ backgroundColor: theme.surfaceLowest }, Shadows.level1]]}
                 >
-                  <ThemedText
-                    style={{
-                      fontSize: 12,
-                      fontFamily: active ? 'Sora_700Bold' : 'Sora_600SemiBold',
-                      color: active ? '#ffffff' : theme.textSecondary,
-                    }}
-                  >
+                  <ThemedText style={[styles.filterText, { color: active ? theme.primary : theme.textSecondary }]} numberOfLines={1}>
                     {f.label}
                   </ThemedText>
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </View>
+
+          <View style={styles.headingWrap}>
+            <SectionHeading
+              title={`${FILTERS.find(f => f.key === filter)?.label ?? 'All'} bookings · ${visible.length}`}
+              tint={theme.primary}
+            />
+          </View>
 
           {visible.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="calendar-outline" size={46} color={theme.textSecondary} />
+            <View style={[styles.emptyState, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+              <View style={[styles.emptyIcon, { backgroundColor: theme.primary + '14' }]}>
+                <Ionicons name="calendar-outline" size={20} color={theme.primary} />
+              </View>
               <ThemedText style={[styles.emptyTitle, { color: theme.text }]}>
                 {ownerBookings.length === 0 ? 'No bookings yet' : `No ${filter} bookings`}
               </ThemedText>
@@ -300,7 +286,7 @@ export default function TurfBookingsScreen() {
   );
 }
 
-const AVATAR = 78;
+const GUTTER = Spacing.containerMargin;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -308,61 +294,64 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.containerMargin,
-    paddingVertical: Spacing.sm,
+    gap: 10,
+    paddingHorizontal: GUTTER,
+    height: 58,
+    borderBottomWidth: 1,
+    borderBottomColor: '#0000000a',
   },
-  backBtn: { padding: 4 },
-  scrollContent: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 60 },
-
-  summaryCard: {
-    flexDirection: 'row',
+  roundBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
     alignItems: 'center',
-    borderRadius: BorderRadius.xl,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    marginTop: Spacing.xs,
+    justifyContent: 'center',
   },
-  summaryCell: { flex: 1, alignItems: 'center' },
-  summaryValue: { color: '#ffffff', fontSize: 18, fontFamily: 'Sora_800ExtraBold' },
-  summaryLabel: {
-    color: 'rgba(255,255,255,0.82)',
-    fontSize: 10.5,
-    fontFamily: 'Sora_500Medium',
-    marginTop: 4,
-  },
-  summaryDivider: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.22)' },
+  headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 14.5 },
+  headerSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1 },
+  scrollContent: { paddingHorizontal: GUTTER, paddingTop: 12, paddingBottom: 60 },
+
+  statRow: { flexDirection: 'row', gap: 8 },
 
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    height: 42,
-    borderRadius: BorderRadius.lg,
+    height: 38,
+    borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    marginTop: Spacing.md,
+    paddingHorizontal: 13,
+    marginTop: 12,
   },
-  searchInput: { flex: 1, fontSize: 13, fontFamily: 'Sora_500Medium',
+  searchInput: {
+    flex: 1,
+    fontSize: 11.5,
+    fontFamily: 'Sora_400Regular',
+    paddingVertical: 0,
     includeFontPadding: false,
+    ...({ outlineStyle: 'none' } as any),
   },
 
-  filterRow: { flexDirection: 'row', gap: 8, paddingVertical: Spacing.md },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.lg,
+  filterRow: { flexDirection: 'row', gap: 3, padding: 3, borderRadius: 999, borderWidth: 1, marginTop: 10 },
+  filterChip: { flex: 1, height: 30, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  filterText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+  headingWrap: { marginTop: 16 },
+
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 28,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.premium,
     borderWidth: 1,
+    gap: 4,
   },
-
-  // ── Booking card, per the reference: gradient wash + inset white card ──────
-  emptyState: { alignItems: 'center', paddingVertical: 56, paddingHorizontal: Spacing.lg },
-  emptyTitle: { fontSize: 15, fontFamily: 'Sora_700Bold', marginTop: 14 },
+  emptyIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  emptyTitle: { fontSize: 13, fontFamily: 'Sora_500Medium', textAlign: 'center' },
   emptyBody: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 15,
     fontFamily: 'Sora_400Regular',
     textAlign: 'center',
-    marginTop: 6,
   },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Pressable, ImageBackground, ScrollView, Animated, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, ImageBackground, ScrollView, Animated, Platform, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
@@ -244,15 +244,17 @@ export function PromoBanner({
 export function AutoScrollingHorizontalBanners({
   banners,
   cardWidth = 305,
-  gap = 16
+  gap = 14
 }: {
   banners: PromoBannerProps[];
   cardWidth?: number;
   gap?: number;
 }) {
+  const { width: windowWidth } = useWindowDimensions();
+  const effectiveCardWidth = Math.min(cardWidth, Math.max(windowWidth - Spacing.containerMargin * 2 - 20, 260));
   const scrollViewRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const step = cardWidth + gap;
+  const step = effectiveCardWidth + gap;
 
   useEffect(() => {
     if (banners.length <= 1) return;
@@ -283,7 +285,7 @@ export function AutoScrollingHorizontalBanners({
         contentContainerStyle={{ paddingHorizontal: Spacing.containerMargin, paddingVertical: 4, gap: gap }}
       >
         {banners.map((banner, index) => (
-          <View key={index} style={{ width: cardWidth, height: 130 }}>
+          <View key={index} style={{ width: effectiveCardWidth, height: 130 }}>
             <PromoBanner {...banner} variant="horizontal" />
           </View>
         ))}

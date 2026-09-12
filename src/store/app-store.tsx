@@ -8,7 +8,16 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Booking, RescheduleResult, createBooking, findSlotClashes } from './booking-store';
-import { PublishedTournament, TournamentRegistration, createRegistration, canTransitionTournament } from './tournament-store';
+import {
+  PublishedTournament,
+  TournamentRegistration,
+  createRegistration,
+  canTransitionTournament,
+  buildTournamentFixtures,
+  shouldAutoGenerateFixtures,
+  refreshLegacyFixtures,
+} from './tournament-store';
+import { todayIso } from '@/constants/tournament';
 import { Team, Player, Match, createTeam, createMatch } from './match-store';
 import { PublishedTurf, createTurf } from './turf-store';
 import { ensureClassIdentity, sortByNewestFirst, generateClassId } from './class-list';
@@ -29,6 +38,13 @@ import {
 } from './enrollment-store';
 import { syncPlayersToFoF, loadFoFDatabase, registerFoFPlayer } from '@/services/fof-network';
 import { classApi } from '@/services/class-api';
+import {
+  syncBookingCancelled,
+  syncBookingCreated,
+  syncEnrollment,
+  syncRegistration,
+  syncTournamentCreated,
+} from '@/services/backend-sync';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
 const KEYS = {
@@ -43,7 +59,17 @@ const KEYS = {
   bids: '@turf_bids',
   offers: '@turf_owner_offers',
   enrollments: '@turf_class_enrollments',
+  cashbackCredits: '@turf_cashback_credits',
 };
+
+export interface CashbackCredit {
+  id: string;
+  amount: number;
+  entityId: string;
+  entityName: string;
+  entityType: 'class' | 'turf';
+  createdAt: string;
+}
 
 // A team can only be marked favourite while fewer than this many are already set.
 const MAX_FAVOURITE_TEAMS = 2;
@@ -139,10 +165,14 @@ interface AppStoreContextType {
   enrollmentCountForClass: (classId: string) => number;
   isClassEditable: (classId: string) => boolean;
 
-  // Wallet
+  // Wallet & Cashback
   walletBalance: number;
   addWalletFunds: (amount: number) => void;
   deductWalletFunds: (amount: number) => void;
+  cashbackCredits: CashbackCredit[];
+  addCashbackCredit: (credit: Omit<CashbackCredit, 'id' | 'createdAt'>) => void;
+  deductCashbackCredit: (amount: number, entityIdOrName?: string) => void;
+  getCashbackBalanceForEntity: (entityIdOrName?: string) => number;
 
   // Bids
   bids: any[];
@@ -179,29 +209,53 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [ownedTurfs, setOwnedTurfs] = useState<PublishedTurf[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [walletBalance, setWalletBalance] = useState<number>(200); // Initial ₹200 wallet balance
+  const [cashbackCredits, setCashbackCredits] = useState<CashbackCredit[]>([]);
   const [offers, setOffers] = useState<OwnerOffer[]>([]);
   const [enrollments, setEnrollments] = useState<ClassEnrollment[]>([]);
   const [bids, setBids] = useState<any[]>([
     {
       id: 'bid-demo-1',
-      tournament: 'Bid Challenge: Super 11',
+      tournament: 'Open Bid Challenge: Cricket 🏏',
       sport: 'Cricket',
       category: 'Turf',
       location: 'Skyline Turf Arena, Court #1',
-      type: 'Bid',
+      type: 'Broadcast',
       status: 'Accept Bid',
       isMe: true,
       isBid: true,
-      playerName: 'Rahul Sharma',
-      avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-      team1: 'Rahul XI',
-      team1Code: 'RX',
-      team2: 'Weekend Warriors',
-      opponentTeam: 'Weekend Warriors',
-      team2Code: 'WW',
+      playerName: 'Azarudeen',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
+      team1: 'Azar XI',
+      team1Code: 'AZ',
+      team2: 'Open Broadcast',
+      opponentTeam: 'Open Broadcast',
+      team2Code: 'VS',
       timeText: 'Today, 8:00 PM',
-      subText: 'Bid Active • Stake: 200 Coins',
-      statusColor: '#8b5cf6',
+      subText: 'Broadcast Live • Stake: 100 Coins',
+      statusColor: '#10b981',
+      section: 'Today',
+      bidCoins: 100,
+    },
+    {
+      id: 'bid-demo-2',
+      tournament: 'Direct Challenge: Cricket 🏏',
+      sport: 'Cricket',
+      category: 'Turf',
+      location: 'Skyline Turf, Velachery',
+      type: 'Direct',
+      status: 'Challenged',
+      isMe: true,
+      isBid: true,
+      playerName: 'Azarudeen',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
+      team1: 'Azar XI',
+      team1Code: 'AZ',
+      team2: 'Chennai Super Strikers',
+      opponentTeam: 'Chennai Super Strikers',
+      team2Code: 'CSS',
+      timeText: 'Today, 9:30 PM',
+      subText: 'Direct Challenge vs Chennai Super Strikers • Stake: 200 Coins',
+      statusColor: '#6366f1',
       section: 'Today',
       bidCoins: 200,
     }
@@ -212,7 +266,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const [b, t, r, te, m, tu, cl, w, of, en] = await Promise.all([
+        const [b, t, r, te, m, tu, cl, w, of, en, cb] = await Promise.all([
           AsyncStorage.getItem(KEYS.bookings),
           AsyncStorage.getItem(KEYS.tournaments),
           AsyncStorage.getItem(KEYS.registrations),
@@ -223,8 +277,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           AsyncStorage.getItem(KEYS.wallet),
           AsyncStorage.getItem(KEYS.offers),
           AsyncStorage.getItem(KEYS.enrollments),
+          AsyncStorage.getItem(KEYS.cashbackCredits),
         ]);
         if (en) setEnrollments(JSON.parse(en));
+        if (cb) setCashbackCredits(JSON.parse(cb));
         if (b) setBookings(JSON.parse(b));
         if (t) setPublishedTournaments(JSON.parse(t));
         if (r) setRegistrations(JSON.parse(r));
@@ -439,6 +495,8 @@ function notifyCrossTabSync(key: string = KEYS.classes) {
       AsyncStorage.setItem(KEYS.bookings, JSON.stringify(next));
       return next;
     });
+    // Mirrored to the backend (best effort) so the Super Admin console sees it.
+    void syncBookingCreated(booking);
     return booking;
   }, []);
 
@@ -496,6 +554,7 @@ function notifyCrossTabSync(key: string = KEYS.classes) {
       AsyncStorage.setItem(KEYS.bookings, JSON.stringify(next));
       return next;
     });
+    void syncBookingCancelled(id);
   }, []);
 
   // ── Tournament actions ──────────────────────────────────────────────────────
@@ -505,6 +564,7 @@ function notifyCrossTabSync(key: string = KEYS.classes) {
       AsyncStorage.setItem(KEYS.tournaments, JSON.stringify(next));
       return next;
     });
+    void syncTournamentCreated(t);
   }, []);
 
   const updateTournamentTeamsCount = useCallback((id: string, delta: number) => {
@@ -557,8 +617,38 @@ function notifyCrossTabSync(key: string = KEYS.classes) {
       return next;
     });
     updateTournamentTeamsCount(params.tournamentId, 1);
+    void syncRegistration(reg);
     return reg;
   }, [updateTournamentTeamsCount]);
+
+  /**
+   * Draw a tournament the moment its roster fills, so the Fixtures tab shows
+   * the bracket without the organiser first opening the planner. Driven from
+   * state rather than from registerForTournament so a cup that was already
+   * full before this existed gets drawn too. Never replaces an existing draw.
+   */
+  useEffect(() => {
+    for (const t of publishedTournaments) {
+      const teamNames = registrations
+        .filter(r => r.tournamentId === t.id && r.status !== 'rejected')
+        .map(r => r.teamName)
+        .filter(Boolean);
+      if (shouldAutoGenerateFixtures(t, teamNames.length)) {
+        updateTournament(t.id, {
+          fixtures: buildTournamentFixtures(teamNames, t.startDate, t.endDate, todayIso(), {
+            venue: t.location,
+            matchDuration: t.matchDuration,
+          }),
+        });
+        continue;
+      }
+      // Draws made before fixtures carried the venue sit on placeholder
+      // "Pitch A/B" with parallel kick-offs; move them to the venue, one match
+      // at a time. Returns null once done, so this runs only once per draw.
+      const refreshed = refreshLegacyFixtures(t.fixtures, t.location, t.matchDuration);
+      if (refreshed) updateTournament(t.id, { fixtures: refreshed });
+    }
+  }, [publishedTournaments, registrations, updateTournament]);
 
   const decideRegistration = useCallback((registrationId: string, status: 'confirmed' | 'rejected') => {
     let rejectedTournamentId: string | null = null;
@@ -862,6 +952,7 @@ function notifyCrossTabSync(key: string = KEYS.classes) {
         AsyncStorage.setItem(KEYS.enrollments, JSON.stringify(next));
         return next;
       });
+      void syncEnrollment(record.classId);
       return { ok: true, record };
     },
     [classes, enrollments]
@@ -963,7 +1054,7 @@ function notifyCrossTabSync(key: string = KEYS.classes) {
     [offers]
   );
 
-  // ── Wallet actions ──────────────────────────────────────────────────────────
+  // ── Wallet & Cashback actions ────────────────────────────────────────────────
   const addWalletFunds = useCallback((amount: number) => {
     setWalletBalance(prev => {
       const next = prev + amount;
@@ -980,6 +1071,61 @@ function notifyCrossTabSync(key: string = KEYS.classes) {
     });
   }, []);
 
+  const addCashbackCredit = useCallback((credit: Omit<CashbackCredit, 'id' | 'createdAt'>) => {
+    const newCredit: CashbackCredit = {
+      ...credit,
+      id: `cashback-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      createdAt: new Date().toISOString(),
+    };
+    setCashbackCredits(prev => {
+      const next = [newCredit, ...prev];
+      AsyncStorage.setItem(KEYS.cashbackCredits, JSON.stringify(next));
+      return next;
+    });
+    setWalletBalance(prev => {
+      const next = prev + credit.amount;
+      AsyncStorage.setItem(KEYS.wallet, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const deductCashbackCredit = useCallback((amount: number, entityIdOrName?: string) => {
+    if (entityIdOrName) {
+      const key = entityIdOrName.trim().toLowerCase();
+      setCashbackCredits(prev => {
+        let remainingToDeduct = amount;
+        const next = prev.map(c => {
+          if (remainingToDeduct <= 0) return c;
+          const match = (c.entityId && c.entityId.toLowerCase() === key) || (c.entityName && c.entityName.toLowerCase() === key);
+          if (!match) return c;
+          if (c.amount <= remainingToDeduct) {
+            remainingToDeduct -= c.amount;
+            return { ...c, amount: 0 };
+          } else {
+            const nextAmt = c.amount - remainingToDeduct;
+            remainingToDeduct = 0;
+            return { ...c, amount: nextAmt };
+          }
+        }).filter(c => c.amount > 0);
+        AsyncStorage.setItem(KEYS.cashbackCredits, JSON.stringify(next));
+        return next;
+      });
+    }
+    setWalletBalance(prev => {
+      const next = Math.max(0, prev - amount);
+      AsyncStorage.setItem(KEYS.wallet, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const getCashbackBalanceForEntity = useCallback((entityIdOrName?: string): number => {
+    if (!entityIdOrName) return 0;
+    const key = entityIdOrName.trim().toLowerCase();
+    return cashbackCredits
+      .filter(c => (c.entityId && c.entityId.toLowerCase() === key) || (c.entityName && c.entityName.toLowerCase() === key))
+      .reduce((sum, c) => sum + c.amount, 0);
+  }, [cashbackCredits]);
+
   return (
     <AppStoreContext.Provider value={{
       bookings, addBooking, cancelBooking, rescheduleBooking,
@@ -993,6 +1139,7 @@ function notifyCrossTabSync(key: string = KEYS.classes) {
       classes, addClass, updateClass, deleteClass, setClassActive, isClassActive, refreshClasses,
       enrollments, enrollInClass, enrollmentCountForClass, isClassEditable,
       walletBalance, addWalletFunds, deductWalletFunds,
+      cashbackCredits, addCashbackCredit, deductCashbackCredit, getCashbackBalanceForEntity,
       bids, addBid, removeBid,
       offers, addOffer, updateOffer, deleteOffer, toggleOfferStatus, isOfferCodeAvailable, redeemOffer,
       isLoading,
@@ -1051,8 +1198,24 @@ export function useClassStore() {
 }
 
 export function useWalletStore() {
-  const { walletBalance, addWalletFunds, deductWalletFunds } = useAppStore();
-  return { walletBalance, addWalletFunds, deductWalletFunds };
+  const {
+    walletBalance,
+    addWalletFunds,
+    deductWalletFunds,
+    cashbackCredits,
+    addCashbackCredit,
+    deductCashbackCredit,
+    getCashbackBalanceForEntity,
+  } = useAppStore();
+  return {
+    walletBalance,
+    addWalletFunds,
+    deductWalletFunds,
+    cashbackCredits,
+    addCashbackCredit,
+    deductCashbackCredit,
+    getCashbackBalanceForEntity,
+  };
 }
 
 export function useBidStore() {

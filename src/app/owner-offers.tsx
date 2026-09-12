@@ -7,16 +7,19 @@ import {
   TextInput,
   Modal,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { EditIcon } from '@/components/ui/edit-icon';
 import { GradientContainer } from '@/components/gradient-container';
-import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
+import { Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useOfferStore, useTurfStore } from '@/store/app-store';
 import { useToast } from '@/context/ToastContext';
@@ -75,22 +78,19 @@ export default function OwnerOffersScreen() {
   const [draft, setDraft] = useState<DraftState>(EMPTY_DRAFT);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // An offer's *effective* state: a stored 'active' offer whose date has passed
-  // reads as expired here without needing a background job to rewrite it.
   const effectiveStatus = (o: OwnerOffer): FilterKey => {
     if (isExpired(o)) return 'expired';
     return o.status === 'paused' ? 'paused' : 'active';
   };
 
   const visibleOffers = useMemo(() => {
-    const list = filter === 'all' ? offers : offers.filter(o => effectiveStatus(o) === filter);
-    // Live first, then paused, expired last — the owner cares about running promos.
+    const list = filter === 'all' ? offers : offers.filter((o) => effectiveStatus(o) === filter);
     const rank: Record<FilterKey, number> = { active: 0, paused: 1, expired: 2, all: 3 };
     return [...list].sort((a, b) => rank[effectiveStatus(a)] - rank[effectiveStatus(b)]);
   }, [offers, filter]);
 
   const stats = useMemo(() => {
-    const live = offers.filter(o => effectiveStatus(o) === 'active').length;
+    const live = offers.filter((o) => effectiveStatus(o) === 'active').length;
     const redemptions = offers.reduce((sum, o) => sum + o.redeemedCount, 0);
     return { live, redemptions, total: offers.length };
   }, [offers]);
@@ -127,8 +127,10 @@ export default function OwnerOffersScreen() {
     const days = Number(draft.validTillDays);
 
     if (!code) next.code = 'Enter a promo code.';
-    else if (!/^[A-Za-z0-9]{3,15}$/.test(code)) next.code = 'Use 3-15 letters or numbers, no spaces.';
-    else if (!isOfferCodeAvailable(code, editingId ?? undefined)) next.code = 'That code is already in use.';
+    else if (!/^[A-Za-z0-9]{3,15}$/.test(code))
+      next.code = 'Use 3-15 letters or numbers, no spaces.';
+    else if (!isOfferCodeAvailable(code, editingId ?? undefined))
+      next.code = 'That code is already in use.';
 
     if (!draft.title.trim()) next.title = 'Give the offer a name.';
 
@@ -183,7 +185,7 @@ export default function OwnerOffersScreen() {
   const confirmDelete = (offer: OwnerOffer) => {
     Alert.alert(
       'Delete offer?',
-      `${offer.code} will stop working immediately for anyone who has it saved.`,
+      `${offer.code} will stop working immediately for players.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -199,7 +201,7 @@ export default function OwnerOffersScreen() {
   };
 
   const turfOptions = useMemo(
-    () => ['All Turfs', ...ownedTurfs.map(t => t.name)],
+    () => ['All Turfs', ...ownedTurfs.map((t) => t.name)],
     [ownedTurfs]
   );
 
@@ -208,9 +210,21 @@ export default function OwnerOffersScreen() {
     const left = redemptionsLeft(offer);
     const capped = left === 0;
     const statusColor =
-      status === 'active' ? (capped ? '#d97706' : '#0f9f58') : status === 'paused' ? '#64748b' : '#b91c1c';
+      status === 'active'
+        ? capped
+          ? '#F59E0B'
+          : '#10B981'
+        : status === 'paused'
+        ? '#64748B'
+        : '#EF4444';
     const statusLabel =
-      status === 'expired' ? 'Expired' : status === 'paused' ? 'Paused' : capped ? 'Fully claimed' : 'Live';
+      status === 'expired'
+        ? 'Expired'
+        : status === 'paused'
+        ? 'Paused'
+        : capped
+        ? 'Fully claimed'
+        : 'Live';
 
     const usedPct =
       offer.maxRedemptions > 0
@@ -220,7 +234,7 @@ export default function OwnerOffersScreen() {
     return (
       <Reanimated.View
         key={offer.id}
-        entering={FadeInDown.delay(index * 60).duration(400)}
+        entering={FadeInDown.delay(index * 50).duration(350)}
         style={[
           styles.offerCard,
           {
@@ -228,29 +242,28 @@ export default function OwnerOffersScreen() {
             borderColor: theme.outlineVariant + '33',
             opacity: status === 'expired' ? 0.72 : 1,
           },
-          Shadows.level2,
+          Shadows.level1,
         ]}
       >
         <View style={styles.offerTopRow}>
           <View style={[styles.discountTile, { backgroundColor: theme.primary + '14' }]}>
             <ThemedText style={[styles.discountValue, { color: theme.primary }]}>
-              {offer.discountType === 'percent' ? `${offer.discountValue}%` : `₹${offer.discountValue}`}
+              {offer.discountType === 'percent'
+                ? `${offer.discountValue}%`
+                : `₹${offer.discountValue}`}
             </ThemedText>
             <ThemedText style={[styles.discountOff, { color: theme.primary }]}>OFF</ThemedText>
           </View>
 
           <View style={styles.offerHeadings}>
-            <ThemedText
-              style={[styles.offerTitle, { color: theme.text }]}
-              numberOfLines={2}
-            >
+            <ThemedText style={[styles.offerTitle, { color: theme.text }]} numberOfLines={2}>
               {offer.title}
             </ThemedText>
             <ThemedText
               style={[styles.offerDesc, { color: theme.textSecondary }]}
               numberOfLines={2}
             >
-              {offer.description || 'No description added.'}
+              {offer.description || 'Valid on turf bookings.'}
             </ThemedText>
             <View style={styles.statusRow}>
               <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
@@ -261,8 +274,17 @@ export default function OwnerOffersScreen() {
           </View>
         </View>
 
-        <View style={[styles.codeStrip, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
-          <MaterialCommunityIcons name="ticket-confirmation-outline" size={15} color={theme.primary} />
+        <View
+          style={[
+            styles.codeStrip,
+            { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="ticket-confirmation-outline"
+            size={15}
+            color={theme.primary}
+          />
           <ThemedText style={[styles.codeText, { color: theme.text }]}>{offer.code}</ThemedText>
           <View style={{ flex: 1 }} />
           <ThemedText style={[styles.codeMeta, { color: theme.textSecondary }]} numberOfLines={1}>
@@ -272,22 +294,28 @@ export default function OwnerOffersScreen() {
 
         <View style={styles.metaGrid}>
           <View style={styles.metaCell}>
-            <ThemedText style={[styles.metaLabel, { color: theme.textSecondary }]}>Min booking</ThemedText>
+            <ThemedText style={[styles.metaLabel, { color: theme.textSecondary }]}>
+              Min Booking
+            </ThemedText>
             <ThemedText style={[styles.metaValue, { color: theme.text }]}>
               {offer.minBooking > 0 ? `₹${offer.minBooking}` : 'None'}
             </ThemedText>
           </View>
           <View style={styles.metaCell}>
-            <ThemedText style={[styles.metaLabel, { color: theme.textSecondary }]}>Valid till</ThemedText>
+            <ThemedText style={[styles.metaLabel, { color: theme.textSecondary }]}>
+              Valid Till
+            </ThemedText>
             <ThemedText style={[styles.metaValue, { color: theme.text }]}>
               {formatValidTill(offer.validTill)}
             </ThemedText>
           </View>
           <View style={styles.metaCell}>
-            <ThemedText style={[styles.metaLabel, { color: theme.textSecondary }]}>Redeemed</ThemedText>
+            <ThemedText style={[styles.metaLabel, { color: theme.textSecondary }]}>
+              Redeemed
+            </ThemedText>
             <ThemedText style={[styles.metaValue, { color: theme.text }]}>
               {offer.maxRedemptions > 0
-                ? `${offer.redeemedCount} / ${offer.maxRedemptions}`
+                ? `${offer.redeemedCount}/${offer.maxRedemptions}`
                 : `${offer.redeemedCount}`}
             </ThemedText>
           </View>
@@ -298,7 +326,7 @@ export default function OwnerOffersScreen() {
             <View
               style={[
                 styles.usageFill,
-                { width: `${usedPct}%`, backgroundColor: capped ? '#d97706' : theme.primary },
+                { width: `${usedPct}%`, backgroundColor: capped ? '#F59E0B' : theme.primary },
               ]}
             />
           </View>
@@ -310,22 +338,25 @@ export default function OwnerOffersScreen() {
             disabled={status === 'expired'}
             hitSlop={6}
             accessibilityRole="button"
-            accessibilityLabel={offer.status === 'active' ? `Pause ${offer.code}` : `Resume ${offer.code}`}
-            style={[
+            accessibilityLabel={
+              offer.status === 'active' ? `Pause ${offer.code}` : `Resume ${offer.code}`
+            }
+            style={({ pressed }) => [
               styles.actionBtn,
               {
                 backgroundColor: theme.surfaceLow,
                 borderColor: theme.outlineVariant + '44',
-                opacity: status === 'expired' ? 0.45 : 1,
+                opacity: status === 'expired' ? 0.45 : pressed ? 0.75 : 1,
               },
             ]}
           >
             <Ionicons
               name={offer.status === 'active' ? 'pause' : 'play'}
-              size={13}
+              size={12}
               color={theme.text}
+              style={{ marginRight: 4 }}
             />
-            <ThemedText style={[styles.actionText, { color: theme.text }]}>
+            <ThemedText style={[styles.actionBtnText, { color: theme.text }]}>
               {offer.status === 'active' ? 'Pause' : 'Resume'}
             </ThemedText>
           </Pressable>
@@ -335,38 +366,59 @@ export default function OwnerOffersScreen() {
             hitSlop={6}
             accessibilityRole="button"
             accessibilityLabel={`Edit ${offer.code}`}
-            style={[styles.actionBtn, { backgroundColor: theme.primary }]}
+            style={({ pressed }) => [
+              styles.actionBtn,
+              {
+                backgroundColor: theme.surfaceLow,
+                borderColor: theme.outlineVariant + '44',
+              },
+              pressed && { opacity: 0.75 },
+            ]}
           >
-            <EditIcon size={13} />
-            <ThemedText style={[styles.actionText, { color: '#ffffff' }]}>Edit</ThemedText>
+            <View style={{ marginRight: 4 }}>
+              <EditIcon size={12} />
+            </View>
+            <ThemedText style={[styles.actionBtnText, { color: theme.text }]}>Edit</ThemedText>
           </Pressable>
 
           <Pressable
             onPress={() => confirmDelete(offer)}
-            hitSlop={10}
+            hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={`Delete ${offer.code}`}
-            style={[styles.deleteBtn, { borderColor: '#fecaca', backgroundColor: '#fef2f2' }]}
+            style={({ pressed }) => [
+              styles.deleteBtn,
+              { borderColor: '#EF444433', backgroundColor: '#EF444415' },
+              pressed && { opacity: 0.75 },
+            ]}
           >
-            <Ionicons name="trash-outline" size={14} color="#b91c1c" />
+            <Ionicons name="trash-outline" size={13} color="#EF4444" />
           </Pressable>
         </View>
       </Reanimated.View>
     );
   };
 
-  const field = (
+  const renderField = (
     label: string,
     key: keyof DraftState,
-    opts: { placeholder?: string; keyboardType?: 'default' | 'numeric'; multiline?: boolean; autoCapitalize?: 'none' | 'characters' | 'sentences' } = {}
+    opts: {
+      placeholder?: string;
+      keyboardType?: 'default' | 'numeric';
+      multiline?: boolean;
+      autoCapitalize?: 'none' | 'characters' | 'sentences';
+    } = {}
   ) => (
     <View style={styles.fieldBlock}>
-      <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>{label}</ThemedText>
-      <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+      <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+        {label}
+      </ThemedText>
+      <TextInput
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
         value={draft[key] as string}
-        onChangeText={v => setDraft(prev => ({ ...prev, [key]: v }))}
+        onChangeText={(v) => setDraft((prev) => ({ ...prev, [key]: v }))}
         placeholder={opts.placeholder}
-        placeholderTextColor={theme.textSecondary + '99'}
+        placeholderTextColor={theme.placeholder}
         keyboardType={opts.keyboardType ?? 'default'}
         multiline={opts.multiline}
         autoCapitalize={opts.autoCapitalize ?? 'sentences'}
@@ -376,188 +428,240 @@ export default function OwnerOffersScreen() {
           {
             backgroundColor: theme.surfaceLow,
             color: theme.text,
-            borderColor: errors[key] ? '#ef4444' : theme.outlineVariant + '44',
+            borderColor: errors[key] ? '#EF4444' : theme.outlineVariant + '44',
           },
         ]}
       />
-      {!!errors[key] && (
-        <ThemedText style={styles.errorText}>{errors[key]}</ThemedText>
-      )}
+      {!!errors[key] && <ThemedText style={styles.errorText}>{errors[key]}</ThemedText>}
     </View>
   );
 
   return (
     <GradientContainer screenName="wallet" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header */}
+        {/* Header Stack Bar */}
         <View style={styles.header}>
           <Pressable
-            onPress={() => router.back()}
-            hitSlop={10}
-            style={styles.backBtn}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+            hitSlop={8}
+            style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={22} color={theme.text} />
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="headlineLg" style={{ color: theme.text }}>
-              Vouchers & Offers
-            </ThemedText>
-            <ThemedText style={{ color: theme.textSecondary, fontSize: 11, marginTop: 2 }}>
-              Promo codes players can redeem at your turf
-            </ThemedText>
-          </View>
+          <ThemedText style={[styles.headerTitle, { color: theme.text }]}>
+            Vouchers & Offers
+          </ThemedText>
+          <Pressable
+            onPress={openCreate}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.headerActionBtn,
+              { backgroundColor: theme.primary + '18' },
+              pressed && { opacity: 0.7 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Create offer"
+          >
+            <Ionicons name="add" size={20} color={theme.primary} />
+          </Pressable>
         </View>
 
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Summary */}
-          <Reanimated.View
-            entering={FadeInDown.duration(400)}
-            style={[styles.summaryCard, { backgroundColor: theme.primaryContainer }, Shadows.level3]}
+          {/* Ambient Header Floodlight Wash */}
+          <LinearGradient
+            colors={[theme.primary + '18', theme.primary + '04', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.ambientWash}
+            pointerEvents="none"
+          />
+
+          {/* Summary Bento Card */}
+          <View
+            style={[
+              styles.summaryCard,
+              {
+                backgroundColor: theme.surfaceLowest,
+                borderColor: theme.outlineVariant + '33',
+              },
+              Shadows.level1,
+            ]}
           >
             <View style={styles.summaryCell}>
-              <ThemedText style={styles.summaryValue}>{stats.live}</ThemedText>
-              <ThemedText style={styles.summaryLabel}>Live now</ThemedText>
+              <ThemedText style={[styles.summaryValue, { color: '#10B981' }]}>
+                {stats.live}
+              </ThemedText>
+              <ThemedText style={[styles.summaryLabel, { color: theme.textSecondary }]}>
+                LIVE NOW
+              </ThemedText>
             </View>
-            <View style={styles.summaryDivider} />
+            <View
+              style={[
+                styles.summaryDivider,
+                { backgroundColor: theme.outlineVariant + '22' },
+              ]}
+            />
             <View style={styles.summaryCell}>
-              <ThemedText style={styles.summaryValue}>{stats.redemptions}</ThemedText>
-              <ThemedText style={styles.summaryLabel}>Redemptions</ThemedText>
+              <ThemedText style={[styles.summaryValue, { color: theme.primary }]}>
+                {stats.redemptions}
+              </ThemedText>
+              <ThemedText style={[styles.summaryLabel, { color: theme.textSecondary }]}>
+                REDEMPTIONS
+              </ThemedText>
             </View>
-            <View style={styles.summaryDivider} />
+            <View
+              style={[
+                styles.summaryDivider,
+                { backgroundColor: theme.outlineVariant + '22' },
+              ]}
+            />
             <View style={styles.summaryCell}>
-              <ThemedText style={styles.summaryValue}>{stats.total}</ThemedText>
-              <ThemedText style={styles.summaryLabel}>Total offers</ThemedText>
+              <ThemedText style={[styles.summaryValue, { color: theme.text }]}>
+                {stats.total}
+              </ThemedText>
+              <ThemedText style={[styles.summaryLabel, { color: theme.textSecondary }]}>
+                TOTAL OFFERS
+              </ThemedText>
             </View>
-          </Reanimated.View>
+          </View>
 
-          {/* Create button */}
-          <Pressable
-            onPress={openCreate}
-            accessibilityRole="button"
-            accessibilityLabel="Create a new offer"
-            style={[styles.createBtn, { backgroundColor: theme.primary }, Shadows.primary]}
-          >
-            <Ionicons name="add" size={18} color="#ffffff" />
-            <ThemedText style={styles.createBtnText}>Create New Offer</ThemedText>
-          </Pressable>
-
-          {/* Filters */}
+          {/* Filter Pills */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterRow}
           >
-            {FILTERS.map(f => {
-              const active = filter === f.key;
+            {FILTERS.map((item) => {
+              const active = filter === item.key;
               return (
                 <Pressable
-                  key={f.key}
-                  onPress={() => setFilter(f.key)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
+                  key={item.key}
+                  onPress={() => setFilter(item.key)}
                   style={[
                     styles.filterChip,
                     {
-                      backgroundColor: active ? theme.primary : theme.surfaceLowest,
+                      backgroundColor: active ? theme.primary : theme.surfaceLow,
                       borderColor: active ? theme.primary : theme.outlineVariant + '44',
                     },
                   ]}
+                  accessibilityRole="button"
                 >
                   <ThemedText
-                    style={{
-                      fontSize: 12,
-                      fontFamily: active ? 'Sora_600SemiBold' : 'Sora_600SemiBold',
-                      color: active ? '#ffffff' : theme.textSecondary,
-                    }}
+                    style={[
+                      styles.filterChipText,
+                      { color: active ? '#ffffff' : theme.textSecondary },
+                    ]}
                   >
-                    {f.label}
+                    {item.label}
                   </ThemedText>
                 </Pressable>
               );
             })}
           </ScrollView>
 
-          {/* List */}
-          {visibleOffers.length === 0 ? (
-            <View style={styles.emptyState}>
-              <MaterialCommunityIcons
-                name="ticket-percent-outline"
-                size={46}
-                color={theme.textSecondary}
-              />
-              <ThemedText style={[styles.emptyTitle, { color: theme.text }]}>
-                {filter === 'all' ? 'No offers yet' : `No ${filter} offers`}
+          {/* Section Indicator Bar Header */}
+          <View style={styles.sectionHeaderRow}>
+            <View style={[styles.sectionIndicatorBar, { backgroundColor: theme.primary }]} />
+            <ThemedText style={[styles.sectionLabel, { color: theme.textSecondary }]}>
+              YOUR OFFERS
+            </ThemedText>
+            <View style={[styles.countBadge, { backgroundColor: theme.surfaceLow }]}>
+              <ThemedText style={[styles.countBadgeText, { color: theme.textSecondary }]}>
+                {visibleOffers.length}
               </ThemedText>
-              <ThemedText style={[styles.emptyBody, { color: theme.textSecondary }]}>
-                {filter === 'all'
-                  ? 'Create a promo code to fill quiet slots and bring teams back.'
-                  : 'Try a different filter to see your other offers.'}
+            </View>
+          </View>
+
+          {visibleOffers.length === 0 ? (
+            <View
+              style={[
+                styles.emptyCard,
+                {
+                  backgroundColor: theme.surfaceLowest,
+                  borderColor: theme.outlineVariant + '33',
+                },
+              ]}
+            >
+              <View style={[styles.emptyIconCircle, { backgroundColor: theme.surfaceLow }]}>
+                <MaterialCommunityIcons
+                  name="ticket-percent-outline"
+                  size={22}
+                  color={theme.textSecondary}
+                />
+              </View>
+              <ThemedText style={[styles.emptyTitle, { color: theme.text }]}>
+                No Offers Found
+              </ThemedText>
+              <ThemedText style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+                Create promotional discount codes for players booking your turf slots.
               </ThemedText>
             </View>
           ) : (
-            visibleOffers.map(renderOfferCard)
+            <View style={styles.offersList}>{visibleOffers.map(renderOfferCard)}</View>
           )}
         </ScrollView>
 
-        {/* Create / Edit editor */}
+        {/* Create / Edit Modal */}
         <Modal
           visible={editorOpen}
           transparent
           animationType="slide"
           onRequestClose={() => setEditorOpen(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalSheet, { backgroundColor: theme.background }]}>
-              <View style={[styles.modalHeader, { borderBottomColor: theme.outlineVariant + '33' }]}>
-                <ThemedText type="headlineLg" style={{ color: theme.text }}>
-                  {editingId ? 'Edit Offer' : 'New Offer'}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalOverlay}
+          >
+            <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest }]}>
+              <View style={styles.modalHeaderRow}>
+                <ThemedText style={[styles.modalTitle, { color: theme.text }]}>
+                  {editingId ? 'Edit Offer' : 'Create New Offer'}
                 </ThemedText>
                 <Pressable
                   onPress={() => setEditorOpen(false)}
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel="Close"
+                  hitSlop={8}
+                  style={({ pressed }) => [styles.modalCloseBtn, pressed && { opacity: 0.7 }]}
                 >
-                  <Ionicons name="close" size={22} color={theme.text} />
+                  <Ionicons name="close" size={20} color={theme.textSecondary} />
                 </Pressable>
               </View>
 
               <ScrollView
+                style={{ maxHeight: 420 }}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.modalBody}
-                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ gap: 10, paddingVertical: 4 }}
               >
-                {field('Promo code', 'code', {
-                  placeholder: 'WEEKDAY20',
+                {renderField('Promo Code', 'code', {
+                  placeholder: 'e.g. MON10',
                   autoCapitalize: 'characters',
                 })}
-                {field('Offer name', 'title', { placeholder: 'Weekday Morning Saver' })}
-                {field('Description', 'description', {
-                  placeholder: 'What do players get, and when?',
+                {renderField('Offer Title', 'title', {
+                  placeholder: 'e.g. 10% Off Weekdays',
+                })}
+                {renderField('Description', 'description', {
+                  placeholder: 'Terms & conditions or details',
                   multiline: true,
                 })}
 
-                {/* Discount type */}
+                {/* Discount Type Selector */}
                 <View style={styles.fieldBlock}>
                   <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
-                    Discount type
+                    Discount Type
                   </ThemedText>
-                  <View style={styles.segmented}>
-                    {(['percent', 'flat'] as OfferDiscountType[]).map(t => {
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {(['percent', 'fixed'] as OfferDiscountType[]).map((t) => {
                       const active = draft.discountType === t;
                       return (
                         <Pressable
                           key={t}
-                          onPress={() => setDraft(prev => ({ ...prev, discountType: t }))}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: active }}
+                          onPress={() => setDraft((prev) => ({ ...prev, discountType: t }))}
                           style={[
-                            styles.segment,
+                            styles.typeChip,
                             {
                               backgroundColor: active ? theme.primary : theme.surfaceLow,
                               borderColor: active ? theme.primary : theme.outlineVariant + '44',
@@ -565,13 +669,12 @@ export default function OwnerOffersScreen() {
                           ]}
                         >
                           <ThemedText
-                            style={{
-                              fontSize: 12,
-                              fontFamily: 'Sora_500Medium',
-                              color: active ? '#ffffff' : theme.textSecondary,
-                            }}
+                            style={[
+                              styles.typeChipText,
+                              { color: active ? '#ffffff' : theme.textSecondary },
+                            ]}
                           >
-                            {t === 'percent' ? 'Percentage (%)' : 'Flat amount (₹)'}
+                            {t === 'percent' ? 'Percentage (%)' : 'Flat Amount (₹)'}
                           </ThemedText>
                         </Pressable>
                       );
@@ -579,40 +682,50 @@ export default function OwnerOffersScreen() {
                   </View>
                 </View>
 
-                {field(
-                  draft.discountType === 'percent' ? 'Discount (%)' : 'Discount (₹)',
+                {renderField(
+                  draft.discountType === 'percent' ? 'Discount Percentage (%)' : 'Discount Amount (₹)',
                   'discountValue',
-                  { placeholder: draft.discountType === 'percent' ? '20' : '150', keyboardType: 'numeric' }
+                  { placeholder: 'e.g. 15', keyboardType: 'numeric' }
                 )}
-                {field('Minimum booking (₹) — optional', 'minBooking', {
-                  placeholder: '0',
-                  keyboardType: 'numeric',
-                })}
-                {field('Redemption limit — blank for unlimited', 'maxRedemptions', {
-                  placeholder: 'Unlimited',
-                  keyboardType: 'numeric',
-                })}
-                {field('Run for (days)', 'validTillDays', {
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    {renderField('Min Booking (₹)', 'minBooking', {
+                      placeholder: '0 for none',
+                      keyboardType: 'numeric',
+                    })}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    {renderField('Redemption Limit', 'maxRedemptions', {
+                      placeholder: '0 for unlimited',
+                      keyboardType: 'numeric',
+                    })}
+                  </View>
+                </View>
+
+                {renderField('Valid Duration (Days)', 'validTillDays', {
                   placeholder: '30',
                   keyboardType: 'numeric',
                 })}
 
-                {/* Applies to */}
+                {/* Turf Scope Selector */}
                 <View style={styles.fieldBlock}>
                   <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
-                    Applies to
+                    Applies To Turf
                   </ThemedText>
-                  <View style={styles.chipWrap}>
-                    {turfOptions.map(name => {
-                      const active = draft.appliesTo === name;
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+                  >
+                    {turfOptions.map((opt) => {
+                      const active = draft.appliesTo === opt;
                       return (
                         <Pressable
-                          key={name}
-                          onPress={() => setDraft(prev => ({ ...prev, appliesTo: name }))}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: active }}
+                          key={opt}
+                          onPress={() => setDraft((prev) => ({ ...prev, appliesTo: opt }))}
                           style={[
-                            styles.turfChip,
+                            styles.scopeChip,
                             {
                               backgroundColor: active ? theme.primary : theme.surfaceLow,
                               borderColor: active ? theme.primary : theme.outlineVariant + '44',
@@ -620,43 +733,51 @@ export default function OwnerOffersScreen() {
                           ]}
                         >
                           <ThemedText
-                            style={{
-                              fontSize: 11.5,
-                              fontFamily: 'Sora_500Medium',
-                              color: active ? '#ffffff' : theme.textSecondary,
-                            }}
+                            style={[
+                              styles.scopeChipText,
+                              { color: active ? '#ffffff' : theme.text },
+                            ]}
                           >
-                            {name}
+                            {opt}
                           </ThemedText>
                         </Pressable>
                       );
                     })}
-                  </View>
+                  </ScrollView>
                 </View>
               </ScrollView>
 
-              <View style={[styles.modalFooter, { borderTopColor: theme.outlineVariant + '33' }]}>
+              <View style={styles.modalButtons}>
                 <Pressable
+                  style={({ pressed }) => [
+                    styles.modalBtn,
+                    {
+                      borderColor: theme.outlineVariant + '55',
+                      backgroundColor: theme.surfaceLow,
+                    },
+                    pressed && { opacity: 0.75 },
+                  ]}
                   onPress={() => setEditorOpen(false)}
-                  style={[styles.footerBtn, { backgroundColor: theme.surfaceLow }]}
-                  accessibilityRole="button"
                 >
-                  <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 13 }}>
+                  <ThemedText style={[styles.modalBtnText, { color: theme.text }]}>
                     Cancel
                   </ThemedText>
                 </Pressable>
                 <Pressable
+                  style={({ pressed }) => [
+                    styles.modalBtn,
+                    { backgroundColor: theme.primary },
+                    pressed && { opacity: 0.85 },
+                  ]}
                   onPress={handleSave}
-                  style={[styles.footerBtn, { backgroundColor: theme.primary, flex: 1.4 }]}
-                  accessibilityRole="button"
                 >
-                  <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 13 }}>
-                    {editingId ? 'Save changes' : 'Publish offer'}
+                  <ThemedText style={[styles.modalBtnText, { color: '#ffffff' }]}>
+                    {editingId ? 'Save Changes' : 'Publish Offer'}
                   </ThemedText>
                 </Pressable>
               </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </Modal>
       </SafeAreaView>
     </GradientContainer>
@@ -664,307 +785,363 @@ export default function OwnerOffersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safeArea: { flex: 1 },
+  container: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.containerMargin,
-    paddingVertical: Spacing.sm,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    height: 48,
+    zIndex: 10,
   },
-  backBtn: { padding: 4 },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 14.5,
+  },
+  ambientWash: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 140,
+  },
   scrollContent: {
-    paddingHorizontal: Spacing.containerMargin,
-    paddingBottom: 60,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 40,
   },
-
   summaryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: BorderRadius.xl,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    marginTop: Spacing.xs,
+    borderRadius: 20,
+    borderWidth: 1.2,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    marginBottom: 12,
   },
-  summaryCell: { flex: 1, alignItems: 'center' },
+  summaryCell: {
+    flex: 1,
+    alignItems: 'center',
+  },
   summaryValue: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontFamily: 'Sora_500Medium',
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 14.5,
   },
   summaryLabel: {
-    color: 'rgba(255,255,255,0.82)',
-    fontSize: 10.5,
     fontFamily: 'Sora_500Medium',
-    marginTop: 4,
+    fontSize: 8.5,
+    letterSpacing: 0.5,
+    marginTop: 2,
   },
   summaryDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    height: 24,
   },
-
-  createBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    height: 46,
-    borderRadius: BorderRadius.lg,
-    marginTop: Spacing.md,
-  },
-  createBtnText: {
-    color: '#ffffff',
-    fontSize: 13.5,
-    fontFamily: 'Sora_500Medium',
-  },
-
   filterRow: {
-    flexDirection: 'row',
     gap: 8,
-    paddingVertical: Spacing.md,
+    paddingBottom: 10,
   },
   filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1.2,
   },
-
+  filterChipText: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 11,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  sectionIndicatorBar: {
+    width: 3.5,
+    height: 14,
+    borderRadius: 2,
+    marginRight: 7,
+  },
+  sectionLabel: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 10,
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
+  },
+  countBadge: {
+    marginLeft: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 999,
+  },
+  countBadgeText: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 9.5,
+  },
+  offersList: {
+    gap: 12,
+  },
   offerCard: {
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
+    borderRadius: 20,
+    borderWidth: 1.2,
     padding: 14,
-    marginBottom: 14,
   },
   offerTopRow: {
     flexDirection: 'row',
     gap: 12,
   },
   discountTile: {
-    width: 62,
-    height: 62,
-    borderRadius: BorderRadius.lg,
-    alignItems: 'center',
+    width: 50,
+    height: 50,
+    borderRadius: 15,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   discountValue: {
-    fontSize: 17,
-    fontFamily: 'Sora_500Medium',
+    fontFamily: 'Sora_700Bold',
+    fontSize: 14.5,
   },
   discountOff: {
-    fontSize: 9,
     fontFamily: 'Sora_500Medium',
+    fontSize: 8,
     letterSpacing: 0.6,
-    marginTop: 1,
   },
-  offerHeadings: { flex: 1 },
+  offerHeadings: {
+    flex: 1,
+    minWidth: 0,
+  },
   offerTitle: {
-    fontSize: 14,
-    lineHeight: 19,
     fontFamily: 'Sora_500Medium',
+    fontSize: 14,
   },
   offerDesc: {
-    fontSize: 11.5,
-    lineHeight: 16,
     fontFamily: 'Sora_400Regular',
-    marginTop: 4,
+    fontSize: 11,
+    marginTop: 2,
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    marginTop: 7,
+    marginTop: 4,
   },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   statusText: {
-    fontSize: 10.5,
     fontFamily: 'Sora_500Medium',
+    fontSize: 10,
   },
-
   codeStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    borderRadius: BorderRadius.md,
+    gap: 6,
+    borderRadius: 12,
     borderWidth: 1,
-    borderStyle: 'dashed',
     paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginTop: 12,
+    paddingVertical: 6,
+    marginTop: 10,
   },
   codeText: {
-    fontSize: 13,
-    fontFamily: 'Sora_500Medium',
-    letterSpacing: 1,
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 12,
+    letterSpacing: 0.8,
   },
   codeMeta: {
+    fontFamily: 'Sora_400Regular',
     fontSize: 10.5,
-    fontFamily: 'Sora_500Medium',
-    maxWidth: '48%',
   },
-
   metaGrid: {
     flexDirection: 'row',
-    marginTop: 12,
-    gap: 10,
+    justifyContent: 'space-between',
+    marginTop: 10,
   },
-  metaCell: { flex: 1 },
+  metaCell: {
+    flex: 1,
+  },
   metaLabel: {
-    fontSize: 9.5,
-    fontFamily: 'Sora_500Medium',
-    marginBottom: 3,
+    fontFamily: 'Sora_400Regular',
+    fontSize: 10,
   },
   metaValue: {
-    fontSize: 12,
     fontFamily: 'Sora_500Medium',
+    fontSize: 11.5,
+    marginTop: 1,
   },
-
   usageTrack: {
     height: 4,
     borderRadius: 2,
-    marginTop: 12,
+    marginTop: 10,
     overflow: 'hidden',
   },
-  usageFill: { height: '100%', borderRadius: 2 },
-
+  usageFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
   offerActions: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
-    marginTop: 14,
+    marginTop: 12,
   },
   actionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    height: 38,
-    borderRadius: BorderRadius.md,
+    height: 34,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'transparent',
   },
-  actionText: {
-    fontSize: 12,
+  actionBtnText: {
     fontFamily: 'Sora_500Medium',
+    fontSize: 11,
   },
   deleteBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    alignItems: 'center',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     justifyContent: 'center',
-  },
-
-  emptyState: {
     alignItems: 'center',
-    paddingVertical: 56,
-    paddingHorizontal: Spacing.lg,
+    borderWidth: 1,
   },
-  emptyTitle: {
-    fontSize: 15,
-    fontFamily: 'Sora_500Medium',
-    marginTop: 14,
+  fieldBlock: {
+    marginBottom: 4,
   },
-  emptyBody: {
-    fontSize: 12,
-    lineHeight: 18,
-    fontFamily: 'Sora_400Regular',
-    textAlign: 'center',
-    marginTop: 6,
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    maxHeight: '92%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.containerMargin,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  modalBody: {
-    paddingHorizontal: Spacing.containerMargin,
-    paddingTop: 16,
-    paddingBottom: 24,
-  },
-  fieldBlock: { marginBottom: 16 },
   fieldLabel: {
-    fontSize: 11,
     fontFamily: 'Sora_500Medium',
-    marginBottom: 6,
+    fontSize: 11,
+    marginBottom: 5,
+    letterSpacing: 0.2,
   },
   input: {
-    height: 46,
-    borderRadius: BorderRadius.md,
     borderWidth: 1,
-    paddingHorizontal: 12,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 44,
     fontSize: 13,
-    fontFamily: 'Sora_500Medium',
+    fontFamily: 'Sora_400Regular',
     includeFontPadding: false,
-    paddingVertical: 0,
   },
   inputMultiline: {
-    height: 82,
-    paddingTop: 12,
+    height: 64,
+    paddingTop: 8,
     textAlignVertical: 'top',
-    includeFontPadding: false,
-    paddingVertical: 0,
   },
   errorText: {
-    color: '#ef4444',
+    fontFamily: 'Sora_400Regular',
     fontSize: 10.5,
-    fontFamily: 'Sora_500Medium',
-    marginTop: 5,
+    color: '#EF4444',
+    marginTop: 3,
   },
-  segmented: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  segment: {
+  typeChip: {
     flex: 1,
-    height: 42,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  turfChip: {
-    paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: BorderRadius.md,
+    borderRadius: 12,
+    borderWidth: 1.2,
+  },
+  typeChipText: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 11,
+  },
+  scopeChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1.2,
+  },
+  scopeChipText: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 11,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(5, 21, 30, 0.55)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 36,
+    gap: 12,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 14.5,
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 6,
+  },
+  modalBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
   },
-  modalFooter: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: Spacing.containerMargin,
-    paddingTop: 12,
-    paddingBottom: 24,
-    borderTopWidth: 1,
+  modalBtnText: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 12,
   },
-  footerBtn: {
-    flex: 1,
-    height: 46,
-    borderRadius: BorderRadius.md,
+  emptyCard: {
+    borderRadius: 20,
+    borderWidth: 1.2,
+    padding: 28,
     alignItems: 'center',
+    marginTop: 12,
+  },
+  emptyIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  emptyTitle: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 14.5,
+  },
+  emptySubtitle: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11.5,
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 16,
   },
 });

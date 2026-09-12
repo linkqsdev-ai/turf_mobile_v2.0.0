@@ -28,7 +28,30 @@ import {
   registrationBlocker,
   spotsRemaining,
   generateFixtures,
+  buildTournamentFixtures,
+  shouldAutoGenerateFixtures,
+  datesInWindow,
+  isoDateParts,
+  parseKickoff,
+  formatKickoff,
+  fixtureDateIssue,
+  kickoffToMinutes,
+  minutesToKickoff,
+  matchLengthMinutes,
+  kickoffSlots,
+  scheduleAtVenue,
+  findOverlap,
+  refreshLegacyFixtures,
+  isLegacyPitch,
+  squadPlayerLimit,
+  nextFixture,
+  describeFixture,
+  renameFixtureVenue,
+  hostTournamentStatus,
   roundName,
+  scheduleRoundDates,
+  voucherMaxDays,
+  formatDefaultsFor,
 } from '@/store/tournament-store';
 
 let passed = 0;
@@ -285,6 +308,210 @@ export function runTournamentRulesTests() {
     const ids = eight.map(f => f.id);
     return new Set(ids).size === ids.length;
   })(), true);
+
+  // ── Fixture dates ────────────────────────────────────────────────────────
+  // Every fixture took the start date, so the final shared a day with the QFs.
+  const rounds3 = ['Quarter Final', 'Semi Final', 'Final'];
+  const d3 = scheduleRoundDates(rounds3, '2026-10-01', '2026-10-07');
+  check('REGRESSION: the opening round is on the start date', d3['Quarter Final'], '2026-10-01');
+  check('the final is on the end date', d3['Final'], '2026-10-07');
+  check('the middle round sits between', d3['Semi Final'], '2026-10-04');
+  check('rounds get distinct dates', new Set(Object.values(d3)).size, 3);
+  check(
+    'a final-only draw is played on the end date',
+    scheduleRoundDates(['Final'], '2026-10-01', '2026-10-07')['Final'],
+    '2026-10-07'
+  );
+  check(
+    'a one-day window puts every round on that day',
+    Object.values(scheduleRoundDates(rounds3, '2026-10-01', '2026-10-01')),
+    ['2026-10-01', '2026-10-01', '2026-10-01']
+  );
+  check('an end before the start collapses to the start', scheduleRoundDates(['Final'], '2026-10-05', '2026-10-01')['Final'], '2026-10-05');
+  check('no start date yields no dates', scheduleRoundDates(rounds3, undefined, '2026-10-07'), {});
+  check('month boundaries are crossed correctly', scheduleRoundDates(['A', 'B'], '2026-09-30', '2026-10-02')['B'], '2026-10-02');
+
+  // ── Voucher validity ─────────────────────────────────────────────────────
+  const today = new Date(2026, 8, 10);
+  check('a voucher can run until the tournament ends', voucherMaxDays('2026-09-30', today), 20);
+  check('a tournament ending tomorrow allows one day', voucherMaxDays('2026-09-11', today), 1);
+  check('a past end date still allows a minimum of one day', voucherMaxDays('2026-09-01', today), 1);
+  check('no end date means no cap', voucherMaxDays(undefined, today), null);
+
+  // ── Sport format defaults ────────────────────────────────────────────────
+  check('cricket points mention ties, not draws', formatDefaultsFor('Cricket').pointSystem.includes('Tie'), true);
+  check('football points mention draws', formatDefaultsFor('Football').pointSystem.includes('Draw'), true);
+  check('the two sports differ', formatDefaultsFor('Cricket').pointSystem !== formatDefaultsFor('Football').pointSystem, true);
+  check('an unknown sport falls back to football', formatDefaultsFor('Kabaddi'), formatDefaultsFor('Football'));
+
+  // ── Automatic draw on a full roster ──────────────────────────────────────
+  check('a full roster with no fixtures is drawn', shouldAutoGenerateFixtures({ maxTeams: 4, fixtures: [] }, 4), true);
+  check('a roster with spaces left is not drawn', shouldAutoGenerateFixtures({ maxTeams: 4 }, 3), false);
+  check(
+    'an existing draw is never replaced',
+    shouldAutoGenerateFixtures({ maxTeams: 4, fixtures: [{ id: 'fx-1' }] }, 4),
+    false
+  );
+  check('no team cap means no automatic draw', shouldAutoGenerateFixtures({ maxTeams: 0 }, 6), false);
+  check('one team is never drawn', shouldAutoGenerateFixtures({ maxTeams: 1 }, 1), false);
+  check('a missing tournament is not drawn', shouldAutoGenerateFixtures(undefined, 4), false);
+
+  const built = buildTournamentFixtures(['A', 'B', 'C', 'D'], '2026-10-01', '2026-10-03');
+  check('four teams build two semis and a final', built.map(f => f.matchNo), ['SF 1', 'SF 2', 'Final']);
+  check('the semis open on the start date', built[0].date, '2026-10-01');
+  check('the final lands on the end date', built[2].date, '2026-10-03');
+  check('semis at one venue kick off one after another', [built[0].time, built[1].time], ['09:00 AM', '11:00 AM']);
+  check('every built fixture starts scheduled', built.every(f => f.status === 'Scheduled'), true);
+  check('no start date falls back to the given date', buildTournamentFixtures(['A', 'B'], undefined, undefined, '2026-09-10')[0].date, '2026-09-10');
+
+  // ── Rescheduling a fixture ───────────────────────────────────────────────
+  check('the window includes both ends', datesInWindow('2026-10-01', '2026-10-03'), ['2026-10-01', '2026-10-02', '2026-10-03']);
+  check('the window crosses a month end', datesInWindow('2026-09-30', '2026-10-01'), ['2026-09-30', '2026-10-01']);
+  check('an end before the start is just the start', datesInWindow('2026-10-05', '2026-10-01'), ['2026-10-05']);
+  check('no start date gives no days', datesInWindow(undefined, '2026-10-01'), []);
+  check('a runaway window is capped', datesInWindow('2026-01-01', '2027-01-01').length, 62);
+
+  check('date parts read without a timezone shift', isoDateParts('2026-10-01'), { weekday: 'Thu', day: 1, month: 'Oct' });
+  check('a malformed date has no parts', isoDateParts('1 Oct'), null);
+
+  check('a stored kick-off parses', parseKickoff('09:00 AM'), { hour: 9, minute: 0, meridiem: 'AM' });
+  check('lower-case pm parses', parseKickoff('4:30 pm'), { hour: 4, minute: 30, meridiem: 'PM' });
+  check('a 24-hour value is rejected', parseKickoff('13:00 PM'), null);
+  check('an empty kick-off is rejected', parseKickoff(''), null);
+  check('a kick-off formats with padding', formatKickoff(9, 5, 'PM'), '09:05 PM');
+  check('a blank hour is not midnight', formatKickoff('', '30', 'AM'), null);
+  check('hour zero is invalid', formatKickoff(0, 0, 'AM'), null);
+  check('sixty minutes is invalid', formatKickoff(12, 60, 'AM'), null);
+  check('parse and format round-trip', formatKickoff(parseKickoff('04:30 PM')!.hour, parseKickoff('04:30 PM')!.minute, 'PM'), '04:30 PM');
+
+  const draw4 = buildTournamentFixtures(['A', 'B', 'C', 'D'], '2026-10-01', '2026-10-03');
+  check('a semi moved past the final is flagged', (fixtureDateIssue(draw4, 'fx-1', '2026-10-04') || '').includes('Final'), true);
+  check('a final moved before the semis is flagged', (fixtureDateIssue(draw4, 'fx-3', '2026-09-30') || '').includes('SF'), true);
+  check('a semi moved within the window is fine', fixtureDateIssue(draw4, 'fx-1', '2026-10-02'), null);
+  check('an unknown fixture raises nothing', fixtureDateIssue(draw4, 'nope', '2026-10-02'), null);
+
+  // ── One venue, one match at a time ───────────────────────────────────────
+  check('09:00 AM is 540 minutes', kickoffToMinutes('09:00 AM'), 540);
+  check('12:30 PM is 750 minutes', kickoffToMinutes('12:30 PM'), 750);
+  check('12:15 AM is 15 minutes', kickoffToMinutes('12:15 AM'), 15);
+  check('minutes format back to a kick-off', minutesToKickoff(870), '02:30 PM');
+  check('match length reads the format', matchLengthMinutes('120'), 120);
+  check('a blank match length defaults to 90', matchLengthMinutes(''), 90);
+  check('an absurd match length defaults to 90', matchLengthMinutes('5000'), 90);
+  check('90-minute matches get five slots', kickoffSlots(90), ['09:00 AM', '11:00 AM', '01:00 PM', '03:00 PM', '05:00 PM']);
+  check('120-minute matches get four slots', kickoffSlots(120), ['09:00 AM', '11:30 AM', '02:00 PM', '04:30 PM']);
+
+  const venueDraw = buildTournamentFixtures(
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], '2026-10-01', '2026-10-05', '',
+    { venue: 'Anna Arena', matchDuration: '120' }
+  );
+  check('every fixture is at the tournament venue', venueDraw.every(f => f.pitch === 'Anna Arena'), true);
+  check(
+    'quarter-finals kick off one after another',
+    venueDraw.filter(f => f.round === 'Quarter Final').map(f => f.time),
+    ['09:00 AM', '11:30 AM', '02:00 PM', '04:30 PM']
+  );
+  check('no two generated fixtures overlap', venueDraw.some(f => !!findOverlap(venueDraw, f, 120)), false);
+  check('a missing venue reads TBD', buildTournamentFixtures(['A', 'B'], '2026-10-01', '2026-10-01')[0].pitch, 'Venue TBD');
+
+  const crowded = [0, 1, 2, 3, 4, 5].map(i => ({ id: `c${i}`, date: '2026-10-01', time: '09:00 AM', pitch: 'Arena' }));
+  const spread = scheduleAtVenue(crowded, 120);
+  check('a full day spills onto the next day', spread[4].date, '2026-10-02');
+  check('the spill starts at the first kick-off', spread[4].time, '09:00 AM');
+  check('the next spill follows it', spread[5].time, '11:30 AM');
+  check(
+    'a clash-free kick-off is left alone',
+    scheduleAtVenue([{ id: 'x', date: '2026-10-01', time: '03:15 PM', pitch: 'Arena' }], 90)[0].time,
+    '03:15 PM'
+  );
+  check(
+    'different venues may share a kick-off',
+    scheduleAtVenue(
+      [
+        { id: 'a', date: '2026-10-01', time: '09:00 AM', pitch: 'North' },
+        { id: 'b', date: '2026-10-01', time: '09:00 AM', pitch: 'South' },
+      ],
+      90
+    )[1].time,
+    '09:00 AM'
+  );
+
+  const booked = [{ id: 'a', date: '2026-10-01', time: '09:00 AM', pitch: 'Arena' }];
+  check('a kick-off inside the match length overlaps', findOverlap(booked, { id: 'b', date: '2026-10-01', time: '10:00 AM', pitch: 'arena' }, 90)?.id, 'a');
+  check('a kick-off after the match ends does not', findOverlap(booked, { id: 'b', date: '2026-10-01', time: '10:30 AM', pitch: 'Arena' }, 90), undefined);
+  check('another day does not overlap', findOverlap(booked, { id: 'b', date: '2026-10-02', time: '09:00 AM', pitch: 'Arena' }, 90), undefined);
+
+  check('"Pitch A" is a placeholder', isLegacyPitch('Pitch A'), true);
+  check('a real venue is not a placeholder', isLegacyPitch('Anna Arena'), false);
+  const legacy = [
+    { id: 'l1', date: '2026-10-01', time: '09:00 AM', pitch: 'Pitch A' },
+    { id: 'l2', date: '2026-10-01', time: '09:00 AM', pitch: 'Pitch B' },
+  ];
+  const refreshed = refreshLegacyFixtures(legacy, 'Anna Arena', '90');
+  check('placeholder pitches move to the venue', refreshed?.map(f => f.pitch), ['Anna Arena', 'Anna Arena']);
+  check('their parallel kick-offs are staggered', refreshed?.map(f => f.time), ['09:00 AM', '11:00 AM']);
+  check('a draw already at the venue is left alone', refreshLegacyFixtures(refreshed, 'Anna Arena', '90'), null);
+  check('a venue that looks like a placeholder is not reused', refreshLegacyFixtures(legacy, 'Pitch C', '90')?.[0].pitch, 'Venue TBD');
+
+  // ── Squad size ───────────────────────────────────────────────────────────
+  check('an 11-a-side squad holds 10 besides the captain', squadPlayerLimit('11'), 10);
+  check('older "7 players" values still read', squadPlayerLimit('7 players'), 6);
+  check('a numeric team size works', squadPlayerLimit(5), 4);
+  check('a one-player team has no squad places', squadPlayerLimit('1'), 0);
+  check('no team size leaves the squad open', squadPlayerLimit(''), null);
+  check('a zero team size leaves the squad open', squadPlayerLimit('0'), null);
+
+  // ── Next fixture on a tournament card ────────────────────────────────────
+  const onSept10 = new Date(2026, 8, 10);
+  const card = [
+    { id: 'f', matchNo: 'Final', date: '2026-10-08', time: '09:00 AM', status: 'Scheduled' },
+    { id: 's2', matchNo: 'SF 2', date: '2026-10-01', time: '11:00 AM', status: 'Scheduled' },
+    { id: 's1', matchNo: 'SF 1', date: '2026-10-01', time: '09:00 AM', status: 'Scheduled' },
+  ];
+  check('the earliest kick-off is next', nextFixture(card, onSept10)?.id, 's1');
+  check(
+    'a rescheduled match moves to the front',
+    nextFixture(card.map(f => (f.id === 's2' ? { ...f, date: '2026-09-20' } : f)), onSept10)?.id,
+    's2'
+  );
+  check('a live match beats the schedule', nextFixture([...card, { id: 'l', matchNo: 'SF 3', date: '2026-10-01', time: '09:00 AM', status: 'Live' }], onSept10)?.id, 'l');
+  check('finished and past matches are skipped', nextFixture(card.map(f => (f.id === 's1' ? { ...f, status: 'Finished' } : f)), onSept10)?.id, 's2');
+  check('nothing left to play gives null', nextFixture(card, new Date(2026, 9, 9)), null);
+  check('no draw gives null', nextFixture(undefined), null);
+  check('a scheduled fixture reads with date and time', describeFixture(card[2]), 'Next: SF 1 · 1 Oct, 09:00 AM');
+  check('a live fixture says so', describeFixture({ ...card[2], status: 'Live' }), 'Live now · SF 1');
+
+  // ── Changing a tournament's venue ────────────────────────────────────────
+  const atArena = [
+    { id: 'a', pitch: 'Anna Arena' },
+    { id: 'b', pitch: 'anna arena ' },
+    { id: 'c', pitch: 'Side Ground' },
+  ];
+  check(
+    'fixtures at the old venue move to the new one',
+    renameFixtureVenue(atArena, 'Anna Arena', 'Skyline Arena Elite')?.map(f => f.pitch),
+    ['Skyline Arena Elite', 'Skyline Arena Elite', 'Side Ground']
+  );
+  check('an unchanged venue changes nothing', renameFixtureVenue(atArena, 'Anna Arena', ' anna arena'), null);
+  check('no fixture at the old venue changes nothing', renameFixtureVenue(atArena, 'Elsewhere', 'Skyline Arena Elite'), null);
+  check('no draw changes nothing', renameFixtureVenue(undefined, 'Anna Arena', 'Skyline Arena Elite'), null);
+  check('a blank new venue changes nothing', renameFixtureVenue(atArena, 'Anna Arena', ''), null);
+
+  // ── Host dashboard status ────────────────────────────────────────────────
+  const sept10 = new Date(2026, 8, 10);
+  const cup = {
+    status: 'Registering', regStart: '2026-09-01', regEnd: '2026-09-25',
+    startDate: '2026-10-01', endDate: '2026-10-08', maxTeams: 4,
+  };
+  check('an open window with places reads Registering', hostTournamentStatus(cup, 2, sept10), 'Registering');
+  check('a filled roster reads Full', hostTournamentStatus(cup, 4, sept10), 'Full');
+  check('a passed registration end reads closed', hostTournamentStatus({ ...cup, regEnd: '2026-09-09' }, 2, sept10), 'Registration closed');
+  check('a registration start still ahead reads Upcoming', hostTournamentStatus({ ...cup, regStart: '2026-09-15' }, 0, sept10), 'Upcoming');
+  check('a start date reached reads Ongoing', hostTournamentStatus({ ...cup, startDate: '2026-09-10' }, 4, sept10), 'Ongoing');
+  check('a passed end date reads Completed', hostTournamentStatus({ ...cup, startDate: '2026-09-01', endDate: '2026-09-09' }, 4, sept10), 'Completed');
+  check('a stored Completed stays Completed', hostTournamentStatus({ ...cup, status: 'Completed' }, 0, sept10), 'Completed');
+  check('Cancelled always wins', hostTournamentStatus({ ...cup, status: 'Cancelled', startDate: '2026-09-01' }, 4, sept10), 'Cancelled');
+  check('a cup with no dates reads Registering', hostTournamentStatus({ status: 'Registering', maxTeams: 8 }, 1, sept10), 'Registering');
 
   console.log(`\n   ${passed} passed, ${failed} failed\n`);
   return { passed, failed };

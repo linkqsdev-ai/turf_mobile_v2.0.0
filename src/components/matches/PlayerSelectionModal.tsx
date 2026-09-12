@@ -110,16 +110,15 @@ function usePalette() {
   return {
     theme,
     isDark,
-    canvas: isDark ? theme.background : '#F8FAFC',
-    cardBg: isDark ? theme.surfaceLow : '#FFFFFF',
-    zoneBg: isDark ? theme.surfaceLowest : '#F1F5F9',
-    borderColor: isDark ? '#334155' : '#E2E8F0',
-    textPrimary: isDark ? theme.text : '#0F172A',
-    textSecondary: isDark ? theme.textSecondary : '#64748B',
+    canvas: theme.background,
+    cardBg: theme.surfaceLowest,
+    zoneBg: theme.surfaceLow,
+    borderColor: theme.outlineVariant + (isDark ? '55' : '40'),
+    textPrimary: theme.text,
+    textSecondary: theme.textSecondary,
     textMuted: isDark ? '#64748B' : '#94A3B8',
-    goldenGrad: isDark
-      ? (['#261D0A', '#161A26', '#0F172A'] as const)
-      : (['#FDE68A', '#FEF3C7', '#FFFDF8', '#FFFFFF'] as const),
+    // Bottom → top: the app's cream ground with the dashboard's primary wash on top.
+    goldenGrad: [theme.background, theme.background, theme.primary + '1C'] as const,
   };
 }
 
@@ -921,65 +920,89 @@ export function PlayerSelectionModal({
           style={StyleSheet.absoluteFill}
         />
         <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]} edges={['top', 'bottom']}>
-          {/* Header */}
+          {/* Header — dashboard hero card with the team match-up */}
           <View style={styles.header}>
-            <View style={{ flex: 1 }}>
-              <ThemedText style={[styles.title, { color: textPrimary }]}>
-                {isInitialSetupMode ? 'Select Playing XI' : 'Manage Squads'}
-              </ThemedText>
-              <ThemedText style={[styles.subtitle, { color: textSecondary }]} numberOfLines={1}>
-                {isInitialSetupMode
-                  ? 'Assign players to both teams · hold to drag or tap to assign'
-                  : 'Drag directly into slots or tap player for actions'}
-              </ThemedText>
+            <View style={[styles.heroCard, { backgroundColor: cardBg, borderColor }, Shadows.level2]}>
+              <LinearGradient
+                colors={[theme.primary + '24', theme.primary + '06', 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+              <View style={styles.heroTop}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={styles.heroTitleRow}>
+                    <ThemedText style={[styles.title, { color: textPrimary }]}>
+                      {isInitialSetupMode ? 'Select Playing XI' : 'Manage Squads'}
+                    </ThemedText>
+                    <View style={[styles.heroBadge, { backgroundColor: theme.primary + '1F' }]}>
+                      <ThemedText style={[styles.heroBadgeText, { color: theme.primary }]}>
+                        {isInitialSetupMode ? 'PRE-MATCH' : 'LIVE MATCH'}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <ThemedText style={[styles.subtitle, { color: textSecondary }]} numberOfLines={2}>
+                    {isInitialSetupMode
+                      ? 'Assign players to both teams · hold to drag or tap to assign'
+                      : 'Drag directly into slots or tap player for actions'}
+                  </ThemedText>
+                </View>
+                <Pressable
+                  onPress={handleClose}
+                  hitSlop={8}
+                  accessibilityLabel="Close"
+                  style={[styles.closeBtn, { backgroundColor: zoneBg, borderColor }]}
+                >
+                  <Ionicons name="close" size={16} color={textPrimary} />
+                </Pressable>
+              </View>
+
+              <View style={styles.legend}>
+                <LegendPill
+                  code={codeA}
+                  name={labelA}
+                  mascot={teamAMascot}
+                  cardBg={cardBg}
+                  borderColor={borderColor}
+                  textPrimary={textPrimary}
+                  roleBadge={isInitialSetupMode ? undefined : (isTeamABatting ? '🏏 Batting' : '🎯 Bowling')}
+                  count={(buckets.teamA || []).length}
+                  theme={theme}
+                />
+
+                {/* Swap Sides Toggle - In-Match Only */}
+                {!isInitialSetupMode ? (
+                  <View style={styles.swapCol}>
+                    <Pressable
+                      onPress={handleSwapBatBowl}
+                      hitSlop={6}
+                      accessibilityLabel="Swap Sides"
+                      style={({ pressed }) => [styles.swapBatBowlBtn, { backgroundColor: theme.primary, opacity: pressed ? 0.85 : 1 }, Shadows.level1]}
+                    >
+                      <Ionicons name="swap-horizontal" size={15} color="#ffffff" />
+                    </Pressable>
+                    <ThemedText style={[styles.swapCaption, { color: theme.primary }]}>SWAP</ThemedText>
+                  </View>
+                ) : (
+                  <View style={[styles.vsBadge, { backgroundColor: zoneBg, borderColor }]}>
+                    <ThemedText style={[styles.vsText, { color: textSecondary }]}>VS</ThemedText>
+                  </View>
+                )}
+
+                <LegendPill
+                  code={codeB}
+                  name={labelB}
+                  mascot={teamBMascot}
+                  cardBg={cardBg}
+                  borderColor={borderColor}
+                  textPrimary={textPrimary}
+                  roleBadge={isInitialSetupMode ? undefined : (!isTeamABatting ? '🏏 Batting' : '🎯 Bowling')}
+                  count={(buckets.teamB || []).length}
+                  theme={theme}
+                />
+              </View>
             </View>
-
-            {/* Swap Sides Toggle - In-Match Only */}
-            {!isInitialSetupMode && (
-              <Pressable
-                onPress={handleSwapBatBowl}
-                hitSlop={6}
-                style={[styles.swapBatBowlBtn, { backgroundColor: cardBg, borderColor }]}
-              >
-                <Ionicons name="swap-horizontal" size={13} color={theme.primary} />
-                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.primary }}>
-                  Swap Sides
-                </ThemedText>
-              </Pressable>
-            )}
-
-            <Pressable
-              onPress={handleClose}
-              hitSlop={8}
-              accessibilityLabel="Close"
-              style={[styles.closeBtn, { backgroundColor: cardBg, borderColor }]}
-            >
-              <Ionicons name="close" size={15} color={textPrimary} />
-            </Pressable>
-          </View>
-
-          {/* Clean Legend Pill Overview */}
-          <View style={styles.legend}>
-            <LegendPill
-              code={codeA}
-              name={labelA}
-              mascot={teamAMascot}
-              cardBg={cardBg}
-              borderColor={borderColor}
-              textPrimary={textPrimary}
-              roleBadge={isInitialSetupMode ? undefined : (isTeamABatting ? '🏏 Batting' : '🎯 Bowling')}
-              theme={theme}
-            />
-            <LegendPill
-              code={codeB}
-              name={labelB}
-              mascot={teamBMascot}
-              cardBg={cardBg}
-              borderColor={borderColor}
-              textPrimary={textPrimary}
-              roleBadge={isInitialSetupMode ? undefined : (!isTeamABatting ? '🏏 Batting' : '🎯 Bowling')}
-              theme={theme}
-            />
           </View>
 
           <ScrollView
@@ -993,7 +1016,7 @@ export function PlayerSelectionModal({
               style={[
                 styles.zoneCard,
                 {
-                  backgroundColor: cardBg,
+                  backgroundColor: activeDropZone === 'master' ? theme.primary + '0A' : cardBg,
                   borderColor: activeDropZone === 'master' ? theme.primary : borderColor,
                   borderWidth: activeDropZone === 'master' ? 1.5 : 1,
                 },
@@ -1003,20 +1026,22 @@ export function PlayerSelectionModal({
                 onPress={() => setIsPoolExpanded((prev) => !prev)}
                 style={styles.zoneHeader}
                 hitSlop={4}
+                accessibilityLabel={isPoolExpanded ? 'Collapse available pool' : 'Expand available pool'}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <ThemedText style={[styles.zoneTitle, { color: textPrimary }]}>
-                    Available Pool
-                  </ThemedText>
-                  <Ionicons
-                    name={isPoolExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={16}
-                    color={theme.primary}
-                  />
+                <View style={styles.zoneHeaderLeft}>
+                  <View style={[styles.zoneIcon, { backgroundColor: theme.primary + '1A' }]}>
+                    <Ionicons name="people-outline" size={15} color={theme.primary} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <ThemedText style={[styles.zoneTitle, { color: textPrimary }]}>Available Pool</ThemedText>
+                    <ThemedText style={[styles.zoneSub, { color: textSecondary }]} numberOfLines={1}>
+                      {(buckets.master || []).length} unassigned · tap {codeA} / {codeB} to assign
+                    </ThemedText>
+                  </View>
                 </View>
-                <ThemedText style={[styles.zoneMeta, { color: textSecondary }]}>
-                  {(buckets.master || []).length} unassigned · {isPoolExpanded ? 'Collapse' : 'Expand'}
-                </ThemedText>
+                <View style={[styles.chevronBtn, { backgroundColor: zoneBg, borderColor }]}>
+                  <Ionicons name={isPoolExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={theme.primary} />
+                </View>
               </Pressable>
 
               {isPoolExpanded && (
@@ -1173,7 +1198,7 @@ export function PlayerSelectionModal({
                               <Image source={{ uri: s.avatar }} style={[styles.avatarSmall, outCheck.isOut && { opacity: 0.6 }]} contentFit="cover" />
                             ) : (
                               <View style={[styles.avatarSmall, { backgroundColor: theme.primary + '18', justifyContent: 'center', alignItems: 'center' }]}>
-                                <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                                <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: theme.primary }}>
                                   {getTwoLetterLogo(s.name)}
                                 </ThemedText>
                               </View>
@@ -1381,18 +1406,21 @@ export function PlayerSelectionModal({
             <View style={{ height: 100 }} />
           </ScrollView>
 
-          {/* Clean Footer Bar */}
+          {/* Footer — pill actions */}
           <View style={[styles.footer, { backgroundColor: cardBg, borderTopColor: borderColor }]}>
-            <Pressable onPress={isInitialSetupMode ? onSkip : handleClose} style={styles.skipBtn}>
+            <Pressable
+              onPress={isInitialSetupMode ? onSkip : handleClose}
+              style={({ pressed }) => [styles.skipBtn, { backgroundColor: zoneBg, borderColor, opacity: pressed ? 0.8 : 1 }]}
+            >
               <ThemedText style={[styles.skipText, { color: textSecondary }]}>
                 {isInitialSetupMode ? 'Skip for now' : 'Close'}
               </ThemedText>
             </Pressable>
             <Pressable
               onPress={handleConfirm}
-              style={[styles.confirmBtn, { backgroundColor: theme.primary }]}
+              style={({ pressed }) => [styles.confirmBtn, { backgroundColor: theme.primary, opacity: pressed ? 0.88 : 1 }, Shadows.level2]}
             >
-              <ThemedText style={styles.confirmText}>
+              <ThemedText style={styles.confirmText} numberOfLines={1}>
                 {isInitialSetupMode
                   ? totalAssigned > 0
                     ? `Continue to Match (${totalAssigned})`
@@ -1401,6 +1429,9 @@ export function PlayerSelectionModal({
                     ? `Apply Lineup (${totalAssigned})`
                     : 'Confirm & Resume'}
               </ThemedText>
+              <View style={styles.confirmArrow}>
+                <Ionicons name="arrow-forward" size={14} color="#ffffff" />
+              </View>
             </Pressable>
           </View>
 
@@ -1611,7 +1642,7 @@ function TeamZoneCard({
       style={[
         styles.zoneCard,
         {
-          backgroundColor: cardBg,
+          backgroundColor: isZoneHovered ? theme.primary + '0A' : cardBg,
           borderColor: isZoneHovered ? theme.primary : borderColor,
           borderWidth: isZoneHovered ? 1.5 : 1,
         },
@@ -1619,8 +1650,8 @@ function TeamZoneCard({
     >
       {/* Zone Header with Logo */}
       <View style={styles.zoneHeader}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1 }}>
-          <View style={[styles.teamZoneLogoBox, { backgroundColor: zoneBg, borderColor }]}>
+        <View style={styles.zoneHeaderLeft}>
+          <View style={[styles.teamZoneLogoBox, { backgroundColor: theme.primary + '14', borderColor: theme.primary + '33' }]}>
             {teamMascot ? (
               <Image source={getMascotImage(teamMascot)} style={styles.teamZoneLogoImg} contentFit="contain" />
             ) : (
@@ -1629,20 +1660,24 @@ function TeamZoneCard({
               </ThemedText>
             )}
           </View>
-          <ThemedText style={[styles.zoneTitle, { color: textPrimary }]} numberOfLines={1}>
-            {teamName}
-          </ThemedText>
-          {!isInitialSetup && (
-            <View style={[styles.roleTag, { backgroundColor: zoneBg, borderColor }]}>
-              <ThemedText style={[styles.roleTagText, { color: textPrimary }]}>
-                {isBatting ? '🏏 Batting' : '🎯 Bowling'}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <ThemedText style={[styles.zoneTitle, { color: textPrimary }]} numberOfLines={1}>
+              {teamName}
+            </ThemedText>
+            <View style={styles.zoneMetaRow}>
+              {!isInitialSetup && (
+                <View style={[styles.roleTag, { backgroundColor: (isBatting ? '#10B981' : '#F59E0B') + '1F' }]}>
+                  <ThemedText style={[styles.roleTagText, { color: isBatting ? '#047857' : '#B45309' }]}>
+                    {isBatting ? '🏏 Batting' : '🎯 Bowling'}
+                  </ThemedText>
+                </View>
+              )}
+              <ThemedText style={[styles.zoneMeta, { color: textSecondary }]}>
+                {uniquePlayers.length} player{uniquePlayers.length === 1 ? '' : 's'}
               </ThemedText>
             </View>
-          )}
+          </View>
         </View>
-        <ThemedText style={[styles.zoneMeta, { color: textSecondary }]}>
-          {uniquePlayers.length} player{uniquePlayers.length === 1 ? '' : 's'}
-        </ThemedText>
       </View>
 
       {/* Crease Active Slots (Direct Drag & Drop Targets - In-Match Squad Management Only) */}
@@ -1663,9 +1698,10 @@ function TeamZoneCard({
                   style={[
                     styles.creaseSlot,
                     {
-                      backgroundColor: cardBg,
-                      borderColor: isStrikerHovered ? theme.primary : borderColor,
+                      backgroundColor: isStrikerHovered ? theme.primary + '0D' : cardBg,
+                      borderColor: isStrikerHovered ? theme.primary : strikerName ? theme.primary + '55' : borderColor,
                       borderWidth: isStrikerHovered ? 1.5 : 1,
+                      borderStyle: strikerName ? 'solid' : 'dashed',
                     },
                   ]}
                 >
@@ -1708,9 +1744,9 @@ function TeamZoneCard({
               <Pressable
                 onPress={onSwapStrike}
                 hitSlop={6}
-                style={[styles.creaseSwapBtn, { backgroundColor: cardBg, borderColor }]}
+                style={[styles.creaseSwapBtn, { backgroundColor: theme.primary, borderColor: theme.primary }]}
               >
-                <Ionicons name="swap-horizontal" size={14} color={theme.primary} />
+                <Ionicons name="swap-horizontal" size={14} color="#ffffff" />
               </Pressable>
 
               {/* Non-Striker Slot Drop Target */}
@@ -1726,9 +1762,10 @@ function TeamZoneCard({
                   style={[
                     styles.creaseSlot,
                     {
-                      backgroundColor: cardBg,
-                      borderColor: isNonStrikerHovered ? theme.primary : borderColor,
+                      backgroundColor: isNonStrikerHovered ? theme.primary + '0D' : cardBg,
+                      borderColor: isNonStrikerHovered ? theme.primary : effectiveNonStrikerName ? theme.primary + '33' : borderColor,
                       borderWidth: isNonStrikerHovered ? 1.5 : 1,
+                      borderStyle: effectiveNonStrikerName ? 'solid' : 'dashed',
                     },
                   ]}
                 >
@@ -1778,9 +1815,10 @@ function TeamZoneCard({
                 style={[
                   styles.creaseSlot,
                   {
-                    backgroundColor: cardBg,
-                    borderColor: isBowlerHovered ? theme.primary : borderColor,
+                    backgroundColor: isBowlerHovered ? theme.primary + '0D' : cardBg,
+                    borderColor: isBowlerHovered ? theme.primary : bowlerName ? '#F59E0B66' : borderColor,
                     borderWidth: isBowlerHovered ? 1.5 : 1,
+                    borderStyle: bowlerName ? 'solid' : 'dashed',
                   },
                 ]}
               >
@@ -2035,7 +2073,7 @@ function CleanPlayerChip({
                 if (onQuickAssignA) onQuickAssignA();
               }}
               hitSlop={4}
-              style={[styles.quickAssignBtn, { borderColor }]}
+              style={[styles.quickAssignBtn, { borderColor: theme.primary + '55', backgroundColor: theme.primary + '10' }]}
             >
               <ThemedText style={[styles.quickAssignText, { color: theme.primary }]}>
                 {codeA || 'A'}
@@ -2047,9 +2085,9 @@ function CleanPlayerChip({
                 if (onQuickAssignB) onQuickAssignB();
               }}
               hitSlop={4}
-              style={[styles.quickAssignBtn, { borderColor }]}
+              style={[styles.quickAssignBtn, { borderColor: '#3B82F655', backgroundColor: '#3B82F610' }]}
             >
-              <ThemedText style={[styles.quickAssignText, { color: textSecondary }]}>
+              <ThemedText style={[styles.quickAssignText, { color: '#2563EB' }]}>
                 {codeB || 'B'}
               </ThemedText>
             </Pressable>
@@ -2122,7 +2160,7 @@ function CleanPlayerChip({
   );
 }
 
-// ── Clean Legend Pill ───────────────────────────────────────────────────────
+// ── Clean Legend Pill (team card in the hero) ──────────────────────────────
 function LegendPill({
   code,
   name,
@@ -2131,6 +2169,7 @@ function LegendPill({
   borderColor,
   textPrimary,
   roleBadge,
+  count,
   theme,
 }: {
   code: string;
@@ -2140,27 +2179,35 @@ function LegendPill({
   borderColor: string;
   textPrimary: string;
   roleBadge?: string;
+  count: number;
   theme: any;
 }) {
+  const isBatting = !!roleBadge && roleBadge.includes('Batting');
   return (
     <View style={[styles.legendPill, { backgroundColor: cardBg, borderColor }]}>
-      <View style={[styles.legendLogoBox, { backgroundColor: theme.primary + '14', borderColor }]}>
+      <View style={[styles.legendLogoBox, { backgroundColor: theme.primary + '14', borderColor: theme.primary + '33' }]}>
         {mascot ? (
           <Image source={getMascotImage(mascot)} style={styles.legendMascotImg} contentFit="contain" />
         ) : (
           <ThemedText style={[styles.legendCodeText, { color: theme.primary }]}>{code}</ThemedText>
         )}
       </View>
-      <ThemedText style={[styles.legendName, { color: textPrimary }]} numberOfLines={1}>
-        {name}
-      </ThemedText>
-      {roleBadge && (
-        <View style={styles.legendBadge}>
-          <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
-            {roleBadge}
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <ThemedText style={[styles.legendName, { color: textPrimary }]} numberOfLines={1}>
+          {name}
+        </ThemedText>
+        {roleBadge ? (
+          <View style={[styles.legendBadge, { backgroundColor: (isBatting ? '#10B981' : '#F59E0B') + '1F' }]}>
+            <ThemedText style={[styles.legendBadgeText, { color: isBatting ? '#047857' : '#B45309' }]} numberOfLines={1}>
+              {roleBadge}
+            </ThemedText>
+          </View>
+        ) : (
+          <ThemedText style={[styles.legendMeta, { color: theme.textSecondary }]}>
+            {count} {count === 1 ? 'player' : 'players'}
           </ThemedText>
-        </View>
-      )}
+        )}
+      </View>
     </View>
   );
 }
@@ -2266,7 +2313,9 @@ function PlayerActionModal({
         <Pressable style={[styles.actionSheet, { backgroundColor: cardBg, borderColor }]} onPress={(e) => e.stopPropagation()}>
           {/* Header */}
           <View style={[styles.actionSheetHeader, { borderBottomColor: borderColor }]}>
-            <Image source={avatarSourceFor(player)} style={styles.actionSheetAvatar} contentFit="cover" />
+            <View style={[styles.actionSheetAvatarRing, { borderColor: theme.primary }]}>
+              <Image source={avatarSourceFor(player)} style={styles.actionSheetAvatar} contentFit="cover" />
+            </View>
             <View style={{ flex: 1, minWidth: 0 }}>
               <ThemedText style={[styles.actionSheetName, { color: textPrimary }]} numberOfLines={1}>
                 {player.name}
@@ -2285,59 +2334,36 @@ function PlayerActionModal({
           <View style={{ gap: 6, marginTop: Spacing.xs }}>
             {/* Career / Overall Player Profile */}
             <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <Ionicons name="person-circle-outline" size={14} color={theme.primary} />
-                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_700Bold', color: theme.primary, letterSpacing: 0.5 }}>
-                    PLAYER PROFILE
-                  </ThemedText>
+              <View style={styles.profileHead}>
+                <View style={[styles.miniPill, { backgroundColor: theme.primary + '1A' }]}>
+                  <Ionicons name="person-circle-outline" size={11} color={theme.primary} />
+                  <ThemedText style={[styles.miniPillText, { color: theme.primary }]}>Player profile</ThemedText>
                 </View>
-                <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: textSecondary }}>
+                <ThemedText style={[styles.profileRole, { color: textSecondary }]} numberOfLines={1}>
                   {player.position || 'All-Rounder'} · {player.skillLevel || 'Intermediate'}
                 </ThemedText>
               </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingTop: 2 }}>
-                <View style={{ alignItems: 'center', flex: 1 }}>
-                  <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: textSecondary }}>
-                    H/S
-                  </ThemedText>
-                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: textPrimary, marginTop: 1 }}>
-                    {bStat?.highScore || 78}*
-                  </ThemedText>
-                </View>
-
-                <View style={{ width: 1, height: 18, backgroundColor: borderColor }} />
-
-                <View style={{ alignItems: 'center', flex: 1 }}>
-                  <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: textSecondary }}>
-                    Best Wkts
-                  </ThemedText>
-                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: textPrimary, marginTop: 1 }}>
-                    {bowlStat?.bestBowling || '3/14'}
-                  </ThemedText>
-                </View>
-
-                <View style={{ width: 1, height: 18, backgroundColor: borderColor }} />
-
-                <View style={{ alignItems: 'center', flex: 1 }}>
-                  <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: textSecondary }}>
-                    Econ
-                  </ThemedText>
-                  <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_700Bold', color: textPrimary, marginTop: 1 }}>
-                    {bowlStat?.econ || '6.50'}
-                  </ThemedText>
-                </View>
+              <View style={styles.profileTiles}>
+                {[
+                  { label: 'H/S', value: `${bStat?.highScore || 78}*` },
+                  { label: 'Best Wkts', value: bowlStat?.bestBowling || '3/14' },
+                  { label: 'Econ', value: bowlStat?.econ || '6.50' },
+                ].map((tile) => (
+                  <View key={tile.label} style={[styles.profileTile, { backgroundColor: cardBg, borderColor }]}>
+                    <ThemedText style={[styles.profileTileValue, { color: textPrimary }]}>{tile.value}</ThemedText>
+                    <ThemedText style={[styles.profileTileLabel, { color: textSecondary }]}>{tile.label}</ThemedText>
+                  </View>
+                ))}
               </View>
             </View>
 
             {/* Live Match Batting Stats (if active or has stats - in-match only) */}
             {!isInitialSetup && bStat && (bStat.runs > 0 || bStat.balls > 0) ? (
               <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor, borderLeftWidth: 3, borderLeftColor: theme.primary }]}>
-                <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: theme.primary }}>
+                <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: theme.primary }}>
                   🏏 LIVE MATCH BATTING
                 </ThemedText>
-                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: textPrimary, marginTop: 2 }}>
                   {bStat.runs} runs ({bStat.balls}b) · 4s: {bStat.fours} · 6s: {bStat.sixes} · SR {bStat.sr}
                 </ThemedText>
               </View>
@@ -2346,10 +2372,10 @@ function PlayerActionModal({
             {/* Live Match Bowling Stats (if active or has stats - in-match only) */}
             {!isInitialSetup && bowlStat && ((bowlStat.overs !== '0.0' && bowlStat.overs !== '') || bowlStat.runs > 0 || bowlStat.wickets > 0) ? (
               <View style={[styles.actionSheetStatsBox, { backgroundColor: zoneBg, borderColor, borderLeftWidth: 3, borderLeftColor: '#F59E0B' }]}>
-                <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_700Bold', color: '#F59E0B' }}>
+                <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: '#F59E0B' }}>
                   🎯 LIVE MATCH BOWLING
                 </ThemedText>
-                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: textPrimary, marginTop: 2 }}>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: textPrimary, marginTop: 2 }}>
                   {bowlStat.overs} ov · {bowlStat.maidens}M · {bowlStat.runs}R · {bowlStat.wickets}W · Econ {bowlStat.econ}
                 </ThemedText>
               </View>
@@ -2394,7 +2420,7 @@ function PlayerActionModal({
                       style={[styles.sheetActionItem, { backgroundColor: '#EF444410', borderColor: '#EF444440' }]}
                     >
                       <Ionicons name="trash-outline" size={15} color="#EF4444" />
-                      <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_600SemiBold' }]}>
+                      <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_500Medium' }]}>
                         Remove Player from Pool
                       </ThemedText>
                     </Pressable>
@@ -2436,7 +2462,7 @@ function PlayerActionModal({
                       <View style={[styles.actionSheetStatsBox, { backgroundColor: '#EF444415', borderColor: '#EF444450', borderLeftWidth: 3, borderLeftColor: '#EF4444' }]}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Ionicons name="close-circle" size={15} color="#EF4444" />
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#EF4444' }}>
                             DISMISSED ({outInfo.reason.toUpperCase()})
                           </ThemedText>
                         </View>
@@ -2492,7 +2518,7 @@ function PlayerActionModal({
                     ) : (
                       <View style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor, opacity: 0.55 }]}>
                         <Ionicons name="lock-closed-outline" size={15} color="#EF4444" />
-                        <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_600SemiBold' }]}>
+                        <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_500Medium' }]}>
                           Batting Disabled (Player is OUT)
                         </ThemedText>
                       </View>
@@ -2533,7 +2559,7 @@ function PlayerActionModal({
                       <View style={[styles.actionSheetStatsBox, { backgroundColor: '#EF444415', borderColor: '#EF444450', borderLeftWidth: 3, borderLeftColor: '#EF4444', marginBottom: 8 }]}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Ionicons name="hand-left" size={15} color="#EF4444" />
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#EF4444' }}>
                             MAX OVERS QUOTA REACHED ({maxBowlerLimit} {maxBowlerLimit === 1 ? 'OVER' : 'OVERS'})
                           </ThemedText>
                         </View>
@@ -2547,7 +2573,7 @@ function PlayerActionModal({
                       <View style={[styles.actionSheetStatsBox, { backgroundColor: '#F59E0B15', borderColor: '#F59E0B50', borderLeftWidth: 3, borderLeftColor: '#F59E0B', marginBottom: 8 }]}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Ionicons name="alert-circle" size={15} color="#F59E0B" />
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#F59E0B' }}>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#F59E0B' }}>
                             BOWLED PREVIOUS OVER
                           </ThemedText>
                         </View>
@@ -2628,7 +2654,7 @@ function PlayerActionModal({
                       <View style={[styles.actionSheetStatsBox, { backgroundColor: '#EF444415', borderColor: '#EF444450', borderLeftWidth: 3, borderLeftColor: '#EF4444' }]}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Ionicons name="close-circle" size={15} color="#EF4444" />
-                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_700Bold', color: '#EF4444' }}>
+                          <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#EF4444' }}>
                             DISMISSED ({outInfo.reason.toUpperCase()})
                           </ThemedText>
                         </View>
@@ -2669,7 +2695,7 @@ function PlayerActionModal({
                     ) : (
                       <View style={[styles.sheetActionItem, { backgroundColor: zoneBg, borderColor, opacity: 0.55 }]}>
                         <Ionicons name="lock-closed-outline" size={15} color="#EF4444" />
-                        <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_600SemiBold' }]}>
+                        <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_500Medium' }]}>
                           Batting Disabled (Player is OUT)
                         </ThemedText>
                       </View>
@@ -2720,7 +2746,7 @@ function PlayerActionModal({
                       style={[styles.sheetActionItem, { backgroundColor: '#EF444410', borderColor: '#EF444440' }]}
                     >
                       <Ionicons name="trash-outline" size={15} color="#EF4444" />
-                      <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_600SemiBold' }]}>
+                      <ThemedText style={[styles.sheetActionText, { color: '#EF4444', fontFamily: 'Sora_500Medium' }]}>
                         Remove Player from Pool
                       </ThemedText>
                     </Pressable>
@@ -2815,7 +2841,7 @@ function RetireConfirmationModal({
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Ionicons name="medkit-outline" size={17} color={theme.primary} />
               <View style={{ flex: 1 }}>
-                <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: textPrimary }}>
+                <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: textPrimary }}>
                   Retired Hurt (Injured)
                 </ThemedText>
                 <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_400Regular', color: textSecondary, marginTop: 1 }}>
@@ -2836,7 +2862,7 @@ function RetireConfirmationModal({
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Ionicons name="exit-outline" size={17} color="#EF4444" />
               <View style={{ flex: 1 }}>
-                <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: '#EF4444' }}>
+                <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_500Medium', color: '#EF4444' }}>
                   Retired Out (Dismissed)
                 </ThemedText>
                 <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_400Regular', color: textSecondary, marginTop: 1 }}>
@@ -2848,7 +2874,7 @@ function RetireConfirmationModal({
           </Pressable>
 
           <Pressable onPress={onClose} style={[styles.retireCancelBtn, { borderColor }]}>
-            <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_600SemiBold', color: textSecondary }}>
+            <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_500Medium', color: textSecondary }}>
               Cancel
             </ThemedText>
           </Pressable>
@@ -2859,117 +2885,120 @@ function RetireConfirmationModal({
 }
 
 // ── Styles ───────────────────────────────────────────────────────────────────
+const CARD_RADIUS = 16;
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingTop: Spacing.xs,
-    paddingBottom: Spacing.sm,
-    gap: 8,
-  },
-  title: { fontFamily: 'Sora_600SemiBold', fontSize: 14.5, letterSpacing: -0.2 },
-  subtitle: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
-  swapBatBowlBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 9999,
-    borderWidth: 1,
-  },
+
+  // ── Header hero ────────────────────────────────────────────────────────
+  header: { paddingHorizontal: Spacing.base, paddingTop: Spacing.xs, paddingBottom: Spacing.sm },
+  heroCard: { borderRadius: 20, borderWidth: 1, padding: 12, overflow: 'hidden' },
+  heroTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  heroTitleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7 },
+  heroBadge: { paddingHorizontal: 8, paddingVertical: 2.5, borderRadius: 999 },
+  heroBadgeText: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.8 },
+  title: { fontFamily: 'Sora_500Medium', fontSize: 15.5 },
+  subtitle: { fontFamily: 'Sora_400Regular', fontSize: 10.5, lineHeight: 14, marginTop: 3 },
   closeBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
 
-  // ── Legend ─────────────────────────────────────────────────────────────
-  legend: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: Spacing.base,
-    paddingBottom: Spacing.sm,
-  },
+  // ── Team match-up ──────────────────────────────────────────────────────
+  legend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
   legendPill: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderRadius: 9999,
-    paddingLeft: 3,
-    paddingRight: 8,
-    paddingVertical: 3,
+    gap: 7,
+    borderRadius: 14,
+    padding: 6,
     borderWidth: 1,
   },
   legendLogoBox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
     borderWidth: 1,
   },
-  legendMascotImg: { width: 18, height: 18 },
-  legendCodeText: { fontFamily: 'Sora_700Bold', fontSize: 9 },
-  legendName: { fontFamily: 'Sora_600SemiBold', fontSize: 10.5, flexShrink: 1 },
-  legendBadge: { marginLeft: 'auto' },
+  legendMascotImg: { width: 24, height: 24 },
+  legendCodeText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+  legendName: { fontFamily: 'Sora_500Medium', fontSize: 11.5 },
+  legendBadge: { alignSelf: 'flex-start', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 999, marginTop: 2 },
+  legendBadgeText: { fontFamily: 'Sora_500Medium', fontSize: 8.5 },
+  legendMeta: { fontFamily: 'Sora_400Regular', fontSize: 9.5, marginTop: 1 },
+  swapCol: { alignItems: 'center', gap: 2 },
+  swapBatBowlBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  swapCaption: { fontFamily: 'Sora_500Medium', fontSize: 8, letterSpacing: 0.6 },
+  vsBadge: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  vsText: { fontFamily: 'Sora_500Medium', fontSize: 9, letterSpacing: 0.8 },
 
-  scrollContent: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.lg },
+  scrollContent: { paddingHorizontal: Spacing.base, paddingTop: 2, paddingBottom: Spacing.lg },
 
-  // ── Zone Cards ─────────────────────────────────────────────────────────
+  // ── Zone cards ─────────────────────────────────────────────────────────
   zoneCard: {
-    borderRadius: 14,
-    padding: Spacing.sm,
-    marginBottom: Spacing.md,
+    borderRadius: CARD_RADIUS,
+    padding: 12,
+    marginBottom: 12,
     borderWidth: 1,
+    ...Shadows.level1,
   },
   zoneHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
+    gap: 8,
+    marginBottom: 10,
   },
+  zoneHeaderLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  zoneIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  zoneSub: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
+  chevronBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoneMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   teamZoneLogoBox: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 34,
+    height: 34,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
     borderWidth: 1,
   },
-  teamZoneLogoImg: { width: 20, height: 20 },
-  teamZoneLogoText: { fontFamily: 'Sora_700Bold', fontSize: 9.5 },
-  zoneTitle: { fontFamily: 'Sora_600SemiBold', fontSize: 12 },
-  zoneMeta: { fontFamily: 'Sora_500Medium', fontSize: 10 },
-  roleTag: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  roleTagText: { fontFamily: 'Sora_600SemiBold', fontSize: 9 },
+  teamZoneLogoImg: { width: 26, height: 26 },
+  teamZoneLogoText: { fontFamily: 'Sora_500Medium', fontSize: 11 },
+  zoneTitle: { fontFamily: 'Sora_500Medium', fontSize: 13 },
+  zoneMeta: { fontFamily: 'Sora_400Regular', fontSize: 10 },
+  roleTag: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999 },
+  roleTagText: { fontFamily: 'Sora_500Medium', fontSize: 9 },
 
-  // ── Crease Active Bar ──────────────────────────────────────────────────
+  // ── Crease slots ───────────────────────────────────────────────────────
   creaseBar: {
-    borderRadius: 10,
+    borderRadius: 14,
     padding: 6,
-    marginBottom: Spacing.sm,
+    marginBottom: 10,
     borderWidth: 1,
   },
   creaseSlot: {
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    minHeight: 56,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    minHeight: 58,
     justifyContent: 'center',
   },
   creaseSlotTopRow: {
@@ -2977,19 +3006,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  creaseSlotTitle: { fontFamily: 'Sora_700Bold', fontSize: 8.5, letterSpacing: 0.2 },
-  creaseSlotName: { fontFamily: 'Sora_600SemiBold', fontSize: 11, marginTop: 1.5 },
-  creaseStatsText: { fontFamily: 'Sora_500Medium', fontSize: 8.5, marginTop: 1.5 },
-  creaseStatsMuted: { fontFamily: 'Sora_400Regular', fontSize: 8.5, marginTop: 1.5 },
-  retireBtnText: { fontSize: 8.5, fontFamily: 'Sora_600SemiBold', color: '#EF4444' },
-  changeBtnText: { fontSize: 8.5, fontFamily: 'Sora_600SemiBold' },
+  creaseSlotTitle: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.7 },
+  creaseSlotName: { fontFamily: 'Sora_500Medium', fontSize: 12, marginTop: 2 },
+  creaseStatsText: { fontFamily: 'Sora_500Medium', fontSize: 9, marginTop: 1.5 },
+  creaseStatsMuted: { fontFamily: 'Sora_400Regular', fontSize: 9, marginTop: 1.5 },
+  retireBtnText: { fontSize: 9, fontFamily: 'Sora_500Medium', color: '#EF4444' },
+  changeBtnText: { fontSize: 9, fontFamily: 'Sora_500Medium' },
   creaseSwapBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Shadows.level1,
   },
 
   // ── Chips ──────────────────────────────────────────────────────────────
@@ -2997,34 +3027,34 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 9999,
-    paddingVertical: 3,
-    paddingLeft: 3,
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingLeft: 4,
     paddingRight: 8,
     gap: 6,
     borderWidth: 1,
   },
-  avatarSmall: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#00000010' },
-  chipName: { fontFamily: 'Sora_500Medium', fontSize: 11, letterSpacing: -0.1 },
-  chipRoleSub: { fontFamily: 'Sora_600SemiBold', fontSize: 8 },
+  avatarSmall: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#00000010' },
+  chipName: { fontFamily: 'Sora_500Medium', fontSize: 11 },
+  chipRoleSub: { fontFamily: 'Sora_500Medium', fontSize: 8.5 },
   chipRemoveBtn: { padding: 2, marginLeft: 2 },
   teamSwitchBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 999,
     borderWidth: 1,
   },
-  teamSwitchText: { fontFamily: 'Sora_700Bold', fontSize: 8.5 },
+  teamSwitchText: { fontFamily: 'Sora_500Medium', fontSize: 9 },
   quickAssignBtn: {
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 999,
     borderWidth: 1,
   },
-  quickAssignText: { fontFamily: 'Sora_700Bold', fontSize: 8 },
+  quickAssignText: { fontFamily: 'Sora_500Medium', fontSize: 9 },
   emptyLabel: {
     fontFamily: 'Sora_400Regular',
     fontSize: 10.5,
@@ -3032,55 +3062,60 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
 
-  // ── Search Bar ─────────────────────────────────────────────────────────
+  // ── Search ─────────────────────────────────────────────────────────────
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 9999,
-    paddingLeft: 10,
-    paddingRight: 3,
-    paddingVertical: 3,
-    marginBottom: Spacing.sm,
+    gap: 6,
+    borderRadius: 999,
+    paddingLeft: 12,
+    paddingRight: 4,
+    height: 38,
+    marginBottom: 10,
     borderWidth: 1,
   },
-  searchInput: { flex: 1, minWidth: 0, height: 28, fontFamily: 'Sora_500Medium', fontSize: 11,
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    height: 30,
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11.5,
     includeFontPadding: false,
     paddingVertical: 0,
   },
   addBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
   warnRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, paddingHorizontal: 4 },
-  warnText: { fontFamily: 'Sora_600SemiBold', fontSize: 10, flexShrink: 1 },
+  warnText: { fontFamily: 'Sora_500Medium', fontSize: 10, flexShrink: 1 },
 
-  // ── Suggest Results ────────────────────────────────────────────────────
-  suggestList: { marginBottom: Spacing.sm, gap: 4 },
+  // ── Suggestions ────────────────────────────────────────────────────────
+  suggestList: { marginBottom: 10, gap: 5 },
   suggestRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderWidth: 1,
   },
-  suggestName: { fontFamily: 'Sora_600SemiBold', fontSize: 11 },
+  suggestName: { fontFamily: 'Sora_500Medium', fontSize: 11.5 },
   suggestMeta: { fontFamily: 'Sora_400Regular', fontSize: 9.5, marginTop: 1 },
-
   notFound: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    borderRadius: 10,
+    borderRadius: 999,
     borderWidth: 1,
     borderStyle: 'dashed',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: Spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 10,
   },
   notFoundText: { fontFamily: 'Sora_500Medium', fontSize: 10.5, flex: 1 },
 
@@ -3088,21 +3123,39 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.sm,
+    paddingVertical: 10,
     borderTopWidth: 1,
   },
-  skipBtn: { paddingVertical: 10, paddingHorizontal: 8 },
-  skipText: { fontFamily: 'Sora_600SemiBold', fontSize: 12 },
-  confirmBtn: {
-    flex: 1,
-    borderRadius: 9999,
-    paddingVertical: 11,
+  skipBtn: {
+    height: 46,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  confirmText: { fontFamily: 'Sora_700Bold', fontSize: 12, color: '#ffffff' },
+  skipText: { fontFamily: 'Sora_500Medium', fontSize: 12 },
+  confirmBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 16,
+    paddingRight: 7,
+  },
+  confirmText: { flex: 1, textAlign: 'center', fontFamily: 'Sora_500Medium', fontSize: 13, color: '#ffffff' },
+  confirmArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   ghost: {
     position: 'absolute',
@@ -3117,19 +3170,19 @@ const styles = StyleSheet.create({
     ...Shadows.level2,
   },
 
-  // ── Action Sheet Modal ─────────────────────────────────────────────────
+  // ── Player action sheet ────────────────────────────────────────────────
   modalBackdrop: {
     flex: 1,
-    backgroundColor: '#00000066',
+    backgroundColor: '#0000007A',
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.base,
   },
   actionSheet: {
     width: '100%',
-    maxWidth: 340,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.base,
+    maxWidth: 360,
+    borderRadius: 22,
+    padding: 14,
     borderWidth: 1,
     ...Shadows.level3,
   },
@@ -3137,61 +3190,77 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingBottom: Spacing.sm,
+    paddingBottom: 10,
     borderBottomWidth: 1,
   },
-  actionSheetAvatar: { width: 34, height: 34, borderRadius: 17 },
-  actionSheetName: { fontFamily: 'Sora_700Bold', fontSize: 13 },
-  actionSheetSub: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
+  actionSheetAvatarRing: { width: 46, height: 46, borderRadius: 23, borderWidth: 2, padding: 2 },
+  actionSheetAvatar: { width: '100%', height: '100%', borderRadius: 20 },
+  actionSheetName: { fontFamily: 'Sora_500Medium', fontSize: 14 },
+  actionSheetSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1 },
   actionSheetStatsBox: {
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginTop: Spacing.xs,
+    paddingVertical: 8,
+    marginTop: 6,
   },
-  actionSheetList: { marginTop: Spacing.sm, gap: 5 },
+  profileHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
+  miniPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 999,
+  },
+  miniPillText: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.5, textTransform: 'uppercase' },
+  profileRole: { fontFamily: 'Sora_400Regular', fontSize: 10, flexShrink: 1 },
+  profileTiles: { flexDirection: 'row', gap: 6 },
+  profileTile: { flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1, paddingVertical: 7 },
+  profileTileValue: { fontFamily: 'Sora_500Medium', fontSize: 13 },
+  profileTileLabel: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 1 },
+  actionSheetList: { marginTop: 10, gap: 6 },
   sheetActionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 10,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
   },
-  sheetActionText: { fontFamily: 'Sora_600SemiBold', fontSize: 11.5 },
+  sheetActionText: { fontFamily: 'Sora_500Medium', fontSize: 12, flexShrink: 1 },
 
-  // ── Retire Modal ───────────────────────────────────────────────────────
+  // ── Retire modal ───────────────────────────────────────────────────────
   retireModal: {
     width: '100%',
-    maxWidth: 320,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.base,
+    maxWidth: 330,
+    borderRadius: 22,
+    padding: 14,
     borderWidth: 1,
     ...Shadows.level3,
   },
   retireIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
     borderWidth: 1,
   },
-  retireTitle: { fontFamily: 'Sora_700Bold', fontSize: 13.5, textAlign: 'center' },
-  retireSub: { fontFamily: 'Sora_400Regular', fontSize: 10, textAlign: 'center', marginTop: 2 },
+  retireTitle: { fontFamily: 'Sora_500Medium', fontSize: 14.5, textAlign: 'center' },
+  retireSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, textAlign: 'center', marginTop: 2 },
   retireOptionCard: {
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    padding: 9,
+    padding: 10,
     marginBottom: 6,
   },
   retireCancelBtn: {
     borderWidth: 1,
     borderRadius: 9999,
-    paddingVertical: 8,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,

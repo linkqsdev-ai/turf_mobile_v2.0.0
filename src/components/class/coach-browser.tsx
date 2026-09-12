@@ -177,7 +177,7 @@ export function CoachBrowser() {
         <View style={styles.section}>
           {displayedCoaches.length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-              <Ionicons name="search-outline" size={40} color={theme.textSecondary} style={{ opacity: 0.4 }} />
+              <Ionicons name="search-outline" size={32} color={theme.textSecondary} style={{ opacity: 0.4 }} />
               <ThemedText style={{ color: theme.textSecondary, marginTop: 10, fontSize: 13, fontFamily: 'Sora_500Medium' }}>
                 No classes match your search.
               </ThemedText>
@@ -246,6 +246,15 @@ export function CoachBrowser() {
                 : (cls?.certification ? [cls.certification] : (coach.certificates || []));
               const certsText = certsList.join(' · ');
 
+              // Extract cashback details
+              const cashbackVal = cls?.cashbackAmount ? parseFloat(String(cls.cashbackAmount)) : 0;
+              const hasCashback = (cls?.cashbackEnabled ?? (cashbackVal > 0)) && cashbackVal > 0;
+              const cashbackText = hasCashback
+                ? cls?.cashbackType === 'percent'
+                  ? `${cashbackVal}% Cashback to Wallet`
+                  : `₹${cashbackVal} Cashback to Wallet`
+                : null;
+
               const details = [
                 dateRange ? { icon: 'calendar-outline' as const, label: 'Runs', value: dateRange, full: true } : null,
                 days ? { icon: 'repeat-outline' as const, label: 'Days', value: days } : null,
@@ -253,6 +262,7 @@ export function CoachBrowser() {
                 { icon: 'pricetag-outline' as const, label: 'Fee', value: fee },
                 { icon: 'trending-up-outline' as const, label: 'Level', value: level },
                 classVoucher ? { icon: 'gift-outline' as const, label: 'Offer', value: `${classVoucher.discountText} · Code: ${classVoucher.code}` } : null,
+                cashbackText ? { icon: 'wallet-outline' as const, label: 'Cashback', value: cashbackText } : null,
                 certsText ? { icon: 'ribbon-outline' as const, label: 'Certified', value: certsText, full: true } : null,
                 venue ? { icon: 'location-outline' as const, label: 'Venue', value: venue, full: true } : null,
               ].filter(Boolean) as { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; full?: boolean }[];
@@ -378,6 +388,23 @@ export function CoachBrowser() {
                       <View style={styles.cardOfferPill}>
                         <ThemedText style={styles.cardOfferCodeText}>
                           {classVoucher.code}
+                        </ThemedText>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Cashback Reward Highlight */}
+                  {hasCashback && (
+                    <View style={[styles.cardOfferHighlight, { backgroundColor: '#10b98115', borderColor: '#10b98144', marginTop: classVoucher ? 4 : 8 }]}>
+                      <View style={styles.cardOfferLeft}>
+                        <Ionicons name="wallet" size={13} color="#10b981" />
+                        <ThemedText style={[styles.cardOfferHighlightText, { color: '#10b981' }]}>
+                          {cls?.cashbackType === 'percent' ? `${cashbackVal}% Cashback` : `₹${cashbackVal} Cashback`}
+                        </ThemedText>
+                      </View>
+                      <View style={[styles.cardOfferPill, { backgroundColor: '#10b981', borderColor: '#10b981' }]}>
+                        <ThemedText style={[styles.cardOfferCodeText, { color: '#ffffff' }]}>
+                          WALLET REWARD
                         </ThemedText>
                       </View>
                     </View>

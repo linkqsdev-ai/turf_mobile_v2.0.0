@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,6 +9,7 @@ import {
   Linking,
   Alert,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -24,6 +25,7 @@ import { useTurfStore, useOfferStore } from '@/store/app-store';
 import { getOffersForTurf, formatDiscount } from '@/store/offer-store';
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
+import { SectionHeading, VoucherTicket } from '@/components/home/dashboard-widgets';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
 
 // Mock Data lookup for the venues
@@ -152,7 +154,11 @@ export default function TurfDetailsScreen() {
     setTimeout(() => setRefreshing(false), 600);
   }, [fetchTurf]);
 
-  const userTurf = remoteTurf || (ownedTurfs || []).find(t => t.id === params.id);
+  const userTurf = remoteTurf || (ownedTurfs || []).find(t => 
+    (params.id && t.id === params.id) ||
+    (params.name && t.name?.trim().toLowerCase() === params.name.trim().toLowerCase()) ||
+    (params.id && t.name?.trim().toLowerCase() === params.id.trim().toLowerCase())
+  );
 
   const AMENITY_MAP: Record<string, { icon: string; title: string }> = {
     floodlights: { icon: 'flashlight-outline', title: 'Floodlights' },
@@ -202,23 +208,42 @@ export default function TurfDetailsScreen() {
   });
 
   const galleryImages = React.useMemo(() => {
-    const list: (string | any)[] = [];
+    const list: string[] = [];
+    const addImg = (img: any) => {
+      if (!img) return;
+      const uri = typeof img === 'string' ? img : img?.uri;
+      if (typeof uri === 'string' && uri.trim().startsWith('http') && !list.includes(uri.trim())) {
+        list.push(uri.trim());
+      } else if (typeof uri === 'string' && uri.trim() && !list.includes(uri.trim())) {
+        list.push(uri.trim());
+      }
+    };
+
     if (userTurf) {
-      if (Array.isArray(userTurf.images) && userTurf.images.length > 0) {
-        userTurf.images.forEach((img: any) => {
-          const uri = typeof img === 'string' ? img : img?.uri;
-          if (uri && !list.includes(uri)) list.push(uri);
-        });
-      }
-      if (userTurf.thumbnailImage && !list.includes(userTurf.thumbnailImage)) {
-        list.unshift(userTurf.thumbnailImage);
+      if (userTurf.thumbnailImage) addImg(userTurf.thumbnailImage);
+      if (Array.isArray(userTurf.images)) {
+        userTurf.images.forEach(addImg);
       }
     }
+
+    if (params.id && VENUE_DETAILS[params.id]) {
+      const v = VENUE_DETAILS[params.id];
+      if (v.image) addImg(v.image);
+      if (Array.isArray((v as any).images)) {
+        (v as any).images.forEach(addImg);
+      }
+    }
+
+    if (list.length === 0 && details.image) {
+      addImg(details.image);
+    }
+
     if (list.length === 0) {
-      if (details.image) list.push(details.image);
+      list.push('https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=600');
     }
+
     return list;
-  }, [userTurf, details.image]);
+  }, [userTurf, params.id, details.image]);
 
   const formatSessionDate = (d: Date): string => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -237,8 +262,12 @@ export default function TurfDetailsScreen() {
     return list;
   }, []);
 
+  const { width: windowWidth } = useWindowDimensions();
+  const bannerScrollRef = useRef<ScrollView>(null);
   const [activeImageIndex, setActiveImageIndex] = React.useState(0);
   const [heroCardWidth, setHeroCardWidth] = React.useState(0);
+  const bannerWidth = heroCardWidth > 0 ? heroCardWidth : Math.max(windowWidth - GUTTER * 2, 280);
+
   const [reviewsVisible, setReviewsVisible] = React.useState(false);
   const [sessionPickerVisible, setSessionPickerVisible] = React.useState(false);
   const [selectedSessionDate, setSelectedSessionDate] = React.useState<string>(() => {
@@ -262,11 +291,36 @@ export default function TurfDetailsScreen() {
     });
   };
 
+  // Home-dashboard palette — the same accents the player dashboard tints with.
+  const accent = '#F59E0B';
+  const info = '#3B82F6';
+  const success = '#10B981';
+  const pink = '#EC4899';
+
+  const cardSurface = {
+    backgroundColor: theme.surfaceLowest,
+    borderColor: theme.outlineVariant + '33',
+  };
+
+  const openDirections = () => {
+    const query = encodeURIComponent(details.name + ', ' + details.location);
+    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`).catch(() => {
+      Alert.alert('Maps Error', 'Could not open Google Maps.');
+    });
+  };
+
+  const infoTiles: { key: string; label: string; value: string; icon: keyof typeof Ionicons.glyphMap; tint: string }[] = [
+    { key: 'price', label: 'Price', value: details.price, icon: 'wallet-outline', tint: theme.primary },
+    { key: 'pitch', label: 'Surface', value: details.pitch, icon: 'grid-outline', tint: success },
+    { key: 'hours', label: 'Hours', value: details.hours.replace(/\s+/g, ''), icon: 'time-outline', tint: accent },
+    { key: 'capacity', label: 'Capacity', value: `${details.capacity.split(' ')[0]} Plrs`, icon: 'people-outline', tint: info },
+  ];
+
   return (
     <GradientContainer screenName="details" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Navigation TopAppBar */}
-        <View style={[styles.header, { backgroundColor: 'transparent' }]}>
+        {/* Navigation top app bar */}
+        <View style={styles.header}>
           <Pressable
             onPress={() => {
               if (router.canGoBack()) {
@@ -275,76 +329,144 @@ export default function TurfDetailsScreen() {
                 router.replace('/(tabs)');
               }
             }}
-            style={styles.backButton}
+            hitSlop={6}
+            style={[styles.roundBtn, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' }]}
           >
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
+            <Ionicons name="arrow-back" size={18} color={theme.text} />
           </Pressable>
-          <ThemedText type="headlineSm" style={[styles.headerTitle, { fontSize: 14 }]} numberOfLines={1}>
-            {details.name}
-          </ThemedText>
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="share-outline" size={22} color={theme.text} />
+          <View style={styles.headerCenter}>
+            <ThemedText style={[styles.headerEyebrow, { color: theme.textSecondary }]}>TURF DETAILS</ThemedText>
+            <ThemedText style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>
+              {details.name}
+            </ThemedText>
+          </View>
+          <Pressable
+            hitSlop={6}
+            style={[styles.roundBtn, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' }]}
+          >
+            <Ionicons name="share-outline" size={17} color={theme.text} />
           </Pressable>
         </View>
 
         <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
-          <ScrollView 
-            showsVerticalScrollIndicator={false} 
+          <ScrollView
+            showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
             }
           >
-            {/* Hero Image Section - Interactive Slider */}
+            {/* Hero image — interactive slider */}
             <View style={styles.heroContainer}>
-              <View 
-                style={[styles.heroCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
+              <View
+                style={[styles.heroCard, cardSurface, Shadows.level2]}
                 onLayout={(e) => {
                   const { width } = e.nativeEvent.layout;
-                  if (width > 0) setHeroCardWidth(width);
+                  if (width > 0 && width !== heroCardWidth) setHeroCardWidth(width);
                 }}
               >
                 {galleryImages.length > 1 ? (
                   <ScrollView
+                    ref={bannerScrollRef}
                     horizontal
                     pagingEnabled
+                    nestedScrollEnabled={true}
+                    decelerationRate="fast"
                     showsHorizontalScrollIndicator={false}
-                    onMomentumScrollEnd={(e) => {
-                      const w = heroCardWidth || 1;
-                      const page = Math.round(e.nativeEvent.contentOffset.x / w);
-                      setActiveImageIndex(page);
+                    scrollEventThrottle={16}
+                    onScroll={(e) => {
+                      const w = bannerWidth || 1;
+                      const offsetX = e.nativeEvent.contentOffset.x;
+                      const page = Math.round(offsetX / w);
+                      if (page !== activeImageIndex && page >= 0 && page < galleryImages.length) {
+                        setActiveImageIndex(page);
+                      }
                     }}
                     style={{ width: '100%', height: '100%' }}
+                    contentContainerStyle={{ flexGrow: 1 }}
                   >
                     {galleryImages.map((img, idx) => (
-                      <Image
-                        key={idx}
-                        source={typeof img === 'string' ? { uri: img } : img}
-                        style={{ width: heroCardWidth || '100%', height: '100%' }}
-                        contentFit="cover"
-                      />
+                      <View key={idx} style={{ width: bannerWidth, height: '100%', overflow: 'hidden' }}>
+                        <Image
+                          source={typeof img === 'string' ? { uri: img } : img}
+                          style={styles.heroImage}
+                          contentFit="cover"
+                        />
+                      </View>
                     ))}
                   </ScrollView>
                 ) : (
-                  <Image 
-                    source={typeof galleryImages[0] === 'string' ? { uri: galleryImages[0] } : galleryImages[0] || details.image} 
-                    style={styles.heroImage} 
-                    contentFit="cover" 
+                  <Image
+                    source={typeof galleryImages[0] === 'string' ? { uri: galleryImages[0] } : galleryImages[0] || details.image}
+                    style={styles.heroImage}
+                    contentFit="cover"
                   />
                 )}
 
-                {/* Pagination Dots & Counter when multiple images exist */}
+                <LinearGradient
+                  colors={['rgba(0,0,0,0.28)', 'transparent', 'rgba(0,0,0,0.5)']}
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
+                />
+
+                {/* Rating chip — opens the reviews sheet */}
+                <Pressable onPress={() => setReviewsVisible(true)} style={styles.ratingChip}>
+                  <Ionicons name="star" size={11} color="#FBBF24" />
+                  <ThemedText style={styles.ratingChipText}>{details.rating}</ThemedText>
+                  <ThemedText style={styles.ratingChipSub}>· {details.reviews.split(' ')[0]}</ThemedText>
+                </Pressable>
+
+                {/* Arrow navigation buttons when multiple images exist */}
+                {galleryImages.length > 1 && (
+                  <>
+                    {activeImageIndex > 0 && (
+                      <Pressable
+                        onPress={() => {
+                          const prev = Math.max(0, activeImageIndex - 1);
+                          bannerScrollRef.current?.scrollTo({ x: prev * bannerWidth, animated: true });
+                          setActiveImageIndex(prev);
+                        }}
+                        style={[styles.sliderNavBtn, styles.sliderNavLeft]}
+                        hitSlop={8}
+                        accessibilityLabel="Previous banner image"
+                      >
+                        <Ionicons name="chevron-back" size={16} color="#ffffff" />
+                      </Pressable>
+                    )}
+                    {activeImageIndex < galleryImages.length - 1 && (
+                      <Pressable
+                        onPress={() => {
+                          const next = Math.min(galleryImages.length - 1, activeImageIndex + 1);
+                          bannerScrollRef.current?.scrollTo({ x: next * bannerWidth, animated: true });
+                          setActiveImageIndex(next);
+                        }}
+                        style={[styles.sliderNavBtn, styles.sliderNavRight]}
+                        hitSlop={8}
+                        accessibilityLabel="Next banner image"
+                      >
+                        <Ionicons name="chevron-forward" size={16} color="#ffffff" />
+                      </Pressable>
+                    )}
+                  </>
+                )}
+
+                {/* Pagination dots & counter when multiple images exist */}
                 {galleryImages.length > 1 && (
                   <>
                     <View style={styles.sliderDotsRow}>
                       {galleryImages.map((_, idx) => (
-                        <View
+                        <Pressable
                           key={idx}
-                          style={[
-                            styles.sliderDot,
-                            idx === activeImageIndex && styles.sliderDotActive,
-                          ]}
-                        />
+                          onPress={() => {
+                            bannerScrollRef.current?.scrollTo({ x: idx * bannerWidth, animated: true });
+                            setActiveImageIndex(idx);
+                          }}
+                          hitSlop={6}
+                        >
+                          <View
+                            style={[styles.sliderDot, idx === activeImageIndex && styles.sliderDotActive]}
+                          />
+                        </Pressable>
                       ))}
                     </View>
                     <View style={styles.sliderCounterBadge}>
@@ -355,310 +477,184 @@ export default function TurfDetailsScreen() {
                   </>
                 )}
 
-                {/* Fav Button top right */}
+                {/* Fav button top right */}
                 <Pressable style={[styles.favFab, Shadows.level2]}>
-                  <Ionicons name="heart" size={20} color="#ff4757" />
+                  <Ionicons name="heart" size={18} color="#ff4757" />
                 </Pressable>
               </View>
             </View>
 
-            {/* Title & Metadata */}
+            {/* Title & metadata */}
             <View style={styles.contentSection}>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                <ThemedText type="headlineLg" style={{ color: theme.text, flex: 1, fontFamily: 'Sora_500Medium', fontSize: 18, lineHeight: 25 }}>
-                  {details.name}
-                </ThemedText>
+              <View style={[styles.statusPill, { backgroundColor: theme.primary + '1A' }]}>
+                <Ionicons name="shield-checkmark" size={10} color={theme.primary} />
+                <ThemedText style={[styles.statusText, { color: theme.primary }]}>{details.reviews}</ThemedText>
               </View>
-
+              <ThemedText style={[styles.title, { color: theme.text }]}>{details.name}</ThemedText>
               <View style={styles.locationRow}>
-                <Ionicons name="location-outline" size={13} color={theme.secondary} />
-                <ThemedText type="bodyMd" style={{ color: theme.textSecondary, marginLeft: 4, fontSize: 12, lineHeight: 16, flexShrink: 1 }}>
+                <Ionicons name="location-outline" size={12} color={theme.textSecondary} />
+                <ThemedText style={[styles.locationText, { color: theme.textSecondary }]}>
                   {details.location}
                 </ThemedText>
-                <View style={[styles.dot, { backgroundColor: theme.outlineVariant }]} />
-
-                <Pressable onPress={() => setReviewsVisible(true)} style={styles.ratingRow}>
-                  <Ionicons name="star" size={12} color="#5D68E8" />
-                  <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 4, fontWeight: '500', fontSize: 11 }}>
-                    {details.rating}
-                  </ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, textDecorationLine: 'underline', fontSize: 10 }}>
-                    ({details.reviews.split(' ')[0]})
-                  </ThemedText>
-                </Pressable>
               </View>
             </View>
 
-            {/* Bento Quick Stats Grid - Clean Badge-free Design */}
-            <View style={styles.bentoGrid}>
-              <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-                <Ionicons name="wallet-outline" size={16} color={theme.primary} />
-                <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]}>
-                  {details.price}
-                </ThemedText>
-              </View>
-
-              <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-                <MaterialCommunityIcons name="cricket" size={18} color={theme.primary} />
-                <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]} numberOfLines={1}>
-                  {details.pitch}
-                </ThemedText>
-              </View>
-
-              <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-                <Ionicons name="time-outline" size={16} color={theme.primary} />
-                <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]}>
-                  {details.hours.replace(/\s+/g, '')}
-                </ThemedText>
-              </View>
-
-              <View style={[styles.bentoItem, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
-                <Ionicons name="people-outline" size={16} color={theme.primary} />
-                <ThemedText type="headlineSm" style={[styles.bentoValue, { color: theme.text }]} numberOfLines={1}>
-                  {details.capacity.split(' ')[0]} Plrs
-                </ThemedText>
-              </View>
-            </View>
-
-            {/* About Section */}
-            <View style={styles.contentSection}>
-              <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-                <ThemedText type="headlineSm" style={styles.cardSectionHeader}>
-                  About the Venue
-                </ThemedText>
-                <ThemedText type="bodyLg" style={{ color: theme.textSecondary, lineHeight: 22, fontSize: 13 }}>
-                  {details.about}
-                </ThemedText>
-              </View>
-            </View>
-
-            {/* Amenities Section - Clean Chip Badges with Icon + Label */}
-            <View style={styles.contentSection}>
-              <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: Spacing.sm }}>
-                  <ThemedText type="headlineSm" style={[styles.cardSectionHeader, { borderBottomWidth: 0, paddingBottom: 0, marginBottom: 0, flexShrink: 1 }]}>
-                    Venue Amenities
-                  </ThemedText>
-                  <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>
-                    {details.amenities.length} {details.amenities.length === 1 ? 'Feature' : 'Features'}
-                  </ThemedText>
+            {/* Quick facts */}
+            <View style={styles.tileGrid}>
+              {infoTiles.map((tile) => (
+                <View key={tile.key} style={[styles.infoTile, cardSurface, Shadows.level1]}>
+                  <View style={[styles.tileRing, { backgroundColor: tile.tint + '1F', borderColor: tile.tint + '45' }]}>
+                    <Ionicons name={tile.icon} size={14} color={tile.tint} />
+                  </View>
+                  <View style={styles.tileText}>
+                    <ThemedText style={[styles.tileLabel, { color: theme.textSecondary }]}>{tile.label}</ThemedText>
+                    <ThemedText style={[styles.tileValue, { color: theme.text }]} numberOfLines={1}>
+                      {tile.value}
+                    </ThemedText>
+                  </View>
                 </View>
+              ))}
+            </View>
 
-                {/* Clean inline chips with icon & label */}
+            {/* About */}
+            <View style={styles.contentSection}>
+              <SectionHeading title="About the venue" tint={theme.primary} />
+              <View style={[styles.card, cardSurface, Shadows.level1]}>
+                <ThemedText style={[styles.bodyText, { color: theme.textSecondary }]}>{details.about}</ThemedText>
+              </View>
+            </View>
+
+            {/* Amenities */}
+            <View style={styles.contentSection}>
+              <SectionHeading
+                title={`Amenities · ${details.amenities.length} ${details.amenities.length === 1 ? 'feature' : 'features'}`}
+                tint={success}
+              />
+              <View style={[styles.card, cardSurface, Shadows.level1]}>
                 <View style={styles.amenityRow}>
                   {details.amenities.map((item, idx) => (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.amenityPill,
-                        {
-                          backgroundColor: theme.surfaceLow,
-                          borderColor: theme.outlineVariant + '33',
-                        },
-                      ]}
-                    >
-                      <Ionicons name={item.icon as any} size={14} color={theme.primary} style={{ marginRight: 6 }} />
-                      <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                        {item.title}
-                      </ThemedText>
+                    <View key={idx} style={[styles.amenityPill, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
+                      <Ionicons name={item.icon as any} size={13} color={theme.primary} />
+                      <ThemedText style={[styles.amenityText, { color: theme.text }]}>{item.title}</ThemedText>
                     </View>
                   ))}
                 </View>
               </View>
             </View>
 
-            {/* Vouchers & Offers Section */}
+            {/* Vouchers & offers — dashboard voucher tickets */}
             {turfOffers.length > 0 && (
-              <View style={styles.contentSection}>
-                <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
-                    <ThemedText type="headlineSm" style={[styles.cardSectionHeader, { borderBottomWidth: 0, paddingBottom: 0, marginBottom: 0 }]}>
-                      Vouchers & Offers
-                    </ThemedText>
-                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: '#10b981' }}>
-                      {turfOffers.length} Active {turfOffers.length === 1 ? 'Offer' : 'Offers'}
-                    </ThemedText>
-                  </View>
-
+              <View style={styles.sectionBleed}>
+                <View style={styles.sectionInset}>
+                  <SectionHeading
+                    title={`Vouchers & offers · ${turfOffers.length} active`}
+                    tint={pink}
+                  />
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.voucherStrip}>
                   {turfOffers.map((offer) => {
                     const isVenueSpecific = (offer.appliesTo || '').trim().toLowerCase() === details.name.trim().toLowerCase();
-                    const brand = isVenueSpecific ? details.name.toUpperCase() : 'TURF PASS';
                     const discountText = formatDiscount(offer);
+                    const limits = [
+                      offer.minBooking > 0 ? `Min ₹${offer.minBooking}` : null,
+                      offer.maxRedemptions > 0 ? `First ${offer.maxRedemptions} users` : 'Open for all',
+                    ].filter(Boolean).join(' · ');
                     return (
-                      <View key={offer.id} style={styles.kakaoCouponCard}>
-                        {/* Serrated Perforated Top Teeth Row */}
-                        <View style={styles.kakaoTeethRow}>
-                          {Array.from({ length: 18 }).map((_, i) => (
-                            <View key={i} style={styles.kakaoTooth} />
-                          ))}
-                        </View>
-
-                        {/* Main Body: with user-selected banner image or fallback color */}
-                        <View style={styles.kakaoPinkBody}>
-                          {offer.bannerImage ? (
-                            <>
-                              <Image
-                                source={{ uri: offer.bannerImage }}
-                                style={StyleSheet.absoluteFill}
-                                contentFit="cover"
-                              />
-                              <LinearGradient
-                                colors={['rgba(255, 30, 112, 0.84)', 'rgba(219, 10, 85, 0.95)']}
-                                style={StyleSheet.absoluteFill}
-                              />
-                            </>
-                          ) : null}
-
-                          {/* Subtle Watermark "SALE" */}
-                          <ThemedText style={styles.kakaoWatermark}>SALE</ThemedText>
-
-                          {/* Header Row: Brand block on left, Yellow circle on right */}
-                          <View style={styles.kakaoHeaderRow}>
-                            <View style={styles.kakaoBrandBlock}>
-                              <ThemedText style={styles.kakaoBrandTitle} numberOfLines={1}>
-                                {brand}
-                              </ThemedText>
-                              <ThemedText style={styles.kakaoBrandSub}>STYLE</ThemedText>
-                              <ThemedText style={styles.kakaoBrandCoupon}>X COUPON</ThemedText>
-                              <View style={styles.kakaoBrandLine} />
-                            </View>
-
-                            {/* Floating Yellow Circle Badge - Click to Apply */}
-                            <Pressable
-                              onPress={() => handleBookNow(offer.code)}
-                              style={styles.kakaoYellowBadge}
-                            >
-                              <ThemedText style={styles.kakaoYellowBadgeText}>COUPON</ThemedText>
-                              <ThemedText style={styles.kakaoYellowBadgeText}>CLAIM</ThemedText>
-                              <Ionicons name="arrow-down" size={13} color="#000000" style={{ marginTop: 1 }} />
-                            </Pressable>
-                          </View>
-
-                          {/* Center Discount Typography: 20% OFF */}
-                          <View style={styles.kakaoDiscountCenter}>
-                            <ThemedText style={styles.kakaoBigDiscount}>
-                              {discountText.replace(' OFF', '')}
-                            </ThemedText>
-                            <ThemedText style={styles.kakaoBigOff}>OFF</ThemedText>
-                          </View>
-                        </View>
-
-                        {/* Bottom Tear-Off Stub (White) */}
-                        <View style={styles.kakaoWhiteStub}>
-                          <ThemedText style={styles.kakaoStubLabel}>VALIDITY PERIOD</ThemedText>
-                          <ThemedText style={styles.kakaoStubDays}>
-                            Valid Offer · {offer.maxRedemptions > 0 ? `Limited to 1st ${offer.maxRedemptions} Users` : 'Open for All Users'}
-                          </ThemedText>
-
-                          <View style={styles.kakaoStubFooter}>
-                            <View style={{ flex: 1, paddingRight: 8 }}>
-                              <ThemedText style={styles.kakaoStubCode}>
-                                Code: <ThemedText style={{ fontFamily: 'Sora_500Medium', color: '#FF1E70' }}>{offer.code}</ThemedText>
-                                {offer.minBooking > 0 ? ` · Min ₹${offer.minBooking}` : ''}
-                              </ThemedText>
-                              <ThemedText style={styles.kakaoStubDesc} numberOfLines={1}>
-                                {offer.description || 'Claim this voucher discount during booking checkout.'}
-                              </ThemedText>
-                            </View>
-
-                            <Pressable
-                              onPress={() => handleBookNow(offer.code)}
-                              style={styles.kakaoApplyBtn}
-                            >
-                              <ThemedText style={styles.kakaoApplyBtnText}>Apply →</ThemedText>
-                            </Pressable>
-                          </View>
-                        </View>
-                      </View>
+                      <VoucherTicket
+                        key={offer.id}
+                        value={discountText.replace(' OFF', '')}
+                        suffix="OFF"
+                        title={offer.description || (isVenueSpecific ? details.name : 'Turf Pass')}
+                        brand={limits}
+                        code={offer.code}
+                        tint={isVenueSpecific ? pink : info}
+                        onPress={() => handleBookNow(offer.code)}
+                      />
                     );
                   })}
-                </View>
+                </ScrollView>
+                <ThemedText style={[styles.voucherHint, { color: theme.textSecondary }]}>
+                  Tap a voucher to book with its code applied.
+                </ThemedText>
               </View>
             )}
 
-            {/* Location Map Preview */}
+            {/* Location map preview */}
             <View style={[styles.contentSection, { paddingBottom: 120 }]}>
-              <View style={[styles.cardContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-                <ThemedText type="headlineSm" style={styles.cardSectionHeader}>
-                  Location
-                </ThemedText>
-
-                {/* Map Placeholder Card */}
-                <Pressable
-                  onPress={() => {
-                    const query = encodeURIComponent(details.name + ', ' + details.location);
-                    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`).catch(() => {
-                      Alert.alert('Maps Error', 'Could not open Google Maps.');
-                    });
-                  }}
-                  style={styles.mapContainer}
-                >
+              <SectionHeading title="Location" tint={info} />
+              <View style={[styles.card, cardSurface, Shadows.level1]}>
+                <Pressable onPress={openDirections} style={[styles.mapContainer, { backgroundColor: theme.surfaceLow }]}>
                   <Image
                     source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAs7ZFxpDuTY0Y20RzzsmBGxAjht8U5AihgJyskprBmTPKVYrEOab08NWaF-4BFy3UjwPr46PMa9oRy0TqoklyqETyaI3T9xbHvBGj0vyYb99qgZn6w5StHhG9_NAMWkvZiyjhoW9QJ4TVDCuUjWD2x6xrp0HlAaAIVRu2xmLKg6V1CrRxUQiNFhiU_n_PBx9V6T9ZF5x3yGwizSIx_I4x5fTWBozUqBJ77o8N5RyeuxUvrf6uWewzXD86IF4X_G5brMzCocIakM-w' }}
                     style={styles.mapImage}
                     contentFit="cover"
                   />
                   <View style={styles.mapMarkerContainer}>
-                    <View style={[styles.mapMarker, { backgroundColor: theme.primaryContainer }]}>
-                      <Ionicons name="location" size={24} color="#ffffff" />
+                    <View style={[styles.mapMarker, { backgroundColor: theme.primary }]}>
+                      <Ionicons name="location" size={20} color="#ffffff" />
                     </View>
                   </View>
                 </Pressable>
 
                 <View style={styles.locationFooter}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>
-                    {details.location.split(',')[0]}
-                  </ThemedText>
-                  <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 2 }}>
-                    {details.location.split(',').slice(1).join(',').trim() || details.location}
-                  </ThemedText>
+                  <View style={[styles.cardIcon, { backgroundColor: info + '1A' }]}>
+                    <Ionicons name="navigate-outline" size={14} color={info} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={[styles.cardTitle, { color: theme.text }]} numberOfLines={1}>
+                      {details.location.split(',')[0]}
+                    </ThemedText>
+                    <ThemedText style={[styles.cardSub, { color: theme.textSecondary }]} numberOfLines={1}>
+                      {details.location.split(',').slice(1).join(',').trim() || details.location}
+                    </ThemedText>
+                  </View>
+                  <Pressable
+                    onPress={openDirections}
+                    style={({ pressed }) => [styles.ghostBtn, { borderColor: theme.primary + '66', opacity: pressed ? 0.8 : 1 }]}
+                  >
+                    <ThemedText style={[styles.ghostBtnText, { color: theme.primary }]}>Directions</ThemedText>
+                    <Ionicons name="arrow-forward" size={12} color={theme.primary} />
+                  </Pressable>
                 </View>
-
-                <Pressable
-                  onPress={() => {
-                    const query = encodeURIComponent(details.name + ', ' + details.location);
-                    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`).catch(() => {
-                      Alert.alert('Maps Error', 'Could not open Google Maps.');
-                    });
-                  }}
-                  style={styles.directionsLink}
-                >
-                  <ThemedText type="labelMd" style={{ color: theme.secondary, fontWeight: '500' }}>
-                    Get Directions
-                  </ThemedText>
-                  <Ionicons name="arrow-forward" size={14} color={theme.secondary} style={{ marginLeft: 4 }} />
-                </Pressable>
               </View>
             </View>
           </ScrollView>
         </Reanimated.View>
 
-        {/* Sticky Action Footer */}
+        {/* Sticky action footer */}
         <View style={[styles.footerActions, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '33' }]}>
           <Pressable
             onPress={() => setSessionPickerVisible(true)}
-            style={styles.footerInfoCol}
+            style={({ pressed }) => [
+              styles.sessionPill,
+              { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '40', opacity: pressed ? 0.85 : 1 },
+            ]}
           >
-            <ThemedText style={styles.footerSessionLabel}>SELECTED SESSION ▾</ThemedText>
-            <ThemedText style={styles.footerSessionDate}>
-              {selectedSessionDate}
-            </ThemedText>
+            <View style={[styles.sessionIcon, { backgroundColor: theme.primary + '1A' }]}>
+              <Ionicons name="calendar-outline" size={14} color={theme.primary} />
+            </View>
+            <View style={styles.sessionText}>
+              <ThemedText style={[styles.footerSessionLabel, { color: theme.textSecondary }]}>SESSION</ThemedText>
+              <ThemedText style={[styles.footerSessionDate, { color: theme.text }]} numberOfLines={1}>
+                {selectedSessionDate}
+              </ThemedText>
+            </View>
+            <Ionicons name="chevron-down" size={13} color={theme.textSecondary} />
           </Pressable>
 
           <Pressable
             onPress={() => handleBookNow()}
-            style={[styles.bookButton, { backgroundColor: theme.primaryContainer }, Shadows.level2]}
+            style={({ pressed }) => [styles.bookButton, { backgroundColor: theme.primary, opacity: pressed ? 0.85 : 1 }, Shadows.level2]}
           >
-            <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium' }}>
-              Book Now
-            </ThemedText>
+            <ThemedText style={styles.bookButtonText}>Book Now</ThemedText>
+            <View style={styles.bookButtonIcon}>
+              <Ionicons name="arrow-forward" size={14} color="#ffffff" />
+            </View>
           </Pressable>
         </View>
-
       </SafeAreaView>
 
-      {/* Reviews Modal */}
+      {/* Reviews sheet */}
       <Modal
         visible={reviewsVisible}
         transparent={true}
@@ -667,23 +663,33 @@ export default function TurfDetailsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: theme.outlineVariant }]} />
             <View style={styles.modalHeader}>
-              <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_500Medium' }}>Customer Reviews</ThemedText>
-              <Pressable onPress={() => setReviewsVisible(false)} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color={theme.text} />
+              <View style={{ flex: 1 }}>
+                <ThemedText style={[styles.modalEyebrow, { color: theme.textSecondary }]} numberOfLines={1}>
+                  {details.name.toUpperCase()}
+                </ThemedText>
+                <ThemedText style={[styles.modalTitle, { color: theme.text }]}>Customer Reviews</ThemedText>
+              </View>
+              <Pressable
+                onPress={() => setReviewsVisible(false)}
+                hitSlop={6}
+                style={[styles.roundBtn, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' }]}
+              >
+                <Ionicons name="close" size={16} color={theme.text} />
               </Pressable>
             </View>
 
-            {/* Rating Summary & Progress Bar Breakdown */}
-            <View style={[styles.ratingSummaryContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+            {/* Rating summary & breakdown */}
+            <View style={[styles.ratingSummaryContainer, cardSurface, Shadows.level1]}>
               <View style={styles.ratingSummaryLeft}>
-                <ThemedText style={{ fontSize: 36, fontFamily: 'Sora_500Medium', color: theme.text }}>{details.rating}</ThemedText>
-                <View style={{ flexDirection: 'row', gap: 2, marginTop: 4 }}>
+                <ThemedText style={[styles.ratingBig, { color: theme.text }]}>{details.rating}</ThemedText>
+                <View style={styles.starRow}>
                   {[1, 2, 3, 4, 5].map((s) => (
-                    <Ionicons key={s} name="star" size={12} color="#5D68E8" />
+                    <Ionicons key={s} name="star" size={11} color={accent} />
                   ))}
                 </View>
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 4 }}>{details.reviews}</ThemedText>
+                <ThemedText style={[styles.statusText, { color: theme.textSecondary, marginTop: 4 }]}>{details.reviews}</ThemedText>
               </View>
 
               <View style={styles.ratingBreakdownRight}>
@@ -695,17 +701,17 @@ export default function TurfDetailsScreen() {
                   { stars: 1, pct: '0%', val: 0.0 },
                 ].map((row) => (
                   <View key={row.stars} style={styles.breakdownRow}>
-                    <ThemedText style={styles.breakdownLabel}>{row.stars}★</ThemedText>
-                    <View style={styles.progressBarBg}>
-                      <View style={[styles.progressBarFill, { width: `${row.val * 100}%`, backgroundColor: '#5D68E8' }]} />
+                    <ThemedText style={[styles.breakdownLabel, { color: theme.textSecondary }]}>{row.stars}★</ThemedText>
+                    <View style={[styles.progressBarBg, { backgroundColor: theme.outlineVariant + '33' }]}>
+                      <View style={[styles.progressBarFill, { width: `${row.val * 100}%`, backgroundColor: accent }]} />
                     </View>
-                    <ThemedText style={styles.breakdownPct}>{row.pct}</ThemedText>
+                    <ThemedText style={[styles.breakdownPct, { color: theme.textSecondary }]}>{row.pct}</ThemedText>
                   </View>
                 ))}
               </View>
             </View>
 
-            {/* Reviews List */}
+            {/* Reviews list */}
             <ScrollView style={styles.reviewsList} showsVerticalScrollIndicator={false}>
               {[
                 { stars: 5, user: 'Azarudeen', date: '1 day ago', text: 'Absolutely the best turf in Canary Wharf! Surface is top notch.' },
@@ -714,19 +720,22 @@ export default function TurfDetailsScreen() {
                 { stars: 2, user: 'James W.', date: '2 weeks ago', text: 'Price is a bit high for off-peak hours.' },
                 { stars: 1, user: 'Michael K.', date: '3 weeks ago', text: 'Floodlights failed during our match. Disappointing.' },
               ].map((rev, idx) => (
-                <View key={idx} style={[styles.reviewCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+                <View key={idx} style={[styles.reviewCard, cardSurface]}>
                   <View style={styles.reviewHeader}>
-                    <View>
-                      <ThemedText style={styles.reviewUser}>{rev.user}</ThemedText>
-                      <View style={{ flexDirection: 'row', gap: 2, marginTop: 2 }}>
+                    <View style={[styles.reviewAvatar, { backgroundColor: theme.primary + '1A' }]}>
+                      <ThemedText style={[styles.reviewAvatarText, { color: theme.primary }]}>{rev.user.charAt(0)}</ThemedText>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={[styles.reviewUser, { color: theme.text }]}>{rev.user}</ThemedText>
+                      <View style={styles.starRow}>
                         {[1, 2, 3, 4, 5].map((s) => (
-                          <Ionicons key={s} name="star" size={10} color={s <= rev.stars ? '#5D68E8' : '#c3c7cb'} />
+                          <Ionicons key={s} name="star" size={9.5} color={s <= rev.stars ? accent : theme.outlineVariant} />
                         ))}
                       </View>
                     </View>
-                    <ThemedText style={styles.reviewDate}>{rev.date}</ThemedText>
+                    <ThemedText style={[styles.reviewDate, { color: theme.textSecondary }]}>{rev.date}</ThemedText>
                   </View>
-                  <ThemedText style={styles.reviewText}>{rev.text}</ThemedText>
+                  <ThemedText style={[styles.reviewText, { color: theme.textSecondary }]}>{rev.text}</ThemedText>
                 </View>
               ))}
             </ScrollView>
@@ -734,7 +743,7 @@ export default function TurfDetailsScreen() {
         </View>
       </Modal>
 
-      {/* Session Picker Modal */}
+      {/* Session picker sheet */}
       <Modal
         visible={sessionPickerVisible}
         transparent={true}
@@ -742,15 +751,23 @@ export default function TurfDetailsScreen() {
         onRequestClose={() => setSessionPickerVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.background, maxHeight: 350 }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.background, maxHeight: 420 }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: theme.outlineVariant }]} />
             <View style={styles.modalHeader}>
-              <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_500Medium' }}>Select Booking Date</ThemedText>
-              <Pressable onPress={() => setSessionPickerVisible(false)} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color={theme.text} />
+              <View style={{ flex: 1 }}>
+                <ThemedText style={[styles.modalEyebrow, { color: theme.textSecondary }]}>NEXT 14 DAYS</ThemedText>
+                <ThemedText style={[styles.modalTitle, { color: theme.text }]}>Select Booking Date</ThemedText>
+              </View>
+              <Pressable
+                onPress={() => setSessionPickerVisible(false)}
+                hitSlop={6}
+                style={[styles.roundBtn, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' }]}
+              >
+                <Ionicons name="close" size={16} color={theme.text} />
               </Pressable>
             </View>
 
-            <ScrollView style={{ paddingVertical: Spacing.md }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.sessionList} showsVerticalScrollIndicator={false}>
               {availableSessionDates.map((dateOption, idx) => {
                 const isSelected = dateOption === selectedSessionDate;
                 const isToday = idx === 0;
@@ -761,27 +778,26 @@ export default function TurfDetailsScreen() {
                       setSelectedSessionDate(dateOption);
                       setSessionPickerVisible(false);
                     }}
-                    style={[
+                    style={({ pressed }) => [
                       styles.sessionOption,
-                      {
-                        backgroundColor: isSelected ? theme.secondaryContainer : theme.surfaceLowest,
-                        borderColor: isSelected ? theme.secondary : theme.outlineVariant + '33'
-                      }
+                      isSelected
+                        ? { backgroundColor: theme.primary + '12', borderColor: theme.primary }
+                        : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
+                      { opacity: pressed ? 0.85 : 1 },
                     ]}
                   >
-                    <ThemedText
-                      type="bodyLg"
-                      style={{
-                        color: isSelected ? theme.onSecondaryContainer : theme.text,
-                        fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium',
-                        fontSize: 13,
-                      }}
-                    >
-                      {isToday ? `${dateOption} (Today)` : dateOption}
+                    <View style={[styles.sessionIcon, { backgroundColor: isSelected ? theme.primary : theme.surfaceLow }]}>
+                      <Ionicons name="calendar-outline" size={13} color={isSelected ? '#ffffff' : theme.textSecondary} />
+                    </View>
+                    <ThemedText style={[styles.sessionOptionText, { color: isSelected ? theme.primary : theme.text }]}>
+                      {dateOption}
                     </ThemedText>
-                    {isSelected && (
-                      <Ionicons name="checkmark-circle" size={18} color={theme.secondary} />
+                    {isToday && (
+                      <View style={[styles.statusPill, { backgroundColor: success + '1A', marginTop: 0 }]}>
+                        <ThemedText style={[styles.statusText, { color: '#047857' }]}>Today</ThemedText>
+                      </View>
                     )}
+                    {isSelected && <Ionicons name="checkmark-circle" size={17} color={theme.primary} />}
                   </Pressable>
                 );
               })}
@@ -793,176 +809,198 @@ export default function TurfDetailsScreen() {
   );
 }
 
+const GUTTER = Spacing.containerMargin;
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
+
+  // header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    height: 56,
+    gap: 10,
+    paddingHorizontal: GUTTER,
+    height: 58,
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',
     zIndex: 10,
   },
-  backButton: {
-    padding: 6,
+  roundBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontFamily: 'Sora_500Medium',
-    fontSize: 16,
-    marginHorizontal: Spacing.sm,
-  },
-  iconButton: {
-    padding: 6,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  heroContainer: {
-    paddingHorizontal: Spacing.containerMargin,
-    marginTop: Spacing.md,
-  },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  headerEyebrow: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.9 },
+  headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 13.5, marginTop: 1 },
+
+  scrollContent: { paddingBottom: 40 },
+
+  // hero image
+  heroContainer: { paddingHorizontal: GUTTER, marginTop: 12 },
   heroCard: {
     width: '100%',
     aspectRatio: 4 / 3,
-    borderRadius: 14,
-    overflow: 'hidden',
+    maxWidth: '100%',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#c3c7cb33',
-    position: 'relative',
+    overflow: 'hidden',
   },
-  heroImage: {
-    width: '100%',
-    height: '100%',
+  heroImage: { width: '100%', height: '100%' },
+  ratingChip: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
   },
+  ratingChipText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 11 },
+  ratingChipSub: { color: 'rgba(255,255,255,0.8)', fontFamily: 'Sora_400Regular', fontSize: 10 },
   sliderDotsRow: {
     position: 'absolute',
     bottom: 12,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: 999,
   },
-  sliderDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)',
-  },
-  sliderDotActive: {
-    width: 16,
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-  },
+  sliderDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255, 255, 255, 0.45)' },
+  sliderDotActive: { width: 16, backgroundColor: '#ffffff' },
   sliderCounterBadge: {
     position: 'absolute',
     bottom: 12,
     right: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 12,
+    borderRadius: 999,
   },
-  sliderCounterText: {
-    color: '#ffffff',
-    fontSize: 11,
+  sliderCounterText: { color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_500Medium' },
+  favFab: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  sliderNavBtn: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  sliderNavLeft: { left: 10 },
+  sliderNavRight: { right: 10 },
+
+  // title block
+  contentSection: { marginTop: Spacing.lg, paddingHorizontal: GUTTER },
+  sectionBleed: { marginTop: Spacing.lg },
+  sectionInset: { paddingHorizontal: GUTTER },
+  statusPill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  statusText: {
     fontFamily: 'Sora_500Medium',
+    fontSize: 8.5,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
-  contentSection: {
-    marginTop: Spacing.md,
-    paddingHorizontal: Spacing.containerMargin,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-    flexWrap: 'wrap',
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    marginHorizontal: 8,
-  },
-  bentoGrid: {
+  title: { fontFamily: 'Sora_500Medium', fontSize: 15, lineHeight: 23, marginTop: 7 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
+  locationText: { fontFamily: 'Sora_400Regular', fontSize: 11, lineHeight: 15, flexShrink: 1 },
+
+  // quick facts
+  tileGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: Spacing.containerMargin,
-    marginTop: Spacing.md,
-    gap: 10,
+    gap: 8,
+    paddingHorizontal: GUTTER,
+    marginTop: 12,
   },
-  bentoItem: {
+  infoTile: {
+    flexBasis: '47%',
+    flexGrow: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    width: '48%',
-    paddingHorizontal: 12,
+    gap: 9,
+    paddingHorizontal: 10,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: BorderRadius.premium,
     borderWidth: 1,
-    gap: 8,
   },
-  bentoValue: {
-    fontSize: 12,
-    fontFamily: 'Sora_500Medium',
-    flex: 1,
-  },
-  cardContainer: {
-    borderRadius: 14,
+  tileRing: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: Spacing.md,
-    shadowColor: '#001b3d',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  cardSectionHeader: {
-    color: '#111c2c',
-    fontSize: 13,
+  tileText: { flex: 1, minWidth: 0 },
+  tileLabel: {
     fontFamily: 'Sora_500Medium',
-    borderBottomWidth: 1,
-    borderBottomColor: '#0000000a',
-    paddingBottom: Spacing.xs,
-    marginBottom: Spacing.sm,
+    fontSize: 8.5,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
-  amenityRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
-  },
+  tileValue: { fontFamily: 'Sora_500Medium', fontSize: 12, marginTop: 1 },
+
+  // cards
+  card: { borderRadius: BorderRadius.premium, borderWidth: 1, padding: Spacing.md },
+  bodyText: { fontFamily: 'Sora_400Regular', fontSize: 11.5, lineHeight: 17 },
+  cardIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { fontFamily: 'Sora_500Medium', fontSize: 12.5 },
+  cardSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1 },
+  amenityRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   amenityPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    gap: 5,
+    paddingHorizontal: 10,
+    height: 30,
+    borderRadius: 999,
     borderWidth: 1,
   },
-  mapContainer: {
-    height: 160,
-    borderRadius: 12,
-    backgroundColor: '#eceef0',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  mapImage: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.5,
-  },
+  amenityText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+
+  // vouchers
+  voucherStrip: { gap: 10, paddingHorizontal: GUTTER, paddingTop: 2, paddingBottom: 6 },
+  voucherHint: { fontFamily: 'Sora_400Regular', fontSize: 10, paddingHorizontal: GUTTER, marginTop: 4 },
+
+  // location
+  mapContainer: { height: 150, borderRadius: BorderRadius.premium, overflow: 'hidden' },
+  mapImage: { width: '100%', height: '100%', opacity: 0.55 },
   mapMarkerContainer: {
     position: 'absolute',
     top: 0,
@@ -974,485 +1012,125 @@ const styles = StyleSheet.create({
   },
   mapMarker: {
     padding: 8,
-    borderRadius: BorderRadius.full,
+    borderRadius: 999,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 5,
   },
-  locationFooter: {
-    marginTop: Spacing.md,
-  },
-  directionsLink: {
+  locationFooter: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
+  ghostBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: '#0000000a',
-    paddingTop: Spacing.md,
+    gap: 3,
+    height: 30,
+    paddingHorizontal: 11,
+    borderRadius: 999,
+    borderWidth: 1,
   },
+  ghostBtnText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+
+  // sticky footer
   footerActions: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     height: 84,
-    paddingHorizontal: Spacing.containerMargin,
+    paddingHorizontal: GUTTER,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
     borderTopWidth: 1,
     paddingBottom: Platform.OS === 'ios' ? 16 : 0,
     zIndex: 100,
   },
-  footerInfoCol: {
-    flexDirection: 'column',
-  },
-  bookButton: {
-    width: '60%',
-    height: 48,
-    borderRadius: BorderRadius.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  // Modals & Enhanced Features styles
-  modalOverlay: {
+  sessionPill: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: BorderRadius.premium,
-    borderTopRightRadius: BorderRadius.premium,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.xl,
-    paddingHorizontal: Spacing.containerMargin,
-    maxHeight: '80%',
-    shadowColor: '#001b3d',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  modalHeader: {
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: '#0000000a',
+    gap: 8,
+    height: 50,
+    paddingLeft: 6,
+    paddingRight: 12,
+    borderRadius: 999,
+    borderWidth: 1,
   },
-  closeButton: {
-    padding: 4,
+  sessionIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  sessionText: { flex: 1, minWidth: 0 },
+  footerSessionLabel: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.8 },
+  footerSessionDate: { fontFamily: 'Sora_500Medium', fontSize: 12.5, marginTop: 1 },
+  bookButton: {
+    height: 50,
+    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingLeft: 20,
+    paddingRight: 8,
   },
+  bookButtonText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 13.5 },
+  bookButtonIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // sheets
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'flex-end' },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 8,
+    paddingBottom: Spacing.xl,
+    paddingHorizontal: GUTTER,
+    maxHeight: '80%',
+    ...Shadows.level3,
+  },
+  sheetHandle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, marginBottom: 10, opacity: 0.6 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 10 },
+  modalEyebrow: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.9 },
+  modalTitle: { fontFamily: 'Sora_500Medium', fontSize: 15.5, marginTop: 1 },
   ratingSummaryContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     padding: Spacing.md,
-    borderRadius: BorderRadius.xl,
+    borderRadius: BorderRadius.premium,
     borderWidth: 1,
-    marginTop: Spacing.md,
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    marginTop: 4,
   },
-  ratingSummaryLeft: {
-    alignItems: 'center',
-    flex: 1.2,
-  },
-  ratingBreakdownRight: {
-    flex: 2,
-    gap: 4,
-    marginLeft: Spacing.md,
-  },
-  breakdownRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  breakdownLabel: {
-    fontSize: 10,
-    fontFamily: 'Sora_500Medium',
-    width: 22,
-  },
-  progressBarBg: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#0000000d',
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  breakdownPct: {
-    fontSize: 10,
-    color: '#81919c',
-    width: 24,
-    textAlign: 'right',
-  },
-  reviewsList: {
-    marginTop: Spacing.md,
-  },
-  reviewCard: {
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.xs,
-  },
-  reviewUser: {
-    fontSize: 13,
-    fontFamily: 'Sora_500Medium',
-  },
-  reviewDate: {
-    fontSize: 11,
-    color: '#81919c',
-  },
-  reviewText: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#43474b',
-  },
+  ratingSummaryLeft: { alignItems: 'center', flex: 1.1 },
+  ratingBig: { fontFamily: 'Sora_500Medium', fontSize: 23, lineHeight: 36 },
+  starRow: { flexDirection: 'row', gap: 2, marginTop: 3 },
+  ratingBreakdownRight: { flex: 2, gap: 5, marginLeft: Spacing.md },
+  breakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  breakdownLabel: { fontSize: 10, fontFamily: 'Sora_500Medium', width: 22 },
+  progressBarBg: { flex: 1, height: 6, borderRadius: 999, overflow: 'hidden' },
+  progressBarFill: { height: '100%', borderRadius: 999 },
+  breakdownPct: { fontSize: 10, fontFamily: 'Sora_400Regular', width: 26, textAlign: 'right' },
+  reviewsList: { marginTop: 12 },
+  reviewCard: { borderRadius: BorderRadius.premium, borderWidth: 1, padding: 12, marginBottom: 8 },
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 7 },
+  reviewAvatar: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  reviewAvatarText: { fontFamily: 'Sora_500Medium', fontSize: 12 },
+  reviewUser: { fontFamily: 'Sora_500Medium', fontSize: 12.5 },
+  reviewDate: { fontFamily: 'Sora_400Regular', fontSize: 10 },
+  reviewText: { fontFamily: 'Sora_400Regular', fontSize: 11.5, lineHeight: 16 },
+  sessionList: { paddingTop: 4 },
   sessionOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    marginBottom: Spacing.xs,
-  },
-  sessionOptionText: {
-    fontSize: 14,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  footerSessionLabel: {
-    color: '#81919c',
-    fontSize: 9,
-    fontFamily: 'Sora_500Medium',
-    letterSpacing: 0.8,
-  },
-  footerSessionDate: {
-    color: '#111c2c',
-    fontSize: 15,
-    fontFamily: 'Sora_500Medium',
-    textDecorationLine: 'underline',
-    marginTop: 2,
-  },
-  favFab: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  // Ticket-style Voucher & Offers
-  voucherCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    overflow: 'hidden',
-    marginBottom: 10,
-  },
-  voucherTopBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: '#1e293b',
-  },
-  voucherDiscountBadge: {
-    backgroundColor: '#10b981',
+    gap: 9,
+    paddingVertical: 8,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  voucherDiscountText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontFamily: 'Sora_500Medium',
-    letterSpacing: 0.3,
-  },
-  voucherBrandPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#0f172a',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#334155',
+    marginBottom: 7,
   },
-  voucherBrandPillText: {
-    color: '#94a3b8',
-    fontSize: 9.5,
-    fontFamily: 'Sora_500Medium',
-    letterSpacing: 0.4,
-  },
-  ticketDividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 16,
-    overflow: 'hidden',
-  },
-  ticketNotchLeft: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginLeft: -8,
-  },
-  ticketDottedLine: {
-    flex: 1,
-    borderStyle: 'dashed',
-    borderBottomWidth: 1.5,
-    marginHorizontal: 4,
-  },
-  ticketNotchRight: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: -8,
-  },
-  voucherBody: {
-    paddingHorizontal: 14,
-    paddingTop: 4,
-    paddingBottom: 12,
-  },
-  voucherTitle: {
-    fontSize: 13.5,
-    fontFamily: 'Sora_500Medium',
-    letterSpacing: -0.1,
-  },
-  voucherDesc: {
-    fontSize: 10.5,
-    fontFamily: 'Sora_400Regular',
-    lineHeight: 15,
-    marginTop: 2,
-  },
-  voucherFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  voucherCodePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-  },
-  voucherCodeText: {
-    fontSize: 11,
-    fontFamily: 'Sora_500Medium',
-    letterSpacing: 0.5,
-  },
-  voucherMetaWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  voucherMetaBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  voucherMetaText: {
-    fontSize: 9.5,
-    fontFamily: 'Sora_500Medium',
-  },
-  voucherApplyBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  voucherApplyBtnText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontFamily: 'Sora_500Medium',
-  },
-  // KakaoStyle Trendy Ticket Voucher
-  kakaoCouponCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#FF1E70',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 4,
-    marginVertical: 8,
-  },
-  kakaoTeethRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#FF1E70',
-    height: 8,
-    overflow: 'hidden',
-  },
-  kakaoTooth: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 8,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#f1f5f9',
-  },
-  kakaoPinkBody: {
-    backgroundColor: '#FF1E70',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 22,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  kakaoWatermark: {
-    position: 'absolute',
-    right: -10,
-    bottom: -15,
-    fontSize: 88,
-    fontFamily: 'Sora_500Medium',
-    color: 'rgba(255, 255, 255, 0.13)',
-    letterSpacing: 2,
-    transform: [{ rotate: '-12deg' }],
-  },
-  kakaoHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    zIndex: 2,
-  },
-  kakaoBrandBlock: {
-    alignItems: 'flex-start',
-    maxWidth: '65%',
-  },
-  kakaoBrandTitle: {
-    fontSize: 12.5,
-    fontFamily: 'Sora_500Medium',
-    color: '#18181b',
-    letterSpacing: 0.5,
-  },
-  kakaoBrandSub: {
-    fontSize: 11,
-    fontFamily: 'Sora_500Medium',
-    color: '#18181b',
-    lineHeight: 13,
-  },
-  kakaoBrandCoupon: {
-    fontSize: 10,
-    fontFamily: 'Sora_500Medium',
-    color: '#18181b',
-    lineHeight: 12,
-  },
-  kakaoBrandLine: {
-    width: 42,
-    height: 2.5,
-    backgroundColor: '#18181b',
-    marginTop: 3,
-  },
-  kakaoYellowBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FFDE00',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  kakaoYellowBadgeText: {
-    fontSize: 8.5,
-    fontFamily: 'Sora_500Medium',
-    color: '#18181b',
-    lineHeight: 10.5,
-    textAlign: 'center',
-  },
-  kakaoDiscountCenter: {
-    marginTop: 12,
-    zIndex: 2,
-  },
-  kakaoBigDiscount: {
-    fontSize: 48,
-    fontFamily: 'Sora_500Medium',
-    color: '#ffffff',
-    lineHeight: 48,
-    letterSpacing: -1,
-  },
-  kakaoBigOff: {
-    fontSize: 40,
-    fontFamily: 'Sora_500Medium',
-    color: '#ffffff',
-    lineHeight: 40,
-    letterSpacing: 0.5,
-  },
-  kakaoWhiteStub: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1.5,
-    borderTopColor: '#f1f5f9',
-    borderStyle: 'dashed',
-  },
-  kakaoStubLabel: {
-    fontSize: 9.5,
-    fontFamily: 'Sora_500Medium',
-    color: '#FF1E70',
-    letterSpacing: 0.4,
-  },
-  kakaoStubDays: {
-    fontSize: 12,
-    fontFamily: 'Sora_500Medium',
-    color: '#0f172a',
-    marginTop: 2,
-  },
-  kakaoStubFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  kakaoStubCode: {
-    fontSize: 10.5,
-    fontFamily: 'Sora_500Medium',
-    color: '#334155',
-  },
-  kakaoStubDesc: {
-    fontSize: 9,
-    color: '#64748b',
-    marginTop: 2,
-    maxWidth: 210,
-  },
-  kakaoApplyBtn: {
-    backgroundColor: '#FF1E70',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  kakaoApplyBtnText: {
-    color: '#ffffff',
-    fontSize: 11.5,
-    fontFamily: 'Sora_500Medium',
-  },
+  sessionOptionText: { flex: 1, fontFamily: 'Sora_500Medium', fontSize: 12.5 },
 });

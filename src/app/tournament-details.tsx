@@ -15,29 +15,55 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { GradientContainer } from '@/components/gradient-container';
-import { Spacing, BorderRadius } from '@/constants/theme';
+import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useTournamentStore, useMatchStore } from '@/store/app-store';
-import { hasTournamentStarted } from '@/store/tournament-store';
+import {
+  hasTournamentStarted,
+  registrationBlocker,
+  registrationBlockedMessage,
+  isLegacyPitch,
+  RegistrationBlocker,
+} from '@/store/tournament-store';
 import { durableImages } from '@/utils/persist-image';
 import { getMascotImage } from '@/constants/mascots';
+import { formatIsoDate } from '@/constants/tournament';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { LinearGradient } from 'expo-linear-gradient';
+import {
+  DashboardCard,
+  DashboardSectionLabel,
+  DashboardTabs,
+  ProgressPill,
+  StatTiles,
+} from '@/components/dashboard/analytics-kit';
+import { ACCENTS } from '@/constants/dashboard-accents';
 import { formatRegistrationCountdown } from '@/store/tournament-store';
+import { CashbackOutputCard } from '@/components/cashback-output-card';
 
 /**
  * All seven fit on one row without scrolling, so nothing is hidden off-screen.
  * "Live Matches" is shortened to "Live" to buy the room.
  *
- * Standings is disabled until the bracket produces results — with no fixtures
- * played there is nothing to rank, and it sits last for the same reason.
+ * Standings and Live are disabled and sit last: Standings until the bracket
+ * produces results, Live until live scoring is tied to a tournament's matches.
  */
+/** Bracket geometry: vertical room per opening match, card width, connector gap. */
+const BRACKET_SLOT = 120;
+const BRACKET_CARD_W = 172;
+const BRACKET_GAP = 28;
+
+/** What the register button says when a tournament can't take more teams. */
+const REG_BLOCK_LABEL: Record<RegistrationBlocker, string> = {
+  full: 'Registration Full',
+  closed: 'Registration Closed',
+  cancelled: 'Tournament Cancelled',
+  not_open: 'Registration Not Open',
+};
+
 /** A small visual anchor per sport, in place of a per-team crest we don't store. */
 const TEAM_BADGE: Record<string, string> = {
   Football: '⚽', Cricket: '🏏', Tennis: '🎾', Basketball: '🏀', Volleyball: '🏐',
-};
-
-const REG_TINT: Record<string, string> = {
-  pending: '#E08A3C', confirmed: '#10B981', rejected: '#EF4444',
 };
 
 /**
@@ -60,10 +86,10 @@ function tabsFor(started: boolean): { key: string; label: string; disabled?: boo
     { key: 'Overview', label: 'Overview' },
     { key: 'Teams', label: 'Teams' },
     { key: 'Fixtures', label: 'Fixtures', disabled: !matchTabsOpen },
-    { key: 'Live Matches', label: 'Live', disabled: !matchTabsOpen },
     { key: 'Sponsors', label: 'Sponsors' },
     { key: 'Media', label: 'Media' },
     { key: 'Standings', label: 'Standings', disabled: true },
+    { key: 'Live Matches', label: 'Live', disabled: true },
   ];
 }
 
@@ -109,6 +135,10 @@ export default function TournamentDetailsScreen() {
    */
   const { publishedTournaments, registrations } = useTournamentStore();
   const { matches } = useMatchStore();
+  const { profile } = useUserProfile();
+  /** Only a host manages the draw; players read it. */
+  const isHost = profile.role === 'Organizer' || profile.role === 'Super Admin';
+  const [fixtureView, setFixtureView] = useState<'bracket' | 'list'>('bracket');
   const tournament = useMemo(
     () => (publishedTournaments || []).find((t: any) => t.id === params.id),
     [publishedTournaments, params.id]
@@ -204,6 +234,11 @@ export default function TournamentDetailsScreen() {
   const tournamentMedia: string[] = durableImages(tournament?.mediaImages);
 
   const teamsCount = registeredTeams.length || tournament?.teamsCount || 0;
+
+  /** Why this tournament can't take another team, if it can't. */
+  const regBlock = tournament
+    ? registrationBlocker(tournament, registeredTeams.filter((r: any) => r.status !== 'rejected').length)
+    : null;
   const maxTeams = tournament?.maxTeams ?? 16;
 
   /**
@@ -219,188 +254,157 @@ export default function TournamentDetailsScreen() {
   }, [teamsCount, tournament]);
 
   // Sub-renders for each tab
-  const renderOverview = () => (
-    <View style={styles.tabContent}>
-      {/* Real venue, from the tournament record. This showed a fixed
-          "Elms Field Ground A, Elms Road, London SE1" for every tournament,
-          and the directions link only raised a toast. */}
-      <ThemedText style={styles.sectionHeader}>Ground Directions</ThemedText>
-      <View style={[styles.infoCard, { backgroundColor: theme.surfaceLow }]}>
-        <Ionicons name="map-outline" size={20} color={theme.primary} />
-        <View style={{ marginLeft: 12, flex: 1 }}>
-          <ThemedText style={[styles.infoTitle, { color: theme.text }]} numberOfLines={2}>
-            {venueName}
-          </ThemedText>
+  /** A live match as a dashboard card; tappable where there is somewhere to go. */
+  const renderLiveCard = (m: any, onPress?: () => void) => (
+    <DashboardCard
+      key={m.id}
+      style={{ marginBottom: 10 }}
+      title={`${m.homeTeam?.name || 'Home'} vs ${m.awayTeam?.name || 'Away'}`}
+      metric={`${m.homeScore ?? 0} – ${m.awayScore ?? 0}`}
+      tag="🔴 LIVE"
+      icon="radio"
+      accent={ACCENTS.red}
+      onPress={onPress}
+      accessibilityLabel={`Live: ${m.homeTeam?.name || 'Home'} ${m.homeScore ?? 0}, ${m.awayTeam?.name || 'Away'} ${m.awayScore ?? 0}`}
+      footer={m.venueName ? { label: 'Venue', value: m.venueName } : undefined}
+    />
+  );
+
+  const renderNoLive = () => (
+    <DashboardCard
+      title="No live matches"
+      metric="Scores appear as soon as a fixture starts"
+      icon="radio-outline"
+      accent={ACCENTS.slate}
+    />
+  );
+
+  /** A footer action in the card's accent, e.g. "Get directions ›". */
+  const renderCardLink = (label: string, color: string, onPress: () => void, a11y: string) => (
+    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={a11y} style={styles.cardLink}>
+      <ThemedText style={[styles.cardLinkText, { color }]}>{label}</ThemedText>
+      <Ionicons name="chevron-forward" size={12} color={color} />
+    </Pressable>
+  );
+
+  const renderOverview = () => {
+    const hasCashback = Boolean((tournament?.cashbackEnabled ?? (Number(tournament?.cashbackAmount) > 0)) && Number(tournament?.cashbackAmount) > 0);
+    const cbAmount = Number(tournament?.cashbackAmount) || 0;
+    const cbType = tournament?.cashbackType || 'flat';
+    const entryFeeNum = Number(tournament?.entryFee) || 150;
+    const calculatedReward = cbType === 'flat' ? cbAmount : Math.min(tournament?.cashbackMaxAmount ? Number(tournament.cashbackMaxAmount) : Infinity, Math.round((entryFeeNum * cbAmount) / 100));
+
+    return (
+      <View style={styles.tabContent}>
+        {/* Active Cashback Reward Offer */}
+        {hasCashback && (
+          <View style={{ marginBottom: Spacing.md }}>
+            <DashboardSectionLabel label="Cashback Reward" color={ACCENTS.green.main} style={{ marginBottom: Spacing.sm }} />
+            <CashbackOutputCard
+              sourceTitle={tournament?.name || 'Tournament'}
+              cashbackTitle={tournament?.cashbackName || `${tournament?.name || 'Tournament'} Cashback Reward`}
+              cashbackCode={tournament?.cashbackCode || 'CUP50'}
+              cashbackAmount={cbAmount}
+              cashbackType={cbType}
+              cashbackMaxAmount={tournament?.cashbackMaxAmount}
+              cashbackOneTime={tournament?.cashbackOneTime}
+              calculatedReward={calculatedReward}
+              variant="compact"
+            />
+          </View>
+        )}
+
+        {/* Real venue, from the tournament record, with working directions. */}
+        <DashboardSectionLabel label="Ground Directions" color={ACCENTS.primary.main} style={{ marginBottom: Spacing.sm }} />
+        <DashboardCard
+          title={venueName}
+          titleLines={2}
+          metric="Tournament venue"
+          icon="map"
+          accent={ACCENTS.primary}
+          footer={{
+            label: 'Opens in',
+            value: 'Maps',
+            status: renderCardLink('Get directions', theme.primary, openVenueInMaps, `Get directions to ${venueName}`),
+          }}
+        >
           {!!venueAddress && (
-            <ThemedText style={[styles.infoLine, { color: theme.textSecondary }]} numberOfLines={3}>
+            <ThemedText style={[styles.addressText, { color: theme.textSecondary }]} numberOfLines={3}>
               {venueAddress}
             </ThemedText>
           )}
-          <Pressable
-            style={styles.directionLink}
-            onPress={openVenueInMaps}
-            accessibilityRole="button"
-            accessibilityLabel={`Get directions to ${venueName}`}
-          >
-            <ThemedText style={[styles.linkText, { color: theme.secondaryContainer }]}>
-              GET DIRECTIONS
-            </ThemedText>
-            <Ionicons name="chevron-forward" size={12} color={theme.secondaryContainer} />
-          </Pressable>
-        </View>
-      </View>
+        </DashboardCard>
 
-      <ThemedText style={[styles.sectionHeader, { marginTop: Spacing.lg }]}>Tournament Rules</ThemedText>
       {/* The rules the organizer actually ticked when publishing. */}
-      <View style={[styles.rulesList, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-        {(tournamentRules.length > 0 ? tournamentRules : ['No specific rules have been published for this tournament.']).map((rule, idx) => (
-          <View key={idx} style={styles.ruleItem}>
-            <Ionicons name="checkmark-circle" size={16} color={theme.secondaryContainer} style={{ marginRight: 8, marginTop: 2 }} />
-            <ThemedText style={[styles.infoLine, { color: theme.text, flex: 1 }]}>{rule}</ThemedText>
+      <DashboardSectionLabel label="Tournament Rules" color={ACCENTS.green.main} style={{ marginTop: Spacing.lg, marginBottom: Spacing.sm }} />
+      <DashboardCard
+        title="Rules & Conditions"
+        metric={
+          tournamentRules.length > 0
+            ? `${tournamentRules.length} ${tournamentRules.length === 1 ? 'rule' : 'rules'} published`
+            : 'No rules published yet'
+        }
+        icon="document-text"
+        accent={ACCENTS.green}
+      >
+        {tournamentRules.length > 0 && (
+          <View style={styles.ruleList}>
+            {tournamentRules.map((rule, idx) => (
+              <View key={idx} style={styles.ruleItem}>
+                <Ionicons name="checkmark-circle" size={15} color={ACCENTS.green.main} style={{ marginRight: 8, marginTop: 1 }} />
+                <ThemedText style={[styles.infoLine, { color: theme.text, flex: 1, marginTop: 0 }]}>{rule}</ThemedText>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
+        )}
+      </DashboardCard>
 
-      {/* The organiser who published this tournament, not a fixed
-          "Apex Sports Club / +44 20 7946 0958". */}
-      <ThemedText style={[styles.sectionHeader, { marginTop: Spacing.lg }]}>Organizer Contacts</ThemedText>
-      <View style={[styles.infoCard, { backgroundColor: theme.surfaceLow }]}>
-        <Ionicons name="call-outline" size={20} color={theme.primary} />
-        <View style={{ marginLeft: 12, flex: 1 }}>
-          <ThemedText style={[styles.infoTitle, { color: theme.text }]} numberOfLines={2}>
-            {organizerName}
-          </ThemedText>
-          {organizerContact ? (
-            <Pressable
-              onPress={() => Linking.openURL(`tel:${organizerContact.replace(/\s/g, '')}`)}
-              accessibilityRole="button"
-              accessibilityLabel={`Call ${organizerName}`}
-            >
-              <ThemedText style={[styles.infoLine, { color: theme.secondaryContainer }]}>
-                {organizerContact}
-              </ThemedText>
-            </Pressable>
-          ) : (
-            <ThemedText style={[styles.infoLine, { color: theme.textSecondary }]}>
-              No contact number published
-            </ThemedText>
-          )}
-        </View>
-      </View>
+      {/* The organiser who published this tournament. */}
+      <DashboardSectionLabel label="Organizer Contacts" color={ACCENTS.orange.main} style={{ marginTop: Spacing.lg, marginBottom: Spacing.sm }} />
+      <DashboardCard
+        title={organizerName}
+        metric={organizerContact || 'No contact number published'}
+        icon="call"
+        accent={ACCENTS.orange}
+        footer={
+          organizerContact
+            ? {
+                label: 'Organizer',
+                status: renderCardLink(
+                  'Call',
+                  ACCENTS.orange.dark,
+                  () => Linking.openURL(`tel:${organizerContact.replace(/\s/g, '')}`),
+                  `Call ${organizerName}`
+                ),
+              }
+            : undefined
+        }
+      />
 
-      {/* Live now — only once play has begun, and only this tournament's
-          matches. Capped at two; the Live tab carries the rest. */}
+      {/* Live now — only this tournament's matches, capped at two. Nothing
+          links to the Live tab while it is disabled. */}
       {(started || ALWAYS_SHOW_MATCH_TABS) && (
         <>
-          <View style={[styles.rowBetween, { marginTop: Spacing.lg, alignItems: 'center' }]}>
-            <ThemedText style={styles.sectionHeader}>Live Now</ThemedText>
-            {liveMatches.length > 2 && (
-              <Pressable onPress={() => setActiveTab('Live Matches')} accessibilityRole="button">
-                <ThemedText type="labelSm" style={{ color: theme.primary }}>
-                  View all {liveMatches.length} ›
-                </ThemedText>
-              </Pressable>
-            )}
-          </View>
-
-          {liveMatches.length === 0 ? (
-            <View style={[styles.infoCard, { backgroundColor: theme.surfaceLow }]}>
-              <Ionicons name="radio-outline" size={20} color={theme.textSecondary} />
-              <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 12, flex: 1 }}>
-                No matches are being scored right now. Live scores appear here as soon as a
-                fixture starts.
-              </ThemedText>
-            </View>
-          ) : (
-            liveMatches.slice(0, 2).map((m: any) => (
-              <Pressable
-                key={m.id}
-                onPress={() => setActiveTab('Live Matches')}
-                accessibilityRole="button"
-                accessibilityLabel={`Live: ${m.homeTeam?.name || 'Home'} versus ${m.awayTeam?.name || 'Away'}`}
-                style={({ pressed }) => [
-                  styles.liveMiniCard,
-                  {
-                    backgroundColor: theme.surfaceLowest,
-                    borderColor: theme.outlineVariant + '33',
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-              >
-                <View style={styles.liveMiniHeader}>
-                  <View style={styles.liveDotRow}>
-                    <View style={styles.liveDot} />
-                    <ThemedText style={styles.liveMiniLabel}>LIVE</ThemedText>
-                  </View>
-                  {!!m.venueName && (
-                    <ThemedText
-                      type="labelSm"
-                      numberOfLines={1}
-                      style={{ color: theme.textSecondary, fontSize: 10, flexShrink: 1 }}
-                    >
-                      {m.venueName}
-                    </ThemedText>
-                  )}
-                </View>
-
-                <View style={styles.liveMiniScoreRow}>
-                  <ThemedText type="bodySm" numberOfLines={1} style={{ color: theme.text, flex: 1 }}>
-                    {m.homeTeam?.name || 'Home'}
-                  </ThemedText>
-                  <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'Sora_500Medium' }}>
-                    {m.homeScore} - {m.awayScore}
-                  </ThemedText>
-                  <ThemedText
-                    type="bodySm"
-                    numberOfLines={1}
-                    style={{ color: theme.text, flex: 1, textAlign: 'right' }}
-                  >
-                    {m.awayTeam?.name || 'Away'}
-                  </ThemedText>
-                </View>
-              </Pressable>
-            ))
-          )}
+          <DashboardSectionLabel label="Live Now" color={ACCENTS.red.main} style={{ marginTop: Spacing.lg, marginBottom: Spacing.sm }} />
+          {liveMatches.length === 0 ? renderNoLive() : liveMatches.slice(0, 2).map((m: any) => renderLiveCard(m))}
         </>
       )}
 
-      {/* Sponsors strip — fills the space below the fold and gives sponsors
-          visibility on the tab everyone lands on, not one they must find. */}
+      {/* Sponsors — the same tiles as the Sponsors and Media tabs, first four. */}
       {sponsors.length > 0 && (
-      <>
-      <View style={[styles.rowBetween, { marginTop: Spacing.lg, alignItems: 'center' }]}>
-        <ThemedText style={styles.sectionHeader}>Sponsors</ThemedText>
-        <Pressable onPress={() => setActiveTab('Sponsors')} accessibilityRole="button">
-          <ThemedText type="labelSm" style={{ color: theme.primary }}>View all ›</ThemedText>
-        </Pressable>
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.sponsorStrip}
-      >
-        {sponsors.map((sp, idx) => (
-          <View
-            key={idx}
-            style={[
-              styles.sponsorStripCard,
-              { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
-            ]}
-          >
-            <Image source={sp.logo} style={styles.sponsorStripLogo} contentFit="contain" />
-            <ThemedText type="labelSm" numberOfLines={1} style={{ color: theme.text, fontSize: 10.5 }}>
-              {sp.name}
-            </ThemedText>
-            <ThemedText type="labelSm" numberOfLines={1} style={{ color: theme.textSecondary, fontSize: 9 }}>
-              {sp.type}
-            </ThemedText>
-          </View>
-        ))}
-      </ScrollView>
-      </>
+        <>
+          <DashboardSectionLabel
+            label="Sponsors"
+            color={ACCENTS.orange.main}
+            style={{ marginTop: Spacing.lg, marginBottom: Spacing.sm }}
+            right={renderCardLink('View all', theme.primary, () => setActiveTab('Sponsors'), 'View all sponsors')}
+          />
+          {renderSponsorTiles(sponsors.slice(0, 4))}
+        </>
       )}
     </View>
-  );
+    );
+  };
 
   /**
    * Registered teams as a list rather than a grid, one per row, each opening
@@ -408,68 +412,53 @@ export default function TournamentDetailsScreen() {
    */
   const renderTeams = () => (
     <View style={styles.tabContent}>
-      <ThemedText style={styles.sectionHeader}>
-        Registered Teams ({teamsCount})
-      </ThemedText>
+      <DashboardSectionLabel label={`Registered Teams (${teamsCount})`} color={ACCENTS.primary.main} style={{ marginBottom: Spacing.sm }} />
 
       {registeredTeams.length === 0 ? (
-        <View style={[styles.emptyTeams, { borderColor: theme.outlineVariant + '55' }]}>
-          <Ionicons name="people-outline" size={22} color={theme.textSecondary} />
-          <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center' }}>
-            No teams have registered yet.
-          </ThemedText>
-          <ThemedText type="labelSm" style={{ color: theme.textSecondary, textAlign: 'center', fontSize: 10 }}>
-            Registrations will appear here as soon as a team signs up.
-          </ThemedText>
-        </View>
+        <DashboardCard
+          title="No teams yet"
+          metric="Registrations appear as soon as a team signs up"
+          icon="people-outline"
+          accent={ACCENTS.slate}
+        />
       ) : (
         <View style={{ gap: 10 }}>
           {registeredTeams.map((reg: any) => {
             const open = expandedTeamId === reg.id;
             const squad = Array.isArray(reg.squad) ? reg.squad : [];
+            const accent = reg.status === 'confirmed' ? ACCENTS.green : reg.status === 'rejected' ? ACCENTS.red : ACCENTS.orange;
+            const statusTag = reg.status === 'pending' ? '⏳ Awaiting' : reg.status === 'confirmed' ? '✅ Confirmed' : '✖ Rejected';
             return (
-              <View
+              <DashboardCard
                 key={reg.id}
-                style={[styles.teamRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
-              >
-                <Pressable
-                  onPress={() => setExpandedTeamId(open ? null : reg.id)}
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: open }}
-                  accessibilityLabel={`${reg.teamName} squad`}
-                  style={styles.teamRowHead}
-                >
-                  {reg.teamMascot ? (
+                title={reg.teamName}
+                metric={squad.length > 0 ? `${squad.length} ${squad.length === 1 ? 'player' : 'players'}` : 'Squad not submitted'}
+                tag={statusTag}
+                accent={accent}
+                leading={
+                  reg.teamLogo ? (
+                    <Image source={{ uri: reg.teamLogo }} style={[styles.teamCrest, { borderRadius: 10 }]} contentFit="cover" />
+                  ) : reg.teamMascot ? (
                     <Image source={getMascotImage(reg.teamMascot)} style={styles.teamCrest} contentFit="contain" />
                   ) : (
                     <ThemedText style={styles.teamLogo}>{TEAM_BADGE[reg.sport] || '🏅'}</ThemedText>
-                  )}
-
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <ThemedText style={[styles.infoTitle, { color: theme.text }]} numberOfLines={1}>
-                      {reg.teamName}
-                    </ThemedText>
-                    <ThemedText style={[styles.infoLine, { color: theme.textSecondary }]} numberOfLines={1}>
-                      {squad.length > 0 ? `${squad.length} players` : 'Squad not submitted'}
-                      {reg.registeredAt ? ` · joined ${new Date(reg.registeredAt).toLocaleDateString()}` : ''}
-                    </ThemedText>
+                  )
+                }
+                trailing={
+                  <View style={[styles.chevronTile, { backgroundColor: theme.surfaceLow }]}>
+                    <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={theme.textSecondary} />
                   </View>
-
-                  <View style={[styles.regStatusPill, { backgroundColor: (REG_TINT[reg.status] || '#6B7280') + '1F' }]}>
-                    <ThemedText type="labelSm" style={{ color: REG_TINT[reg.status] || '#6B7280', fontSize: 9 }}>
-                      {reg.status === 'pending' ? 'Awaiting' : reg.status === 'confirmed' ? 'Confirmed' : 'Rejected'}
-                    </ThemedText>
-                  </View>
-
-                  <Ionicons
-                    name={open ? 'chevron-up' : 'chevron-down'}
-                    size={16}
-                    color={theme.textSecondary}
-                  />
-                </Pressable>
-
+                }
+                onPress={() => setExpandedTeamId(open ? null : reg.id)}
+                accessibilityLabel={`${reg.teamName}, ${statusTag.slice(2)}, ${squad.length} players. ${open ? 'Hide' : 'Show'} squad`}
+                footer={
+                  reg.registeredAt
+                    ? { label: 'Joined', value: formatIsoDate(String(reg.registeredAt).slice(0, 10)) }
+                    : undefined
+                }
+              >
                 {open && (
-                  <View style={[styles.squadPanel, { borderTopColor: theme.outlineVariant + '33' }]}>
+                  <View style={[styles.squadList, { borderTopColor: theme.outlineVariant + '1A' }]}>
                     {squad.length === 0 ? (
                       <ThemedText style={[styles.infoLine, { color: theme.textSecondary }]}>
                         This team has not submitted a squad yet.
@@ -477,10 +466,8 @@ export default function TournamentDetailsScreen() {
                     ) : (
                       squad.map((pl: any, i: number) => (
                         <View key={pl.id || i} style={styles.squadRow}>
-                          <View style={[styles.squadNo, { backgroundColor: theme.primary + '14' }]}>
-                            <ThemedText style={[styles.linkText, { color: theme.primary }]}>
-                              {pl.jersey || i + 1}
-                            </ThemedText>
+                          <View style={[styles.squadNo, { backgroundColor: accent.main + '1A' }]}>
+                            <ThemedText style={[styles.linkText, { color: accent.dark }]}>{pl.jersey || i + 1}</ThemedText>
                           </View>
                           <View style={{ flex: 1, minWidth: 0 }}>
                             <ThemedText style={[styles.infoTitle, { color: theme.text }]} numberOfLines={1}>
@@ -502,7 +489,7 @@ export default function TournamentDetailsScreen() {
                     )}
                   </View>
                 )}
-              </View>
+              </DashboardCard>
             );
           })}
         </View>
@@ -517,74 +504,199 @@ export default function TournamentDetailsScreen() {
    * to render here regardless, so a tournament with no schedule still showed a
    * full day's play.
    */
+  /** A slot the bracket hasn't decided yet — "Winner SF 1", or a bye. */
+  const isPendingTeam = (name: string) => /^Winner\s/i.test(String(name)) || name === 'Bye';
+
+  /** Where a match is played: its own venue, or the tournament's for old placeholder pitches. */
+  const venueOf = (f: any) => (f.pitch && !isLegacyPitch(f.pitch) ? f.pitch : venueName);
+
+  /**
+   * The knockout as a tree: one column per round, each match centred between
+   * the two it is fed by, joined by connector lines, ending at the trophy.
+   */
+  const renderBracketTree = () => {
+    const firstCount = Math.max(fixtureRounds[0]?.[1].length || 1, 1);
+    const height = firstCount * BRACKET_SLOT;
+    const line = theme.outlineVariant + '99';
+
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: Spacing.sm }} contentContainerStyle={styles.bracketScroll}>
+        {fixtureRounds.map(([round, list], col) => {
+          const slotH = height / list.length;
+          const last = col === fixtureRounds.length - 1;
+          return (
+            <View key={round} style={{ width: BRACKET_CARD_W + BRACKET_GAP }}>
+              <ThemedText style={[styles.bracketRoundTitle, { color: theme.primary }]} numberOfLines={1}>
+                {round.toUpperCase()}
+              </ThemedText>
+              <View style={{ height }}>
+                {list.map((f: any, i: number) => (
+                  <View key={f.id} style={[styles.bracketSlot, { top: slotH * i, height: slotH }]}>
+                    {col > 0 && <View style={[styles.bracketStubIn, { backgroundColor: line }]} />}
+                    <View
+                      style={[styles.bracketCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44' }]}
+                      accessible
+                      accessibilityLabel={`${f.matchNo}: ${f.teamA} versus ${f.teamB}, ${f.date ? formatIsoDate(f.date) : 'date to be set'} ${f.time || ''}`}
+                    >
+                      <View style={styles.bracketCardHead}>
+                        <ThemedText style={[styles.bracketMatchNo, { color: theme.primary }]} numberOfLines={1}>
+                          {f.matchNo}
+                        </ThemedText>
+                        <ThemedText style={[styles.bracketMeta, { color: theme.textSecondary }]} numberOfLines={1}>
+                          {[f.date ? formatIsoDate(f.date).replace(/\s\d{4}$/, '') : null, f.time].filter(Boolean).join(' · ')}
+                        </ThemedText>
+                      </View>
+                      <ThemedText
+                        numberOfLines={1}
+                        style={[styles.bracketTeam, { color: isPendingTeam(f.teamA) ? theme.textSecondary : theme.text }]}
+                      >
+                        {f.teamA}
+                      </ThemedText>
+                      <View style={[styles.bracketDivider, { backgroundColor: theme.outlineVariant + '33' }]} />
+                      <ThemedText
+                        numberOfLines={1}
+                        style={[styles.bracketTeam, { color: isPendingTeam(f.teamB) ? theme.textSecondary : theme.text }]}
+                      >
+                        {f.teamB}
+                      </ThemedText>
+                      <View style={styles.bracketVenueRow}>
+                        <Ionicons name="location-outline" size={10} color={theme.textSecondary} />
+                        <ThemedText style={[styles.bracketMeta, { color: theme.textSecondary, flex: 1 }]} numberOfLines={1}>
+                          {venueOf(f)}
+                        </ThemedText>
+                      </View>
+                    </View>
+                    {last && <View style={[styles.bracketStubOut, { backgroundColor: line }]} />}
+                  </View>
+                ))}
+                {/* Each pair of matches joins into the one they feed. */}
+                {!last &&
+                  list.map((f: any, i: number) =>
+                    i % 2 === 0 && i + 1 < list.length ? (
+                      <View
+                        key={`join-${f.id}`}
+                        style={[styles.bracketJoin, { top: slotH * i + slotH / 2, height: slotH, borderColor: line }]}
+                      />
+                    ) : null
+                  )}
+              </View>
+            </View>
+          );
+        })}
+
+        <View style={{ width: 48 }}>
+          <View style={styles.bracketRoundTitle} />
+          <View style={{ height, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={[styles.bracketTrophy, { backgroundColor: '#F59E0B1A' }]}>
+              <Ionicons name="trophy" size={18} color="#F59E0B" />
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    );
+  };
+
+  const renderFixtureList = () => (
+    <View style={{ marginTop: Spacing.sm }}>
+      {/* Grouped by round so the path to the final is legible. */}
+      {fixtureRounds.map(([round, list]) => (
+        <View key={round} style={{ marginBottom: 16 }}>
+          <DashboardSectionLabel
+            label={round}
+            color={ACCENTS.primary.main}
+            style={{ marginBottom: Spacing.sm }}
+            right={
+              <ThemedText style={[styles.infoLine, { color: theme.textSecondary, marginTop: 0 }]}>
+                {list.length} {list.length === 1 ? 'match' : 'matches'}
+              </ThemedText>
+            }
+          />
+          <View style={{ gap: 10 }}>
+            {list.map((f: any) => {
+              const accent =
+                f.status === 'Live' || f.status === 'Cancelled'
+                  ? ACCENTS.red
+                  : f.status === 'Finished'
+                    ? ACCENTS.slate
+                    : ACCENTS.primary;
+              return (
+                <DashboardCard
+                  key={f.id}
+                  title={`${f.teamA} v ${f.teamB}`}
+                  metric={[f.date ? formatIsoDate(f.date) : null, f.time].filter(Boolean).join(' · ') || 'Schedule TBC'}
+                  tag={f.matchNo}
+                  accent={accent}
+                  trailing={
+                    <View style={[styles.fixtureStatusTag, { backgroundColor: accent.main + '1A' }]}>
+                      <ThemedText style={[styles.fixtureStatusText, { color: accent.dark }]}>{f.status}</ThemedText>
+                    </View>
+                  }
+                  footer={{ label: 'Venue', value: venueOf(f) }}
+                />
+              );
+            })}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
   const renderFixtures = () => (
     <View style={styles.tabContent}>
       <View style={styles.rowBetween}>
-        <ThemedText style={styles.sectionHeader}>Upcoming Fixtures</ThemedText>
-        <Pressable
-          style={[styles.manageBtn, { backgroundColor: theme.primary }]}
-          onPress={() => router.push({ pathname: '/fixture-management', params: { tournamentId: String(params.id || '') } })}
-          accessibilityRole="button"
-        >
-          <ThemedText type="labelSm" style={{ color: '#ffffff' }}>Open Fixtures Planner</ThemedText>
-        </Pressable>
+        <DashboardSectionLabel label="Upcoming Fixtures" color={theme.primary} style={{ marginBottom: Spacing.sm }} />
+        {/* No planner button: hosts manage the draw from the fixtures icon on
+            their tournament card in the host screen. */}
+        {tournamentFixtures.length > 0 && (
+          <View style={[styles.viewToggle, { backgroundColor: theme.surfaceLow }]} accessibilityRole="tablist">
+            {([
+              ['bracket', 'git-network-outline', 'Bracket view'],
+              ['list', 'list-outline', 'List view'],
+            ] as const).map(([key, icon, label]) => {
+              const active = fixtureView === key;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => setFixtureView(key)}
+                  hitSlop={4}
+                  accessibilityRole="tab"
+                  accessibilityLabel={label}
+                  accessibilityState={{ selected: active }}
+                  style={[styles.viewToggleBtn, active && { backgroundColor: theme.surfaceLowest }, active && Shadows.level1]}
+                >
+                  <Ionicons name={icon} size={16} color={active ? theme.primary : theme.textSecondary} />
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </View>
 
       {tournamentFixtures.length === 0 ? (
-        <View style={[styles.infoCard, { backgroundColor: theme.surfaceLow, marginTop: Spacing.sm }]}>
-          <Ionicons name="calendar-outline" size={20} color={theme.textSecondary} />
-          <ThemedText style={[styles.infoLine, { color: theme.textSecondary, marginLeft: 12, flex: 1 }]}>
-            No fixtures have been scheduled yet. They are drawn automatically once
-            registration fills, or you can build them in the planner.
-          </ThemedText>
-        </View>
+        <DashboardCard
+          style={{ marginTop: Spacing.sm }}
+          title="No fixtures yet"
+          metric={isHost ? 'Drawn once registration fills' : 'The draw appears once registration closes'}
+          icon="calendar-outline"
+          accent={ACCENTS.slate}
+        >
+          {isHost && (
+            <ThemedText style={[styles.addressText, { color: theme.textSecondary }]}>
+              You can also draw them from the fixtures icon on your tournament card.
+            </ThemedText>
+          )}
+        </DashboardCard>
       ) : (
-        <View style={{ marginTop: Spacing.sm }}>
-          {/* Grouped by round so the path to the final is legible — every
-              fixture previously sat in one flat list labelled "Round 1". */}
-          {fixtureRounds.map(([round, matches]) => (
-            <View key={round} style={{ marginBottom: 16 }}>
-              <View style={styles.roundHeaderRow}>
-                <View style={[styles.roundDot, { backgroundColor: theme.primary }]} />
-                <ThemedText style={[styles.linkText, { color: theme.primary }]}>
-                  {round.toUpperCase()}
-                </ThemedText>
-                <View style={[styles.roundRule, { backgroundColor: theme.outlineVariant + '44' }]} />
-                <ThemedText style={[styles.infoLine, { color: theme.textSecondary, marginTop: 0 }]}>
-                  {matches.length} {matches.length === 1 ? 'match' : 'matches'}
-                </ThemedText>
-              </View>
-
-              <View style={{ gap: 10 }}>
-          {matches.map((f: any) => (
-            <View
-              key={f.id}
-              style={[styles.fixtureRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
-            >
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <ThemedText style={[styles.infoTitle, { color: theme.text }]} numberOfLines={1}>
-                  {f.teamA} <ThemedText style={{ color: theme.textSecondary }}>v</ThemedText> {f.teamB}
-                </ThemedText>
-                <ThemedText style={[styles.infoLine, { color: theme.textSecondary }]} numberOfLines={1}>
-                  {[f.matchNo, f.pitch, f.time].filter(Boolean).join(' · ')}
-                </ThemedText>
-              </View>
-              <View style={[styles.fixtureStatus, { backgroundColor: theme.primary + '14' }]}>
-                <ThemedText style={[styles.linkText, { color: theme.primary }]}>{f.status}</ThemedText>
-              </View>
-            </View>
-          ))}
-              </View>
-            </View>
-          ))}
-        </View>
+        <>
+          {fixtureView === 'bracket' ? renderBracketTree() : renderFixtureList()}
+        </>
       )}
     </View>
   );
 
   const renderStandings = () => (
     <View style={styles.tabContent}>
-      <ThemedText type="headlineSm" style={styles.sectionHeader}>Group A Point Table</ThemedText>
+      <DashboardSectionLabel label="Group A Point Table" color={theme.primary} style={{ marginBottom: Spacing.sm }} />
       <View style={[styles.tableContainer, { borderColor: theme.outlineVariant + '33' }]}>
         {/* Table Header */}
         <View style={[styles.tableRow, styles.tableHeaderRow, { backgroundColor: theme.surfaceLow }]}>
@@ -624,70 +736,18 @@ export default function TournamentDetailsScreen() {
    */
   const renderLiveMatches = () => (
     <View style={styles.tabContent}>
-      <ThemedText style={styles.sectionHeader}>Live Matches</ThemedText>
-
-      {liveMatches.length === 0 ? (
-        <View style={[styles.infoCard, { backgroundColor: theme.surfaceLow }]}>
-          <Ionicons name="radio-outline" size={20} color={theme.textSecondary} />
-          <ThemedText style={[styles.infoLine, { color: theme.textSecondary, marginLeft: 12, flex: 1 }]}>
-            No match is being scored right now. Live scores appear here the moment
-            a fixture kicks off.
-          </ThemedText>
-        </View>
-      ) : (
-        liveMatches.map((m: any) => (
-          <Pressable
-            key={m.id}
-            onPress={() => router.push({ pathname: '/scoring', params: { matchId: m.id } })}
-            accessibilityRole="button"
-            accessibilityLabel={`Open live scoring for ${m.homeTeam?.name || 'home'} versus ${m.awayTeam?.name || 'away'}`}
-            style={({ pressed }) => [
-              styles.liveMiniCard,
-              {
-                backgroundColor: theme.surfaceLowest,
-                borderColor: theme.outlineVariant + '33',
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}
-          >
-            <View style={styles.liveMiniHeader}>
-              <View style={styles.liveDotRow}>
-                <View style={styles.liveDot} />
-                <ThemedText style={styles.liveMiniLabel}>LIVE</ThemedText>
-              </View>
-              {!!m.venueName && (
-                <ThemedText
-                  numberOfLines={1}
-                  style={[styles.infoLine, { color: theme.textSecondary, flexShrink: 1, marginTop: 0 }]}
-                >
-                  {m.venueName}
-                </ThemedText>
-              )}
-            </View>
-
-            <View style={styles.liveMiniScoreRow}>
-              <ThemedText numberOfLines={1} style={[styles.infoTitle, { color: theme.text, flex: 1 }]}>
-                {m.homeTeam?.name || 'Home'}
-              </ThemedText>
-              <ThemedText style={[styles.infoTitle, { color: theme.text }]}>
-                {m.homeScore} - {m.awayScore}
-              </ThemedText>
-              <ThemedText
-                numberOfLines={1}
-                style={[styles.infoTitle, { color: theme.text, flex: 1, textAlign: 'right' }]}
-              >
-                {m.awayTeam?.name || 'Away'}
-              </ThemedText>
-            </View>
-          </Pressable>
-        ))
-      )}
+      <DashboardSectionLabel label="Live Matches" color={ACCENTS.red.main} style={{ marginBottom: Spacing.sm }} />
+      {liveMatches.length === 0
+        ? renderNoLive()
+        : liveMatches.map((m: any) =>
+            renderLiveCard(m, () => router.push({ pathname: '/scoring', params: { matchId: m.id } }))
+          )}
     </View>
   );
 
   const renderStats = () => (
     <View style={styles.tabContent}>
-      <ThemedText type="headlineSm" style={styles.sectionHeader}>Top Players (MVP Rankings)</ThemedText>
+      <DashboardSectionLabel label="Top Players (MVP Rankings)" color={theme.primary} style={{ marginBottom: Spacing.sm }} />
       <View style={styles.statsList}>
         {[
           { rank: 1, name: 'Marcus Rashford', team: 'Red Devils FC', value: '8 Goals', rating: '9.2' },
@@ -711,116 +771,90 @@ export default function TournamentDetailsScreen() {
   );
 
   /**
-   * Sponsors, led by the headline partner.
-   *
-   * A flat four-up grid gave a ground sponsor the same weight as the title
-   * sponsor, which is the one thing a sponsor page has to get right. The first
-   * uploaded sponsor is treated as the headline and gets a full-width card;
-   * the rest sit beneath it as a supporting row.
+   * Sponsor tiles — the Media tab's two-column grid of full-bleed artwork, with
+   * name and tier on a dark scrim. Shared by the Overview and the Sponsors tab
+   * so the two can't drift apart. The headline sponsor gets a star.
    */
-  /**
-   * Sponsors, presented as a partner wall rather than a flat logo grid.
-   *
-   * The headline partner gets a gradient plaque — its logo on a white card so
-   * the artwork reads cleanly against the colour — with the tier on a ribbon.
-   * Everyone else appears as a numbered row, which keeps the hierarchy legible
-   * when a tournament has one big name and several smaller ones.
-   */
-  const renderSponsors = () => {
-    return (
-      <View style={styles.tabContent}>
-        <View style={styles.rowBetween}>
-          <ThemedText style={styles.sectionHeader}>Event Sponsors</ThemedText>
-          {sponsors.length > 0 && (
-            <ThemedText style={[styles.infoLine, { color: theme.textSecondary, marginTop: 0 }]}>
-              {sponsors.length} {sponsors.length === 1 ? 'partner' : 'partners'}
-            </ThemedText>
+  const renderSponsorTiles = (list: typeof sponsors) => (
+    <View style={styles.mediaGrid}>
+      {list.map((sp, idx) => (
+        <View key={`${sp.name}-${idx}`} style={[styles.mediaFrame, styles.sponsorTile]}>
+          <Image source={sp.logo} style={styles.mediaImage} contentFit="cover" />
+          <LinearGradient
+            colors={['rgba(15,23,42,0)', 'rgba(15,23,42,0.85)']}
+            style={styles.sponsorScrim}
+          >
+            <ThemedText style={styles.sponsorTileName} numberOfLines={1}>{sp.name}</ThemedText>
+            <ThemedText style={styles.sponsorTileTier} numberOfLines={1}>{sp.type}</ThemedText>
+          </LinearGradient>
+          {idx === 0 && (
+            <View style={styles.sponsorStar}>
+              <Ionicons name="star" size={10} color="#F59E0B" />
+            </View>
           )}
         </View>
+      ))}
+    </View>
+  );
 
-        {sponsors.length === 0 ? (
-          <View style={[styles.infoCard, { backgroundColor: theme.surfaceLow }]}>
-            <Ionicons name="ribbon-outline" size={20} color={theme.textSecondary} />
-            <ThemedText style={[styles.infoLine, { color: theme.textSecondary, marginLeft: 12, flex: 1 }]}>
-              No sponsors have been added for this tournament yet.
-            </ThemedText>
-          </View>
-        ) : (
-          <>
-            {/* One sponsor per row. The gradient hero gave the first sponsor a
-                half-width plaque, which stretched portrait artwork oddly and
-                made the tab read as one big advert rather than a partner list. */}
-            <View style={{ gap: 10 }}>
-              {sponsors.map((sp, idx) => {
-                const isHeadline = idx === 0;
-                return (
-                  <View
-                    key={idx}
-                    style={[
-                      styles.sponsorPartnerRow,
-                      {
-                        backgroundColor: theme.surfaceLowest,
-                        borderColor: isHeadline ? theme.primary + '55' : theme.outlineVariant + '33',
-                        borderWidth: isHeadline ? 1.5 : 1,
-                      },
-                    ]}
-                  >
-                    <View style={[styles.sponsorPartnerLogoWrap, { borderColor: theme.outlineVariant + '33' }]}>
-                      <Image source={sp.logo} style={styles.sponsorPartnerLogo} contentFit="contain" />
-                    </View>
+  const renderSponsors = () => (
+    <View style={styles.tabContent}>
+      <DashboardSectionLabel label="Event Sponsors" color={ACCENTS.orange.main} style={{ marginBottom: Spacing.sm }} />
 
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <ThemedText style={[styles.infoTitle, { color: theme.text }]} numberOfLines={1}>
-                        {sp.name}
-                      </ThemedText>
-                      <View
-                        style={[
-                          styles.sponsorTierChip,
-                          { backgroundColor: isHeadline ? theme.primary + '1F' : theme.outlineVariant + '22' },
-                        ]}
-                      >
-                        {isHeadline && <Ionicons name="star" size={9} color={theme.primary} />}
-                        <ThemedText
-                          style={[styles.linkText, { color: isHeadline ? theme.primary : theme.textSecondary }]}
-                          numberOfLines={1}
-                        >
-                          {sp.type}
-                        </ThemedText>
-                      </View>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-
-          </>
-        )}
-      </View>
-    );
-  };
+      {sponsors.length === 0 ? (
+        <DashboardCard
+          title="No sponsors yet"
+          metric="The organizer adds sponsors from the tournament editor"
+          icon="ribbon-outline"
+          accent={ACCENTS.slate}
+        />
+      ) : (
+        <DashboardCard
+          title="Backed by"
+          metric={`${sponsors.length} ${sponsors.length === 1 ? 'sponsor' : 'sponsors'}`}
+          tag="🤝 Partners"
+          icon="ribbon"
+          accent={ACCENTS.orange}
+        >
+          {renderSponsorTiles(sponsors)}
+        </DashboardCard>
+      )}
+    </View>
+  );
 
   const renderMedia = () => (
     <View style={styles.tabContent}>
-      <ThemedText type="headlineSm" style={styles.sectionHeader}>Highlights & Photos</ThemedText>
+      <DashboardSectionLabel label="Highlights & Photos" color={ACCENTS.primary.main} style={{ marginBottom: Spacing.sm }} />
       {/* Photos the organizer uploaded at publish time. */}
       {tournamentMedia.length === 0 ? (
-        <View style={[styles.emptyTeams, { borderColor: theme.outlineVariant + '55' }]}>
-          <Ionicons name="images-outline" size={22} color={theme.textSecondary} />
-          <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center' }}>
-            No photos yet.
-          </ThemedText>
-          <ThemedText type="labelSm" style={{ color: theme.textSecondary, textAlign: 'center', fontSize: 10 }}>
-            The organizer can add match photos from the tournament editor.
-          </ThemedText>
-        </View>
+        <DashboardCard
+          title="No photos yet"
+          metric="The organizer adds match photos from the tournament editor"
+          icon="images-outline"
+          accent={ACCENTS.slate}
+        />
       ) : (
-        <View style={styles.mediaGrid}>
-          {tournamentMedia.map((uri, idx) => (
-            <Pressable key={`${uri}-${idx}`} style={styles.mediaFrame} onPress={() => triggerToast('Opening full-screen photo...')}>
-              <Image source={{ uri }} style={styles.mediaImage} contentFit="cover" />
-            </Pressable>
-          ))}
-        </View>
+        <DashboardCard
+          title="Gallery"
+          metric={`${tournamentMedia.length} ${tournamentMedia.length === 1 ? 'photo' : 'photos'}`}
+          tag="📸 From the organizer"
+          icon="images"
+          accent={ACCENTS.primary}
+        >
+          <View style={styles.mediaGrid}>
+            {tournamentMedia.map((uri, idx) => (
+              <Pressable
+                key={`${uri}-${idx}`}
+                style={styles.mediaFrame}
+                onPress={() => triggerToast('Opening full-screen photo...')}
+                accessibilityRole="imagebutton"
+                accessibilityLabel={`Photo ${idx + 1} of ${tournamentMedia.length}`}
+              >
+                <Image source={{ uri }} style={styles.mediaImage} contentFit="cover" />
+              </Pressable>
+            ))}
+          </View>
+        </DashboardCard>
       )}
     </View>
   );
@@ -845,7 +879,7 @@ export default function TournamentDetailsScreen() {
         {/* Detail Header Navigation */}
         <View style={styles.header}>
           <Pressable style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/tournaments')}>
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
           <ThemedText type="headlineMd" numberOfLines={1} style={{ color: theme.text, flex: 1, marginLeft: 12 }}>
             {tournamentName}
@@ -862,86 +896,69 @@ export default function TournamentDetailsScreen() {
               onError={() => setBannerFailed(true)}
             />
             <View style={styles.gradientOverlay} />
-            {/* Computed from the tournament's own registration deadline. This
-                printed a fixed "02d : 14h : 45m" for every tournament, which
-                looked live while counting to a date that did not exist. */}
-            {!!regCountdown && (
-              <View style={styles.countdownBadge}>
-                <Ionicons name="hourglass-outline" size={14} color="#ffffff" style={{ marginRight: 6 }} />
-                <ThemedText style={styles.countdownText}>
-                  {regCountdown === 'Registration closed'
-                    ? regCountdown
-                    : `Reg Ends In: ${regCountdown}`}
-                </ThemedText>
-              </View>
-            )}
           </View>
 
-          {/* Quick Metrics Statistics Grid */}
-          <View style={styles.metricsGrid}>
-            <View style={[styles.metricCard, { backgroundColor: theme.surfaceLow }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Teams</ThemedText>
-              <ThemedText type="headlineMd" numberOfLines={1} style={{ color: theme.text }}>{teamsCount}/{maxTeams}</ThemedText>
-            </View>
-            <View style={[styles.metricCard, { backgroundColor: theme.surfaceLow }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Prize</ThemedText>
-              <ThemedText type="headlineMd" numberOfLines={1} adjustsFontSizeToFit style={{ color: theme.secondaryContainer, textAlign: 'center' }}>{tournamentPrize}</ThemedText>
-            </View>
-            <View style={[styles.metricCard, { backgroundColor: theme.surfaceLow }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Matches</ThemedText>
-              <ThemedText type="headlineMd" numberOfLines={1} style={{ color: theme.text }}>{matchCount}</ThemedText>
-            </View>
-          </View>
+          {/* At a glance — the Home analytics card, with the registration countdown */}
+          <DashboardCard
+            style={{ marginHorizontal: Spacing.containerMargin, marginTop: Spacing.md }}
+            title="Tournament at a Glance"
+            metric={`${teamsCount}/${maxTeams} Teams Registered`}
+            tag={
+              regCountdown
+                ? regCountdown === 'Registration closed'
+                  ? '🔒 Registration closed'
+                  : `⏳ ${regCountdown} left`
+                : `${TEAM_BADGE[tournamentSport] || '🏅'} ${tournamentSport}`
+            }
+            icon="trophy"
+            accent={regBlock ? ACCENTS.slate : ACCENTS.green}
+            footer={{
+              label: 'Starts',
+              value: tournament?.startDate ? formatIsoDate(tournament.startDate) : 'TBC',
+              status: regBlock ? REG_BLOCK_LABEL[regBlock] : 'Open for registration',
+            }}
+          >
+            <ProgressPill progress={maxTeams > 0 ? teamsCount / maxTeams : 0} accent={regBlock ? ACCENTS.slate : ACCENTS.green} />
+            <StatTiles
+              items={[
+                { value: `${teamsCount}/${maxTeams}`, label: 'Teams' },
+                { value: tournamentPrize, label: 'Prize', color: ACCENTS.orange.dark },
+                { value: String(matchCount), label: 'Matches' },
+              ]}
+            />
+          </DashboardCard>
 
-          {/* Segmented Tab Bar — every tab visible, no horizontal scroll */}
-          <View style={styles.tabsSection}>
-            <View style={styles.tabsRow}>
-              {tabsFor(started).map((tab) => {
-                const isActive = activeTab === tab.key;
-                return (
-                  <Pressable
-                     key={tab.key}
-                     disabled={tab.disabled}
-                     accessibilityState={{ disabled: !!tab.disabled, selected: isActive }}
-                     onPress={() => { if (!tab.disabled) setActiveTab(tab.key); }}
-                     style={[
-                       styles.tabPill,
-                       isActive && { backgroundColor: theme.primary },
-                       tab.disabled && { opacity: 0.4 },
-                     ]}
-                  >
-                    <ThemedText
-                      numberOfLines={1}
-                      style={{
-                        fontSize: 10,
-                        textAlign: 'center',
-                        fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_500Medium',
-                        color: isActive ? '#ffffff' : theme.textSecondary,
-                      }}
-                    >
-                      {tab.label}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
+          {/* Tabs — grey track, raised white active tab; every tab visible */}
+          <DashboardTabs
+            compact
+            style={{ marginHorizontal: Spacing.sm, marginTop: Spacing.md }}
+            options={tabsFor(started).map((tab) => ({ key: tab.key, label: tab.label, disabled: tab.disabled }))}
+            active={activeTab}
+            onChange={setActiveTab}
+          />
 
           {/* Tab Sub-View Render */}
           {renderActiveTabContent()}
         </ScrollView>
 
-        {/* Floating Call to Action Register Button */}
+        {/* Floating Call to Action Register Button — locked once every place is
+            taken, play has started, or the tournament was cancelled. */}
         <View style={[styles.ctaFooter, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '33' }]}>
           <Pressable 
-            style={[styles.registerCtaBtn, { backgroundColor: theme.secondaryContainer }]}
+            style={[styles.registerCtaBtn, { backgroundColor: regBlock ? '#64748B' : theme.secondaryContainer }]}
+            disabled={!!regBlock}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !!regBlock }}
+            accessibilityLabel={regBlock ? registrationBlockedMessage(regBlock, tournamentName) : `Register a team for ${tournamentName}`}
             onPress={() => router.push({
               pathname: '/team-registration',
               params: { id: params.id || 't1', name: tournamentName }
             })}
           >
-            <Ionicons name="medal" size={20} color="#ffffff" style={{ marginRight: 8 }} />
-            <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: '500' }}>Register Team Now</ThemedText>
+            <Ionicons name={regBlock ? 'lock-closed' : 'medal'} size={20} color="#ffffff" style={{ marginRight: 8 }} />
+            <ThemedText type="labelMd" style={{ color: '#ffffff', fontWeight: '500' }}>
+              {regBlock ? REG_BLOCK_LABEL[regBlock] : 'Register Team Now'}
+            </ThemedText>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -973,79 +990,35 @@ const styles = StyleSheet.create({
   backBtn: {
     padding: 4,
   },
-  iconBtn: {
-    padding: 4,
-  },
   scrollContent: {
     paddingBottom: 80,
   },
-  bannerContainer: {
-    height: 180,
-    width: '100%',
+bannerContainer: {
+    height: 150,
+    marginHorizontal: Spacing.containerMargin,
+    marginTop: Spacing.sm,
+    borderRadius: BorderRadius.premium,
+    overflow: 'hidden',
     position: 'relative',
   },
   bannerImage: {
     width: '100%',
     height: '100%',
   },
-  gradientOverlay: {
+gradientOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(5, 21, 30, 0.4)',
-  },
-  countdownBadge: {
-    position: 'absolute',
-    bottom: 12,
-    left: Spacing.containerMargin,
-    backgroundColor: 'rgba(186, 26, 26, 0.85)', // Vibrant error-like red
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.containerMargin,
-    marginTop: Spacing.md,
-    gap: 8,
-  },
-  metricCard: {
-    flex: 1,
-    // minWidth:0 lets a long prize string shrink instead of stretching its
-    // card, which is what pushed the three cards out of alignment; the fixed
-    // height keeps all three level whatever their content.
-    minWidth: 0,
-    height: 62,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  tabsSection: {
-    marginTop: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: '#0000000a',
-    paddingBottom: 8,
+    backgroundColor: 'rgba(5, 21, 30, 0.12)',
   },
   // flex:1 per tab distributes the row evenly; minWidth:0 lets the longer
   // labels shrink rather than forcing the row wider than the screen.
-  tabsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.sm,
-    gap: 2,
-  },
-  tabPill: {
-    flex: 1,
-    minWidth: 0,
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  cardLink: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  cardLinkText: { fontSize: 10, fontFamily: 'Sora_500Medium' },
+  addressText: { fontSize: 11, lineHeight: 16, fontFamily: 'Sora_400Regular' },
+  ruleList: { gap: 6 },
+  chevronTile: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  squadList: { gap: 8, paddingTop: 10, borderTopWidth: 1 },
+  fixtureStatusTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  fixtureStatusText: { fontSize: 10, fontFamily: 'Sora_600SemiBold' },
   tabContent: {
     paddingHorizontal: Spacing.containerMargin,
     paddingTop: Spacing.md,
@@ -1053,46 +1026,10 @@ const styles = StyleSheet.create({
   },
   // Matched to components/home/player-dashboard.tsx: Sora Medium/Regular only,
   // nothing above 15.5px, so this screen shares the app's dominant voice.
-  sectionHeader: {
-    fontSize: 13.5,
-    fontFamily: 'Sora_500Medium',
-    marginBottom: Spacing.sm,
-  },
-  countdownText: { color: '#ffffff', fontSize: 11, fontFamily: 'Sora_500Medium' },
   teamCrest: { width: 40, height: 40 },
-  teamRow: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+teamRow: { borderRadius: BorderRadius.premium, borderWidth: 1, ...Shadows.level1 },
   // The logo sits on a white plaque so artwork reads cleanly against the
   // gradient rather than fighting it.
-  sponsorPartnerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 12,
-  },
-  sponsorPartnerLogoWrap: {
-    width: 58,
-    height: 58,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-  },
-  sponsorPartnerLogo: { width: 42, height: 42 },
-  sponsorTierChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    marginTop: 4,
-  },
-  teamRowHead: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
-  squadPanel: { borderTopWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
   squadRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   squadNo: {
     width: 26,
@@ -1101,36 +1038,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fixtureRow: {
+fixtureRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderRadius: 12,
+    borderRadius: BorderRadius.premium,
     borderWidth: 1,
     padding: 12,
+    ...Shadows.level1,
   },
-  fixtureStatus: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999 },
-  roundHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  roundDot: { width: 6, height: 6, borderRadius: 3 },
-  roundRule: { flex: 1, height: 1 },
   infoTitle: { fontSize: 13, lineHeight: 18, fontFamily: 'Sora_500Medium' },
   infoLine: { fontSize: 11, lineHeight: 16, fontFamily: 'Sora_400Regular', marginTop: 2 },
   linkText: { fontSize: 10.5, fontFamily: 'Sora_500Medium', letterSpacing: 0.4 },
-  infoCard: {
+infoCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: Spacing.md,
-    borderRadius: BorderRadius.xl,
-  },
-  directionLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  rulesList: {
+    borderRadius: BorderRadius.premium,
     borderWidth: 1,
-    borderRadius: BorderRadius.xl,
+    borderColor: '#c3c7cb33',
+    ...Shadows.level1,
+  },
+rulesList: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.premium,
     padding: Spacing.md,
+    ...Shadows.level1,
   },
   ruleItem: {
     flexDirection: 'row',
@@ -1142,62 +1075,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  manageBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
+viewToggle: { flexDirection: 'row', borderRadius: BorderRadius.premium, padding: 3, gap: 2 },
+viewToggleBtn: { width: 32, height: 30, borderRadius: BorderRadius.md, alignItems: 'center', justifyContent: 'center' },
+
+  bracketScroll: { paddingVertical: 4, paddingRight: 16 },
+  bracketRoundTitle: { height: 18, marginBottom: 6, fontSize: 10, letterSpacing: 0.8, fontFamily: 'Sora_500Medium' },
+  bracketSlot: { position: 'absolute', left: 0, width: BRACKET_CARD_W, justifyContent: 'center' },
+  bracketCard: { width: BRACKET_CARD_W, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8 },
+  bracketCardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 2 },
+  bracketMatchNo: { fontSize: 10, letterSpacing: 0.4, fontFamily: 'Sora_500Medium' },
+  bracketMeta: { fontSize: 9.5, fontFamily: 'Sora_400Regular', flexShrink: 1 },
+  bracketTeam: { fontSize: 12.5, fontFamily: 'Sora_500Medium', paddingVertical: 3 },
+  bracketDivider: { height: 1 },
+  bracketVenueRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
+  bracketStubIn: { position: 'absolute', left: -BRACKET_GAP / 2, width: BRACKET_GAP / 2, height: 1.5, top: '50%' },
+  bracketStubOut: { position: 'absolute', left: BRACKET_CARD_W, width: BRACKET_GAP + 4, height: 1.5, top: '50%' },
+  bracketJoin: {
+    position: 'absolute',
+    left: BRACKET_CARD_W,
+    width: BRACKET_GAP / 2,
+    borderTopWidth: 1.5,
+    borderRightWidth: 1.5,
+    borderBottomWidth: 1.5,
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
   },
-  emptyTeams: {
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    paddingVertical: 28,
-    paddingHorizontal: Spacing.base,
-    alignItems: 'center',
-    gap: 6,
-  },
-  regStatusPill: { marginTop: 6, paddingHorizontal: 8, paddingVertical: 2, borderRadius: BorderRadius.full },
-  teamsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: Spacing.sm,
-  },
-  teamCard: {
-    width: '48%',
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    padding: 16,
-    alignItems: 'center',
-  },
+  bracketTrophy: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+
   teamLogo: {
-    fontSize: 32,
-  },
-  fixturesList: {
-    gap: 12,
-    marginTop: Spacing.sm,
-  },
-  fixtureCard: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
-  },
-  matchTeamsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 12,
-  },
-  fixtureTeamName: {
-    flex: 1,
-    fontWeight: '500',
-  },
-  fixtureCardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    paddingTop: Spacing.xs,
+    fontSize: 24,
   },
   tableContainer: {
     borderWidth: 1,
@@ -1222,42 +1128,6 @@ const styles = StyleSheet.create({
     width: 35,
     textAlign: 'center',
   },
-  liveScoreCard: {
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
-    marginTop: Spacing.sm,
-  },
-  cricketScores: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 16,
-  },
-  versusDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: '#ffffff33',
-    marginHorizontal: 16,
-  },
-  liveFooterStats: {
-    borderTopWidth: 1,
-    paddingTop: 12,
-    marginTop: 8,
-  },
-  footballScores: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginVertical: 16,
-  },
-  footballScoreTeam: {
-    flex: 1,
-  },
-  scoreNumberContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 80,
-  },
   statsList: {
     gap: 10,
     marginTop: Spacing.sm,
@@ -1269,43 +1139,9 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
   },
-  liveMiniCard: { borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 10 },
-  liveMiniHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  liveDotRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0 },
-  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#EF4444' },
-  liveMiniLabel: { fontSize: 9.5, letterSpacing: 0.6, color: '#EF4444', fontFamily: 'Sora_500Medium' },
-  liveMiniScoreRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
+liveMiniCard: { borderRadius: BorderRadius.premium, borderWidth: 1, padding: 12, marginBottom: 10, ...Shadows.level1 },
 
-  sponsorStrip: { gap: 10, paddingRight: 16, paddingVertical: 2 },
-  sponsorStripCard: {
-    width: 104,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    gap: 2,
-  },
-  sponsorStripLogo: { width: 34, height: 34, marginBottom: 4 },
 
-  sponsorsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: Spacing.sm,
-  },
-  sponsorCard: {
-    width: '48%',
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    padding: 16,
-    alignItems: 'center',
-  },
-  sponsorLogo: {
-    width: 60,
-    height: 60,
-    borderRadius: BorderRadius.lg,
-  },
   mediaGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1319,15 +1155,32 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
+  sponsorTile: { position: 'relative' },
+  sponsorScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 8,
+    paddingTop: 16,
+    paddingBottom: 6,
+  },
+  sponsorTileName: { color: '#ffffff', fontSize: 11.5, fontFamily: 'Sora_500Medium' },
+  sponsorTileTier: { color: 'rgba(255,255,255,0.8)', fontSize: 9.5, fontFamily: 'Sora_400Regular' },
+  sponsorStar: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   mediaImage: {
     width: '100%',
     height: '100%',
-  },
-  playOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(5, 21, 30, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   ctaFooter: {
     position: 'absolute',
@@ -1347,11 +1200,11 @@ const styles = StyleSheet.create({
   },
   toastContainer: {
     position: 'absolute',
-    bottom: 90,
+    top: 56,
     alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.premium,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
     zIndex: 999,
   },
 });
