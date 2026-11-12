@@ -22,7 +22,9 @@ import { GradientContainer } from '@/components/gradient-container';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useClassStore, useOfferStore, useWalletStore } from '@/store/app-store';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { paymentApi, PaymentsUnavailableError } from '@/services/payment-api';
+import { openRazorpayCheckout } from '@/services/razorpay-checkout';
 import { useToast } from '@/context/ToastContext';
 import { VOUCHERS, VOUCHER_CATEGORIES, vouchersByCategory } from '@/constants/vouchers';
 import { CASHBACK_DEALS, TOURNAMENT_PASSES } from '@/constants/platform-deals';
@@ -76,6 +78,7 @@ export default function WalletScreen() {
   const { walletBalance, addWalletFunds, cashbackCredits } = useWalletStore();
   const { offers } = useOfferStore();
   const { classes } = useClassStore();
+  const { profile } = useUserProfile();
 
   const [activeTab, setActiveTab] = useState<'vouchers' | 'offers' | 'cashback' | 'history'>('vouchers');
 
@@ -150,15 +153,32 @@ export default function WalletScreen() {
     try {
       const order = await paymentApi.createOrder('wallet_topup', undefined, amountToAdd);
 
-      // Checkout itself is not wired up yet, so stop here rather than crediting
-      // an order nobody has paid. The balance moves only once the gateway
-      // returns a signature and /payments/verify accepts it.
-      setTopUpModalVisible(false);
-      showError(
-        'Payment not completed',
-        `Order ${order.orderId} was created for ₹${amountToAdd}, but checkout is not connected yet. ` +
-          'Your wallet has not been credited and you have not been charged.'
-      );
+      await openRazorpayCheckout({
+        orderId: order.orderId,
+        paymentId: order.paymentId,
+        keyId: order.keyId,
+        amountPaise: order.amountPaise,
+        name: 'Turf Wallet Top-up',
+        description: `Add ₹${amountToAdd} to Turf Wallet`,
+        prefill: {
+          name: profile?.name || 'Player',
+          email: profile?.email || '',
+          contact: profile?.phone || '',
+        },
+        onSuccess: async () => {
+          addWalletFunds(amountToAdd);
+          setTopUpModalVisible(false);
+          showSuccess('Top-up Successful! 🎉', `₹${amountToAdd.toFixed(2)} added to your universal wallet.`);
+          triggerToast(`✅ ₹${amountToAdd.toFixed(2)} added to wallet`);
+          setCustomAmount('200');
+        },
+        onDismiss: () => {
+          triggerToast('Payment cancelled');
+        },
+        onError: (err) => {
+          showError('Payment Failed', err?.message || 'Payment could not be completed.');
+        },
+      });
     } catch (err: any) {
       setTopUpModalVisible(false);
       if (err instanceof PaymentsUnavailableError) {
