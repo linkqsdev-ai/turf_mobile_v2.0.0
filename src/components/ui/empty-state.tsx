@@ -19,7 +19,7 @@ export function EmptyState({ icon = 'sparkles-outline', title, description, acti
   return (
     <View className={cn('items-center justify-center gap-3 px-8 py-16', className)}>
       <View className="h-16 w-16 items-center justify-center rounded-full bg-muted">
-        <Ionicons name={icon} size={28} color={t.mutedForeground} />
+        <Ionicons name={icon} size={22} color={t.mutedForeground} />
       </View>
       <Text variant="subheading" className="text-center">
         {title}

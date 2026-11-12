@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { openProfileDrawer } from '@/components/profile-drawer';
 import { StyleSheet, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -201,7 +202,7 @@ export function PlayerDashboard({
         {/* ── Fixed Top App Bar ────────────────────────────────────────── */}
         <View style={[styles.header, { backgroundColor: theme.surfaceLowest }]}>
           <View style={styles.headerLeft}>
-            <Pressable style={styles.profileIconButton} onPress={() => go('/profile')}>
+            <Pressable style={styles.profileIconButton} onPress={openProfileDrawer}>
               <Image
                 source={getAvatarSource(profile.avatarUrl)}
                 style={styles.headerAvatar}
@@ -310,10 +311,10 @@ export function PlayerDashboard({
 
           {/* ── Stat ribbon ────────────────────────────────────────────── */}
           <Reanimated.View entering={FadeInDown.delay(170).duration(460)} style={styles.statRow}>
-            <StatTile label="Played" value={completed.length} icon="tennisball-outline" tint={theme.primary} />
-            <StatTile label="Win %" value={winRate} suffix="%" icon="trending-up-outline" tint={success} />
-            <StatTile label="Wallet" value={walletBalance} prefix="₹" icon="wallet-outline" tint={accent} />
-            <StatTile label="Upcoming" value={upcoming.length} icon="calendar-outline" tint={info} />
+            <StatTile label="Played" value={completed.length} icon="tennisball-outline" tint={theme.primary} onPress={() => go('/(tabs)/matches')} />
+            <StatTile label="Win %" value={winRate} suffix="%" icon="trending-up-outline" tint={success} onPress={() => go('/(tabs)/matches')} />
+            <StatTile label="Wallet" value={walletBalance} prefix="₹" icon="wallet-outline" tint={accent} onPress={() => go('/wallet')} />
+            <StatTile label="Upcoming" value={upcoming.length} icon="calendar-outline" tint={info} onPress={() => go('/booking-history')} />
           </Reanimated.View>
 
           {/* ── Next session ───────────────────────────────────────────── */}
@@ -522,7 +523,9 @@ export function PlayerDashboard({
               title="Your form"
               action={{ label: 'Matches', onPress: () => go('/(tabs)/matches') }}
             />
-            <View
+            <PressCard
+              onPress={() => go('/(tabs)/matches')}
+              accessibilityLabel="Season summary and matches"
               style={[
                 styles.formCard,
                 { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
@@ -606,7 +609,7 @@ export function PlayerDashboard({
                   </View>
                 ) : null}
               </View>
-            </View>
+            </PressCard>
           </Reanimated.View>
         </ScrollView>
       </SafeAreaView>

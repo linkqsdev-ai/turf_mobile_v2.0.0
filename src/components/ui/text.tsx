@@ -38,8 +38,13 @@ export interface TextProps extends RNTextProps, VariantProps<typeof textVariants
  * Sora family, size and colour token for you.
  */
 export const Text = React.forwardRef<RNText, TextProps>(
-  ({ className, variant, ...props }, ref) => (
-    <RNText ref={ref} className={cn(textVariants({ variant }), className)} {...props} />
+  ({ className, variant, maxFontSizeMultiplier = 1.15, ...props }, ref) => (
+    <RNText
+      ref={ref}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
+      className={cn(textVariants({ variant }), className)}
+      {...props}
+    />
   ),
 );
 Text.displayName = 'Text';

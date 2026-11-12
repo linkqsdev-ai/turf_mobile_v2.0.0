@@ -28,6 +28,8 @@ import { getCalendarGrid, formatDateFull, formatDateShort, formatDateISO, MONTH_
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
 import { computeTurfSlotMetrics } from '@/utils/turf-slot-sync';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SectionHeading } from '@/components/home/dashboard-widgets';
 
 // Slots details (Full 6 AM - 11 PM range in 12-hour AM/PM format)
 const TIME_SLOTS = [
@@ -115,7 +117,15 @@ export default function BookingConfigurationScreen() {
   const params = useLocalSearchParams<{ id?: string; name?: string; price?: string; date?: string; coupon?: string }>();
   const { bookings, addBooking } = useBookings();
   const { profile } = useUserProfile();
-  const { walletBalance, addWalletFunds, deductWalletFunds } = useWalletStore();
+  const {
+    walletBalance,
+    addWalletFunds,
+    deductWalletFunds,
+    cashbackCredits,
+    addCashbackCredit,
+    deductCashbackCredit,
+    getCashbackBalanceForEntity,
+  } = useWalletStore();
   const { classes } = useClassStore();
   const { ownedTurfs } = useTurfStore();
   const { offers } = useOfferStore();
@@ -312,20 +322,11 @@ export default function BookingConfigurationScreen() {
   const total = courtFee + serviceCharge + coachFee + recordingFee;
   const advanceAmount = Math.round((total * advancePct) / 100);
 
-  // Valid fallback coupon codes
-  const VALID_COUPONS: Record<string, { discount: number; type: 'flat' | 'percent'; cashback: number }> = {
-    'YAWAH50': { discount: 20, type: 'percent', cashback: 0 },
-    'YAWAH30': { discount: 30, type: 'percent', cashback: 50 },
-    'FIRST50': { discount: 50, type: 'flat', cashback: 100 },
-    'TURF20': { discount: 20, type: 'percent', cashback: 0 },
-    'HAPPYHOUR': { discount: 15, type: 'flat', cashback: 20 },
-  };
-
   const applyCoupon = (codeOverride?: string) => {
     const code = (codeOverride || couponInput).trim().toUpperCase();
     if (!code) return;
 
-    // Check store owner offers first
+    // Check store owner offers
     const matchedOffer = offers.find(
       o => o.code.toUpperCase() === code && isRedeemable(o)
     );
@@ -352,27 +353,10 @@ export default function BookingConfigurationScreen() {
       return;
     }
 
-    const found = VALID_COUPONS[code];
-    if (!found) {
-      setCouponError('Invalid coupon code. Try YAWAH50, YAWAH30 or FIRST50.');
-      setCouponDiscount(0);
-      setCouponApplied(false);
-      setCashbackOffer(null);
-      return;
-    }
-    const disc =
-      found.type === 'percent'
-        ? Math.round(((total > 0 ? total : venue.basePrice) * found.discount) / 100)
-        : found.discount;
-    setCouponCode(code);
-    setCouponDiscount(disc);
-    setCouponApplied(true);
-    setCouponError('');
-    if (found.cashback > 0) {
-      setCashbackOffer({ code, cashback: found.cashback });
-    } else {
-      setCashbackOffer(null);
-    }
+    setCouponError('Invalid or expired voucher code.');
+    setCouponDiscount(0);
+    setCouponApplied(false);
+    setCashbackOffer(null);
   };
 
   React.useEffect(() => {
@@ -399,7 +383,7 @@ export default function BookingConfigurationScreen() {
   ]);
   const [newPlayerName, setNewPlayerName] = useState<string>('');
 
-  // Wallet deductions with custom amount input (Max 25% cap)
+  // Wallet deductions with custom amount input (Max 25% cap) - usable from universal wallet balance
   const [walletInputAmount, setWalletInputAmount] = useState<string>('');
   const maxAllowedFromAmount = Math.max(1, Math.round(advanceAmount * 0.25));
   const maxWalletDeductible = Math.min(walletBalance, maxAllowedFromAmount);
@@ -407,6 +391,29 @@ export default function BookingConfigurationScreen() {
   const walletDeduction = useWallet ? parsedWalletAmount : 0;
   const finalPayable = Math.max(0, advanceAmount - walletDeduction - couponDiscount);
   const remainingAmount = total - advanceAmount;
+
+  const currentTurfRecord = userTurf || remoteTurf || (ownedTurfs || []).find((t: any) => t.id === params.id || t.name === venue.name);
+
+  // Calculate cashback earned for this turf booking
+  const turfCashbackEarned = useMemo(() => {
+    if (!currentTurfRecord) return 0;
+    const isEnabled = currentTurfRecord.cashbackEnabled ?? (Number(currentTurfRecord.cashbackAmount) > 0);
+    if (!isEnabled) return 0;
+    const amountVal = parseFloat(String(currentTurfRecord.cashbackAmount || 0));
+    if (isNaN(amountVal) || amountVal <= 0) return 0;
+
+    let earned = 0;
+    if (currentTurfRecord.cashbackType === 'percent') {
+      earned = Math.round((courtFee * amountVal) / 100);
+    } else {
+      earned = Math.round(amountVal);
+    }
+
+    if (currentTurfRecord.cashbackMaxAmount && Number(currentTurfRecord.cashbackMaxAmount) > 0) {
+      earned = Math.min(earned, Number(currentTurfRecord.cashbackMaxAmount));
+    }
+    return earned;
+  }, [currentTurfRecord, courtFee]);
 
   const toggleSlot = (time: string) => {
     const slot = slotMetrics.slots.find(s => s.time === time);
@@ -436,15 +443,15 @@ export default function BookingConfigurationScreen() {
       return;
     }
 
-    // Deduct funds from wallet if applied
+    // Deduct wallet balance from universal wallet
     if (useWallet && walletDeduction > 0) {
       deductWalletFunds(walletDeduction);
     }
 
-    // No cashback is credited here. This previously granted a flat ₹100 on
-    // every booking with no funding source and no cap, so book-and-cancel
-    // minted unlimited balance. A real cashback scheme has to be issued
-    // against settled money, not created at checkout.
+    // Auto-credit cashback directly to universal wallet balance
+    if (turfCashbackEarned > 0) {
+      addWalletFunds(turfCashbackEarned);
+    }
 
     // Save booking to global store
     const booking = addBooking({
@@ -495,16 +502,46 @@ export default function BookingConfigurationScreen() {
         slots: selectedSlots.join(','),
         total: total.toFixed(2),
         advancePaid: finalPayable.toFixed(2),
-        cashbackEarned: '100', // Pass cashback amount to display success splash
+        cashbackEarned: String(turfCashbackEarned || 0),
+        cashbackName: currentTurfRecord?.cashbackName || `${venue.name} Cashback Reward`,
+        cashbackCode: currentTurfRecord?.cashbackCode || '',
+        cashbackType: currentTurfRecord?.cashbackType || 'flat',
+        cashbackMaxAmount: currentTurfRecord?.cashbackMaxAmount ? String(currentTurfRecord.cashbackMaxAmount) : '',
+        cashbackOneTime: currentTurfRecord?.cashbackOneTime ? 'true' : 'false',
       },
     });
   };
 
+  // Home-dashboard palette — the same accents the player dashboard tints with.
+  const accent = '#F59E0B';
+  const info = '#3B82F6';
+  const success = '#10B981';
+  const danger = '#ef4444';
+
+  const cardSurface = {
+    backgroundColor: theme.surfaceLowest,
+    borderColor: theme.outlineVariant + '33',
+  };
+  const selectedMethodLabel = PAYMENT_METHODS.find(p => p.id === paymentMethod)?.label ?? 'Apple Pay';
+  const venueSource =
+    typeof venue.image === 'string' && !/^\d+$/.test(venue.image)
+      ? { uri: venue.image }
+      : typeof venue.image === 'number'
+        ? venue.image
+        : parseInt(venue.image || '1', 10);
+
+  const renderPriceRow = (label: string, value: string, tone?: string) => (
+    <View style={styles.priceRow}>
+      <ThemedText style={[styles.priceLabel, { color: tone ?? theme.textSecondary }]}>{label}</ThemedText>
+      <ThemedText style={[styles.priceValue, { color: tone ?? theme.text }]}>{value}</ThemedText>
+    </View>
+  );
+
   return (
     <GradientContainer screenName="booking" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Top App Bar */}
-        <View style={[styles.header, { backgroundColor: 'transparent' }]}>
+        {/* Top app bar */}
+        <View style={styles.header}>
           <Pressable
             onPress={() => {
               if (router.canGoBack()) {
@@ -513,27 +550,32 @@ export default function BookingConfigurationScreen() {
                 router.replace('/(tabs)');
               }
             }}
-            style={styles.backButton}
+            hitSlop={6}
+            style={[styles.roundBtn, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' }]}
           >
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
+            <Ionicons name="arrow-back" size={18} color={theme.text} />
           </Pressable>
-          <ThemedText type="headlineSm" style={styles.headerTitle}>
-            Book Venue
-          </ThemedText>
-          <View style={{ width: 36 }} />
+          <View style={styles.headerCenter}>
+            <ThemedText style={[styles.headerEyebrow, { color: theme.textSecondary }]}>BOOK VENUE</ThemedText>
+            <ThemedText style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>
+              {venue.name}
+            </ThemedText>
+          </View>
+          <View style={styles.roundSpacer} />
         </View>
 
         <ScrollView
           showsVerticalScrollIndicator={false}
+          style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
           }
         >
-          {/* Hero Card */}
+          {/* Hero card */}
           <View style={styles.heroWrapper}>
             <View
-              style={[styles.heroCard, { backgroundColor: theme.primaryContainer }]}
+              style={[styles.heroCard, cardSurface, Shadows.level2]}
               onLayout={(e) => {
                 const { width } = e.nativeEvent.layout;
                 if (width > 0) setHeroCardWidth(width);
@@ -569,64 +611,57 @@ export default function BookingConfigurationScreen() {
                   ))}
                 </ScrollView>
               ) : (
-                <Image
-                  source={
-                    typeof venue.image === 'string' && !/^\d+$/.test(venue.image)
-                      ? { uri: venue.image }
-                      : typeof venue.image === 'number'
-                        ? venue.image
-                        : parseInt(venue.image || '1', 10)
-                  }
-                  style={styles.heroImage}
-                  contentFit="cover"
-                />
+                <Image source={venueSource} style={styles.heroImage} contentFit="cover" />
               )}
 
-              {/* Pagination Dots & Counter when multiple images exist */}
+              <LinearGradient
+                colors={['rgba(0,0,0,0.25)', 'transparent', 'rgba(0,0,0,0.72)']}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+
+              {/* Pagination dots when multiple images exist */}
               {galleryImages.length > 1 && (
-                <View style={[styles.sliderDotsRow, { bottom: 90 }]}>
+                <View style={styles.sliderDotsRow}>
                   {galleryImages.map((_, idx) => (
                     <View
                       key={idx}
-                      style={[
-                        styles.sliderDot,
-                        idx === activeImageIndex && styles.sliderDotActive,
-                      ]}
+                      style={[styles.sliderDot, idx === activeImageIndex && styles.sliderDotActive]}
                     />
                   ))}
                 </View>
               )}
 
-              {/* Fav Button top right */}
-              <Pressable style={[styles.favFab, { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8 }]}>
-                <Ionicons name="heart" size={20} color="#ff4757" />
+              {/* Fav button top right */}
+              <Pressable style={[styles.favFab, Shadows.level2]}>
+                <Ionicons name="heart" size={18} color="#ff4757" />
               </Pressable>
 
-              <View style={styles.heroOverlay}>
-                <ThemedText type="headlineLg" style={styles.heroTitle}>
-                  {venue.name}
-                </ThemedText>
-                <View style={styles.heroSubRow}>
-                  <View style={styles.heroSubItem}>
-                    <Ionicons name="location-outline" size={14} color="#ffffffaa" />
-                    <ThemedText type="bodySm" style={styles.heroSubText}>
+              <View style={styles.heroOverlay} pointerEvents="box-none">
+                <ThemedText style={styles.heroTitle} numberOfLines={1}>{venue.name}</ThemedText>
+                <View style={styles.heroChipRow}>
+                  <View style={styles.heroChip}>
+                    <Ionicons name="location-outline" size={11} color="#ffffff" />
+                    <ThemedText style={styles.heroChipText} numberOfLines={1}>
                       {(venue.location || 'Local Arena').split(',')[0]}
                     </ThemedText>
                   </View>
-                  <View style={[styles.heroSubItem, { borderLeftWidth: 1, borderLeftColor: '#ffffff22', paddingLeft: 12, marginLeft: 12 }]}>
-                    <Ionicons name="star" size={14} color="#ffffff" />
-                    <ThemedText type="bodySm" style={[styles.heroSubText, { color: '#ffffff', fontWeight: '500' }]}>
-                      {venue.rating || '5.0'} <ThemedText type="labelSm" style={{ color: '#ffffffaa' }}>({(venue.reviews || '10+').split(' ')[0]})</ThemedText>
+                  <View style={styles.heroChip}>
+                    <Ionicons name="star" size={11} color="#FBBF24" />
+                    <ThemedText style={styles.heroChipText}>
+                      {venue.rating || '5.0'} ({(venue.reviews || '10+').split(' ')[0]})
                     </ThemedText>
+                  </View>
+                  <View style={styles.heroChip}>
+                    <Ionicons name="cash-outline" size={11} color="#ffffff" />
+                    <ThemedText style={styles.heroChipText}>₹{venue.basePrice}/slot</ThemedText>
                   </View>
                 </View>
               </View>
             </View>
           </View>
 
-
-
-          {/* Published Class Advertisement Promo Banner */}
+          {/* Published class advertisement promo banner */}
           {classes && classes.length > 0 && (
             <View style={styles.section}>
               <PromoBanner
@@ -646,41 +681,53 @@ export default function BookingConfigurationScreen() {
             </View>
           )}
 
-          {/* Date Picker Grid */}
+          {/* ── Date picker ── */}
           <View style={styles.section}>
-            <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}>
+            <SectionHeading title="Pick a date" tint={theme.primary} />
+            <View style={[styles.card, cardSurface, Shadows.level1]}>
               <View style={styles.monthHeader}>
-                <ThemedText type="headlineSm" style={{ color: theme.text }}>
-                  {MONTH_NAMES[calMonth]} {calYear}
-                </ThemedText>
+                <View>
+                  <ThemedText style={[styles.cardTitle, { color: theme.text }]}>
+                    {MONTH_NAMES[calMonth]} {calYear}
+                  </ThemedText>
+                  <ThemedText style={[styles.cardSub, { color: theme.textSecondary }]}>
+                    {formatDateFull(selectedDate)}
+                  </ThemedText>
+                </View>
                 <View style={styles.monthNav}>
-                  <Pressable style={styles.monthNavBtn} onPress={handlePrevMonth}>
-                    <Ionicons name="chevron-back" size={18} color={theme.text} />
+                  <Pressable
+                    style={[styles.monthNavBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}
+                    onPress={handlePrevMonth}
+                  >
+                    <Ionicons name="chevron-back" size={15} color={theme.text} />
                   </Pressable>
-                  <Pressable style={styles.monthNavBtn} onPress={handleNextMonth}>
-                    <Ionicons name="chevron-forward" size={18} color={theme.text} />
+                  <Pressable
+                    style={[styles.monthNavBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}
+                    onPress={handleNextMonth}
+                  >
+                    <Ionicons name="chevron-forward" size={15} color={theme.text} />
                   </Pressable>
                 </View>
               </View>
 
               {/* Date not selected nudge */}
               {!selectedDate && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 4, backgroundColor: theme.error + '15', borderRadius: 8, padding: 8 }}>
+                <View style={[styles.inlineAlert, { backgroundColor: theme.error + '15' }]}>
                   <Ionicons name="calendar-outline" size={13} color={theme.error} />
-                  <ThemedText style={{ fontSize: 11, color: theme.error, fontFamily: 'Sora_500Medium' }}>Please select a date to continue</ThemedText>
+                  <ThemedText style={[styles.inlineAlertText, { color: theme.error }]}>Please select a date to continue</ThemedText>
                 </View>
               )}
 
-              {/* Day Labels */}
+              {/* Day labels */}
               <View style={styles.dayLabelsRow}>
                 {['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'].map((d) => (
-                  <ThemedText key={d} type="labelSm" style={[styles.dayLabelText, { color: theme.textSecondary }]}>
+                  <ThemedText key={d} style={[styles.dayLabelText, { color: theme.textSecondary }]}>
                     {d}
                   </ThemedText>
                 ))}
               </View>
 
-              {/* Month Grid — real date-aware */}
+              {/* Month grid — real date-aware */}
               <View style={styles.calendarGrid}>
                 {calendarGrid.map((item, idx) => {
                   if (item.isPadding) {
@@ -703,22 +750,28 @@ export default function BookingConfigurationScreen() {
                           setSelectedSlots(prev => prev.filter(s => !isTimeSlotPassed(s, item.date)));
                         }
                       }}
-                      style={[
-                        styles.calendarDayCell,
-                        isSelected && { backgroundColor: theme.secondaryContainer, borderRadius: BorderRadius.md },
-                        isToday && !isSelected && { borderWidth: 1.5, borderColor: theme.primary, borderRadius: BorderRadius.md },
-                      ]}
+                      style={styles.calendarDayCell}
                     >
-                      <ThemedText
-                        type="bodyMd"
-                        style={{
-                          color: isSelected ? theme.onSecondaryContainer : isPast ? theme.textSecondary : isToday ? theme.primary : theme.text,
-                          fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_400Regular',
-                          opacity: isPast ? 0.35 : 1,
-                        }}
+                      <View
+                        style={[
+                          styles.calendarDayInner,
+                          isSelected && { backgroundColor: theme.primary },
+                          isToday && !isSelected && { borderWidth: 1.5, borderColor: theme.primary },
+                        ]}
                       >
-                        {item.dayNumber}
-                      </ThemedText>
+                        <ThemedText
+                          style={[
+                            styles.calendarDayText,
+                            {
+                              color: isSelected ? '#ffffff' : isPast ? theme.textSecondary : isToday ? theme.primary : theme.text,
+                              fontFamily: isSelected || isToday ? 'Sora_500Medium' : 'Sora_400Regular',
+                              opacity: isPast ? 0.35 : 1,
+                            },
+                          ]}
+                        >
+                          {item.dayNumber}
+                        </ThemedText>
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -726,33 +779,34 @@ export default function BookingConfigurationScreen() {
             </View>
           </View>
 
-          {/* Time & Duration Config */}
+          {/* ── Day & time slots ── */}
           <View style={styles.section}>
-            <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
-              {/* Collapse/Expand Section Header */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="time" size={15} color={theme.primary} />
-                  <ThemedText type="labelMd" style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                    Select Day & Time Slot
-                  </ThemedText>
+            <SectionHeading title="Time slots" tint={accent} />
+            <View style={[styles.card, cardSurface, Shadows.level1]}>
+              <View style={styles.slotHeader}>
+                <View style={styles.slotHeaderLeft}>
+                  <View style={[styles.cardIcon, { backgroundColor: accent + '1F' }]}>
+                    <Ionicons name="time-outline" size={15} color="#B45309" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={[styles.cardTitle, { color: theme.text }]}>Select Day & Time Slot</ThemedText>
+                    <ThemedText style={[styles.cardSub, { color: theme.textSecondary }]} numberOfLines={1}>
+                      {selectedSlots.length > 0 ? `${selectedSlots.length} selected · ${formatSlotsRange(selectedSlots)}` : 'Tap one or more slots'}
+                    </ThemedText>
+                  </View>
                 </View>
                 <Pressable
                   onPress={() => setIsSlotsExpanded(!isSlotsExpanded)}
-                  style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.primary + '15', justifyContent: 'center', alignItems: 'center' }}
+                  style={[styles.monthNavBtn, { backgroundColor: theme.primary + '14', borderColor: 'transparent' }]}
                   hitSlop={8}
                 >
-                  <Ionicons
-                    name={isSlotsExpanded ? "chevron-up" : "chevron-down"}
-                    size={16}
-                    color={theme.primary}
-                  />
+                  <Ionicons name={isSlotsExpanded ? 'chevron-up' : 'chevron-down'} size={15} color={theme.primary} />
                 </Pressable>
               </View>
 
               {isSlotsExpanded ? (
                 <>
-                  {/* Day Selector — Short names (Mon-Sun) in one row */}
+                  {/* Day selector — short names (Mon-Sun) in one row */}
                   <View style={styles.daySelectorGrid}>
                     {DAYS_OF_WEEK.map((d, dayIdx) => {
                       const isActive = d.full === selectedDayOfWeek;
@@ -778,20 +832,12 @@ export default function BookingConfigurationScreen() {
                           style={[
                             styles.daySelectorTab,
                             isActive
-                              ? [styles.daySelectorTabActive, { backgroundColor: theme.secondaryContainer, borderColor: theme.secondary + '44' }]
-                              : { backgroundColor: theme.surfaceLow, borderColor: 'transparent' },
-                            isPastDay && { opacity: 0.35, backgroundColor: theme.surfaceLow + '80' },
+                              ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                              : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
+                            isPastDay && { opacity: 0.35 },
                           ]}
                         >
-                          <ThemedText
-                            type="labelMd"
-                            style={{
-                              color: isActive ? theme.onSecondaryContainer : isPastDay ? theme.textSecondary : theme.textSecondary,
-                              fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_600SemiBold',
-                              fontSize: 11.5,
-                              letterSpacing: 0.1,
-                            }}
-                          >
+                          <ThemedText style={[styles.daySelectorText, { color: isActive ? '#ffffff' : theme.textSecondary }]}>
                             {d.short}
                           </ThemedText>
                         </Pressable>
@@ -799,33 +845,26 @@ export default function BookingConfigurationScreen() {
                     })}
                   </View>
 
-                  {/* Time Slots Header with Live Occupancy Count */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                      Select Time Slots
-                    </ThemedText>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {/* Live occupancy */}
+                  <View style={styles.occupancyRow}>
+                    <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Select time slots</ThemedText>
+                    <View style={styles.pillRow}>
                       {slotMetrics.totalBooked > 0 && (
-                        <View style={{ backgroundColor: '#ef444418', paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 4 }}>
-                          <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#ef4444' }}>
-                            {slotMetrics.totalBooked} Booked
-                          </ThemedText>
+                        <View style={[styles.statusPill, { backgroundColor: danger + '18' }]}>
+                          <ThemedText style={[styles.statusText, { color: danger }]}>{slotMetrics.totalBooked} Booked</ThemedText>
                         </View>
                       )}
-                      <View style={{ backgroundColor: '#10b98118', paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 4 }}>
-                        <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#047857' }}>
-                          {slotMetrics.totalAvailable} Available
-                        </ThemedText>
+                      <View style={[styles.statusPill, { backgroundColor: success + '1A' }]}>
+                        <ThemedText style={[styles.statusText, { color: '#047857' }]}>{slotMetrics.totalAvailable} Available</ThemedText>
                       </View>
                     </View>
                   </View>
 
-                  {/* Time Slots Grid */}
+                  {/* Time slots grid */}
                   <View style={styles.slotsGrid}>
                     {slotMetrics.slots.map((slot) => {
                       const isSelected = selectedSlots.includes(slot.time);
                       const isBooked = slot.isBooked;
-                      const isConfigBlocked = slot.isConfigBlocked;
                       const isPassed = slot.isPassed;
                       const isDisabled = !slot.isAvailable;
 
@@ -836,38 +875,24 @@ export default function BookingConfigurationScreen() {
                           onPress={() => toggleSlot(slot.time)}
                           style={[
                             styles.slotItem,
-                            { backgroundColor: theme.surfaceLow },
-                            isSelected && { backgroundColor: theme.primary },
-                            isDisabled && {
-                              opacity: isPassed ? 0.35 : 0.45,
-                              backgroundColor: theme.surfaceLow + '50',
-                            },
+                            { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
+                            isSelected && { backgroundColor: theme.primary, borderColor: theme.primary },
+                            isDisabled && { opacity: isPassed ? 0.35 : 0.45 },
                           ]}
                         >
                           <Ionicons
                             name={isBooked ? 'lock-closed-outline' : (slot.icon as any)}
-                            size={13}
-                            color={
-                              isSelected
-                                ? '#ffffff'
-                                : isDisabled
-                                ? theme.textSecondary + '60'
-                                : theme.textSecondary
-                            }
+                            size={12}
+                            color={isSelected ? '#ffffff' : theme.textSecondary}
                           />
                           <ThemedText
-                            type="bodyMd"
-                            style={{
-                              color: isSelected
-                                ? '#ffffff'
-                                : isDisabled
-                                ? theme.textSecondary + '70'
-                                : theme.text,
-                              fontFamily: 'Sora_500Medium',
-                              fontSize: 11,
-                              marginLeft: 4,
-                              textDecorationLine: isPassed ? 'line-through' : 'none',
-                            }}
+                            style={[
+                              styles.slotText,
+                              {
+                                color: isSelected ? '#ffffff' : isDisabled ? theme.textSecondary : theme.text,
+                                textDecorationLine: isPassed ? 'line-through' : 'none',
+                              },
+                            ]}
                           >
                             {slot.time}
                           </ThemedText>
@@ -877,16 +902,19 @@ export default function BookingConfigurationScreen() {
                   </View>
 
                   {/* Notice */}
-                  <View style={styles.noticeRow}>
-                    <Ionicons name="information-circle-outline" size={16} color={theme.textSecondary} />
-                    <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 4, flex: 1 }}>
+                  <View style={[styles.noticeRow, { backgroundColor: theme.surfaceLow }]}>
+                    <Ionicons name="information-circle-outline" size={14} color={theme.textSecondary} />
+                    <ThemedText style={[styles.noticeText, { color: theme.textSecondary }]}>
                       The time slots are in local time. Free cancellation up to 24h before.
                     </ThemedText>
                   </View>
                 </>
               ) : (
-                <Pressable onPress={() => setIsSlotsExpanded(true)} style={{ padding: 10, backgroundColor: theme.primary + '0A', borderRadius: BorderRadius.lg, alignItems: 'center' }}>
-                  <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_500Medium', fontSize: 12 }}>
+                <Pressable
+                  onPress={() => setIsSlotsExpanded(true)}
+                  style={[styles.collapsedPill, { backgroundColor: theme.primary + '0F' }]}
+                >
+                  <ThemedText style={[styles.collapsedText, { color: theme.primary }]}>
                     📅 {selectedDayOfWeek} • {selectedSlots.length > 0 ? `${selectedSlots.length} slot(s) selected (${selectedSlots[0]})` : 'Tap to select slot'}
                   </ThemedText>
                 </Pressable>
@@ -894,100 +922,53 @@ export default function BookingConfigurationScreen() {
             </View>
           </View>
 
-          {/* Additional Services (Disabled Gray State - Pro Plan Required) */}
+          {/* ── Professional services (disabled — Pro plan required) ── */}
           <View style={styles.section}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <ThemedText type="labelMd" style={{ color: theme.textSecondary, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                  PROFESSIONAL SERVICES
-                </ThemedText>
-              </View>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, opacity: 0.7 }}>Disabled in Free Plan</ThemedText>
+            <SectionHeading title="Professional services" tint={info} />
+            <View style={[styles.card, cardSurface, Shadows.level1, styles.lockedCard]}>
+              {[
+                { key: 'coach', icon: 'fitness' as const, title: 'Pro Net Coach', message: '🔒 Pro Plan Required: Upgrade to Pro Plan to enable Trainer Coaching.' },
+                { key: 'recording', icon: 'videocam' as const, title: 'HD Match Recording', message: '🔒 Pro Plan Required: Upgrade to Pro Plan for 4K Match Recording.' },
+              ].map((service, idx) => (
+                <Pressable
+                  key={service.key}
+                  disabled={true}
+                  onPress={() => showError(service.message)}
+                  style={[styles.serviceRow, idx > 0 && { borderTopWidth: 1, borderTopColor: theme.outlineVariant + '26' }]}
+                >
+                  <View style={[styles.cardIcon, { backgroundColor: theme.outlineVariant + '26' }]}>
+                    <Ionicons name={service.icon} size={15} color={theme.textSecondary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={[styles.cardTitle, { color: theme.textSecondary }]}>{service.title}</ThemedText>
+                    <ThemedText style={[styles.cardSub, { color: theme.textSecondary }]}>Included with Pro Plan (Disabled)</ThemedText>
+                  </View>
+                  <View style={[styles.statusPill, { backgroundColor: theme.outlineVariant + '33' }]}>
+                    <Ionicons name="lock-closed" size={9} color={theme.textSecondary} />
+                    <ThemedText style={[styles.statusText, { color: theme.textSecondary }]}>Pro</ThemedText>
+                  </View>
+                </Pressable>
+              ))}
             </View>
-
-            {/* Pro Net Coach Card (Disabled State) */}
-            <Pressable
-              disabled={true}
-              onPress={() => showError('🔒 Pro Plan Required: Upgrade to Pro Plan to enable Trainer Coaching.')}
-              style={[
-                styles.serviceRow,
-                {
-                  backgroundColor: theme.surfaceLow,
-                  borderColor: theme.outlineVariant + '25',
-                  borderWidth: 1,
-                  opacity: 0.5,
-                }
-              ]}
-            >
-              <View style={styles.serviceLeft}>
-                <View style={[styles.serviceIconWrap, { backgroundColor: theme.outlineVariant + '20' }]}>
-                  <Ionicons name="fitness" size={20} color={theme.textSecondary} />
-                </View>
-                <View style={{ marginLeft: Spacing.sm }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', fontSize: 14, color: theme.textSecondary }}>
-                    Pro Net Coach
-                  </ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 2, fontSize: 10 }}>
-                    Included with Pro Plan (Disabled)
-                  </ThemedText>
-                </View>
-              </View>
-            </Pressable>
-
-            {/* HD Match Recording Card (Disabled State) */}
-            <Pressable
-              disabled={true}
-              onPress={() => showError('🔒 Pro Plan Required: Upgrade to Pro Plan for 4K Match Recording.')}
-              style={[
-                styles.serviceRow,
-                {
-                  backgroundColor: theme.surfaceLow,
-                  borderColor: theme.outlineVariant + '25',
-                  borderWidth: 1,
-                  marginTop: Spacing.xs,
-                  opacity: 0.5,
-                }
-              ]}
-            >
-              <View style={styles.serviceLeft}>
-                <View style={[styles.serviceIconWrap, { backgroundColor: theme.outlineVariant + '20' }]}>
-                  <Ionicons name="videocam" size={20} color={theme.textSecondary} />
-                </View>
-                <View style={{ marginLeft: Spacing.sm }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', fontSize: 14, color: theme.textSecondary }}>
-                    HD Match Recording
-                  </ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 2, fontSize: 10 }}>
-                    Included with Pro Plan (Disabled)
-                  </ThemedText>
-                </View>
-              </View>
-            </Pressable>
           </View>
 
-          {/* ── Advance Pay Option ── */}
+          {/* ── Advance payment ── */}
           <View style={styles.section}>
-            <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.sm, letterSpacing: 0.5 }}>
-              ADVANCE PAYMENT
-            </ThemedText>
-            <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
+            <SectionHeading title="Advance payment" tint={success} />
+            <View style={[styles.card, cardSurface, Shadows.level1]}>
               <View style={styles.advanceHeader}>
-                <View style={styles.advanceHeaderLeft}>
-                  <View style={[styles.advanceIconWrap, { backgroundColor: '#5D68E822' }]}>
-                    <Ionicons name="cash" size={18} color="#5D68E8" />
-                  </View>
-                  <View style={{ marginLeft: Spacing.sm }}>
-                    <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>Pay in Advance</ThemedText>
-                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Remaining due at venue</ThemedText>
-                  </View>
+                <View style={[styles.cardIcon, { backgroundColor: theme.primary + '1A' }]}>
+                  <Ionicons name="cash-outline" size={15} color={theme.primary} />
                 </View>
-                <ThemedText type="headlineSm" style={{ color: '#5D68E8', fontFamily: 'Sora_500Medium' }}>
-                  ₹{advanceAmount}
-                </ThemedText>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={[styles.cardTitle, { color: theme.text }]}>Pay in Advance</ThemedText>
+                  <ThemedText style={[styles.cardSub, { color: theme.textSecondary }]}>Remaining due at venue</ThemedText>
+                </View>
+                <ThemedText style={[styles.amountText, { color: theme.primary }]}>₹{advanceAmount}</ThemedText>
               </View>
 
               {/* Advance % toggle row */}
-              <View style={styles.advanceOptions}>
+              <View style={styles.segmentRow}>
                 {ADVANCE_OPTIONS.map((opt) => {
                   const isActive = opt.pct === advancePct;
                   return (
@@ -995,26 +976,24 @@ export default function BookingConfigurationScreen() {
                       key={opt.pct}
                       onPress={() => setAdvancePct(opt.pct)}
                       style={[
-                        styles.advanceOptBtn,
+                        styles.segmentPill,
                         isActive
-                          ? { backgroundColor: '#5D68E8', borderColor: '#5D68E8' }
+                          ? { backgroundColor: theme.primary, borderColor: theme.primary }
                           : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
                       ]}
                     >
-                      <ThemedText style={{
-                        color: isActive ? '#05151e' : theme.textSecondary,
-                        fontFamily: 'Sora_500Medium',
-                        fontSize: 12,
-                      }}>{opt.label}</ThemedText>
+                      <ThemedText style={[styles.segmentText, { color: isActive ? '#ffffff' : theme.textSecondary }]}>
+                        {opt.label}
+                      </ThemedText>
                     </Pressable>
                   );
                 })}
               </View>
 
               {advancePct < 100 && (
-                <View style={[styles.advanceRemainder, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}>
+                <View style={[styles.noticeRow, { backgroundColor: theme.surfaceLow, marginTop: 10 }]}>
                   <Ionicons name="information-circle-outline" size={14} color={theme.textSecondary} />
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 6, flex: 1 }}>
+                  <ThemedText style={[styles.noticeText, { color: theme.textSecondary }]}>
                     ₹{remainingAmount.toFixed(2)} remaining to be paid at the venue before your session.
                   </ThemedText>
                 </View>
@@ -1022,47 +1001,36 @@ export default function BookingConfigurationScreen() {
             </View>
           </View>
 
-          {/* ── Payment Method ── */}
+          {/* ── Payment ── */}
           <View style={styles.section}>
-            <View style={{ marginBottom: Spacing.md }}>
-              <ThemedText type="headlineSm" style={{ color: theme.text, marginBottom: 4 }}>
-                Payment Methods
-              </ThemedText>
-              <ThemedText type="bodyMd" style={{ color: theme.textSecondary }}>
-                Confirm your booking details
-              </ThemedText>
-            </View>
+            <SectionHeading title="Payment" tint={theme.primary} />
 
-            {/* Cashback Offer Card */}
-            <View style={{ backgroundColor: '#10B98115', borderColor: '#10B98133', borderWidth: 1, borderRadius: BorderRadius.lg, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: Spacing.md }}>
-              <View style={{ backgroundColor: '#10B98125', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="gift" size={16} color="#10B981" />
+            {/* Cashback — shown only when this venue actually credits one */}
+            {turfCashbackEarned > 0 && (
+              <View style={[styles.cashbackCard, { backgroundColor: success + '12', borderColor: success + '33' }]}>
+                <View style={[styles.cardIcon, { backgroundColor: success + '22' }]}>
+                  <Ionicons name="gift" size={15} color={success} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={[styles.cardTitle, { color: '#047857' }]}>Cashback Offer Activated!</ThemedText>
+                  <ThemedText style={[styles.cardSub, { color: theme.textSecondary }]}>
+                    Get ₹{turfCashbackEarned.toFixed(2)} Cashback instantly added to your wallet on completing this booking.
+                  </ThemedText>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: '#10B981' }}>
-                  Cashback Offer Activated!
-                </ThemedText>
-                <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 1 }}>
-                  Get ₹100.00 Cashback instantly added to your wallet on completing this booking.
-                </ThemedText>
-              </View>
-            </View>
+            )}
 
-            {/* Wallet Option Card with Enter Amount to Reduce */}
-            <View style={{ backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.lg, padding: 14, marginBottom: Spacing.md, ...Shadows.level1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: theme.primary + '10', justifyContent: 'center', alignItems: 'center' }}>
-                    <Ionicons name="wallet-outline" size={20} color={theme.primary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                      Pay with Wallet Balance
-                    </ThemedText>
-                    <ThemedText style={{ fontSize: 11, color: theme.textSecondary }}>
-                      Available Balance: ₹{walletBalance.toFixed(2)}
-                    </ThemedText>
-                  </View>
+            {/* Wallet option with amount to reduce */}
+            <View style={[styles.card, cardSurface, Shadows.level1]}>
+              <View style={styles.walletHeader}>
+                <View style={[styles.cardIcon, { backgroundColor: accent + '1F' }]}>
+                  <Ionicons name="wallet-outline" size={15} color="#B45309" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={[styles.cardTitle, { color: theme.text }]}>Pay with Wallet Balance</ThemedText>
+                  <ThemedText style={[styles.cardSub, { color: theme.textSecondary }]}>
+                    Available Balance: ₹{walletBalance.toFixed(2)}
+                  </ThemedText>
                 </View>
                 {walletBalance > 0 ? (
                   <Pressable
@@ -1072,34 +1040,35 @@ export default function BookingConfigurationScreen() {
                       }
                       setUseWallet(!useWallet);
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: useWallet ? theme.primary : theme.surfaceLow, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 }}
+                    style={[
+                      styles.smallPill,
+                      useWallet
+                        ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                        : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+                    ]}
                   >
-                    <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: useWallet ? '#ffffff' : theme.textSecondary }}>
+                    <ThemedText style={[styles.smallPillText, { color: useWallet ? '#ffffff' : theme.textSecondary }]}>
                       {useWallet ? 'Applied' : 'Apply'}
                     </ThemedText>
-                    <Ionicons name={useWallet ? 'checkmark-circle' : 'add-circle-outline'} size={14} color={useWallet ? '#ffffff' : theme.textSecondary} />
+                    <Ionicons name={useWallet ? 'checkmark-circle' : 'add-circle-outline'} size={13} color={useWallet ? '#ffffff' : theme.textSecondary} />
                   </Pressable>
                 ) : (
-                  <ThemedText style={{ fontSize: 11, color: theme.textSecondary, fontStyle: 'italic' }}>
-                    Empty
-                  </ThemedText>
+                  <View style={[styles.statusPill, { backgroundColor: theme.outlineVariant + '33' }]}>
+                    <ThemedText style={[styles.statusText, { color: theme.textSecondary }]}>Empty</ThemedText>
+                  </View>
                 )}
               </View>
 
               {useWallet && walletBalance > 0 && (
-                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '22' }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>
-                      Enter amount to reduce (Max 25%):
-                    </ThemedText>
-                    <ThemedText style={{ fontSize: 11, color: theme.primary, fontFamily: 'Sora_500Medium' }}>
-                      Max: ₹{maxWalletDeductible.toFixed(2)}
-                    </ThemedText>
+                <View style={[styles.walletBody, { borderTopColor: theme.outlineVariant + '26' }]}>
+                  <View style={styles.labelRow}>
+                    <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Amount to reduce (max 25%)</ThemedText>
+                    <ThemedText style={[styles.fieldHint, { color: theme.primary }]}>Max ₹{maxWalletDeductible.toFixed(2)}</ThemedText>
                   </View>
 
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLow, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant + '33', paddingHorizontal: 10, height: 38 }}>
-                      <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginRight: 4 }}>₹</ThemedText>
+                  <View style={styles.walletInputRow}>
+                    <View style={[styles.inputShell, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
+                      <ThemedText style={[styles.currency, { color: theme.textSecondary }]}>₹</ThemedText>
                       <TextInput
                         maxFontSizeMultiplier={MAX_FONT_SCALE}
                         keyboardType="decimal-pad"
@@ -1110,27 +1079,25 @@ export default function BookingConfigurationScreen() {
                           const sanitized = txt.replace(/[^0-9.]/g, '');
                           setWalletInputAmount(sanitized);
                         }}
-                        style={{ flex: 1, fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text, height: 36, ...({ outlineStyle: 'none' } as any) }}
+                        style={[styles.inputField, { color: theme.text }]}
                       />
                       {walletInputAmount !== '' && (
-                        <Pressable onPress={() => setWalletInputAmount('')}>
-                          <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+                        <Pressable onPress={() => setWalletInputAmount('')} hitSlop={6}>
+                          <Ionicons name="close-circle" size={15} color={theme.textSecondary} />
                         </Pressable>
                       )}
                     </View>
 
                     <Pressable
                       onPress={() => setWalletInputAmount(String(maxWalletDeductible))}
-                      style={{ backgroundColor: theme.primary + '15', borderWidth: 1, borderColor: theme.primary + '44', paddingHorizontal: 12, height: 38, borderRadius: BorderRadius.md, justifyContent: 'center', alignItems: 'center' }}
+                      style={[styles.maxPill, { backgroundColor: theme.primary + '14', borderColor: theme.primary + '44' }]}
                     >
-                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.primary }}>
-                        Max
-                      </ThemedText>
+                      <ThemedText style={[styles.smallPillText, { color: theme.primary }]}>Max</ThemedText>
                     </Pressable>
                   </View>
 
                   {/* Quick deduction chips */}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                  <View style={styles.chipWrap}>
                     {[0.25, 0.5, 0.75, 1].map((ratio) => {
                       const amount = Math.min(maxWalletDeductible, Math.max(1, Math.round(maxWalletDeductible * ratio)));
                       if (amount <= 0) return null;
@@ -1139,16 +1106,14 @@ export default function BookingConfigurationScreen() {
                         <Pressable
                           key={ratio}
                           onPress={() => setWalletInputAmount(String(amount))}
-                          style={{
-                            paddingVertical: 4,
-                            paddingHorizontal: 8,
-                            borderRadius: 6,
-                            backgroundColor: isSelected ? theme.primary : theme.surfaceLow,
-                            borderWidth: 1,
-                            borderColor: isSelected ? theme.primary : theme.outlineVariant + '22',
-                          }}
+                          style={[
+                            styles.quickChip,
+                            isSelected
+                              ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                              : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
+                          ]}
                         >
-                          <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: isSelected ? '#ffffff' : theme.textSecondary }}>
+                          <ThemedText style={[styles.quickChipText, { color: isSelected ? '#ffffff' : theme.textSecondary }]}>
                             {ratio === 1 ? 'Use Max 25%' : `Use ${(ratio * 25).toFixed(0)}%`} (₹{amount})
                           </ThemedText>
                         </Pressable>
@@ -1156,9 +1121,9 @@ export default function BookingConfigurationScreen() {
                     })}
                   </View>
 
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
-                    <Ionicons name="checkmark-circle" size={12} color="#10B981" />
-                    <ThemedText style={{ fontSize: 10.5, color: '#10B981', fontFamily: 'Sora_500Medium' }}>
+                  <View style={styles.successLine}>
+                    <Ionicons name="checkmark-circle" size={12} color={success} />
+                    <ThemedText style={[styles.successText, { color: '#047857' }]}>
                       ₹{walletDeduction.toFixed(2)} will be reduced from your booking fee (Max 25% wallet limit).
                     </ThemedText>
                   </View>
@@ -1167,78 +1132,87 @@ export default function BookingConfigurationScreen() {
             </View>
 
             {finalPayable === 0 ? (
-              <View style={{ backgroundColor: theme.primary + '10', padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: theme.primary + '22', alignItems: 'center', marginVertical: Spacing.sm }}>
-                <Ionicons name="shield-checkmark-outline" size={32} color={theme.primary} />
-                <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text, marginTop: 8 }}>
+              <View style={[styles.coveredCard, { backgroundColor: theme.primary + '0D', borderColor: theme.primary + '26' }]}>
+                <View style={[styles.coveredIcon, { backgroundColor: theme.primary + '1A' }]}>
+                  <Ionicons name="shield-checkmark-outline" size={20} color={theme.primary} />
+                </View>
+                <ThemedText style={[styles.cardTitle, { color: theme.text, textAlign: 'center' }]}>
                   Wallet Balance Applied Fully
                 </ThemedText>
-                <ThemedText style={{ fontSize: 11, color: theme.textSecondary, textAlign: 'center', marginTop: 4, paddingHorizontal: Spacing.md }}>
+                <ThemedText style={[styles.cardSub, { color: theme.textSecondary, textAlign: 'center' }]}>
                   Your advance amount of ₹{advanceAmount.toFixed(2)} is completely covered by your wallet balance.
                 </ThemedText>
               </View>
             ) : (
-              <View style={{ gap: Spacing.sm }}>
+              <View style={styles.methodList}>
+                <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginTop: 4 }]}>Select payment method</ThemedText>
                 {PAYMENT_METHODS.map(pm => {
                   const isSelected = paymentMethod === pm.id;
+                  const iconColor = pm.color === '#000000' ? theme.text : pm.color;
                   return (
                     <Pressable
                       key={pm.id}
                       onPress={() => setPaymentMethod(pm.id)}
-                      style={[{ flexDirection: 'column', padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: theme.outlineVariant + '40', backgroundColor: theme.surfaceLowest }, isSelected && { borderColor: theme.primary, backgroundColor: theme.primaryContainer }]}
+                      style={[
+                        styles.methodCard,
+                        isSelected
+                          ? { borderColor: theme.primary, backgroundColor: theme.primary + '0D' }
+                          : { borderColor: theme.outlineVariant + '33', backgroundColor: theme.surfaceLowest },
+                      ]}
                     >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={styles.methodRow}>
+                        <View style={[styles.methodIcon, { backgroundColor: theme.surfaceLow }]}>
                           {pm.id === 'gpay' ? (
-                            <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={{ width: 24, height: 24, marginHorizontal: 4 }} />
+                            <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={styles.methodLogo} />
                           ) : pm.family === 'Ionicons' ? (
-                            <Ionicons name={pm.icon as any} size={24} color={isSelected ? theme.surfaceLowest : (pm.color === '#000000' ? theme.text : pm.color)} style={{ width: 32, textAlign: 'center' }} />
+                            <Ionicons name={pm.icon as any} size={17} color={iconColor} />
                           ) : (
-                            <FontAwesome5 name={pm.icon as any} size={24} color={isSelected ? theme.surfaceLowest : (pm.color === '#000000' ? theme.text : pm.color)} style={{ width: 32, textAlign: 'center' }} />
+                            <FontAwesome5 name={pm.icon as any} size={16} color={iconColor} />
                           )}
-                          <ThemedText type="bodyMd" style={{ marginLeft: 12, color: isSelected ? theme.surfaceLowest : theme.text }}>{pm.label}</ThemedText>
                         </View>
-                        <View style={[{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: theme.outlineVariant, justifyContent: 'center', alignItems: 'center' }, isSelected && { borderColor: theme.surfaceLowest }]}>
-                          {isSelected && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.surfaceLowest }} />}
+                        <ThemedText style={[styles.methodLabel, { color: isSelected ? theme.primary : theme.text }]}>{pm.label}</ThemedText>
+                        <View style={[styles.radio, { borderColor: isSelected ? theme.primary : theme.outlineVariant }]}>
+                          {isSelected && <View style={[styles.radioDot, { backgroundColor: theme.primary }]} />}
                         </View>
                       </View>
 
-                      {/* Expanded Payment Details */}
+                      {/* Expanded payment details */}
                       {isSelected && (pm.id === 'credit' || pm.id === 'debit') && (
-                        <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignSelf: 'stretch' }}>
+                        <View style={[styles.methodExpand, { borderTopColor: theme.outlineVariant + '26' }]}>
                           <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                             placeholder="Card Number"
                             placeholderTextColor="#94a3b8"
-                            style={{ backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, marginBottom: Spacing.sm, alignSelf: 'stretch', includeFontPadding: false,}}
+                            style={[styles.cardInput, { backgroundColor: theme.surfaceLowest, color: theme.text, borderColor: theme.outlineVariant + '66' }]}
                           />
-                          <View style={{ flexDirection: 'row', gap: Spacing.sm, alignSelf: 'stretch' }}>
+                          <View style={styles.cardInputRow}>
                             <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                               placeholder="MM/YY"
                               placeholderTextColor="#94a3b8"
-                              style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, includeFontPadding: false,}}
+                              style={[styles.cardInput, styles.cardInputHalf, { backgroundColor: theme.surfaceLowest, color: theme.text, borderColor: theme.outlineVariant + '66' }]}
                             />
                             <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                               placeholder="CVV"
                               placeholderTextColor="#94a3b8"
-                              style={{ flex: 1, backgroundColor: theme.surfaceLowest, color: theme.text, padding: Spacing.sm, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant, includeFontPadding: false,}}
+                              style={[styles.cardInput, styles.cardInputHalf, { backgroundColor: theme.surfaceLowest, color: theme.text, borderColor: theme.outlineVariant + '66' }]}
                               secureTextEntry
                             />
                           </View>
                         </View>
                       )}
                       {isSelected && pm.id === 'gpay' && (
-                        <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignItems: 'center' }}>
-                          <ThemedText type="bodySm" style={{ color: theme.surfaceLowest, marginBottom: Spacing.sm, textAlign: 'center' }}>You will be redirected to Google Pay to complete the transaction securely.</ThemedText>
-                        </View>
+                        <ThemedText style={[styles.methodNote, { color: theme.textSecondary, borderTopColor: theme.outlineVariant + '26' }]}>
+                          You will be redirected to Google Pay to complete the transaction securely.
+                        </ThemedText>
                       )}
                       {isSelected && pm.id === 'paypal' && (
-                        <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignItems: 'center' }}>
-                          <ThemedText type="bodySm" style={{ color: theme.surfaceLowest, marginBottom: Spacing.sm, textAlign: 'center' }}>You will be redirected to PayPal to complete the transaction securely.</ThemedText>
-                        </View>
+                        <ThemedText style={[styles.methodNote, { color: theme.textSecondary, borderTopColor: theme.outlineVariant + '26' }]}>
+                          You will be redirected to PayPal to complete the transaction securely.
+                        </ThemedText>
                       )}
                       {isSelected && pm.id === 'apple' && (
-                        <View style={{ marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: theme.surfaceLowest + '30', alignItems: 'center' }}>
-                          <ThemedText type="bodySm" style={{ color: theme.surfaceLowest, marginBottom: Spacing.sm, textAlign: 'center' }}>Secure transaction via Apple Pay. Authenticate with Touch ID or Face ID.</ThemedText>
-                        </View>
+                        <ThemedText style={[styles.methodNote, { color: theme.textSecondary, borderTopColor: theme.outlineVariant + '26' }]}>
+                          Secure transaction via Apple Pay. Authenticate with Touch ID or Face ID.
+                        </ThemedText>
                       )}
                     </Pressable>
                   );
@@ -1247,188 +1221,114 @@ export default function BookingConfigurationScreen() {
             )}
           </View>
 
-          {/* ── Split Booking Amount (Disabled in Free Plan) ── */}
+          {/* ── Split booking amount (disabled in free plan) ── */}
           <View style={styles.section}>
-            <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.lg, padding: 16, ...Shadows.level1 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_500Medium', color: theme.text }}>
-                    Split Cost among Players
-                  </ThemedText>
-                  <ThemedText style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
-                    Split booking fee based on play hours (e.g., 1 hr, 2 hrs)
+            <Pressable
+              onPress={() => showError('🔒 Pro Plan Required: Upgrade to Pro Plan to enable Split Cost among Players.')}
+              style={[styles.card, cardSurface, Shadows.level1, styles.lockedCard]}
+            >
+              <View style={styles.serviceRowTight}>
+                <View style={[styles.cardIcon, { backgroundColor: theme.outlineVariant + '26' }]}>
+                  <Ionicons name="people" size={15} color={theme.textSecondary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={[styles.cardTitle, { color: theme.text }]}>Split Cost among Players</ThemedText>
+                  <ThemedText style={[styles.cardSub, { color: theme.textSecondary }]}>
+                    Upgrade to Pro Plan to invite players & split payments dynamically.
                   </ThemedText>
                 </View>
-                <ThemedText type="labelSm" style={{ color: theme.textSecondary, opacity: 0.7, fontSize: 10 }}>
-                  Disabled in Free Plan
-                </ThemedText>
+                <View style={[styles.statusPill, { backgroundColor: theme.outlineVariant + '33' }]}>
+                  <Ionicons name="lock-closed" size={9} color={theme.textSecondary} />
+                  <ThemedText style={[styles.statusText, { color: theme.textSecondary }]}>Pro Only</ThemedText>
+                </View>
               </View>
-
-              <Pressable
-                onPress={() => showError('🔒 Pro Plan Required: Upgrade to Pro Plan to enable Split Cost among Players.')}
-                style={[
-                  styles.serviceRow,
-                  {
-                    backgroundColor: theme.surfaceLow,
-                    borderColor: theme.outlineVariant + '25',
-                    borderWidth: 1,
-                    opacity: 0.75,
-                    padding: 12,
-                    borderRadius: BorderRadius.md,
-                  }
-                ]}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10 }}>
-                  <View style={[styles.serviceIconWrap, { backgroundColor: theme.outlineVariant + '20', width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' }]}>
-                    <Ionicons name="people" size={18} color={theme.textSecondary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={{ fontSize: 12.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>
-                      Pro Plan Feature (Locked)
-                    </ThemedText>
-                    <ThemedText style={{ fontSize: 10.5, color: theme.textSecondary, marginTop: 2 }}>
-                      Upgrade to Pro Plan to invite players & split payments dynamically.
-                    </ThemedText>
-                  </View>
-                  <View style={{ backgroundColor: theme.outlineVariant + '30', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Ionicons name="lock-closed" size={12} color={theme.textSecondary} />
-                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>
-                      Pro Only
-                    </ThemedText>
-                  </View>
-                </View>
-              </Pressable>
-            </View>
+            </Pressable>
           </View>
 
-          {/* Booking Summary Ticket Card */}
-          <View style={[styles.section, { paddingBottom: 60 }]}>
-            <View style={[styles.ticketContainer, { backgroundColor: theme.surfaceLowest }, Shadows.level3]}>
-
-              {/* Top part: Rounded banner/hero image */}
+          {/* ── Booking summary ticket ── */}
+          <View style={[styles.section, { paddingBottom: 24 }]}>
+            <SectionHeading title="Booking summary" tint={accent} />
+            <View style={[styles.ticketContainer, cardSurface, Shadows.level2]}>
+              {/* Top: banner image */}
               <View style={styles.ticketTopSection}>
-                <Image source={venue.image} style={styles.ticketHeroImage} contentFit="cover" />
+                <Image source={venueSource} style={styles.ticketHeroImage} contentFit="cover" />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.7)']}
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
+                />
                 <View style={styles.ticketHeroOverlay}>
-                  <ThemedText type="headlineLg" style={styles.ticketHeroTitle}>
-                    {venue.name}
-                  </ThemedText>
+                  <View style={[styles.statusPill, { backgroundColor: 'rgba(255,255,255,0.22)' }]}>
+                    <ThemedText style={[styles.statusText, { color: '#ffffff' }]}>Turf Ticket</ThemedText>
+                  </View>
+                  <ThemedText style={styles.ticketHeroTitle} numberOfLines={1}>{venue.name}</ThemedText>
+                  <ThemedText style={styles.ticketHeroSub} numberOfLines={1}>{venue.location}</ThemedText>
                 </View>
               </View>
 
-              {/* Dotted line with left & right notches */}
-              <View style={styles.ticketDottedLineContainer}>
-                <View style={[styles.ticketNotchLeft, { backgroundColor: theme.background, borderColor: theme.outlineVariant + '44' }]} />
-                <View style={[styles.ticketDottedLine, { borderColor: theme.outlineVariant + '66' }]} />
-                <View style={[styles.ticketNotchRight, { backgroundColor: theme.background, borderColor: theme.outlineVariant + '44' }]} />
+              {/* Perforation */}
+              <View style={styles.ticketPerforation}>
+                <View style={[styles.ticketNotch, styles.ticketNotchLeft, { backgroundColor: theme.background }]} />
+                <View style={[styles.ticketDottedLine, { borderColor: theme.outlineVariant + '88' }]} />
+                <View style={[styles.ticketNotch, styles.ticketNotchRight, { backgroundColor: theme.background }]} />
               </View>
 
-              {/* Middle Section: Details grid */}
-              <View style={styles.ticketMiddleSection}>
-                {/* Bookmark icon */}
-                <View style={[styles.ticketChipAndActionRow, { justifyContent: 'flex-end' }]}>
-                  <Pressable style={[styles.ticketBookmarkBtn, { borderColor: theme.outlineVariant + '33' }]}>
-                    <Ionicons name="bookmark-outline" size={14} color={theme.textSecondary} />
-                  </Pressable>
-                </View>
-
-                {/* Bold title & location */}
-                <ThemedText type="bodyLg" style={{ color: theme.text, marginTop: 10, fontFamily: 'Sora_500Medium' }}>
-                  {venue.name}
-                </ThemedText>
-                <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 2 }}>
-                  {venue.location}
-                </ThemedText>
-
-                {/* Flat separator line */}
-                <View style={[styles.ticketSeparator, { backgroundColor: theme.outlineVariant + '33' }]} />
-
-                {/* Details Grid (3 rows, 2 columns) */}
-                <View style={styles.ticketDetailsGrid}>
-                  <View style={styles.ticketGridRow}>
-                    <View style={styles.ticketGridCol}>
-                      <ThemedText style={styles.ticketGridLabel}>Date</ThemedText>
-                      <ThemedText style={[styles.ticketGridValue, { color: theme.text }]}>
-                        {formatDateShort(selectedDate || today)}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.ticketGridCol}>
-                      <ThemedText style={styles.ticketGridLabel}>Time</ThemedText>
-                      <ThemedText style={[styles.ticketGridValue, { color: theme.text }]}>
-                        {formatSlotsRange(selectedSlots)}
-                      </ThemedText>
-                    </View>
+              {/* Details grid */}
+              <View style={styles.ticketDetailsGrid}>
+                {[
+                  { label: 'Date', value: formatDateShort(selectedDate || today) },
+                  { label: 'Time', value: formatSlotsRange(selectedSlots) },
+                  { label: 'Location', value: venue.location.split(',')[0] },
+                  {
+                    label: 'Services',
+                    value: `${coachAdded ? 'Coach' : ''}${coachAdded && recordingAdded ? ' & ' : ''}${recordingAdded ? 'HD Video' : ''}${!coachAdded && !recordingAdded ? 'None Added' : ''}`,
+                  },
+                  { label: 'Ticket holder', value: profile.name || 'You' },
+                  { label: 'Issued to', value: `ID: TXN-${1000 + selectedDayOfMonth}` },
+                ].map((cell) => (
+                  <View key={cell.label} style={styles.ticketGridCol}>
+                    <ThemedText style={[styles.ticketGridLabel, { color: theme.textSecondary }]}>{cell.label}</ThemedText>
+                    <ThemedText numberOfLines={1} style={[styles.ticketGridValue, { color: theme.text }]}>
+                      {cell.value}
+                    </ThemedText>
                   </View>
-
-                  <View style={styles.ticketGridRow}>
-                    <View style={styles.ticketGridCol}>
-                      <ThemedText style={styles.ticketGridLabel}>Location</ThemedText>
-                      <ThemedText numberOfLines={1} style={[styles.ticketGridValue, { color: theme.text }]}>
-                        {venue.location.split(',')[0]}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.ticketGridCol}>
-                      <ThemedText style={styles.ticketGridLabel}>Services</ThemedText>
-                      <ThemedText numberOfLines={1} style={[styles.ticketGridValue, { color: theme.text }]}>
-                        {coachAdded ? 'Coach' : ''}{coachAdded && recordingAdded ? ' & ' : ''}{recordingAdded ? 'HD Video' : ''}{!coachAdded && !recordingAdded ? 'None Added' : ''}
-                      </ThemedText>
-                    </View>
-                  </View>
-
-                  <View style={styles.ticketGridRow}>
-                    <View style={styles.ticketGridCol}>
-                      <ThemedText style={styles.ticketGridLabel}>Ticket holder</ThemedText>
-                      <ThemedText numberOfLines={1} style={[styles.ticketGridValue, { color: theme.text }]}>
-                        Azarudeen
-                      </ThemedText>
-                    </View>
-                    <View style={styles.ticketGridCol}>
-                      <ThemedText style={styles.ticketGridLabel}>Issued to</ThemedText>
-                      <ThemedText numberOfLines={1} style={[styles.ticketGridValue, { color: theme.text }]}>
-                        ID: TXN-{1000 + selectedDayOfMonth}
-                      </ThemedText>
-                    </View>
-                  </View>
-                </View>
+                ))}
               </View>
 
-              {/* Second dotted line with notches */}
-              <View style={styles.ticketDottedLineContainer}>
-                <View style={[styles.ticketNotchLeft, { backgroundColor: theme.background, borderColor: theme.outlineVariant + '44' }]} />
-                <View style={[styles.ticketDottedLine, { borderColor: theme.outlineVariant + '66' }]} />
-                <View style={[styles.ticketNotchRight, { backgroundColor: theme.background, borderColor: theme.outlineVariant + '44' }]} />
+              {/* Perforation */}
+              <View style={styles.ticketPerforation}>
+                <View style={[styles.ticketNotch, styles.ticketNotchLeft, { backgroundColor: theme.background }]} />
+                <View style={[styles.ticketDottedLine, { borderColor: theme.outlineVariant + '88' }]} />
+                <View style={[styles.ticketNotch, styles.ticketNotchRight, { backgroundColor: theme.background }]} />
               </View>
 
-              {/* Bottom part: Pricing, Barcode & Action Button */}
               <View style={styles.ticketBottomSection}>
-
-                {/* ── Coupon / Promo Code Section ── */}
-                <View style={[styles.couponSection, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                    <Ionicons name="pricetag" size={14} color={theme.primary} />
-                    <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 13 }}>Coupon & Offers</ThemedText>
+                {/* ── Coupon / promo code ── */}
+                <View style={[styles.innerPanel, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '26' }]}>
+                  <View style={styles.panelTitleRow}>
+                    <Ionicons name="pricetag-outline" size={13} color={theme.primary} />
+                    <ThemedText style={[styles.panelTitle, { color: theme.text }]}>Coupon & Offers</ThemedText>
                   </View>
 
                   {couponApplied ? (
                     // Applied state
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#dcfce7', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
-                        <View>
-                          <ThemedText style={{ color: '#15803d', fontFamily: 'Sora_500Medium', fontSize: 12 }}>{couponCode} applied!</ThemedText>
-                          <ThemedText style={{ color: '#16a34a', fontSize: 10, marginTop: 2 }}>You save ₹{couponDiscount}</ThemedText>
-                        </View>
+                    <View style={[styles.appliedPill, { backgroundColor: success + '1A', borderColor: success + '40' }]}>
+                      <Ionicons name="checkmark-circle" size={17} color="#16a34a" />
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={[styles.appliedTitle, { color: '#15803d' }]}>{couponCode} applied!</ThemedText>
+                        <ThemedText style={[styles.appliedSub, { color: '#16a34a' }]}>You save ₹{couponDiscount}</ThemedText>
                       </View>
-                      <Pressable onPress={removeCoupon} style={{ padding: 4 }}>
-                        <Ionicons name="close-circle" size={18} color="#16a34a" />
+                      <Pressable onPress={removeCoupon} hitSlop={6} style={{ padding: 2 }}>
+                        <Ionicons name="close-circle" size={17} color="#16a34a" />
                       </Pressable>
                     </View>
                   ) : (
                     // Input state
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <View style={styles.couponRow}>
                       <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                         style={[
                           styles.couponInput,
-                          { backgroundColor: theme.surfaceLowest, color: theme.text, borderColor: couponError ? '#ef4444' : theme.outlineVariant + '44' }
+                          { backgroundColor: theme.surfaceLowest, color: theme.text, borderColor: couponError ? danger : theme.outlineVariant + '55' },
                         ]}
                         placeholder="Enter promo / coupon code"
                         placeholderTextColor="#94a3b8"
@@ -1440,15 +1340,15 @@ export default function BookingConfigurationScreen() {
                       />
                       <Pressable
                         onPress={() => applyCoupon()}
-                        style={[styles.couponApplyBtn, { backgroundColor: theme.primary }]}
+                        style={({ pressed }) => [styles.couponApplyBtn, { backgroundColor: theme.primary, opacity: pressed ? 0.85 : 1 }]}
                       >
-                        <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 12 }}>Apply</ThemedText>
+                        <ThemedText style={styles.couponApplyText}>Apply</ThemedText>
                       </Pressable>
                     </View>
                   )}
 
                   {couponError !== '' && (
-                    <ThemedText style={{ color: '#ef4444', fontSize: 10, marginTop: 6 }}>{couponError}</ThemedText>
+                    <ThemedText style={[styles.errorText, { color: danger }]}>{couponError}</ThemedText>
                   )}
 
                   {/* The cashback banner that stood here promised a credit the
@@ -1457,134 +1357,69 @@ export default function BookingConfigurationScreen() {
                       Re-add this only alongside a real cashback ledger. */}
 
                   {/* Available turf offers & voucher codes */}
-                  {!couponApplied && (
-                    <View style={{ marginTop: 10 }}>
-                      {turfOffers.length > 0 && (
-                        <View style={{ marginBottom: 10 }}>
-                          <ThemedText style={{ color: '#047857', fontSize: 9.5, fontFamily: 'Sora_500Medium', letterSpacing: 0.4, marginBottom: 5 }}>
-                            EXCLUSIVE OFFERS FOR {venue.name.toUpperCase()}
-                          </ThemedText>
-                          <View style={{ gap: 6 }}>
-                            {turfOffers.map((o) => (
-                              <Pressable
-                                key={o.id}
-                                onPress={() => {
-                                  setCouponInput(o.code);
-                                  applyCoupon(o.code);
-                                }}
-                                style={{
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  backgroundColor: '#10b98112',
-                                  borderColor: '#10b98144',
-                                  borderWidth: 1,
-                                  borderRadius: 8,
-                                  paddingHorizontal: 10,
-                                  paddingVertical: 8,
-                                }}
-                              >
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                                  <View style={{ backgroundColor: '#10b981', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                                    <ThemedText style={{ color: '#ffffff', fontSize: 9.5, fontFamily: 'Sora_500Medium' }}>
-                                      {formatDiscount(o)}
-                                    </ThemedText>
-                                  </View>
-                                  <View style={{ flex: 1 }}>
-                                    <ThemedText style={{ color: theme.text, fontSize: 11, fontFamily: 'Sora_500Medium' }} numberOfLines={1}>
-                                      {o.title || `${o.code} Voucher`}
-                                    </ThemedText>
-                                    <ThemedText style={{ color: theme.textSecondary, fontSize: 9.5 }} numberOfLines={1}>
-                                      Use code <ThemedText style={{ fontFamily: 'Sora_500Medium', color: '#047857' }}>{o.code}</ThemedText>
-                                      {o.minBooking > 0 ? ` • Min ₹${o.minBooking}` : ''}
-                                    </ThemedText>
-                                  </View>
-                                </View>
-                                <View style={{ backgroundColor: '#10b981', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-                                  <ThemedText style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_500Medium' }}>Apply</ThemedText>
-                                </View>
-                              </Pressable>
-                            ))}
+                  {!couponApplied && turfOffers.length > 0 && (
+                    <View style={styles.offerList}>
+                      <ThemedText style={[styles.fieldLabel, { color: '#047857' }]} numberOfLines={1}>
+                        Exclusive offers for {venue.name}
+                      </ThemedText>
+                      {turfOffers.map((o) => (
+                        <Pressable
+                          key={o.id}
+                          onPress={() => {
+                            setCouponInput(o.code);
+                            applyCoupon(o.code);
+                          }}
+                          style={({ pressed }) => [
+                            styles.offerRow,
+                            { backgroundColor: theme.surfaceLowest, borderColor: success + '40', opacity: pressed ? 0.85 : 1 },
+                          ]}
+                        >
+                          <View style={[styles.offerBadge, { backgroundColor: success }]}>
+                            <ThemedText style={styles.offerBadgeText}>{formatDiscount(o)}</ThemedText>
                           </View>
-                        </View>
-                      )}
-
-                      <ThemedText style={{ color: theme.textSecondary, fontSize: 9, letterSpacing: 0.4 }}>OTHER PROMO CODES</ThemedText>
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                        {[
-                          { code: 'YAWAH30', label: '30% OFF + ₹50 cashback' },
-                          { code: 'FIRST50', label: '₹50 flat + ₹100 cashback' },
-                          { code: 'TURF20', label: '20% OFF' },
-                        ].map(({ code, label }) => (
-                          <Pressable
-                            key={code}
-                            onPress={() => {
-                              setCouponInput(code);
-                              setCouponError('');
-                              applyCoupon(code);
-                            }}
-                            style={[styles.offerPill, { borderColor: theme.primary + '44', backgroundColor: theme.primary + '0a' }]}
-                          >
-                            <ThemedText style={{ color: theme.primary, fontSize: 9, fontFamily: 'Sora_500Medium' }}>{code}</ThemedText>
-                            <ThemedText style={{ color: theme.textSecondary, fontSize: 8 }}>{label}</ThemedText>
-                          </Pressable>
-                        ))}
-                      </View>
+                          <View style={{ flex: 1 }}>
+                            <ThemedText style={[styles.offerTitle, { color: theme.text }]} numberOfLines={1}>
+                              {o.title || `${o.code} Voucher`}
+                            </ThemedText>
+                            <ThemedText style={[styles.offerSub, { color: theme.textSecondary }]} numberOfLines={1}>
+                              Use code <ThemedText style={[styles.offerSub, { fontFamily: 'Sora_500Medium', color: '#047857' }]}>{o.code}</ThemedText>
+                              {o.minBooking > 0 ? ` • Min ₹${o.minBooking}` : ''}
+                            </ThemedText>
+                          </View>
+                          <View style={[styles.offerApply, { backgroundColor: success }]}>
+                            <ThemedText style={styles.offerApplyText}>Apply</ThemedText>
+                          </View>
+                        </Pressable>
+                      ))}
                     </View>
                   )}
                 </View>
 
-                {/* Pricing Tally inside a clean breakdown container */}
-                <View style={[styles.ticketPriceBreakdown, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '22' }]}>
-                  <View style={styles.ticketPriceRow}>
-                    <ThemedText style={styles.ticketPriceLabel}>Court Hire ({selectedSlots.length} hrs)</ThemedText>
-                    <ThemedText style={[styles.ticketPriceValue, { color: theme.text }]}>₹{courtFee.toFixed(2)}</ThemedText>
-                  </View>
-                  {coachAdded && (
-                    <View style={styles.ticketPriceRow}>
-                      <ThemedText style={styles.ticketPriceLabel}>Pro Net Coach</ThemedText>
-                      <ThemedText style={[styles.ticketPriceValue, { color: theme.text }]}>₹{coachFee.toFixed(2)}</ThemedText>
-                    </View>
-                  )}
-                  {recordingAdded && (
-                    <View style={styles.ticketPriceRow}>
-                      <ThemedText style={styles.ticketPriceLabel}>HD Match Recording</ThemedText>
-                      <ThemedText style={[styles.ticketPriceValue, { color: theme.text }]}>₹{recordingFee.toFixed(2)}</ThemedText>
-                    </View>
-                  )}
-                  <View style={styles.ticketPriceRow}>
-                    <ThemedText style={styles.ticketPriceLabel}>Service Charge</ThemedText>
-                    <ThemedText style={[styles.ticketPriceValue, { color: theme.text }]}>₹{serviceCharge.toFixed(2)}</ThemedText>
-                  </View>
+                {/* Price breakdown */}
+                <View style={[styles.innerPanel, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '26' }]}>
+                  {renderPriceRow(`Court Hire (${selectedSlots.length} hrs)`, `₹${courtFee.toFixed(2)}`)}
+                  {coachAdded && renderPriceRow('Pro Net Coach', `₹${coachFee.toFixed(2)}`)}
+                  {recordingAdded && renderPriceRow('HD Match Recording', `₹${recordingFee.toFixed(2)}`)}
+                  {renderPriceRow('Service Charge', `₹${serviceCharge.toFixed(2)}`)}
+                  {couponApplied && couponDiscount > 0 && renderPriceRow(`Coupon Discount (${couponCode})`, `-₹${couponDiscount.toFixed(2)}`, '#16a34a')}
 
-                  {couponApplied && couponDiscount > 0 && (
-                    <View style={styles.ticketPriceRow}>
-                      <ThemedText style={[styles.ticketPriceLabel, { color: '#16a34a', fontWeight: '500' }]}>Coupon Discount ({couponCode})</ThemedText>
-                      <ThemedText style={{ fontSize: 12, color: '#16a34a', fontWeight: '500' }}>-₹{couponDiscount.toFixed(2)}</ThemedText>
-                    </View>
-                  )}
-
-                  <View style={styles.ticketPriceTotalRow}>
-                    <ThemedText style={[styles.ticketPriceTotalLabel, { color: theme.text }]}>Total Due</ThemedText>
-                    <ThemedText style={[styles.ticketPriceTotalVal, { color: theme.secondary }]}>₹{Math.max(0, total - couponDiscount).toFixed(2)}</ThemedText>
+                  <View style={[styles.totalRow, { borderTopColor: theme.outlineVariant + '33' }]}>
+                    <ThemedText style={[styles.totalLabel, { color: theme.text }]}>Total Due</ThemedText>
+                    <ThemedText style={[styles.totalValue, { color: theme.text }]}>₹{Math.max(0, total - couponDiscount).toFixed(2)}</ThemedText>
                   </View>
-                  {useWallet && walletDeduction > 0 && (
-                    <View style={styles.ticketPriceRow}>
-                      <ThemedText style={[styles.ticketPriceLabel, { color: '#10B981', fontWeight: '500' }]}>Wallet Discount</ThemedText>
-                      <ThemedText style={{ fontSize: 12, color: '#10B981', fontWeight: '500' }}>-₹{walletDeduction.toFixed(2)}</ThemedText>
-                    </View>
-                  )}
-                  <View style={[styles.ticketPriceRow, { marginTop: 6, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '15', paddingTop: 6 }]}>
-                    <ThemedText style={{ color: theme.text, fontSize: 12, fontWeight: '500' }}>
+                  {useWallet && walletDeduction > 0 && renderPriceRow('Wallet Discount', `-₹${walletDeduction.toFixed(2)}`, success)}
+
+                  <View style={[styles.payNowRow, { backgroundColor: theme.primary + '12' }]}>
+                    <ThemedText style={[styles.payNowLabel, { color: theme.text }]}>
                       {advancePct < 100 ? `Amount to Pay Now (${advancePct}%)` : 'Amount to Pay Now'}
                     </ThemedText>
-                    <ThemedText style={{ color: theme.primary, fontSize: 13, fontWeight: '500' }}>
+                    <ThemedText style={[styles.payNowValue, { color: theme.primary }]}>
                       ₹{finalPayable.toFixed(2)}
                     </ThemedText>
                   </View>
                 </View>
 
-                {/* Mock Barcode Element */}
+                {/* Mock barcode */}
                 <View style={styles.barcodeWrapper}>
                   <View style={styles.barcodeLines}>
                     {[2, 1, 3, 1, 4, 2, 1, 2, 3, 1, 2, 4, 1, 3, 2, 1, 1, 3, 2, 4, 1, 2, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2, 4, 2, 1, 3, 1, 1, 2].map((w, idx) => (
@@ -1592,7 +1427,7 @@ export default function BookingConfigurationScreen() {
                         key={idx}
                         style={{
                           width: w,
-                          height: 40,
+                          height: 36,
                           backgroundColor: theme.text,
                           marginRight: idx % 2 === 0 ? 1 : 2,
                         }}
@@ -1608,30 +1443,34 @@ export default function BookingConfigurationScreen() {
           </View>
         </ScrollView>
 
-        {/* Sticky Fixed Bottom Action Bar */}
-        <View style={[styles.fixedBottomBar, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '22' }, Shadows.level3]}>
+        {/* Sticky bottom action bar */}
+        <View style={[styles.fixedBottomBar, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '33' }]}>
           <Pressable
             onPress={handleConfirmBooking}
             disabled={selectedSlots.length === 0}
-            style={[
-              styles.ticketConfirmBtn,
+            style={({ pressed }) => [
+              styles.confirmBtn,
               { backgroundColor: theme.primary },
-              selectedSlots.length === 0 && { opacity: 0.45 }
+              Shadows.level2,
+              selectedSlots.length === 0 && { opacity: 0.45 },
+              pressed && { opacity: 0.85 },
             ]}
           >
-            <View style={styles.ticketConfirmBtnIconWrap}>
-              <Ionicons name="shield-checkmark" size={18} color={theme.primary} />
+            <View style={styles.confirmIconWrap}>
+              <Ionicons name="shield-checkmark" size={16} color={theme.primary} />
             </View>
-            <View style={{ flex: 1, paddingLeft: 8 }}>
-              <ThemedText style={styles.ticketConfirmBtnTitle}>CONFIRM BOOKING</ThemedText>
-              <ThemedText style={styles.ticketConfirmBtnSub}>
-                ₹{finalPayable.toFixed(2)} via {finalPayable === 0 ? 'Wallet Balance' : (PAYMENT_METHODS.find(p => p.id === paymentMethod)?.label ?? 'Apple Pay')}
+            <View style={{ flex: 1 }}>
+              <ThemedText style={styles.confirmTitle}>Confirm Booking</ThemedText>
+              <ThemedText style={styles.confirmSub} numberOfLines={1}>
+                ₹{finalPayable.toFixed(2)} via {finalPayable === 0 ? 'Wallet Balance' : selectedMethodLabel}
               </ThemedText>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#ffffff" />
+            <View style={styles.confirmArrow}>
+              <Ionicons name="chevron-forward" size={16} color="#ffffff" />
+            </View>
           </Pressable>
 
-          <ThemedText type="labelSm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 6, fontSize: 10 }}>
+          <ThemedText style={[styles.secureNote, { color: theme.textSecondary }]}>
             🔒 Secure payment · Free cancellation 24h before
           </ThemedText>
         </View>
@@ -1640,521 +1479,442 @@ export default function BookingConfigurationScreen() {
   );
 }
 
+const GUTTER = Spacing.containerMargin;
+const CARD_RADIUS = BorderRadius.premium;
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
+
+  // header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    height: 56,
+    gap: 10,
+    paddingHorizontal: GUTTER,
+    height: 58,
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',
     zIndex: 10,
   },
-  backButton: {
-    padding: 6,
-  },
-  headerTitle: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 16,
-  },
-  scrollContent: {
-    paddingBottom: 110,
-  },
-  fixedBottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: Spacing.containerMargin,
-    paddingTop: Spacing.xs,
-    paddingBottom: Platform.OS === 'ios' ? 24 : Spacing.md,
-    borderTopWidth: 1,
-    zIndex: 100,
-  },
-  heroWrapper: {
-    paddingHorizontal: Spacing.containerMargin,
-    marginTop: Spacing.md,
-  },
-  heroCard: {
-    width: '100%',
-    height: 180,
-    borderRadius: BorderRadius.premium,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.6,
-  },
-  heroOverlay: {
-    position: 'absolute',
-    inset: 0,
-    justifyContent: 'flex-end',
-    padding: Spacing.md,
-  },
-  heroTitle: {
-    color: '#ffffff',
-    fontFamily: 'Sora_500Medium',
-    fontSize: 20,
-    lineHeight: 24,
-  },
-  heroSubRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  heroSubItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  heroSubText: {
-    color: '#ffffffaa',
-    fontSize: 12,
-    marginLeft: 4,
-  },
-  section: {
-    marginTop: Spacing.lg,
-    paddingHorizontal: Spacing.containerMargin,
-  },
-  formCard: {
-    borderRadius: BorderRadius.premium,
-    padding: Spacing.md,
-  },
-  monthHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  monthNav: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-  },
-  monthNavBtn: {
-    padding: 6,
-    borderRadius: BorderRadius.full,
-  },
-  dayLabelsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.xs,
-  },
-  dayLabelText: {
-    width: `${100 / 7}%`,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  calendarDayCell: {
-    width: `${100 / 7}%`,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 2,
-  },
-  daySelectorGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingBottom: Spacing.xs,
-  },
-  daySelectorTab: {
-    flex: 1,
-    paddingVertical: 7,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  daySelectorTabActive: {
-    borderWidth: 1,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  slotsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: Spacing.md,
-  },
-  slotItem: {
-    width: '31%',
-    height: 44,
-    borderRadius: BorderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    paddingHorizontal: 4,
-  },
-  noticeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: Spacing.md,
-  },
-  serviceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 16,
-  },
-  serviceLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  serviceIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ticketContainer: {
-    borderRadius: BorderRadius.premium,
-    paddingVertical: 0,
-  },
-  ticketTopSection: {
-    height: 140,
-    width: '100%',
-    position: 'relative',
-  },
-  ticketHeroImage: {
-    width: '100%',
-    height: '100%',
-    borderTopLeftRadius: BorderRadius.premium - 1,
-    borderTopRightRadius: BorderRadius.premium - 1,
-  },
-  ticketHeroOverlay: {
-    position: 'absolute',
-    inset: 0,
-    backgroundColor: 'rgba(5, 21, 30, 0.45)',
-    justifyContent: 'flex-end',
-    padding: Spacing.md,
-  },
-  ticketHeroTitle: {
-    color: '#ffffff',
-    fontFamily: 'Sora_500Medium',
-    fontSize: 20,
-  },
-  ticketDottedLineContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    position: 'relative',
-    height: 20,
-    width: '100%',
-  },
-  ticketNotchLeft: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginLeft: -8,
-    borderWidth: 1,
-    zIndex: 10,
-  },
-  ticketNotchRight: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: -8,
-    borderWidth: 1,
-    zIndex: 10,
-  },
-  ticketDottedLine: {
-    flex: 1,
-    height: 1,
-    borderStyle: 'dashed',
-    borderWidth: 1,
-  },
-  ticketMiddleSection: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.xs,
-    paddingBottom: Spacing.sm,
-  },
-  ticketChipAndActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  ticketBookmarkBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ticketSeparator: {
-    height: 1,
-    marginVertical: 12,
-    alignSelf: 'stretch',
-  },
-  ticketDetailsGrid: {
-    gap: 12,
-  },
-  ticketGridRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  ticketGridCol: {
-    flex: 1,
-  },
-  ticketGridLabel: {
-    color: 'rgba(128, 128, 128, 0.6)',
-    fontSize: 10,
-    fontFamily: 'Sora_500Medium',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  ticketGridValue: {
-    fontSize: 12.5,
-    fontFamily: 'Sora_500Medium',
-    marginTop: 2,
-  },
-  ticketBottomSection: {
-    padding: Spacing.md,
-  },
-  ticketPriceBreakdown: {
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    marginBottom: 16,
-    gap: 6,
-  },
-  ticketPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  ticketPriceLabel: {
-    color: 'rgba(128, 128, 128, 0.7)',
-    fontSize: 11.5,
-    fontFamily: 'Sora_400Regular',
-  },
-  ticketPriceValue: {
-    fontSize: 12,
-    fontFamily: 'Sora_500Medium',
-  },
-  ticketPriceTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.08)',
-    paddingTop: 8,
-    marginTop: 4,
-  },
-  ticketPriceTotalLabel: {
-    fontSize: 14,
-    fontFamily: 'Sora_500Medium',
-  },
-  ticketPriceTotalVal: {
-    fontSize: 16,
-    fontFamily: 'Sora_500Medium',
-  },
-  barcodeWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 12,
-  },
-  barcodeLines: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 40,
-  },
-  barcodeSubText: {
-    fontSize: 10,
-    fontFamily: 'Sora_500Medium',
-    marginTop: 4,
-    letterSpacing: 1.5,
-  },
-  ticketConfirmBtn: {
-    height: 56,
-    borderRadius: BorderRadius.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-    marginTop: 8,
-  },
-  ticketConfirmBtnIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ticketConfirmBtnTitle: {
-    color: '#ffffff',
-    fontFamily: 'Sora_500Medium',
-    fontSize: 13,
-    letterSpacing: 0.3,
-  },
-  ticketConfirmBtnSub: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontFamily: 'Sora_400Regular',
-    fontSize: 10,
-    marginTop: 1,
-  },
-  // Advance Pay styles
-  advanceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-  },
-  advanceHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  advanceIconWrap: {
+  roundBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  advanceOptions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  advanceOptBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.xl,
     borderWidth: 1,
     alignItems: 'center',
-  },
-  advanceRemainder: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: Spacing.sm,
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.default,
-    borderWidth: 1,
-  },
-  // Payment Method styles
-  paymentGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  paymentItem: {
-    width: '13%',
-    flex: 1,
-    minWidth: 68,
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    position: 'relative',
-  },
-  paymentIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
     justifyContent: 'center',
-    alignItems: 'center',
   },
-  paymentCheck: {
+  roundSpacer: { width: 36 },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  headerEyebrow: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.9 },
+  headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 13.5, marginTop: 1 },
+
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 20 },
+  section: { paddingHorizontal: GUTTER, marginTop: Spacing.lg },
+
+  // hero
+  heroWrapper: { paddingHorizontal: GUTTER, marginTop: 12 },
+  heroCard: { height: 196, borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
+  heroImage: { width: '100%', height: '100%' },
+  sliderDotsRow: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    justifyContent: 'center',
+    top: 14,
+    alignSelf: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
   },
+  sliderDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255, 255, 255, 0.45)' },
+  sliderDotActive: { width: 16, backgroundColor: '#ffffff' },
   favFab: {
     position: 'absolute',
     top: 12,
     right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#ffffff',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 10,
   },
-  couponSection: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    marginBottom: 12,
-  },
-  couponInput: {
-    flex: 1,
-    height: 40,
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    fontSize: 12,
-    fontFamily: 'Sora_500Medium',
-    includeFontPadding: false,
-    paddingVertical: 0,
-  },
-  couponApplyBtn: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 40,
-    borderRadius: 8,
-  },
-  offerPill: {
+  heroOverlay: { position: 'absolute', left: 14, right: 14, bottom: 13 },
+  heroTitle: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 15, lineHeight: 22 },
+  heroChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 6 },
+  heroChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    borderWidth: 1,
-    borderRadius: 6,
+    maxWidth: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
+    borderRadius: 999,
   },
-  sliderDotsRow: {
-    position: 'absolute',
-    alignSelf: 'center',
+  heroChipText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 10 },
+
+  // shared card language
+  card: { borderRadius: CARD_RADIUS, borderWidth: 1, padding: 12 },
+  lockedCard: { opacity: 0.75 },
+  cardIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { fontFamily: 'Sora_500Medium', fontSize: 12.5 },
+  cardSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1, lineHeight: 14 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  fieldLabel: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 9,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  fieldHint: { fontFamily: 'Sora_500Medium', fontSize: 10 },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 999,
+  },
+  statusText: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 8.5,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  pillRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  inlineAlert: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    zIndex: 10,
+    paddingVertical: 6,
+    marginBottom: 8,
   },
-  sliderDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+  inlineAlertText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+
+  // calendar
+  monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  monthNav: { flexDirection: 'row', gap: 6 },
+  monthNavBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sliderDotActive: {
-    width: 16,
-    borderRadius: 8,
+  dayLabelsRow: { flexDirection: 'row', marginBottom: 2 },
+  dayLabelText: {
+    width: '14.28%',
+    textAlign: 'center',
+    fontFamily: 'Sora_500Medium',
+    fontSize: 8.5,
+    letterSpacing: 0.6,
+  },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calendarDayCell: { width: '14.28%', height: 40, alignItems: 'center', justifyContent: 'center' },
+  calendarDayInner: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  calendarDayText: { fontSize: 12 },
+
+  // slots
+  slotHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  slotHeaderLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  daySelectorGrid: { flexDirection: 'row', gap: 4, marginBottom: 12 },
+  daySelectorTab: {
+    flex: 1,
+    height: 30,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  daySelectorText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+  occupancyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  slotItem: {
+    flexBasis: '31%',
+    flexGrow: 1,
+    height: 34,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  slotText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+  noticeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: CARD_RADIUS,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 12,
+  },
+  noticeText: { flex: 1, fontFamily: 'Sora_400Regular', fontSize: 10.5, lineHeight: 14 },
+  collapsedPill: { borderRadius: 999, paddingVertical: 10, paddingHorizontal: 12, alignItems: 'center' },
+  collapsedText: { fontFamily: 'Sora_500Medium', fontSize: 11.5 },
+
+  // services
+  serviceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  serviceRowTight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+
+  // advance
+  advanceHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  amountText: { fontFamily: 'Sora_500Medium', fontSize: 14.5 },
+  segmentRow: { flexDirection: 'row', gap: 6 },
+  segmentPill: {
+    flex: 1,
+    height: 32,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentText: { fontFamily: 'Sora_500Medium', fontSize: 11.5 },
+
+  // payment
+  cashbackCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: CARD_RADIUS,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 10,
+  },
+  walletHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  smallPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  smallPillText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+  walletBody: { marginTop: 12, paddingTop: 12, borderTopWidth: 1 },
+  walletInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  inputShell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 38,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingLeft: 14,
+    paddingRight: 10,
+  },
+  currency: { fontFamily: 'Sora_500Medium', fontSize: 13 },
+  inputField: {
+    flex: 1,
+    height: 36,
+    fontFamily: 'Sora_500Medium',
+    fontSize: 13,
+    paddingVertical: 0,
+    ...({ outlineStyle: 'none' } as any),
+  },
+  maxPill: {
+    height: 38,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  quickChip: { height: 28, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, justifyContent: 'center' },
+  quickChipText: { fontFamily: 'Sora_500Medium', fontSize: 10 },
+  successLine: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 },
+  successText: { flex: 1, fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+  coveredCard: {
+    alignItems: 'center',
+    gap: 3,
+    borderRadius: CARD_RADIUS,
+    borderWidth: 1,
+    padding: Spacing.md,
+    marginTop: 10,
+  },
+  coveredIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
+  methodList: { gap: 7, marginTop: 10 },
+  methodCard: { borderRadius: CARD_RADIUS, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 9 },
+  methodRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  methodIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  methodLogo: { width: 18, height: 18 },
+  methodLabel: { flex: 1, fontFamily: 'Sora_500Medium', fontSize: 12 },
+  radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  radioDot: { width: 9, height: 9, borderRadius: 4.5 },
+  methodExpand: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, gap: 7 },
+  cardInputRow: { flexDirection: 'row', gap: 7 },
+  cardInput: {
+    height: 38,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11.5,
+    paddingVertical: 0,
+    includeFontPadding: false,
+  },
+  cardInputHalf: { flex: 1 },
+  methodNote: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 10.5,
+    lineHeight: 14,
+    textAlign: 'center',
+    marginTop: 9,
+    paddingTop: 9,
+    borderTopWidth: 1,
+  },
+
+  // ticket
+  ticketContainer: { borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
+  ticketTopSection: { height: 118 },
+  ticketHeroImage: { width: '100%', height: '100%' },
+  ticketHeroOverlay: { position: 'absolute', left: 14, right: 14, bottom: 11, gap: 2 },
+  ticketHeroTitle: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 15, marginTop: 4 },
+  ticketHeroSub: { color: 'rgba(255,255,255,0.85)', fontFamily: 'Sora_400Regular', fontSize: 10.5 },
+  ticketPerforation: { flexDirection: 'row', alignItems: 'center', height: 18 },
+  ticketNotch: { width: 18, height: 18, borderRadius: 9 },
+  ticketNotchLeft: { marginLeft: -9 },
+  ticketNotchRight: { marginRight: -9 },
+  ticketDottedLine: { flex: 1, borderStyle: 'dashed', borderBottomWidth: 1.5, marginHorizontal: 6 },
+  ticketDetailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  ticketGridCol: { width: '50%', paddingRight: 8 },
+  ticketGridLabel: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 8.5,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  ticketGridValue: { fontFamily: 'Sora_500Medium', fontSize: 12, marginTop: 2 },
+  ticketBottomSection: { paddingHorizontal: 12, paddingTop: 6, paddingBottom: 14, gap: 10 },
+  innerPanel: { borderRadius: CARD_RADIUS, borderWidth: 1, padding: 11 },
+  panelTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 9 },
+  panelTitle: { fontFamily: 'Sora_500Medium', fontSize: 12.5 },
+  appliedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingLeft: 10,
+    paddingRight: 8,
+    paddingVertical: 7,
+  },
+  appliedTitle: { fontFamily: 'Sora_500Medium', fontSize: 11.5 },
+  appliedSub: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
+  couponRow: { flexDirection: 'row', gap: 8 },
+  couponInput: {
+    flex: 1,
+    height: 38,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    fontFamily: 'Sora_500Medium',
+    fontSize: 11.5,
+    letterSpacing: 0.5,
+    paddingVertical: 0,
+    includeFontPadding: false,
+    ...({ outlineStyle: 'none' } as any),
+  },
+  couponApplyBtn: { height: 38, paddingHorizontal: 18, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  couponApplyText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 11.5 },
+  errorText: { fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 6 },
+  offerList: { marginTop: 10, gap: 6 },
+  offerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: CARD_RADIUS,
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+  },
+  offerBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999 },
+  offerBadgeText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 9 },
+  offerTitle: { fontFamily: 'Sora_500Medium', fontSize: 11 },
+  offerSub: { fontFamily: 'Sora_400Regular', fontSize: 9.5 },
+  offerApply: { height: 26, paddingHorizontal: 11, borderRadius: 999, justifyContent: 'center' },
+  offerApplyText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 10 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 3 },
+  priceLabel: { flex: 1, fontFamily: 'Sora_400Regular', fontSize: 11 },
+  priceValue: { fontFamily: 'Sora_500Medium', fontSize: 11.5 },
+  totalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+  },
+  totalLabel: { fontFamily: 'Sora_500Medium', fontSize: 12.5 },
+  totalValue: { fontFamily: 'Sora_500Medium', fontSize: 14 },
+  payNowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  payNowLabel: { flex: 1, fontFamily: 'Sora_500Medium', fontSize: 11.5 },
+  payNowValue: { fontFamily: 'Sora_500Medium', fontSize: 14 },
+  barcodeWrapper: { alignItems: 'center', paddingTop: 4 },
+  barcodeLines: { flexDirection: 'row', alignItems: 'flex-end' },
+  barcodeSubText: { fontFamily: 'Sora_500Medium', fontSize: 9.5, letterSpacing: 1.2, marginTop: 5 },
+
+  // sticky bar
+  fixedBottomBar: {
+    paddingHorizontal: GUTTER,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 22 : 10,
+    borderTopWidth: 1,
+  },
+  confirmBtn: {
+    height: 54,
+    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingLeft: 8,
+    paddingRight: 8,
+  },
+  confirmIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  confirmTitle: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 13.5 },
+  confirmSub: { color: 'rgba(255,255,255,0.88)', fontFamily: 'Sora_400Regular', fontSize: 10, marginTop: 1 },
+  confirmArrow: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secureNote: { fontFamily: 'Sora_400Regular', fontSize: 10, textAlign: 'center', marginTop: 6 },
 });

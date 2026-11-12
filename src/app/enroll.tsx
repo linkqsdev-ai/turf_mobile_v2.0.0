@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
+import { CashbackOutputCard } from '@/components/cashback-output-card';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
@@ -39,7 +40,15 @@ export default function EnrollScreen() {
   const { profile } = useUserProfile();
   const { offers, redeemOffer } = useOfferStore();
   const { classes, enrollInClass } = useClassStore();
-  const { walletBalance, deductWalletFunds } = useWalletStore();
+  const {
+    walletBalance,
+    deductWalletFunds,
+    addWalletFunds,
+    cashbackCredits,
+    addCashbackCredit,
+    deductCashbackCredit,
+    getCashbackBalanceForEntity,
+  } = useWalletStore();
 
   const title = (params.title as string) || 'Featured Coaching Camp';
   const priceRaw = (params.price as string) || '2500';
@@ -71,6 +80,12 @@ export default function EnrollScreen() {
     amountPaid: number;
     paymentMethodLabel: string;
     discountSaved: number;
+    cashbackEarned?: number;
+    cashbackName?: string;
+    cashbackCode?: string;
+    cashbackType?: 'flat' | 'percent';
+    cashbackMaxAmount?: number;
+    cashbackOneTime?: boolean;
     code?: string;
   } | null>(null);
 
@@ -106,13 +121,6 @@ export default function EnrollScreen() {
     return Math.min(basePrice, appliedOffer.discountValue);
   }, [appliedOffer, basePrice]);
 
-  const grossTotal = Math.max(0, basePrice + serviceFee - discountAmount);
-  const maxAllowedFromAmount = Math.max(1, Math.round(grossTotal * 0.25));
-  const maxWalletDeductible = Math.min(walletBalance, maxAllowedFromAmount);
-  const parsedWalletAmount = walletInputAmount === '' ? maxWalletDeductible : Math.min(maxWalletDeductible, Math.max(0, parseFloat(walletInputAmount) || 0));
-  const walletDeduction = useWallet ? parsedWalletAmount : 0;
-  const netPayable = Math.max(0, grossTotal - walletDeduction);
-
   const selectedClass = useMemo(() => {
     return (classes || []).find(
       (c: any) =>
@@ -120,6 +128,34 @@ export default function EnrollScreen() {
         (c.className && c.className.toLowerCase() === title.toLowerCase())
     );
   }, [classId, title, classes]);
+
+  // Calculate cashback earned for this class booking
+  const classCashbackEarned = useMemo(() => {
+    if (!selectedClass) return 0;
+    const isEnabled = selectedClass.cashbackEnabled ?? (Number(selectedClass.cashbackAmount) > 0);
+    if (!isEnabled) return 0;
+    const amountVal = parseFloat(String(selectedClass.cashbackAmount || 0));
+    if (isNaN(amountVal) || amountVal <= 0) return 0;
+
+    let earned = 0;
+    if (selectedClass.cashbackType === 'percent') {
+      earned = Math.round((basePrice * amountVal) / 100);
+    } else {
+      earned = Math.round(amountVal);
+    }
+
+    if (selectedClass.cashbackMaxAmount && Number(selectedClass.cashbackMaxAmount) > 0) {
+      earned = Math.min(earned, Number(selectedClass.cashbackMaxAmount));
+    }
+    return earned;
+  }, [selectedClass, basePrice]);
+
+  const grossTotal = Math.max(0, basePrice + serviceFee - discountAmount);
+  const maxAllowedFromAmount = Math.max(1, Math.round(grossTotal * 0.25));
+  const maxWalletDeductible = Math.min(walletBalance, maxAllowedFromAmount);
+  const parsedWalletAmount = walletInputAmount === '' ? maxWalletDeductible : Math.min(maxWalletDeductible, Math.max(0, parseFloat(walletInputAmount) || 0));
+  const walletDeduction = useWallet ? parsedWalletAmount : 0;
+  const netPayable = Math.max(0, grossTotal - walletDeduction);
 
   const displaySchedule = useMemo(() => {
     if (selectedClass?.startDate || selectedClass?.endDate) {
@@ -179,65 +215,68 @@ export default function EnrollScreen() {
     return (params.certificates as string) || '';
   }, [selectedClass, params.certificates]);
 
-  // Filter and strictly deduplicate available vouchers for this class
+  // Filter and strictly deduplicate available vouchers for this class using Map
   const classOffers = useMemo(() => {
-    let list: any[] = [];
+    const map = new Map<string, any>();
 
-    if (selectedClass?.vouchers && Array.isArray(selectedClass.vouchers) && selectedClass.vouchers.length > 0) {
-      list = selectedClass.vouchers.map((v: any) => ({
-        id: v.offerId || v.localId || `class-voucher-${v.code}`,
-        code: String(v.code || '').trim().toUpperCase(),
-        title: v.title || `${selectedClass.className} Voucher`,
-        description: v.description || `Special coaching voucher for ${selectedClass.className}`,
-        discountType: (v.discountType === 'flat' ? 'flat' : 'percent') as OfferDiscountType,
-        discountValue: parseFloat(v.discountValue) || 15,
-        minBooking: parseFloat(v.minBooking) || 0,
-        maxRedemptions: parseInt(v.maxRedemptions, 10) || 0,
-        redeemedCount: 0,
-        validTill: new Date(Date.now() + 30 * 86400000).toISOString(),
-        appliesTo: selectedClass.className || 'Coaching Class',
-        status: 'active' as OfferStatus,
-        createdAt: new Date().toISOString(),
-        bannerImage: v.bannerImage,
-      }));
-    } else {
-      const matched = offers.filter(
-        o => isRedeemable(o) && o.appliesTo && selectedClass?.className && o.appliesTo.toLowerCase() === selectedClass.className.toLowerCase()
-      );
-      if (matched.length > 0) {
-        list = matched;
-      } else {
-        const clsName = selectedClass?.className || title || 'CLASS';
-        const cleanPrefix = clsName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase();
-        const promoCode = `${cleanPrefix || 'CLASS'}10`;
-        list = [
-          {
-            id: `class-promo-${clsName}`,
-            code: promoCode,
-            title: `${clsName} Special Discount`,
-            description: `Enjoy 15% off your enrollment in ${clsName}`,
-            discountType: 'percent' as OfferDiscountType,
-            discountValue: 15,
-            minBooking: 0,
-            maxRedemptions: 100,
+    // 1. Class-specific vouchers created by the coach
+    if (selectedClass?.vouchers && Array.isArray(selectedClass.vouchers)) {
+      selectedClass.vouchers.forEach((v: any, idx: number) => {
+        const code = String(v.code || '').trim().toUpperCase();
+        if (code && !map.has(code)) {
+          map.set(code, {
+            id: v.offerId || v.localId || `class-voucher-${code}`,
+            code,
+            title: v.title || `${selectedClass.className} Voucher`,
+            description: v.description || `Special coaching voucher for ${selectedClass.className}`,
+            discountType: (v.discountType === 'flat' ? 'flat' : 'percent') as OfferDiscountType,
+            discountValue: parseFloat(v.discountValue) || 15,
+            minBooking: parseFloat(v.minBooking) || 0,
+            maxRedemptions: parseInt(v.maxRedemptions, 10) || 0,
             redeemedCount: 0,
-            validTill: new Date(Date.now() + 60 * 86400000).toISOString(),
-            appliesTo: clsName,
+            validTill: new Date(Date.now() + 30 * 86400000).toISOString(),
+            appliesTo: selectedClass.className || 'Coaching Class',
             status: 'active' as OfferStatus,
             createdAt: new Date().toISOString(),
-          },
-        ];
-      }
+            bannerImage: v.bannerImage,
+          });
+        }
+      });
     }
 
-    // Strict deduplication by uppercase promo code so duplicate cards are never rendered
-    const seen = new Set<string>();
-    return list.filter((item: any) => {
-      const code = String(item.code || '').trim().toUpperCase();
-      if (!code || seen.has(code)) return false;
-      seen.add(code);
-      return true;
+    // 2. Matching store owner offers that apply to this class
+    const clsName = selectedClass?.className || title || 'Class';
+    (offers || []).forEach(o => {
+      if (isRedeemable(o) && o.appliesTo && (o.appliesTo.toLowerCase() === clsName.toLowerCase() || o.appliesTo.toLowerCase() === 'all classes')) {
+        const code = String(o.code || '').trim().toUpperCase();
+        if (code && !map.has(code)) {
+          map.set(code, o);
+        }
+      }
     });
+
+    // 3. If no vouchers exist, provide a default class promo
+    if (map.size === 0) {
+      const cleanPrefix = clsName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase();
+      const promoCode = `${cleanPrefix || 'CLASS'}10`;
+      map.set(promoCode, {
+        id: `class-promo-${clsName}`,
+        code: promoCode,
+        title: `${clsName} Special Discount`,
+        description: `Enjoy 15% off your enrollment in ${clsName}`,
+        discountType: 'percent' as OfferDiscountType,
+        discountValue: 15,
+        minBooking: 0,
+        maxRedemptions: 100,
+        redeemedCount: 0,
+        validTill: new Date(Date.now() + 60 * 86400000).toISOString(),
+        appliesTo: clsName,
+        status: 'active' as OfferStatus,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    return Array.from(map.values());
   }, [selectedClass, title, offers]);
 
   const initialPromoCode = (params.promoCode as string) || '';
@@ -251,20 +290,21 @@ export default function EnrollScreen() {
   const handleApplyPromo = (codeToApply?: string) => {
     const code = (codeToApply || promoInput).trim().toUpperCase();
     if (!code) {
-      setPromoError('Please enter a voucher code.');
+      setPromoError('Please enter a voucher / promo code.');
       return;
     }
 
     const allAvailable = [...classOffers, ...offers];
-    const found = allAvailable.find(o => o.code.toUpperCase() === code);
+    const found = allAvailable.find(o => o.code.toUpperCase() === code && isRedeemable(o));
+
     if (!found) {
-      setPromoError('Invalid or expired promo code.');
+      setPromoError(`"${code}" is an invalid or expired promo code.`);
       setAppliedOffer(null);
       return;
     }
 
     if (found.minBooking > 0 && basePrice < found.minBooking) {
-      setPromoError(`Minimum fee of ₹${found.minBooking} required for this code.`);
+      setPromoError(`Minimum fee of ₹${found.minBooking} required for ${code}.`);
       setAppliedOffer(null);
       return;
     }
@@ -322,6 +362,7 @@ export default function EnrollScreen() {
       contactNumber: trimmedPhone,
       amountPaid: netPayable,
       appliedCode: appliedOffer?.code,
+      cashbackEarned: classCashbackEarned > 0 ? classCashbackEarned : undefined,
     });
 
     if (result && !result.ok) {
@@ -344,6 +385,11 @@ export default function EnrollScreen() {
       deductWalletFunds(walletDeduction);
     }
 
+    // Automatically credit cashback amount directly to universal wallet balance
+    if (classCashbackEarned > 0) {
+      addWalletFunds(classCashbackEarned);
+    }
+
     const selectedPmObj = PAYMENT_METHODS.find(p => p.id === paymentMethod);
     const bookingRef = `ENR-${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -360,6 +406,12 @@ export default function EnrollScreen() {
       amountPaid: netPayable,
       paymentMethodLabel: selectedPmObj?.label || 'Online Payment',
       discountSaved: discountAmount,
+      cashbackEarned: classCashbackEarned,
+      cashbackName: selectedClass?.cashbackName || `${title} Cashback Reward`,
+      cashbackCode: selectedClass?.cashbackCode || '',
+      cashbackType: selectedClass?.cashbackType || 'flat',
+      cashbackMaxAmount: selectedClass?.cashbackMaxAmount,
+      cashbackOneTime: selectedClass?.cashbackOneTime,
       code: appliedOffer?.code,
     });
   };
@@ -635,19 +687,73 @@ export default function EnrollScreen() {
         </View>
 
         {/* ── Section 2: Vouchers & Offers (Kakao Style Matching Screenshot) ── */}
-        {classOffers.length > 0 && (
-          <View style={styles.section}>
-            <View style={[styles.headingRow, { marginBottom: 8 }]}>
-              <ThemedText style={{ fontFamily: 'Sora_600SemiBold', fontSize: 13.5, color: theme.text }}>
-                Vouchers & Offers
-              </ThemedText>
+        <View style={styles.section}>
+          <View style={[styles.headingRow, { marginBottom: 8 }]}>
+            <ThemedText style={{ fontFamily: 'Sora_600SemiBold', fontSize: 13.5, color: theme.text }}>
+              Vouchers & Offers
+            </ThemedText>
+            {classOffers.length > 0 && (
               <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: '#10b981' }}>
                 {classOffers.length} Active {classOffers.length === 1 ? 'Offer' : 'Offers'}
               </ThemedText>
-            </View>
+            )}
+          </View>
 
-            {classOffers.map((offer, idx) => {
-              const isApplied = appliedOffer?.code === offer.code;
+          {/* Coupon / Voucher Code Input Box */}
+          <View style={{ marginBottom: 12, backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: promoError ? '#ef4444' : theme.outlineVariant + '33', padding: 10 }}>
+            {appliedOffer ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#10b98115', paddingHorizontal: 12, paddingVertical: 10, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: '#10b98144' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="checkmark-circle" size={18} color="#10b981" />
+                  <View>
+                    <ThemedText style={{ color: '#047857', fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
+                      {appliedOffer.code} Applied!
+                    </ThemedText>
+                    <ThemedText style={{ color: '#10b981', fontSize: 10, marginTop: 1 }}>
+                      You save ₹{discountAmount} ({formatDiscount(appliedOffer)})
+                    </ThemedText>
+                  </View>
+                </View>
+                <Pressable onPress={handleRemovePromo} hitSlop={8} style={{ padding: 4 }}>
+                  <Ionicons name="close-circle" size={18} color="#10b981" />
+                </Pressable>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, height: 40, backgroundColor: theme.surfaceLow, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant + '33' }}>
+                  <Ionicons name="pricetag-outline" size={14} color={theme.textSecondary} />
+                  <TextInput
+                    maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={{ flex: 1, color: theme.text, fontSize: 12, fontFamily: 'Sora_500Medium' }}
+                    placeholder="Enter voucher / coupon code"
+                    placeholderTextColor={theme.textSecondary + '88'}
+                    value={promoInput}
+                    onChangeText={(t) => { setPromoInput(t.toUpperCase()); setPromoError(''); }}
+                    autoCapitalize="characters"
+                    returnKeyType="done"
+                    onSubmitEditing={() => handleApplyPromo()}
+                  />
+                </View>
+                <Pressable
+                  onPress={() => handleApplyPromo()}
+                  style={{ backgroundColor: theme.primary, paddingHorizontal: 16, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: BorderRadius.md }}
+                >
+                  <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 12 }}>
+                    Apply
+                  </ThemedText>
+                </Pressable>
+              </View>
+            )}
+
+            {promoError !== '' && (
+              <ThemedText style={{ color: '#ef4444', fontSize: 10.5, marginTop: 6, marginLeft: 2, fontFamily: 'Sora_500Medium' }}>
+                {promoError}
+              </ThemedText>
+            )}
+          </View>
+
+          {classOffers.map((offer, idx) => {
+            const isApplied = appliedOffer?.code === offer.code;
               const discountText = formatDiscount(offer);
               const brand = (offer.appliesTo || 'TURF PASS').toUpperCase();
 
@@ -742,7 +848,6 @@ export default function EnrollScreen() {
               );
             })}
           </View>
-        )}
 
         {/* ── Section 3: Location (Matching Screenshot) ── */}
         <View style={styles.section}>
@@ -768,7 +873,7 @@ export default function EnrollScreen() {
               />
               <View style={styles.mapMarkerContainer}>
                 <View style={[styles.mapMarker, { backgroundColor: theme.primaryContainer }]}>
-                  <Ionicons name="location" size={24} color="#ffffff" />
+                  <Ionicons name="location" size={20} color="#ffffff" />
                 </View>
               </View>
             </Pressable>
@@ -815,15 +920,15 @@ export default function EnrollScreen() {
             <View style={[styles.walletCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', flexDirection: 'column', alignItems: 'stretch' }, Shadows.level1]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <View style={[styles.walletIconWrap, { backgroundColor: theme.primary + '15' }]}>
-                    <Ionicons name="wallet-outline" size={18} color={theme.primary} />
+                  <View style={[styles.walletIconWrap, { backgroundColor: '#10b98115' }]}>
+                    <Ionicons name="wallet-outline" size={18} color="#10b981" />
                   </View>
                   <View style={{ flex: 1 }}>
                     <ThemedText style={[styles.walletTitle, { color: theme.text }]}>
-                      Pay with Wallet
+                      Pay with Wallet Balance
                     </ThemedText>
                     <ThemedText style={[styles.walletSubtext, { color: theme.textSecondary }]}>
-                      Balance: ₹{walletBalance.toFixed(2)}
+                      Available Balance: ₹{walletBalance.toFixed(2)}
                     </ThemedText>
                   </View>
                 </View>
@@ -837,7 +942,7 @@ export default function EnrollScreen() {
                   }}
                   style={[
                     styles.walletApplyBtn,
-                    { backgroundColor: useWallet ? theme.primary : theme.surfaceLow },
+                    { backgroundColor: useWallet ? '#10b981' : theme.surfaceLow },
                   ]}
                 >
                   <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: useWallet ? '#ffffff' : theme.textSecondary }}>
@@ -854,8 +959,8 @@ export default function EnrollScreen() {
               {useWallet && (
                 <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: theme.outlineVariant + '22' }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <ThemedText style={{ fontSize: 11.5, color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
-                      Enter amount to reduce (Max 25%):
+                    <ThemedText style={{ fontSize: 9, color: theme.textSecondary, fontFamily: 'Sora_500Medium', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+                      Amount to reduce (max 25%)
                     </ThemedText>
                     <ThemedText style={{ fontSize: 11, color: theme.primary, fontFamily: 'Sora_500Medium' }}>
                       Max: ₹{maxWalletDeductible.toFixed(2)}
@@ -863,7 +968,7 @@ export default function EnrollScreen() {
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLow, borderRadius: 8, borderWidth: 1, borderColor: theme.outlineVariant + '33', paddingHorizontal: 10, height: 36 }}>
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLow, borderRadius: 999, borderWidth: 1, borderColor: theme.outlineVariant + '33', paddingHorizontal: 14, height: 38 }}>
                       <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginRight: 4 }}>₹</ThemedText>
                       <TextInput
                         maxFontSizeMultiplier={MAX_FONT_SCALE}
@@ -886,7 +991,7 @@ export default function EnrollScreen() {
 
                     <Pressable
                       onPress={() => setWalletInputAmount(String(maxWalletDeductible))}
-                      style={{ backgroundColor: theme.primary + '15', borderWidth: 1, borderColor: theme.primary + '44', paddingHorizontal: 12, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }}
+                      style={{ backgroundColor: theme.primary + '15', borderWidth: 1, borderColor: theme.primary + '44', paddingHorizontal: 14, height: 38, borderRadius: 999, justifyContent: 'center', alignItems: 'center' }}
                     >
                       <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.primary }}>
                         Max
@@ -905,9 +1010,9 @@ export default function EnrollScreen() {
                           key={ratio}
                           onPress={() => setWalletInputAmount(String(amount))}
                           style={{
-                            paddingVertical: 3,
-                            paddingHorizontal: 8,
-                            borderRadius: 6,
+                            paddingVertical: 5,
+                            paddingHorizontal: 10,
+                            borderRadius: 999,
                             backgroundColor: isSelected ? theme.primary : theme.surfaceLow,
                             borderWidth: 1,
                             borderColor: isSelected ? theme.primary : theme.outlineVariant + '22',
@@ -943,7 +1048,7 @@ export default function EnrollScreen() {
                   style={[
                     styles.pmRow,
                     {
-                      backgroundColor: isSelected ? (theme.primary + '18') : theme.surfaceLowest,
+                      backgroundColor: isSelected ? (theme.primary + '0D') : theme.surfaceLowest,
                       borderColor: isSelected ? theme.primary : theme.outlineVariant + '33',
                     },
                   ]}
@@ -974,7 +1079,7 @@ export default function EnrollScreen() {
                         styles.pmLabel,
                         {
                           color: isSelected ? theme.primary : theme.text,
-                          fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium',
+                          fontFamily: 'Sora_500Medium',
                         },
                       ]}
                     >
@@ -1058,6 +1163,96 @@ export default function EnrollScreen() {
                 ₹{netPayable.toFixed(2)}
               </ThemedText>
             </View>
+
+            {/* Cashback Output Card Design */}
+            {classCashbackEarned > 0 && (
+              <View
+                style={{
+                  borderRadius: BorderRadius.premium,
+                  borderWidth: 1,
+                  borderColor: '#10b98155',
+                  overflow: 'hidden',
+                  marginTop: 14,
+                  backgroundColor: theme.surfaceLow,
+                }}
+              >
+                {/* Banner with Emerald Gradient Overlay */}
+                <View style={{ height: 85, width: '100%', position: 'relative', justifyContent: 'space-between', padding: Spacing.sm }}>
+                  <Image
+                    source={{ uri: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1200&auto=format&fit=crop&q=80' }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                  />
+                  <LinearGradient
+                    colors={['rgba(6, 78, 59, 0.45)', 'rgba(6, 78, 59, 0.94)']}
+                    style={StyleSheet.absoluteFill}
+                  />
+
+                  {/* Top Badges */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', zIndex: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: BorderRadius.full }}>
+                      <Ionicons name="wallet-outline" size={11} color="#34d399" />
+                      <ThemedText style={{ color: '#34d399', fontSize: 9, fontFamily: 'Sora_500Medium', letterSpacing: 0.4 }}>WALLET CASHBACK</ThemedText>
+                    </View>
+                    <View style={{ backgroundColor: '#10b981', paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full }}>
+                      <ThemedText style={{ color: '#ffffff', fontSize: 10, fontFamily: 'Sora_500Medium' }}>
+                        +₹{classCashbackEarned} CASHBACK
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  {/* Banner Title & Target */}
+                  <View style={{ zIndex: 2 }}>
+                    <ThemedText style={{ color: '#ffffff', fontSize: 12.5, fontFamily: 'Sora_500Medium' }} numberOfLines={1}>
+                      Direct Class Wallet Reward
+                    </ThemedText>
+                    <ThemedText style={{ color: 'rgba(255,255,255,0.85)', fontSize: 9.5, fontFamily: 'Sora_400Regular', marginTop: 1 }} numberOfLines={1}>
+                      Credited automatically on completing payment
+                    </ThemedText>
+                  </View>
+                </View>
+
+                {/* Details Spec Body */}
+                <View style={{ padding: Spacing.sm, gap: 7 }}>
+                  {/* Trigger Row */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.sm, paddingVertical: 5, borderRadius: BorderRadius.md, borderWidth: 1, borderStyle: 'dashed', backgroundColor: '#10b98112', borderColor: '#10b98144' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="checkmark-circle" size={13} color="#10b981" />
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#10b981', letterSpacing: 0.6 }}>
+                        AUTO-CREDITED ON PAYMENT
+                      </ThemedText>
+                    </View>
+                    <View style={{ backgroundColor: '#10b981', paddingHorizontal: 6, paddingVertical: 2, borderRadius: BorderRadius.full }}>
+                      <ThemedText style={{ color: '#ffffff', fontSize: 8, fontFamily: 'Sora_500Medium' }}>INSTANT</ThemedText>
+                    </View>
+                  </View>
+
+                  {/* 3-Metric Spec Grid */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: theme.outlineVariant + '22', paddingTop: 6, marginTop: 2 }}>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: theme.textSecondary, letterSpacing: 0.3 }}>REWARD TYPE</ThemedText>
+                      <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: theme.text, marginTop: 1 }} numberOfLines={1}>
+                        Class Wallet
+                      </ThemedText>
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: theme.textSecondary, letterSpacing: 0.3 }}>CASHBACK</ThemedText>
+                      <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: '#10b981', marginTop: 1 }}>
+                        +₹{classCashbackEarned}
+                      </ThemedText>
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={{ fontSize: 8, fontFamily: 'Sora_500Medium', color: theme.textSecondary, letterSpacing: 0.3 }}>STATUS</ThemedText>
+                      <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: '#10b981', marginTop: 1 }}>
+                        Ready on Pay ✓
+                      </ThemedText>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -1124,7 +1319,7 @@ export default function EnrollScreen() {
             {/* Success Ring & Icon */}
             <View style={[styles.confirmBadgeRing, { backgroundColor: '#10B9811A' }]}>
               <View style={styles.confirmBadgeCircle}>
-                <Ionicons name="checkmark" size={28} color="#ffffff" />
+                <Ionicons name="checkmark" size={22} color="#ffffff" />
               </View>
             </View>
 
@@ -1201,12 +1396,27 @@ export default function EnrollScreen() {
               </View>
             </View>
 
+            {/* Cashback Reward Earned Output Card */}
+            {Boolean(confirmationData?.cashbackEarned && confirmationData.cashbackEarned > 0) && (
+              <View style={{ marginTop: 14 }}>
+                <CashbackOutputCard
+                  entityName={confirmationData?.className || 'Coaching Class'}
+                  entityType="class"
+                  cashbackAmount={confirmationData?.cashbackEarned || 0}
+                  cashbackType={confirmationData?.cashbackType || 'flat'}
+                  cashbackName={confirmationData?.cashbackName}
+                  cashbackCode={confirmationData?.cashbackCode}
+                  cashbackMaxAmount={confirmationData?.cashbackMaxAmount}
+                  cashbackOneTime={confirmationData?.cashbackOneTime}
+                />
+              </View>
+            )}
+
             {/* Action Buttons */}
             <View style={styles.confirmActionRow}>
               <Pressable
                 onPress={() => {
                   setConfirmationData(null);
-                  router.dismissAll();
                   router.replace('/(tabs)/coach');
                 }}
                 style={[styles.confirmPrimaryBtn, { backgroundColor: theme.primary }]}
@@ -1219,7 +1429,6 @@ export default function EnrollScreen() {
               <Pressable
                 onPress={() => {
                   setConfirmationData(null);
-                  router.dismissAll();
                   router.replace('/(tabs)');
                 }}
                 style={[styles.confirmSecondaryBtn, { borderColor: theme.outlineVariant + '44' }]}
@@ -1286,7 +1495,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontFamily: 'Sora_600SemiBold',
-    fontSize: 17,
+    fontSize: 15,
     lineHeight: 22,
     color: '#ffffff',
   },
@@ -1332,7 +1541,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   formCard: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     padding: 14,
   },
@@ -1490,21 +1699,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 7,
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 999,
   },
   pmRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 10,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
   },
   pmLabel: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 12.5,
+    fontSize: 12,
     marginLeft: 8,
   },
   pmRadio: {
@@ -1528,22 +1738,22 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontFamily: 'Sora_400Regular',
-    fontSize: 12,
+    fontSize: 11,
   },
   summaryValue: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 12,
+    fontSize: 11.5,
   },
   divider: {
     height: 1,
     marginVertical: 6,
   },
   summaryTotalLabel: {
-    fontFamily: 'Sora_600SemiBold',
-    fontSize: 13,
+    fontFamily: 'Sora_500Medium',
+    fontSize: 12.5,
   },
   summaryTotalValue: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 15,
   },
   bottomBar: {
@@ -1559,12 +1769,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   bottomSubtext: {
-    fontFamily: 'Sora_400Regular',
-    fontSize: 10.5,
+    fontFamily: 'Sora_500Medium',
+    fontSize: 8.5,
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
   },
   bottomPrice: {
-    fontFamily: 'Sora_600SemiBold',
-    fontSize: 19,
+    fontFamily: 'Sora_500Medium',
+    fontSize: 15.5,
     letterSpacing: -0.3,
   },
   bottomStrikethrough: {
@@ -1575,13 +1787,13 @@ const styles = StyleSheet.create({
   payBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 42,
-    paddingHorizontal: 20,
+    height: 46,
+    paddingHorizontal: 22,
     borderRadius: 999,
-    ...Shadows.level1,
+    ...Shadows.level2,
   },
   payBtnText: {
-    fontFamily: 'Sora_600SemiBold',
+    fontFamily: 'Sora_500Medium',
     fontSize: 13,
     color: '#ffffff',
   },
@@ -1691,14 +1903,14 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   kakaoBigDiscount: {
-    fontSize: 48,
+    fontSize: 36,
     fontFamily: 'Sora_500Medium',
     color: '#ffffff',
     lineHeight: 48,
     letterSpacing: -1,
   },
   kakaoBigOff: {
-    fontSize: 40,
+    fontSize: 32,
     fontFamily: 'Sora_500Medium',
     color: '#ffffff',
     lineHeight: 40,
@@ -1798,7 +2010,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fee2e2',
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderRadius: 6,
+    borderRadius: 999,
     marginBottom: 8,
     width: '100%',
   },
@@ -1842,7 +2054,7 @@ const styles = StyleSheet.create({
     ...Shadows.level2,
   },
   confirmTitle: {
-    fontSize: 19,
+    fontSize: 16,
     fontFamily: 'Sora_600SemiBold',
     letterSpacing: -0.3,
     textAlign: 'center',
@@ -1887,7 +2099,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Sora_600SemiBold',
   },
   confirmTotalVal: {
-    fontSize: 16,
+    fontSize: 14.5,
     fontFamily: 'Sora_600SemiBold',
   },
   confirmActionRow: {

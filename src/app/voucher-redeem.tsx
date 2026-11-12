@@ -141,18 +141,18 @@ export default function VoucherRedeemScreen() {
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={styles.header}>
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
               hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
-              <Ionicons name="arrow-back" size={24} color="#ffffff" />
+              <Ionicons name="arrow-back" size={20} color="#ffffff" />
             </Pressable>
             <ThemedText style={styles.headerTitle}>Voucher</ThemedText>
             <View style={{ width: 24 }} />
           </View>
           <View style={styles.missingWrap}>
-            <Ionicons name="pricetag-outline" size={44} color="rgba(255,255,255,0.75)" />
+            <Ionicons name="pricetag-outline" size={36} color="rgba(255,255,255,0.75)" />
             <ThemedText style={styles.missingText}>
               This voucher is no longer available.
             </ThemedText>
@@ -169,12 +169,12 @@ export default function VoucherRedeemScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+            <Ionicons name="arrow-back" size={20} color="#ffffff" />
           </Pressable>
           <ThemedText style={styles.headerTitle} numberOfLines={1}>
             {voucher.brand}
@@ -386,14 +386,14 @@ const styles = StyleSheet.create({
   discountBox: { alignItems: 'flex-end' },
   discountValue: {
     color: BRAND_BLUE,
-    fontSize: 42,
+    fontSize: 32,
     lineHeight: 46,
     fontFamily: 'Sora_500Medium',
     letterSpacing: -1.5,
   },
   discountSuffix: {
     color: BRAND_BLUE,
-    fontSize: 19,
+    fontSize: 16,
     lineHeight: 22,
     fontFamily: 'Sora_500Medium',
     letterSpacing: 0.5,
@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
   },
   codeText: {
     color: BRAND_BLUE,
-    fontSize: 25,
+    fontSize: 20,
     fontFamily: 'Sora_500Medium',
     letterSpacing: 2,
   },

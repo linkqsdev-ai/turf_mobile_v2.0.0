@@ -118,7 +118,7 @@ export default function CoachHomeScreen() {
         <View className="flex-row flex-wrap justify-between gap-3">
           {QUICK_CATEGORIES.map((cat) => (
             <Card key={cat.id} variant="elevated" className="w-[31%] items-center py-4" padded={false}>
-              <MaterialCommunityIcons name={cat.icon as any} size={26} color={t.primary} />
+              <MaterialCommunityIcons name={cat.icon as any} size={22} color={t.primary} />
               <Text variant="caption" className="mt-2 text-center">
                 {cat.title}
               </Text>

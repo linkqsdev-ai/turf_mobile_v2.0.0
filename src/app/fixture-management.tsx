@@ -15,8 +15,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTournamentStore } from '@/store/app-store';
-import { generateFixtures, hasTournamentStarted } from '@/store/tournament-store';
-import { todayIso } from '@/constants/tournament';
+import {
+  buildTournamentFixtures,
+  hasTournamentStarted,
+  kickoffSlots,
+  matchLengthMinutes,
+  scheduleAtVenue,
+  findOverlap,
+  datesInWindow,
+  isoDateParts,
+  parseKickoff,
+  formatKickoff,
+  fixtureDateIssue,
+} from '@/store/tournament-store';
+import { todayIso, formatIsoDate } from '@/constants/tournament';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -45,19 +58,24 @@ interface Fixture {
  * tournament. It now starts empty and builds the draw from the teams that
  * actually registered.
  */
-const KICKOFF_TIMES = ['09:00 AM', '10:30 AM', '12:00 PM', '01:30 PM', '03:00 PM', '04:30 PM'];
-const PITCHES = ['Pitch A', 'Pitch B'];
 
 export default function FixtureManagementScreen() {
   const theme = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ tournamentId?: string }>();
   const { publishedTournaments, registrations, updateTournament } = useTournamentStore();
+  const { profile } = useUserProfile();
+  /** Drawing and rescheduling are the host's job; players only read the draw. */
+  const isHost = profile.role === 'Organizer' || profile.role === 'Super Admin';
 
   const tournament = useMemo(
     () => (publishedTournaments || []).find((t: any) => t.id === params.tournamentId),
     [publishedTournaments, params.tournamentId]
   );
+
+  /** Match length from the tournament's format; kick-offs are spaced by it. */
+  const matchMinutes = matchLengthMinutes(tournament?.matchDuration);
+  const kickoffTimes = kickoffSlots(matchMinutes);
 
   /** Confirmed teams, in the order they registered — the seeding order. */
   const registeredTeamNames = useMemo(
@@ -70,23 +88,35 @@ export default function FixtureManagementScreen() {
   );
 
   // State Variables
-  const [viewMode, setViewMode] = useState<'calendar' | 'bracket' | 'list'>('list');
-  const [fixtures, setFixturesLocal] = useState<Fixture[]>([]);
+  const [viewMode, setViewMode] = useState<'bracket' | 'list'>('list');
+  /**
+   * The draw is read straight from the tournament record, so every save here
+   * is exactly what the Fixtures tab and the Cups screen show. It used to be a
+   * local copy loaded once on open: when the store redrew or re-timed the draw
+   * afterwards, the next edit wrote that stale copy back over it.
+   */
+  const fixtures = useMemo<Fixture[]>(
+    () => (Array.isArray(tournament?.fixtures) ? (tournament!.fixtures as Fixture[]) : []),
+    [tournament?.fixtures]
+  );
 
-  /** Persist alongside local state so every screen sees the same draw. */
   const setFixtures = (next: Fixture[] | ((prev: Fixture[]) => Fixture[])) => {
-    setFixturesLocal(prev => {
-      const value = typeof next === 'function' ? (next as (p: Fixture[]) => Fixture[])(prev) : next;
-      if (params.tournamentId) updateTournament(params.tournamentId, { fixtures: value });
-      return value;
-    });
+    if (!params.tournamentId) return;
+    const value = typeof next === 'function' ? (next as (p: Fixture[]) => Fixture[])(fixtures) : next;
+    updateTournament(params.tournamentId, { fixtures: value });
   };
 
-  // Load whatever the tournament already holds.
-  React.useEffect(() => {
-    if (Array.isArray(tournament?.fixtures)) setFixturesLocal(tournament!.fixtures as Fixture[]);
-  }, [tournament?.id]);
-  const [selectedDate, setSelectedDate] = useState(todayIso());
+  /**
+   * The tournament's own days, plus any a fixture already sits on — the days
+   * offered in the reschedule date picker.
+   */
+  const calendarDates = useMemo(() => {
+    const start = tournament?.startDate || todayIso();
+    const days = datesInWindow(start, tournament?.endDate || start);
+    const extra = fixtures.map(f => f.date).filter(d => d && !days.includes(d));
+    return [...new Set([...days, ...extra])].sort();
+  }, [tournament?.startDate, tournament?.endDate, fixtures]);
+
   // Derived from the fixtures actually present, not asserted up front.
   const [conflictDismissed, setConflictDismissed] = useState(false);
 
@@ -100,6 +130,13 @@ export default function FixtureManagementScreen() {
   const [editPitch, setEditPitch] = useState('');
   const [editTime, setEditTime] = useState('');
   const [editStatus, setEditStatus] = useState<'Scheduled' | 'Live' | 'Finished' | 'Cancelled'>('Scheduled');
+  const [editDate, setEditDate] = useState('');
+  /** Custom kick-off, typed in parts; a valid entry becomes `editTime`. */
+  const [customTime, setCustomTime] = useState<{ hour: string; minute: string; meridiem: 'AM' | 'PM' }>({
+    hour: '',
+    minute: '',
+    meridiem: 'AM',
+  });
 
   // Custom Toast state
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -133,19 +170,9 @@ export default function FixtureManagementScreen() {
   const handleOptimizeSchedule = () => {
     setIsOptimizing(true);
     setTimeout(() => {
-      const seen = new Set<string>();
-      const optimized = fixtures.map(f => {
-        let time = f.time;
-        let slot = KICKOFF_TIMES.indexOf(time);
-        if (slot < 0) slot = 0;
-        while (seen.has(`${f.pitch}@${time}`) && slot < KICKOFF_TIMES.length - 1) {
-          slot += 1;
-          time = KICKOFF_TIMES[slot];
-        }
-        seen.add(`${f.pitch}@${time}`);
-        return time === f.time ? f : { ...f, time };
-      });
-      const moved = optimized.filter((f, i) => f.time !== fixtures[i].time).length;
+      // One match at a time per venue; kick-offs that already fit are kept.
+      const optimized = scheduleAtVenue(fixtures, matchMinutes);
+      const moved = optimized.filter((f, i) => f.time !== fixtures[i].time || f.date !== fixtures[i].date).length;
       setFixtures(optimized);
       setConflictDismissed(true);
       setIsOptimizing(false);
@@ -163,34 +190,34 @@ export default function FixtureManagementScreen() {
    */
   /** Pitch/time collisions in the current draw. */
   const conflicts = useMemo(() => {
-    const seen = new Map<string, Fixture>();
+    // Overlapping matches, not just identical kick-offs: at 90 minutes a match,
+    // 09:00 and 10:00 at the same venue clash too.
     const clashes: string[] = [];
-    for (const f of fixtures) {
-      const key = `${f.pitch}@${f.time}@${f.date}`;
-      const first = seen.get(key);
-      if (first) {
-        clashes.push(`${f.teamA} vs ${f.teamB} clashes with ${first.teamA} vs ${first.teamB} on ${f.pitch} at ${f.time}.`);
-      } else {
-        seen.set(key, f);
+    fixtures.forEach((f, i) => {
+      const other = findOverlap(fixtures.slice(0, i), f, matchMinutes);
+      if (other) {
+        clashes.push(`${f.teamA} vs ${f.teamB} overlaps ${other.teamA} vs ${other.teamB} at ${f.pitch} on ${formatIsoDate(f.date)}.`);
       }
-    }
+    });
     return clashes;
-  }, [fixtures]);
+  }, [fixtures, matchMinutes]);
 
   const conflictSummary = conflicts[0] || 'No scheduling clashes.';
 
+  /**
+   * The draw, dated across the tournament window.
+   *
+   * Every fixture used to take the tournament's start date, so a quarter-final
+   * and the final were scheduled for the same day. Each round now gets its own
+   * date — opening round on the start date, final on the end date — and pitch
+   * and kick-off restart per round, since each round is its own match day.
+   */
+  // Same builder the store uses to draw a full tournament automatically.
   const buildFixtures = (): Fixture[] =>
-    generateFixtures(registeredTeamNames).map((f, i) => ({
-      id: f.id,
-      matchNo: f.matchNo,
-      round: f.round,
-      teamA: f.teamA,
-      teamB: f.teamB,
-      pitch: PITCHES[i % PITCHES.length],
-      time: KICKOFF_TIMES[Math.floor(i / PITCHES.length) % KICKOFF_TIMES.length],
-      date: tournament?.startDate || selectedDate,
-      status: 'Scheduled' as const,
-    }));
+    buildTournamentFixtures(registeredTeamNames, tournament?.startDate, tournament?.endDate, todayIso(), {
+      venue: tournament?.location,
+      matchDuration: tournament?.matchDuration,
+    });
 
   const handleGenerateBrackets = () => {
     if (registeredTeamNames.length < 2) {
@@ -238,20 +265,64 @@ export default function FixtureManagementScreen() {
     setEditingFixture(fix);
     setEditPitch(fix.pitch);
     setEditTime(fix.time);
+    setEditDate(fix.date);
+    fillCustomFrom(fix.time);
     setEditStatus(fix.status);
     setIsEditVisible(true);
   };
 
+  /** Mirror a kick-off into the custom hh:mm fields. */
+  const fillCustomFrom = (time: string) => {
+    const parsed = parseKickoff(time);
+    setCustomTime(
+      parsed
+        ? { hour: String(parsed.hour), minute: String(parsed.minute).padStart(2, '0'), meridiem: parsed.meridiem }
+        : { hour: '', minute: '', meridiem: 'AM' }
+    );
+  };
+
+  const selectKickoff = (slot: string) => {
+    setEditTime(slot);
+    fillCustomFrom(slot);
+  };
+
+  const updateCustomTime = (patch: Partial<typeof customTime>) => {
+    const next = { ...customTime, ...patch };
+    setCustomTime(next);
+    const formatted = formatKickoff(next.hour, next.minute, next.meridiem);
+    if (formatted) setEditTime(formatted);
+  };
+
+  const customTimeInvalid =
+    (customTime.hour !== '' || customTime.minute !== '') &&
+    !formatKickoff(customTime.hour, customTime.minute, customTime.meridiem);
+
+  /** Days offered in the picker — the window, plus the fixture's own day if outside it. */
+  const editDateOptions =
+    editDate && !calendarDates.includes(editDate) ? [...calendarDates, editDate].sort() : calendarDates;
+
+  /** Another match at this venue that would still be playing at this kick-off. */
+  const editClash = editingFixture
+    ? findOverlap(fixtures, { id: editingFixture.id, date: editDate, time: editTime, pitch: editPitch }, matchMinutes)
+    : undefined;
+
+  const editDateIssue = editingFixture ? fixtureDateIssue(fixtures, editingFixture.id, editDate) : null;
+
   const saveFixtureEdits = () => {
     if (!editingFixture) return;
+    if (customTimeInvalid) {
+      triggerToast('Fix the custom kick-off time before saving');
+      return;
+    }
     setFixtures(fixtures.map(f => f.id === editingFixture.id ? {
       ...f,
+      date: editDate || f.date,
       pitch: editPitch,
       time: editTime,
       status: editStatus
     } : f));
     setIsEditVisible(false);
-    triggerToast(`Fixture ${editingFixture.matchNo} details modified.`);
+    triggerToast(`${editingFixture.matchNo} set for ${formatIsoDate(editDate || editingFixture.date)}, ${editTime}`);
   };
 
   // Sub-renders
@@ -268,7 +339,7 @@ export default function FixtureManagementScreen() {
             onPress={() => openEditModal(fix)}
           >
             <View style={styles.rowBetween}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontWeight: '500' }}>{fix.matchNo} • {fix.date}</ThemedText>
+              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontWeight: '500' }}>{fix.matchNo} • {formatIsoDate(fix.date)}</ThemedText>
               
               <View style={[
                 styles.statusTag,
@@ -323,7 +394,7 @@ export default function FixtureManagementScreen() {
 
       {fixtures.length === 0 ? (
         <View style={[styles.emptyBox, { borderColor: theme.outlineVariant + '55' }]}>
-          <Ionicons name="git-branch-outline" size={22} color={theme.textSecondary} />
+          <Ionicons name="git-branch-outline" size={20} color={theme.textSecondary} />
           <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 8 }}>
             {registeredTeamNames.length < 2
               ? 'At least two teams must register before a draw can be made.'
@@ -364,66 +435,33 @@ export default function FixtureManagementScreen() {
     </View>
   );
 
-  const renderCalendarView = () => (
-    <View style={styles.viewContent}>
-      <ThemedText type="headlineSm" style={styles.sectionHeader}>Calendar Agenda</ThemedText>
-      
-      {/* Horizontal Month calendar mock */}
-      <View style={[styles.calendarGrid, { backgroundColor: theme.surfaceLow }]}>
-        <View style={styles.calendarHeaderRow}>
-          {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
-            <ThemedText key={i} type="labelSm" style={{ flex: 1, textAlign: 'center', color: theme.textSecondary }}>{day}</ThemedText>
-          ))}
-        </View>
-        <View style={styles.calendarDaysRow}>
-          {[12, 13, 14, 15, 16, 17, 18].map((day) => {
-            const isSelected = selectedDate === `2026-06-${day}`;
-            return (
-              <Pressable
-                key={day}
-                onPress={() => setSelectedDate(`2026-06-${day}`)}
-                style={[
-                  styles.calendarDayCell,
-                  isSelected && { backgroundColor: theme.primary }
-                ]}
-              >
-                <ThemedText type="bodySm" style={{ color: isSelected ? '#ffffff' : theme.text, fontWeight: isSelected ? 'bold' : 'normal' }}>
-                  {day}
-                </ThemedText>
-                {day === 15 && <View style={[styles.dotIndicator, { backgroundColor: theme.secondaryContainer }]} />}
-                {day === 16 && <View style={[styles.dotIndicator, { backgroundColor: theme.secondaryContainer }]} />}
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-
-      <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginTop: 12 }}>Matches Scheduled for June {selectedDate.split('-')[2]}, 2026:</ThemedText>
-      
-      <View style={[styles.fixturesList, { marginTop: 8 }]}>
-        {fixtures.filter(f => f.date === selectedDate).map((fix) => (
-          <Pressable 
-            key={fix.id} 
-            style={[styles.fixtureCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
-            onPress={() => openEditModal(fix)}
-          >
-            <View style={styles.rowBetween}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>{fix.matchNo} • {fix.time}</ThemedText>
-              <ThemedText type="labelSm" style={{ color: theme.secondaryContainer }}>{fix.pitch}</ThemedText>
-            </View>
-            <ThemedText type="bodySm" style={{ fontWeight: '500', color: theme.text, marginVertical: 6 }}>
-              {fix.teamA} VS {fix.teamB}
+  if (!isHost) {
+    return (
+      <GradientContainer screenName="fixture-management" style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <View style={styles.header}>
+            <Pressable
+              style={styles.backBtn}
+              onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/tournaments')}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="arrow-back" size={20} color={theme.text} />
+            </Pressable>
+            <ThemedText type="headlineMd" style={{ color: theme.text, flex: 1, marginLeft: 12 }}>
+              Fixture Management
             </ThemedText>
-          </Pressable>
-        ))}
-        {fixtures.filter(f => f.date === selectedDate).length === 0 && (
-          <ThemedText type="bodySm" style={{ color: theme.textSecondary, fontStyle: 'italic', textAlign: 'center', marginTop: 16 }}>
-            No matches scheduled for this date.
-          </ThemedText>
-        )}
-      </View>
-    </View>
-  );
+          </View>
+          <View style={[styles.emptyBox, { borderColor: theme.outlineVariant + '55', marginHorizontal: Spacing.containerMargin, marginTop: 24 }]}>
+            <Ionicons name="lock-closed-outline" size={20} color={theme.textSecondary} />
+            <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 8 }}>
+              Only the tournament host can generate or change fixtures. The draw is on the tournament's Fixtures tab.
+            </ThemedText>
+          </View>
+        </SafeAreaView>
+      </GradientContainer>
+    );
+  }
 
   return (
     <GradientContainer screenName="fixture-management" style={styles.container}>
@@ -431,7 +469,7 @@ export default function FixtureManagementScreen() {
         {/* Header stack navigation */}
         <View style={styles.header}>
           <Pressable style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/tournaments')}>
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
           <ThemedText type="headlineMd" style={{ color: theme.text, flex: 1, marginLeft: 12 }}>
             Fixture Management
@@ -454,14 +492,6 @@ export default function FixtureManagementScreen() {
           >
             <Ionicons name="git-network-outline" size={16} color={viewMode === 'bracket' ? '#ffffff' : theme.text} />
             <ThemedText type="labelSm" style={{ color: viewMode === 'bracket' ? '#ffffff' : theme.text, marginLeft: 6 }}>Brackets</ThemedText>
-          </Pressable>
-
-          <Pressable 
-            style={[styles.modeBtn, viewMode === 'calendar' && [styles.modeBtnActive, { backgroundColor: theme.primary }]]}
-            onPress={() => setViewMode('calendar')}
-          >
-            <Ionicons name="calendar-outline" size={16} color={viewMode === 'calendar' ? '#ffffff' : theme.text} />
-            <ThemedText type="labelSm" style={{ color: viewMode === 'calendar' ? '#ffffff' : theme.text, marginLeft: 6 }}>Calendar</ThemedText>
           </Pressable>
         </View>
 
@@ -510,58 +540,172 @@ export default function FixtureManagementScreen() {
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
           {viewMode === 'list' && renderListView()}
           {viewMode === 'bracket' && renderBracketView()}
-          {viewMode === 'calendar' && renderCalendarView()}
         </ScrollView>
 
         {/* MODAL: EDIT FIXTURE DETAILS */}
-        <Modal visible={isEditVisible} transparent animationType="slide">
+        <Modal visible={isEditVisible} transparent animationType="slide" onRequestClose={() => setIsEditVisible(false)}>
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContent, { backgroundColor: theme.surfaceLowest }]}>
               <View style={styles.rowBetween}>
-                <ThemedText type="headlineSm" style={{ color: theme.text, fontWeight: '500' }}>Modify Fixture</ThemedText>
-                <Pressable onPress={() => setIsEditVisible(false)}>
-                  <Ionicons name="close" size={24} color={theme.text} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <ThemedText type="headlineSm" style={{ color: theme.text, fontWeight: '500' }}>Modify Fixture</ThemedText>
+                  {editingFixture && (
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary }} numberOfLines={1}>
+                      {editingFixture.matchNo} · {editingFixture.teamA} v {editingFixture.teamB}
+                    </ThemedText>
+                  )}
+                </View>
+                <Pressable onPress={() => setIsEditVisible(false)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
+                  <Ionicons name="close" size={20} color={theme.text} />
                 </Pressable>
               </View>
 
-              <View style={styles.inputGroup}>
-                <ThemedText type="labelSm" style={styles.inputLabel}>Selected pitch</ThemedText>
-                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                  style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                  value={editPitch}
-                  onChangeText={setEditPitch}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <ThemedText type="labelSm" style={styles.inputLabel}>Scheduled time</ThemedText>
-                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                  style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
-                  value={editTime}
-                  onChangeText={setEditTime}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <ThemedText type="labelSm" style={styles.inputLabel}>Status</ThemedText>
-                <View style={styles.statusSelectors}>
-                  {['Scheduled', 'Live', 'Finished', 'Cancelled'].map((st) => (
-                    <Pressable
-                      key={st}
-                      onPress={() => setEditStatus(st as any)}
-                      style={[
-                        styles.statusPill,
-                        { borderColor: theme.outlineVariant },
-                        editStatus === st && { backgroundColor: theme.primary, borderColor: theme.primary }
-                      ]}
-                    >
-                      <ThemedText type="labelSm" style={{ color: editStatus === st ? '#ffffff' : theme.text, fontSize: 10 }}>
-                        {st}
-                      </ThemedText>
-                    </Pressable>
-                  ))}
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingBottom: 4 }}>
+                {/* Date — limited to the tournament's days. */}
+                <View>
+                  <ThemedText type="labelSm" style={styles.inputLabel}>Match date</ThemedText>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                    {editDateOptions.map((iso) => {
+                      const parts = isoDateParts(iso);
+                      const active = iso === editDate;
+                      return (
+                        <Pressable
+                          key={iso}
+                          onPress={() => setEditDate(iso)}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active }}
+                          accessibilityLabel={`Play on ${formatIsoDate(iso)}`}
+                          style={[
+                            styles.dateChip,
+                            { borderColor: active ? theme.primary : theme.outlineVariant + '66', backgroundColor: active ? theme.primary : theme.surfaceLowest },
+                          ]}
+                        >
+                          <ThemedText style={[styles.dateChipSmall, { color: active ? '#ffffffcc' : theme.textSecondary }]}>{parts?.weekday}</ThemedText>
+                          <ThemedText style={[styles.dateChipDay, { color: active ? '#ffffff' : theme.text }]}>{parts?.day}</ThemedText>
+                          <ThemedText style={[styles.dateChipSmall, { color: active ? '#ffffffcc' : theme.textSecondary }]}>{parts?.month}</ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                  <ThemedText type="labelSm" style={[styles.hintText, { color: theme.textSecondary }]}>
+                    {tournament?.startDate
+                      ? `Tournament runs ${formatIsoDate(tournament.startDate)} – ${formatIsoDate(tournament.endDate || tournament.startDate)}`
+                      : 'No tournament dates set'}
+                  </ThemedText>
                 </View>
-              </View>
+
+                {/* Kick-off — a preset slot, or any time typed in. */}
+                <View>
+                  <ThemedText type="labelSm" style={styles.inputLabel}>Kick-off time</ThemedText>
+                  <View style={styles.timeChipWrap}>
+                    {kickoffTimes.map((slot) => {
+                      const active = slot === editTime;
+                      return (
+                        <Pressable
+                          key={slot}
+                          onPress={() => selectKickoff(slot)}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active }}
+                          style={[
+                            styles.timeChip,
+                            { borderColor: active ? theme.primary : theme.outlineVariant + '66', backgroundColor: active ? theme.primary : theme.surfaceLowest },
+                          ]}
+                        >
+                          <ThemedText type="labelSm" style={{ color: active ? '#ffffff' : theme.text, fontSize: 11 }}>{slot}</ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <View style={styles.customTimeRow}>
+                    <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginRight: 4 }}>Custom</ThemedText>
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                      style={[styles.textInput, styles.timeBox, { borderColor: theme.outlineVariant, color: theme.text }]}
+                      value={customTime.hour}
+                      onChangeText={(t) => updateCustomTime({ hour: t.replace(/\D/g, '').slice(0, 2) })}
+                      placeholder="hh"
+                      placeholderTextColor="#94a3b8"
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      accessibilityLabel="Kick-off hour"
+                    />
+                    <ThemedText style={{ color: theme.text }}>:</ThemedText>
+                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                      style={[styles.textInput, styles.timeBox, { borderColor: theme.outlineVariant, color: theme.text }]}
+                      value={customTime.minute}
+                      onChangeText={(t) => updateCustomTime({ minute: t.replace(/\D/g, '').slice(0, 2) })}
+                      placeholder="mm"
+                      placeholderTextColor="#94a3b8"
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      accessibilityLabel="Kick-off minutes"
+                    />
+                    {(['AM', 'PM'] as const).map((mer) => {
+                      const active = customTime.meridiem === mer;
+                      return (
+                        <Pressable
+                          key={mer}
+                          onPress={() => updateCustomTime({ meridiem: mer })}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active }}
+                          style={[
+                            styles.meridiemBtn,
+                            { borderColor: active ? theme.primary : theme.outlineVariant + '66', backgroundColor: active ? theme.primary + '14' : 'transparent' },
+                          ]}
+                        >
+                          <ThemedText type="labelSm" style={{ color: active ? theme.primary : theme.textSecondary }}>{mer}</ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  {customTimeInvalid && (
+                    <ThemedText type="labelSm" style={[styles.hintText, { color: '#DC2626' }]}>
+                      Enter an hour from 1 to 12 and minutes from 00 to 59.
+                    </ThemedText>
+                  )}
+                </View>
+
+                <View>
+                  <ThemedText type="labelSm" style={styles.inputLabel}>Venue</ThemedText>
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.textInput, { borderColor: theme.outlineVariant, color: theme.text }]}
+                    value={editPitch}
+                    onChangeText={setEditPitch}
+                  />
+                </View>
+
+                <View>
+                  <ThemedText type="labelSm" style={styles.inputLabel}>Status</ThemedText>
+                  <View style={styles.statusSelectors}>
+                    {['Scheduled', 'Live', 'Finished', 'Cancelled'].map((st) => (
+                      <Pressable
+                        key={st}
+                        onPress={() => setEditStatus(st as any)}
+                        style={[
+                          styles.statusPill,
+                          { borderColor: theme.outlineVariant },
+                          editStatus === st && { backgroundColor: theme.primary, borderColor: theme.primary }
+                        ]}
+                      >
+                        <ThemedText type="labelSm" style={{ color: editStatus === st ? '#ffffff' : theme.text, fontSize: 10 }}>
+                          {st}
+                        </ThemedText>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                {(editClash || editDateIssue) && (
+                  <View style={[styles.editWarn, { backgroundColor: '#F59E0B14', borderColor: '#F59E0B55' }]}>
+                    <Ionicons name="warning-outline" size={14} color="#B45309" />
+                    <ThemedText type="labelSm" style={{ color: '#B45309', flex: 1 }}>
+                      {editClash
+                        ? `${editClash.matchNo} (${editClash.teamA} v ${editClash.teamB}) kicks off at ${editClash.time} at ${editClash.pitch} — ${matchMinutes}-minute matches would overlap.`
+                        : editDateIssue}
+                    </ThemedText>
+                  </View>
+                )}
+              </ScrollView>
 
               <Pressable style={[styles.modalSaveBtn, { backgroundColor: theme.secondaryContainer }]} onPress={saveFixtureEdits}>
                 <ThemedText type="labelSm" style={{ color: '#ffffff', fontWeight: '500' }}>Save Changes</ThemedText>
@@ -698,11 +842,11 @@ const styles = StyleSheet.create({
   },
   toastContainer: {
     position: 'absolute',
-    bottom: 50,
+    top: 56,
     alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.premium,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
     zIndex: 999,
   },
   // Bracket View styles
@@ -745,34 +889,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 6,
   },
-  // Calendar View styles
-  calendarGrid: {
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
-  },
-  calendarHeaderRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  calendarDaysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  calendarDayCell: {
-    width: 32,
-    height: 38,
-    borderRadius: BorderRadius.lg,
-    justifyContent: 'center',
+  // Reschedule pickers
+  chipRow: { gap: 8, paddingVertical: 2, paddingRight: 8 },
+  dateChip: {
+    width: 52,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingTop: 6,
+    paddingBottom: 10,
     alignItems: 'center',
     position: 'relative',
   },
-  dotIndicator: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    position: 'absolute',
-    bottom: 4,
-  },
+  dateChipSmall: { fontSize: 9.5, fontFamily: 'Sora_400Regular' },
+  dateChipDay: { fontSize: 14.5, fontFamily: 'Sora_500Medium', marginVertical: 1 },
+  timeChipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  timeChip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  customTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+  timeBox: { width: 48, minWidth: 0, paddingHorizontal: 0, textAlign: 'center' },
+  meridiemBtn: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
+  hintText: { fontSize: 10, marginTop: 6 },
+  editWarn: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, borderWidth: 1, borderRadius: 10, padding: 10 },
   // Modal Edit styles
   modalOverlay: {
     flex: 1,
@@ -786,6 +922,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: 40,
     gap: 16,
+    maxHeight: '88%',
   },
   inputGroup: {
     marginBottom: Spacing.sm,

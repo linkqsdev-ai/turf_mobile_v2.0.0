@@ -9,38 +9,33 @@ import {
   Platform,
   ScrollView,
   Animated,
-  Dimensions,
-  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
-import { Spacing, BorderRadius } from '@/constants/theme';
+import { Shadows } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useLocation } from '@/hooks/use-location';
 import { useToast } from '@/context/ToastContext';
 import { apiClient, setAuthToken } from '@/services/api-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StatusBar } from 'expo-status-bar';
+import { BRAND, BRAND_LOGO_ASPECT } from '@/constants/brand';
+import { AnimatedBrandLogo } from '@/components/brand/animated-brand-logo';
+import { ACCENTS } from '@/constants/dashboard-accents';
+import { useFormConfig } from '@/context/RemoteConfigContext';
+import { CustomFieldsSection } from '@/components/forms/CustomFieldsSection';
+import { saveCustomAnswers } from '@/services/custom-answers';
+import { validateCustomAnswers, type CustomAnswers } from '@/lib/remote-config';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-// ── Design tokens (mirrors landing.tsx) ──────────────────────────────────────
-const CREAM_BG   = '#FDF4EC';
-const TEXT_DARK  = '#1a1a2e';
-const TEXT_MID   = '#5a5a7a';
-const ACCENT     = '#f59e0b';
-const SUCCESS    = '#10B981';
-const DANGER     = '#ef4444';
-const BLOB1      = '#a7f3d0';
-const BLOB2      = '#fde68a';
-const BLOB3      = '#c4b5fd';
-
-const roleOptions: { key: 'Player' | 'Coach' | 'Owner'; label: string; desc: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'Player', label: 'Player', desc: 'Join matches & track your stats', icon: 'football-outline' },
-  { key: 'Coach',  label: 'Coach',  desc: 'Host classes & train athletes',  icon: 'megaphone-outline' },
-  { key: 'Owner',  label: 'Owner',  desc: 'List & manage your turfs',       icon: 'business-outline' },
+const roleOptions: { key: 'Player' | 'Coach' | 'Owner' | 'Organizer'; label: string; desc: string; emoji: string }[] = [
+  { key: 'Player',    label: 'Player',    desc: 'Join matches & track your stats',        emoji: '⚽' },
+  { key: 'Coach',     label: 'Coach',     desc: 'Host classes & train athletes',         emoji: '🏋️' },
+  { key: 'Owner',     label: 'Owner',     desc: 'List & manage your turfs',              emoji: '🏟️' },
+  { key: 'Organizer', label: 'Organizer', desc: 'Host & manage tournaments and cups',    emoji: '🏆' },
 ];
 
 import { formatPhoneNumber, cleanPhoneDigits, isValidMobile, getPhoneValidationError } from '@/utils/phone-utils';
@@ -50,6 +45,7 @@ const generateOtpCode = (): string => String(Math.floor(100000 + Math.random() *
 type OtpStage = 'idle' | 'sent' | 'verified';
 
 export default function SignUpScreen() {
+  const theme = useTheme();
   const router = useRouter();
   const { updateProfile } = useUserProfile();
   const { showInfo, showSuccess } = useToast();
@@ -59,12 +55,19 @@ export default function SignUpScreen() {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [phone,    setPhone]    = useState('');
-  const [selectedRole, setSelectedRole] = useState<'Player' | 'Coach' | 'Owner'>('Player');
-  const [roleModalVisible, setRoleModalVisible] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<'Player' | 'Coach' | 'Owner' | 'Organizer'>('Player');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading,    setIsLoading]    = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  // Super Admin layout for the Sign Up & Profile form.
+  const form = useFormConfig('signup_profile');
+  const nameView = form.field('name', { label: 'Full Name', placeholder: 'Enter your name' });
+  const emailView = form.field('email', { label: 'Email', placeholder: 'Enter your email' });
+  const phoneView = form.field('phone', { label: 'Mobile Number', placeholder: 'Enter your mobile number' });
+  const locationView = form.field('location', { label: 'Location' });
+  const [customAnswers, setCustomAnswers] = useState<CustomAnswers>({});
 
   // ── OTP verification (client-side demo — no SMS gateway configured yet) ──
   const [otpStage, setOtpStage]   = useState<OtpStage>('idle');
@@ -183,6 +186,11 @@ export default function SignUpScreen() {
       setErrorMessage('Password must be 8–12 characters with uppercase, lowercase, a number, and a special character.');
       return;
     }
+    const customErrors = validateCustomAnswers(form.customFields, customAnswers);
+    if (customErrors.length > 0) {
+      setErrorMessage(customErrors[0]);
+      return;
+    }
     setErrorMessage(null);
     setIsLoading(true);
     try {
@@ -202,6 +210,7 @@ export default function SignUpScreen() {
         });
         if (response && response.token) {
           await setAuthToken(response.token);
+          await saveCustomAnswers('signup_profile', 'user', cleanEmail, customAnswers, form.customFields);
           updateProfile({
             name: response.user.name,
             role: response.user.role,
@@ -232,6 +241,7 @@ export default function SignUpScreen() {
 
       const localToken = `local_token_${Date.now()}`;
       await setAuthToken(localToken);
+      await saveCustomAnswers('signup_profile', 'user', cleanEmail, customAnswers, form.customFields);
       await AsyncStorage.setItem('@turf_user_profile', JSON.stringify({
         name: newUser.name,
         role: newUser.role,
@@ -257,14 +267,25 @@ export default function SignUpScreen() {
   const isFocused = (f: string) => focusedField === f;
   const selectedRoleMeta = roleOptions.find((r) => r.key === selectedRole)!;
 
+  const passwordRules = [
+    { key: 'length',  label: '8–12 chars' },
+    { key: 'upper',   label: 'A–Z' },
+    { key: 'lower',   label: 'a–z' },
+    { key: 'number',  label: '0–9' },
+    { key: 'special', label: '#!@' },
+  ] as const;
+  const webInput = Platform.OS === 'web' ? ({ outlineStyle: 'none', outlineWidth: 0 } as any) : null;
+  const otpDisabled = !isPhoneValid || (otpStage === 'sent' && resendTimer > 0);
+  const logoScale = logoAnim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] });
+
+  const fieldStyle = (field: string, verified = false) => [
+    styles.field,
+    { borderColor: isFocused(field) ? BRAND.ink : verified ? ACCENTS.green.main : BRAND.line },
+  ];
+
   return (
     <View style={styles.container}>
-      {/* ── Decorative Blobs (confined to header band) ── */}
-      <View style={[styles.blob, styles.blobTopLeft,  { backgroundColor: BLOB1 + 'CC' }]} />
-      <View style={[styles.blob, styles.blobTopRight, { backgroundColor: BLOB2 + 'AA' }]} />
-      <View style={[styles.dot, { top: SCREEN_HEIGHT * 0.02, left: 90, backgroundColor: ACCENT + '55', width: 8, height: 8 }]} />
-      <View style={[styles.dot, { top: SCREEN_HEIGHT * 0.05, right: 90, backgroundColor: BLOB3 + '88', width: 6, height: 6 }]} />
-
+      <StatusBar style="dark" />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -274,735 +295,468 @@ export default function SignUpScreen() {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             bounces={false}
+            keyboardShouldPersistTaps="handled"
           >
-            {/* ── Compact Header ── */}
-            <Animated.View style={[styles.headerBar, { opacity: logoAnim }]}>
-              <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={8}>
-                <Ionicons name="chevron-back" size={20} color={TEXT_DARK} />
-              </Pressable>
-              <Image
-                source={require('@/assets/images/illustrations/nonstricker_auth_logo.png')}
-                style={styles.headerLogo}
-                contentFit="contain"
-              />
+            <Pressable
+              style={styles.backBtn}
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/(auth)/login'))}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="chevron-back" size={18} color={BRAND.ink} />
+            </Pressable>
+
+            {/* ── Brand ── */}
+            <Animated.View style={[styles.hero, { opacity: logoAnim, transform: [{ scale: logoScale }] }]}>
+              <AnimatedBrandLogo style={styles.logo} entrance={false} />
+              <ThemedText style={styles.title}>Create Account</ThemedText>
+              <ThemedText style={styles.subtitle}>Sign up to get started with Buk Ur Play.</ThemedText>
             </Animated.View>
 
-            <Animated.View style={[styles.topArea, { opacity: logoAnim }]}>
-              <View style={styles.titleRow}>
-                <ThemedText style={styles.titleNormal}>Create </ThemedText>
-                <View style={styles.titleHighlightWrap}>
-                  <ThemedText style={styles.titleHighlight}>Account</ThemedText>
-                  <View style={[styles.highlightBar, { backgroundColor: ACCENT }]} />
+            <Animated.View style={[styles.form, { opacity: cardOpacity, transform: [{ translateY: cardTrans }] }]}>
+              {/* Role */}
+              <View>
+                <ThemedText style={styles.label}>I am a</ThemedText>
+                <View style={styles.roleRow} accessibilityRole="radiogroup">
+                  {roleOptions.map((r) => {
+                    const on = selectedRole === r.key;
+                    return (
+                      <Pressable
+                        key={r.key}
+                        onPress={() => setSelectedRole(r.key)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: on }}
+                        accessibilityLabel={`${r.label}: ${r.desc}`}
+                        style={[styles.roleChip, on && styles.roleChipOn]}
+                      >
+                        <ThemedText style={styles.roleEmoji}>{r.emoji}</ThemedText>
+                        <ThemedText style={[styles.roleText, on && styles.roleTextOn]}>{r.label}</ThemedText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <ThemedText style={[styles.hint, styles.hintBelow]}>{selectedRoleMeta.desc}</ThemedText>
+              </View>
+
+              {/* Full name */}
+              <View>
+                <ThemedText style={styles.label}>{nameView.label}</ThemedText>
+                <View style={fieldStyle('name')}>
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.input, webInput]}
+                    placeholder={nameView.placeholder}
+                    placeholderTextColor={BRAND.inkMuted}
+                    value={name}
+                    onChangeText={setName}
+                    accessibilityLabel="Full name"
+                    onFocus={() => setFocusedField('name')}
+                    onBlur={() => setFocusedField(null)}
+                  />
                 </View>
               </View>
-              <ThemedText style={styles.subtitle}>Join thousands of athletes on NonStricker</ThemedText>
-            </Animated.View>
 
-            {/* ── Bottom Card ── */}
-            <Animated.View
-              style={[
-                styles.card,
-                { transform: [{ translateY: cardTrans }], opacity: cardOpacity },
-              ]}
-            >
+              {/* Email */}
+              <View>
+                <ThemedText style={styles.label}>{emailView.label}</ThemedText>
+                <View style={fieldStyle('email')}>
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.input, webInput]}
+                    placeholder={emailView.placeholder}
+                    placeholderTextColor={BRAND.inkMuted}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    accessibilityLabel="Email"
+                    onFocus={() => setFocusedField('email')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                </View>
+              </View>
+
+              {/* Mobile number + OTP */}
+              <View>
+                <ThemedText style={styles.label}>{phoneView.label}</ThemedText>
+                <View style={fieldStyle('phone', otpStage === 'verified')}>
+                  <ThemedText style={styles.prefix}>+91</ThemedText>
+                  <View style={styles.prefixDivider} />
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.input, webInput]}
+                    placeholder={phoneView.placeholder}
+                    placeholderTextColor={BRAND.inkMuted}
+                    value={phone}
+                    onChangeText={handlePhoneChange}
+                    keyboardType="phone-pad"
+                    maxLength={11}
+                    accessibilityLabel="Mobile number"
+                    onFocus={() => setFocusedField('phone')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                  {otpStage === 'verified' ? (
+                    <Ionicons name="checkmark-circle" size={18} color={ACCENTS.green.main} />
+                  ) : (
+                    <Pressable
+                      onPress={handleSendOtp}
+                      disabled={otpDisabled}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: otpDisabled }}
+                    >
+                      <ThemedText style={[styles.link, otpDisabled && styles.linkDisabled]}>
+                        {otpStage === 'sent' ? (resendTimer > 0 ? `Resend ${resendTimer}s` : 'Resend') : 'Send OTP'}
+                      </ThemedText>
+                    </Pressable>
+                  )}
+                </View>
+
+                {otpStage === 'sent' && (
+                  <View style={styles.otpBlock}>
+                    <View style={styles.otpRow}>
+                      <View style={[fieldStyle('otp'), styles.otpField]}>
+                        <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                          style={[styles.input, !!otpInput && styles.otpInput, webInput]}
+                          placeholder="6-digit code"
+                          placeholderTextColor={BRAND.inkMuted}
+                          value={otpInput}
+                          onChangeText={(t) => { setOtpInput(t.replace(/\D/g, '').slice(0, 6)); setOtpError(null); }}
+                          keyboardType="number-pad"
+                          maxLength={6}
+                          autoFocus
+                          accessibilityLabel="One-time code"
+                          onFocus={() => setFocusedField('otp')}
+                          onBlur={() => setFocusedField(null)}
+                          onSubmitEditing={handleVerifyOtp}
+                        />
+                      </View>
+                      <Pressable
+                        style={({ pressed }) => [styles.verifyBtn, pressed && { opacity: 0.9 }]}
+                        onPress={handleVerifyOtp}
+                        accessibilityRole="button"
+                        accessibilityLabel="Verify code"
+                      >
+                        <ThemedText style={styles.verifyText}>Verify</ThemedText>
+                      </Pressable>
+                    </View>
+                    {otpError && <ThemedText style={[styles.hint, styles.hintBelow, styles.dangerText]}>{otpError}</ThemedText>}
+                  </View>
+                )}
+
+                {/* Location — auto-detected for Players only */}
+                {selectedRole === 'Player' && locationView.visible && (
+                  <View style={styles.locationRow}>
+                    <Ionicons name="location-outline" size={13} color={locError ? BRAND.danger : BRAND.inkSoft} />
+                    {locLoading ? (
+                      <>
+                        <ActivityIndicator size="small" color={BRAND.ink} />
+                        <ThemedText style={[styles.hint, styles.locationText]} numberOfLines={1}>
+                          Detecting your location…
+                        </ThemedText>
+                      </>
+                    ) : (
+                      <>
+                        <ThemedText style={[styles.hint, styles.locationText, !!locError && styles.dangerText]} numberOfLines={1}>
+                          {locError || address || 'Location unavailable'}
+                        </ThemedText>
+                        <Pressable onPress={fetchLocation} hitSlop={8} accessibilityRole="button" accessibilityLabel="Refresh location">
+                          <Ionicons name="refresh" size={13} color={BRAND.ink} />
+                        </Pressable>
+                      </>
+                    )}
+                  </View>
+                )}
+              </View>
+
+              {/* Fields added by the Super Admin */}
+              <CustomFieldsSection
+                fields={form.customFields}
+                values={customAnswers}
+                onChange={(key, value) => setCustomAnswers((prev) => ({ ...prev, [key]: value }))}
+                labelStyle={styles.label}
+                palette={{
+                  label: BRAND.ink,
+                  text: BRAND.ink,
+                  placeholder: BRAND.inkMuted,
+                  fieldBg: BRAND.field,
+                  border: BRAND.line,
+                  accent: BRAND.ink,
+                }}
+              />
+
+              {/* Password */}
+              <View>
+                <ThemedText style={styles.label}>Password</ThemedText>
+                <View style={fieldStyle('password')}>
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.input, webInput]}
+                    placeholder="Create a password"
+                    placeholderTextColor={BRAND.inkMuted}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    maxLength={12}
+                    accessibilityLabel="Password"
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                  <Pressable
+                    onPress={() => setShowPassword(!showPassword)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={17} color={BRAND.inkSoft} />
+                  </Pressable>
+                </View>
+                {password.length > 0 && (
+                  <View style={styles.rulesRow}>
+                    {passwordRules.map((req) => {
+                      const ok = passwordChecks[req.key];
+                      return (
+                        <View
+                          key={req.key}
+                          style={[styles.ruleChip, ok && styles.ruleChipOk]}
+                          accessible
+                          accessibilityLabel={`${req.label}: ${ok ? 'met' : 'not met'}`}
+                        >
+                          <Ionicons name={ok ? 'checkmark' : 'ellipse-outline'} size={10} color={ok ? ACCENTS.green.dark : BRAND.inkMuted} />
+                          <ThemedText style={[styles.ruleText, ok && styles.ruleTextOk]}>{req.label}</ThemedText>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+
               {errorMessage && (
-                <View style={styles.errorBox}>
-                  <Ionicons name="alert-circle-outline" size={16} color={DANGER} />
+                <View style={styles.errorRow} accessibilityRole="alert">
+                  <Ionicons name="alert-circle" size={14} color={BRAND.danger} />
                   <ThemedText style={styles.errorText}>{errorMessage}</ThemedText>
                 </View>
               )}
 
-              {/* Role Picker (dropdown) */}
-              <ThemedText style={styles.label}>Your Role</ThemedText>
               <Pressable
-                style={styles.selectField}
-                onPress={() => setRoleModalVisible(true)}
-              >
-                <View style={styles.roleBadgeSmall}>
-                  <Ionicons name={selectedRoleMeta.icon} size={15} color={ACCENT} />
-                </View>
-                <ThemedText style={styles.selectFieldText}>{selectedRoleMeta.label}</ThemedText>
-                <Ionicons name="chevron-down" size={18} color={TEXT_MID} />
-              </Pressable>
-
-              {/* Name */}
-              <ThemedText style={styles.label}>Full Name</ThemedText>
-              <View style={[styles.inputWrapper, isFocused('name') && styles.inputFocused]}>
-                <Ionicons name="person-outline" size={17} color={isFocused('name') ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                  style={styles.input}
-                  placeholder="Your full name"
-                  placeholderTextColor="#94a3b8"
-                  value={name}
-                  onChangeText={setName}
-                  onFocus={() => setFocusedField('name')}
-                  onBlur={() => setFocusedField(null)}
-                />
-              </View>
-
-              {/* Email */}
-              <ThemedText style={styles.label}>Email</ThemedText>
-              <View style={[styles.inputWrapper, isFocused('email') && styles.inputFocused]}>
-                <Ionicons name="mail-outline" size={17} color={isFocused('email') ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                  style={styles.input}
-                  placeholder="Your email address"
-                  placeholderTextColor="#94a3b8"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  onFocus={() => setFocusedField('email')}
-                  onBlur={() => setFocusedField(null)}
-                />
-              </View>
-
-              {/* Phone + OTP */}
-              <ThemedText style={styles.label}>Mobile Number</ThemedText>
-              <View style={[
-                styles.inputWrapper,
-                isFocused('phone') && styles.inputFocused,
-                otpStage === 'verified' && styles.inputVerified,
-              ]}>
-                <Ionicons name="call-outline" size={17} color={isFocused('phone') ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                  style={styles.input}
-                  placeholder="10-digit mobile number"
-                  placeholderTextColor="#94a3b8"
-                  value={phone}
-                  onChangeText={handlePhoneChange}
-                  keyboardType="phone-pad"
-                  maxLength={11}
-                  onFocus={() => setFocusedField('phone')}
-                  onBlur={() => setFocusedField(null)}
-                />
-                {otpStage === 'verified' ? (
-                  <Ionicons name="checkmark-circle" size={19} color={SUCCESS} />
-                ) : (
-                  <Pressable
-                    onPress={handleSendOtp}
-                    disabled={!isPhoneValid || (otpStage === 'sent' && resendTimer > 0)}
-                    hitSlop={8}
-                  >
-                    <ThemedText style={[
-                      styles.otpTriggerText,
-                      (!isPhoneValid || (otpStage === 'sent' && resendTimer > 0)) && styles.otpTriggerTextDisabled,
-                    ]}>
-                      {otpStage === 'sent' ? (resendTimer > 0 ? `Resend ${resendTimer}s` : 'Resend') : 'Send OTP'}
-                    </ThemedText>
-                  </Pressable>
-                )}
-              </View>
-
-              {otpStage === 'sent' && (
-                <View style={styles.otpBlock}>
-                  <View style={styles.otpRow}>
-                    <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                      style={styles.otpInput}
-                      placeholder="6-digit code"
-                      placeholderTextColor="#94a3b8"
-                      value={otpInput}
-                      onChangeText={(t) => { setOtpInput(t.replace(/\D/g, '').slice(0, 6)); setOtpError(null); }}
-                      keyboardType="number-pad"
-                      maxLength={6}
-                      autoFocus
-                    />
-                    <Pressable style={styles.otpVerifyBtn} onPress={handleVerifyOtp}>
-                      <ThemedText style={styles.otpVerifyText}>Verify</ThemedText>
-                    </Pressable>
-                  </View>
-                  {otpError && <ThemedText style={styles.otpErrorText}>{otpError}</ThemedText>}
-                </View>
-              )}
-
-              {/* Location — auto-detected for Players only */}
-              {selectedRole === 'Player' && (
-                <View style={styles.locationChip}>
-                  <Ionicons name="location" size={13} color={ACCENT} />
-                  {locLoading ? (
-                    <>
-                      <ActivityIndicator size="small" color={ACCENT} style={styles.locationSpinner} />
-                      <ThemedText style={styles.locationChipText} numberOfLines={1}>Detecting your location…</ThemedText>
-                    </>
-                  ) : locError ? (
-                    <>
-                      <ThemedText style={[styles.locationChipText, styles.locationChipTextError]} numberOfLines={1}>
-                        {locError}
-                      </ThemedText>
-                      <Pressable onPress={fetchLocation} hitSlop={8}>
-                        <Ionicons name="refresh" size={14} color={ACCENT} />
-                      </Pressable>
-                    </>
-                  ) : (
-                    <>
-                      <ThemedText style={styles.locationChipText} numberOfLines={1}>
-                        {address || 'Location unavailable'}
-                      </ThemedText>
-                      <Pressable onPress={fetchLocation} hitSlop={8}>
-                        <Ionicons name="refresh" size={13} color={TEXT_MID} />
-                      </Pressable>
-                    </>
-                  )}
-                </View>
-              )}
-
-              {/* Password */}
-              <ThemedText style={styles.label}>Password</ThemedText>
-              <View style={[styles.inputWrapper, isFocused('password') && styles.inputFocused]}>
-                <Ionicons name="lock-closed-outline" size={17} color={isFocused('password') ? ACCENT : TEXT_MID} style={styles.inputIcon} />
-                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                  style={styles.input}
-                  placeholder="8–12 characters"
-                  placeholderTextColor="#94a3b8"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  maxLength={12}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                />
-                <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={8}>
-                  <Ionicons
-                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                    size={17}
-                    color={TEXT_MID}
-                  />
-                </Pressable>
-              </View>
-
-              {password.length > 0 && (
-                <View style={styles.pwRequirementsRow}>
-                  {([
-                    { key: 'length',  label: '8-12' },
-                    { key: 'upper',   label: 'A-Z' },
-                    { key: 'lower',   label: 'a-z' },
-                    { key: 'number',  label: '0-9' },
-                    { key: 'special', label: '#!@' },
-                  ] as const).map((req) => {
-                    const ok = passwordChecks[req.key];
-                    return (
-                      <View key={req.key} style={[styles.pwChip, ok && styles.pwChipActive]}>
-                        <Ionicons name={ok ? 'checkmark' : 'ellipse-outline'} size={9} color={ok ? SUCCESS : '#94a3b8'} />
-                        <ThemedText style={[styles.pwChipText, ok && styles.pwChipTextActive]}>{req.label}</ThemedText>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-
-              {/* CTA */}
-              <Pressable
-                style={[styles.ctaButton, isLoading && { opacity: 0.75 }]}
+                style={({ pressed }) => [
+                  styles.primaryBtn,
+                  Shadows.level1,
+                  isLoading && { opacity: 0.75 },
+                  pressed && { opacity: 0.9 },
+                ]}
                 onPress={handleSignUp}
                 disabled={isLoading}
+                accessibilityRole="button"
+                accessibilityLabel="Create account"
+                accessibilityState={{ disabled: isLoading, busy: isLoading }}
               >
-                {isLoading
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <ThemedText style={styles.ctaText}>CREATE ACCOUNT →</ThemedText>
-                }
+                {isLoading ? (
+                  <ActivityIndicator size="small" color={BRAND.yellow} />
+                ) : (
+                  <ThemedText style={styles.primaryBtnText}>Create Account</ThemedText>
+                )}
               </Pressable>
 
-              {/* Divider */}
-              <View style={styles.divider}>
+              {/* ── Or ── */}
+              <View style={styles.dividerRow}>
                 <View style={styles.dividerLine} />
-                <ThemedText style={styles.dividerText}>or sign up with</ThemedText>
+                <ThemedText style={styles.dividerText}>Or</ThemedText>
                 <View style={styles.dividerLine} />
               </View>
 
-              {/* Social */}
               <View style={styles.socialRow}>
-                <Pressable style={styles.socialBtn}>
-                  <Image
-                    source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }}
-                    style={styles.socialIcon}
-                  />
-                </Pressable>
-                <Pressable style={styles.socialBtn}>
-                  <Ionicons name="logo-apple" size={20} color={TEXT_DARK} />
-                </Pressable>
-                <Pressable style={styles.socialBtn}>
-                  <Ionicons name="logo-facebook" size={20} color="#1877F2" />
-                </Pressable>
-              </View>
-
-              {/* Footer */}
-              <View style={styles.footerRow}>
-                <ThemedText style={styles.footerText}>Already registered? </ThemedText>
-                <Pressable onPress={() => router.push('/login')}>
-                  <ThemedText style={styles.footerLink}>Sign In</ThemedText>
-                </Pressable>
+                {(['google', 'apple', 'facebook'] as const).map((provider) => (
+                  <Pressable
+                    key={provider}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Sign up with ${provider}`}
+                    style={({ pressed }) => [styles.socialRound, pressed && { opacity: 0.85 }]}
+                  >
+                    {provider === 'google' ? (
+                      <Image
+                        source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }}
+                        style={styles.socialIcon}
+                      />
+                    ) : provider === 'apple' ? (
+                      <Ionicons name="logo-apple" size={18} color={BRAND.ink} />
+                    ) : (
+                      <Ionicons name="logo-facebook" size={18} color="#1877F2" />
+                    )}
+                  </Pressable>
+                ))}
               </View>
             </Animated.View>
+
+            <View style={styles.spacer} />
+
+            <View style={styles.footerRow}>
+              <ThemedText style={styles.footerText}>Already have an account? </ThemedText>
+              <Pressable onPress={() => router.push('/login')} hitSlop={8} accessibilityRole="link">
+                <ThemedText style={styles.footerLink}>Sign In</ThemedText>
+              </Pressable>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-
-      {/* ── Role Dropdown Sheet ── */}
-      <Modal
-        visible={roleModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRoleModalVisible(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setRoleModalVisible(false)}>
-          <Pressable style={styles.roleSheet} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.roleSheetHandle} />
-            <ThemedText style={styles.roleSheetTitle}>Select Your Role</ThemedText>
-            {roleOptions.map((r) => {
-              const active = selectedRole === r.key;
-              return (
-                <Pressable
-                  key={r.key}
-                  style={[styles.roleOption, active && styles.roleOptionActive]}
-                  onPress={() => { setSelectedRole(r.key); setRoleModalVisible(false); }}
-                >
-                  <View style={[styles.roleIconWrap, active && { backgroundColor: ACCENT }]}>
-                    <Ionicons name={r.icon} size={18} color={active ? '#fff' : TEXT_MID} />
-                  </View>
-                  <View style={styles.roleOptionTextWrap}>
-                    <ThemedText style={styles.roleOptionLabel}>{r.label}</ThemedText>
-                    <ThemedText style={styles.roleOptionDesc}>{r.desc}</ThemedText>
-                  </View>
-                  {active && <Ionicons name="checkmark-circle" size={20} color={ACCENT} />}
-                </Pressable>
-              );
-            })}
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: CREAM_BG,
-    overflow: 'hidden',
-  },
+  container: { flex: 1, backgroundColor: BRAND.yellow },
   flex: { flex: 1 },
   safeArea: { flex: 1 },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 10, paddingBottom: 18 },
 
-  blob: {
-    position: 'absolute',
-    borderRadius: 999,
-  },
-  blobTopLeft: {
-    width: 130,
-    height: 130,
-    top: -50,
-    left: -60,
-  },
-  blobTopRight: {
-    width: 100,
-    height: 100,
-    top: -30,
-    right: -40,
-  },
-  dot: {
-    position: 'absolute',
-    borderRadius: 999,
-  },
-
-  scrollContent: {
-    flexGrow: 1,
-  },
-
-  headerBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.containerMargin,
-    paddingTop: Spacing.xs,
-  },
+  // Brand
   backBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF88',
-    justifyContent: 'center',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: BRAND.line,
+    backgroundColor: BRAND.fieldSoft,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerLogo: {
-    width: 32,
-    height: 32,
-  },
-
-  topArea: {
-    paddingHorizontal: Spacing.containerMargin,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
-    alignItems: 'flex-start',
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    flexWrap: 'wrap',
-    marginBottom: 4,
-  },
-  titleNormal: {
-    fontSize: 22,
-    fontFamily: 'Sora_500Medium',
-    color: TEXT_DARK,
-    lineHeight: 28,
-    letterSpacing: -0.5,
-  },
-  titleHighlightWrap: { position: 'relative' },
-  titleHighlight: {
-    fontSize: 22,
-    fontFamily: 'Sora_500Medium',
-    color: TEXT_DARK,
-    lineHeight: 28,
-    letterSpacing: -0.5,
-  },
-  highlightBar: {
-    position: 'absolute',
-    bottom: 2,
-    left: 0,
-    right: 0,
-    height: 7,
-    borderRadius: 4,
-    opacity: 0.5,
-    zIndex: -1,
+  hero: { alignItems: 'center' },
+  logo: { width: '52%', maxWidth: 210, aspectRatio: BRAND_LOGO_ASPECT },
+  title: {
+    fontSize: 18,
+    lineHeight: 30,
+    fontFamily: 'Sora_600SemiBold',
+    color: BRAND.ink,
+    textAlign: 'center',
+    letterSpacing: -0.2,
+    marginTop: 4,
   },
   subtitle: {
-    fontSize: 12,
-    color: TEXT_MID,
+    fontSize: 12.5,
+    lineHeight: 19,
     fontFamily: 'Sora_400Regular',
-    lineHeight: 16,
+    color: BRAND.inkSoft,
+    textAlign: 'center',
+    marginTop: 6,
   },
 
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 22,
-    paddingTop: 18,
-    paddingBottom: 18,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-
-  errorBox: {
+  // Form
+  form: { marginTop: 22, gap: 14 },
+  label: { fontSize: 12, fontFamily: 'Sora_500Medium', color: BRAND.ink, marginBottom: 7 },
+  field: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fee2e2',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 12,
-    gap: 8,
-  },
-  errorText: {
-    flex: 1,
-    fontSize: 12,
-    color: DANGER,
-    fontFamily: 'Sora_500Medium',
-  },
-
-  label: {
-    fontSize: 12,
-    fontFamily: 'Sora_500Medium',
-    color: TEXT_DARK,
-    marginBottom: 5,
-    marginLeft: 4,
-  },
-
-  selectField: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F7F4',
-    borderWidth: 1.5,
-    borderColor: '#EBEBEB',
-    borderRadius: BorderRadius.lg,
-    height: 46,
-    paddingHorizontal: 12,
-    marginBottom: 10,
     gap: 10,
-  },
-  roleBadgeSmall: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: ACCENT + '18',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectFieldText: {
-    flex: 1,
-    fontSize: 14,
-    color: TEXT_DARK,
-    fontFamily: 'Sora_500Medium',
-  },
-
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F7F4',
+    height: 48,
     borderWidth: 1.5,
-    borderColor: '#EBEBEB',
-    borderRadius: BorderRadius.lg,
-    height: 46,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    marginBottom: 10,
+    backgroundColor: BRAND.field,
   },
-  inputFocused: {
-    borderColor: ACCENT,
-  },
-  inputVerified: {
-    borderColor: SUCCESS + '99',
-  },
-  inputIcon: { marginRight: 9 },
   input: {
     flex: 1,
-    fontSize: 14,
-    color: TEXT_DARK,
-    fontFamily: 'Sora_500Medium',
+    minWidth: 0,
     height: '100%',
+    fontSize: 13,
+    fontFamily: 'Sora_400Regular',
+    color: BRAND.ink,
     includeFontPadding: false,
   },
+  prefix: { fontSize: 13, fontFamily: 'Sora_500Medium', color: BRAND.ink },
+  prefixDivider: { width: 1, height: 20, backgroundColor: BRAND.line },
+  hint: { fontSize: 11, fontFamily: 'Sora_400Regular', color: BRAND.inkSoft },
+  hintBelow: { marginTop: 6 },
+  dangerText: { color: BRAND.danger },
+  link: { fontSize: 11.5, fontFamily: 'Sora_500Medium', color: BRAND.ink, textDecorationLine: 'underline' },
+  linkDisabled: { color: BRAND.inkMuted, textDecorationLine: 'none' },
 
-  otpTriggerText: {
-    fontSize: 12,
-    fontFamily: 'Sora_500Medium',
-    color: ACCENT,
-    letterSpacing: 0.2,
-  },
-  otpTriggerTextDisabled: {
-    color: TEXT_MID,
-    opacity: 0.6,
-  },
-  otpBlock: {
-    marginTop: -4,
-    marginBottom: 10,
-  },
-  otpRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  otpInput: {
+  // Role
+  roleRow: { flexDirection: 'row', gap: 6 },
+  roleChip: {
     flex: 1,
-    height: 40,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1.5,
-    borderColor: '#EBEBEB',
-    backgroundColor: '#F8F7F4',
-    paddingHorizontal: 14,
-    fontSize: 14,
-    letterSpacing: 2,
-    color: TEXT_DARK,
-    fontFamily: 'Sora_500Medium',
-    includeFontPadding: false,
-    paddingVertical: 0,
-  },
-  otpVerifyBtn: {
-    height: 40,
-    paddingHorizontal: 18,
-    borderRadius: BorderRadius.md,
-    backgroundColor: TEXT_DARK,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
+    gap: 4,
+    height: 40,
+    paddingHorizontal: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: BRAND.line,
+    backgroundColor: BRAND.field,
   },
-  otpVerifyText: {
-    color: '#fff',
-    fontSize: 12,
-    fontFamily: 'Sora_500Medium',
-  },
-  otpErrorText: {
-    fontSize: 11,
-    color: DANGER,
-    fontFamily: 'Sora_500Medium',
-    marginTop: 5,
-    marginLeft: 4,
-  },
+  roleChipOn: { backgroundColor: BRAND.ink, borderColor: BRAND.ink },
+  roleEmoji: { fontSize: 12 },
+  roleText: { fontSize: 11, fontFamily: 'Sora_500Medium', color: BRAND.ink },
+  roleTextOn: { color: BRAND.yellow },
 
-  locationChip: {
-    flexDirection: 'row',
+  // OTP
+  otpBlock: { marginTop: 10 },
+  otpRow: { flexDirection: 'row', gap: 8 },
+  otpField: { flex: 1, height: 44 },
+  otpInput: { fontSize: 14, letterSpacing: 3, fontFamily: 'Sora_500Medium' },
+  verifyBtn: {
+    height: 44,
+    paddingHorizontal: 18,
+    borderRadius: 999,
     alignItems: 'center',
-    backgroundColor: ACCENT + '10',
-    borderRadius: BorderRadius.md,
-    height: 32,
-    paddingHorizontal: 10,
-    marginBottom: 10,
-    gap: 6,
+    justifyContent: 'center',
+    backgroundColor: BRAND.ink,
   },
-  locationSpinner: { marginLeft: 2 },
-  locationChipText: {
-    flex: 1,
-    fontSize: 11,
-    color: TEXT_MID,
-    fontFamily: 'Sora_500Medium',
-  },
-  locationChipTextError: {
-    color: DANGER,
-  },
+  verifyText: { color: BRAND.yellow, fontSize: 12.5, fontFamily: 'Sora_500Medium' },
 
-  pwRequirementsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 12,
-    marginTop: -2,
-  },
-  pwChip: {
+  // Location
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  locationText: { flex: 1 },
+
+  // Password rules
+  rulesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  ruleChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
     paddingHorizontal: 8,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#F2F1EE',
+    height: 22,
+    borderRadius: 999,
+    backgroundColor: BRAND.fieldSoft,
   },
-  pwChipActive: {
-    backgroundColor: SUCCESS + '15',
-  },
-  pwChipText: {
-    fontSize: 9.5,
-    fontFamily: 'Sora_500Medium',
-    color: '#94a3b8',
-  },
-  pwChipTextActive: {
-    color: SUCCESS,
-  },
+  ruleChipOk: { backgroundColor: BRAND.field },
+  ruleText: { fontSize: 10, fontFamily: 'Sora_400Regular', color: BRAND.inkSoft },
+  ruleTextOk: { color: ACCENTS.green.dark },
 
-  ctaButton: {
-    backgroundColor: ACCENT,
+  // Error
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  errorText: { flex: 1, fontSize: 11.5, fontFamily: 'Sora_500Medium', color: BRAND.danger },
+
+  // Buttons
+  primaryBtn: {
+    height: 48,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    backgroundColor: BRAND.ink,
+  },
+  primaryBtnText: { color: BRAND.yellow, fontSize: 13.5, fontFamily: 'Sora_500Medium' },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 4 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: BRAND.line },
+  dividerText: { fontSize: 11.5, fontFamily: 'Sora_400Regular', color: BRAND.inkSoft },
+  socialRow: { flexDirection: 'row', justifyContent: 'center', gap: 16 },
+  socialRound: {
+    width: 46,
     height: 46,
-    borderRadius: BorderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: ACCENT,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 4,
-    marginBottom: 14,
-    marginTop: 2,
-  },
-  ctaText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontFamily: 'Sora_500Medium',
-    letterSpacing: 1.0,
-  },
-
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#EBEBEB',
-  },
-  dividerText: {
-    fontSize: 11,
-    color: TEXT_MID,
-    fontFamily: 'Sora_400Regular',
-  },
-
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 14,
-    marginBottom: 14,
-  },
-  socialBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#F8F7F4',
+    borderRadius: 23,
     borderWidth: 1,
-    borderColor: '#EBEBEB',
-    justifyContent: 'center',
+    borderColor: BRAND.line,
+    backgroundColor: BRAND.field,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  socialIcon: {
-    width: 19,
-    height: 19,
-  },
+  socialIcon: { width: 18, height: 18 },
 
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 13,
-    color: TEXT_MID,
-    fontFamily: 'Sora_500Medium',
-  },
-  footerLink: {
-    fontSize: 13,
-    color: TEXT_DARK,
-    fontFamily: 'Sora_500Medium',
-  },
-
-  // ── Role dropdown sheet ──
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  roleSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 28,
-  },
-  roleSheetHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#EBEBEB',
-    alignSelf: 'center',
-    marginBottom: 14,
-  },
-  roleSheetTitle: {
-    fontSize: 15,
-    fontFamily: 'Sora_500Medium',
-    color: TEXT_DARK,
-    marginBottom: 12,
-  },
-  roleOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    marginBottom: 4,
-  },
-  roleOptionActive: {
-    backgroundColor: ACCENT + '12',
-  },
-  roleIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F2F1EE',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  roleOptionTextWrap: { flex: 1 },
-  roleOptionLabel: {
-    fontSize: 14,
-    fontFamily: 'Sora_500Medium',
-    color: TEXT_DARK,
-  },
-  roleOptionDesc: {
-    fontSize: 11,
-    fontFamily: 'Sora_400Regular',
-    color: TEXT_MID,
-    marginTop: 1,
-  },
+  // Footer
+  spacer: { flex: 1, minHeight: 20 },
+  footerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  footerText: { fontSize: 12, fontFamily: 'Sora_400Regular', color: BRAND.inkSoft },
+  footerLink: { fontSize: 12, fontFamily: 'Sora_600SemiBold', color: BRAND.ink, textDecorationLine: 'underline' },
 });

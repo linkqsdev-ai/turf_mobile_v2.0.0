@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,6 +8,7 @@ import {
   Animated,
   Modal,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -54,43 +55,36 @@ import {
   TournamentVoucherDraft,
 } from '@/constants/tournament';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTournamentStore, useOfferStore } from '@/store/app-store';
-import { generateTournamentId, rulePresetsForSport, TournamentSponsor } from '@/store/tournament-store';
+import { useTournamentStore, useOfferStore, useTurfStore } from '@/store/app-store';
+import { STATIC_TURFS } from '@/constants/turfs';
+import { turfVenueOptions, filterTurfVenues, TurfVenueOption } from '@/utils/turf-venues';
+import { generateTournamentId, rulePresetsForSport, TournamentSponsor, formatDefaultsFor, voucherMaxDays, renameFixtureVenue, StoredFixture } from '@/store/tournament-store';
 import { toPersistableImage, durableImages } from '@/utils/persist-image';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { DashboardCard, DashboardSectionLabel, DashboardStepper, StatTiles } from '@/components/dashboard/analytics-kit';
+import { useFormConfig } from '@/context/RemoteConfigContext';
+import { CustomFieldsSection } from '@/components/forms/CustomFieldsSection';
+import { saveCustomAnswers } from '@/services/custom-answers';
+import { validateCustomAnswers, type CustomAnswers } from '@/lib/remote-config';
+import { ACCENTS } from '@/constants/dashboard-accents';
+import { prizeLabel, sportEmoji } from '@/utils/cup-display';
+import { CashbackOutputCard } from '@/components/cashback-output-card';
+import { formatPhoneNumber, getPhoneValidationError } from '@/utils/phone-utils';
 
 /** Where saved tournament drafts persist between sessions. */
 const DRAFTS_KEY = '@turf_tournament_drafts';
 
-// Step-tracker geometry, matching Create Turf so both wizards read identically.
-const STEP_CIRCLE = 26;
-const STEP_LABEL_LINE = 12;
-const STEP_CONNECTOR_H = 1.5;
 
 const STEPS = [
-  { title: 'Basic', icon: 'information-circle-outline' },
-  { title: 'Schedule', icon: 'calendar-outline' },
-  { title: 'Venue', icon: 'map-outline' },
-  { title: 'Rules', icon: 'document-text-outline' },
-  { title: 'Fees', icon: 'cash-outline' },
-  { title: 'Prizes & Media', icon: 'trophy-outline' },
+  { title: 'Basic', short: 'Basic', icon: 'information-circle-outline' },
+  { title: 'Schedule', short: 'Schedule', icon: 'calendar-outline' },
+  { title: 'Venue', short: 'Venue', icon: 'map-outline' },
+  { title: 'Rules', short: 'Rules', icon: 'document-text-outline' },
+  { title: 'Fees', short: 'Fees', icon: 'cash-outline' },
+  { title: 'Prizes & Media', short: 'Prizes', icon: 'trophy-outline' },
 ];
 
-/**
- * Digits only, capped at 10, grouped 5+5 — "98765 43210".
- * Mirrors formatPhoneNumber in create-turf so both wizards store the same shape.
- */
-function formatPhone(value: string): string {
-  const digits = String(value || '').replace(/\D/g, '').slice(0, 10);
-  if (digits.length <= 5) return digits;
-  return `${digits.slice(0, 5)} ${digits.slice(5)}`;
-}
 
-/** An Indian mobile is exactly 10 digits and never starts 0-5. */
-function isValidPhone(value: string): boolean {
-  const digits = String(value || '').replace(/\D/g, '');
-  return /^[6-9][0-9]{9}$/.test(digits);
-}
 
 /**
  * Pulls the first number out of a free-text money field.
@@ -113,6 +107,7 @@ export default function CreateTournamentScreen() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const { addTournament, updateTournament, publishedTournaments } = useTournamentStore();
+  const { ownedTurfs } = useTurfStore();
   const { addOffer } = useOfferStore();
   const { profile } = useUserProfile();
   /** Phone is the canonical identity elsewhere in the app; email/name back it up. */
@@ -199,8 +194,8 @@ export default function CreateTournamentScreen() {
     description: '',
     sportType: TOURNAMENT_SPORTS[0] as string, // see constants/tournament.ts
     tournamentType: 'Knockout', // Knockout, League, Round Robin
-    organizerName: '',
-    organizerContact: '',
+    organizerName: profile?.name || '',
+    organizerContact: profile?.phone ? formatPhoneNumber(profile.phone) : '',
     banner: require('@/assets/images/illustrations/tournament_cover.png'), // Default cover banner
     
     // Section 2: Schedule
@@ -212,6 +207,10 @@ export default function CreateTournamentScreen() {
     tournEnd: isoDaysFromToday(28),
     
     // Section 3: Venue
+    /** Hosted at a listed turf, or at a ground the organiser types in. */
+    venueType: 'Turf' as 'Turf' | 'Ground',
+    /** The listed turf this is hosted at; '' for a ground. */
+    turfId: '',
     selectedGround: '',
     address: '',
     latLng: '',
@@ -278,6 +277,9 @@ export default function CreateTournamentScreen() {
       regEnd: t.regEnd ?? prev.regEnd,
       tournStart: t.startDate ?? prev.tournStart,
       tournEnd: t.endDate ?? prev.tournEnd,
+      // Older cups carry no type: a saved turf means Turf, a typed venue Ground.
+      venueType: t.venueType ?? (t.turfId ? 'Turf' : t.location ? 'Ground' : 'Turf'),
+      turfId: t.turfId ?? '',
       selectedGround: t.location ?? prev.selectedGround,
       address: t.venueAddress ?? prev.address,
       matchDuration: t.matchDuration ?? prev.matchDuration,
@@ -323,8 +325,31 @@ export default function CreateTournamentScreen() {
     if (t.banner && typeof t.banner === 'object' && 'uri' in t.banner) {
       setCustomImageUri((t.banner as { uri: string }).uri);
     }
+    if (t.cashbackEnabled !== undefined) setCashbackEnabled(Boolean(t.cashbackEnabled));
+    if (t.cashbackType) setCashbackType(t.cashbackType);
+    if (t.cashbackAmount) {
+      setCashbackAmount(String(t.cashbackAmount));
+      if (t.cashbackEnabled === undefined && Number(t.cashbackAmount) > 0) setCashbackEnabled(true);
+    }
+    if (t.cashbackName) setCashbackName(t.cashbackName);
+    if (t.cashbackCode) setCashbackCode(t.cashbackCode);
+    if (t.cashbackMaxAmount) setCashbackMaxAmount(String(t.cashbackMaxAmount));
+    if (t.cashbackOneTime !== undefined) setCashbackOneTime(Boolean(t.cashbackOneTime));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId, publishedTournaments.length]);
+
+  // Sync logged user profile details when creating a new tournament
+  useEffect(() => {
+    if (!isEditing && profile) {
+      setForm(prev => {
+        const updates: Partial<typeof prev> = {};
+        if (!prev.organizerName && profile.name) updates.organizerName = profile.name;
+        if (!prev.organizerContact && profile.phone) updates.organizerContact = formatPhoneNumber(profile.phone);
+        if (Object.keys(updates).length > 0) return { ...prev, ...updates };
+        return prev;
+      });
+    }
+  }, [profile?.name, profile?.phone, isEditing]);
 
   // Action feedback toasts
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -344,6 +369,88 @@ export default function CreateTournamentScreen() {
   /** The draft this form was loaded from, cleared once it is published. */
   const [loadedDraftId, setLoadedDraftId] = useState<string | null>(null);
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
+  const [turfListOpen, setTurfListOpen] = useState(false);
+  const [turfQuery, setTurfQuery] = useState('');
+
+  // Cashback Reward State
+  const [cashbackEnabled, setCashbackEnabled] = useState(false);
+  const [cashbackType, setCashbackType] = useState<'flat' | 'percent'>('flat');
+  const [cashbackAmount, setCashbackAmount] = useState('');
+  const [cashbackName, setCashbackName] = useState('');
+  const [cashbackCode, setCashbackCode] = useState('');
+  const [cashbackMaxAmount, setCashbackMaxAmount] = useState('');
+  const [cashbackOneTime, setCashbackOneTime] = useState(true);
+
+  const activeCashbackCode = useMemo(() => {
+    if (cashbackCode.trim()) return cashbackCode.trim().toUpperCase();
+    const clean = form.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    return clean ? `${clean.slice(0, 6)}50` : 'CUP50';
+  }, [cashbackCode, form.name]);
+
+  const handleCopyCashbackCode = async (codeToCopy: string) => {
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).clipboard) {
+      try {
+        await (navigator as any).clipboard.writeText(codeToCopy);
+      } catch {}
+    }
+    triggerToast(`📋 Code ${codeToCopy} copied to clipboard!`);
+  };
+
+  /**
+   * Turf or Ground, normalised: drafts saved before the toggle existed carry
+   * no type, so infer it from what they hold.
+   */
+  const venueType: 'Turf' | 'Ground' =
+    form.venueType === 'Turf' || form.venueType === 'Ground'
+      ? form.venueType
+      : form.turfId ? 'Turf' : form.selectedGround ? 'Ground' : 'Turf';
+
+  /** Turfs created in the app, then the venues that ship with it. */
+  const turfOptions = turfVenueOptions(ownedTurfs || [], STATIC_TURFS);
+  // While a turf is picked the box shows its name, so list everything.
+  const shownTurfOptions = filterTurfVenues(form.turfId ? '' : turfQuery, turfOptions);
+
+  /** A ground typed before switching to Turf, restored on switching back. */
+  const groundDraft = useRef({ selectedGround: '', address: '', latLng: '' });
+
+  const switchVenueType = (type: 'Turf' | 'Ground') => {
+    if (type === venueType) return;
+    if (type === 'Turf') {
+      groundDraft.current = { selectedGround: form.selectedGround, address: form.address, latLng: form.latLng };
+      setForm(prev => ({ ...prev, venueType: 'Turf', turfId: '', selectedGround: '', address: '', latLng: '' }));
+    } else {
+      setForm(prev => ({ ...prev, venueType: 'Ground', turfId: '', ...groundDraft.current }));
+    }
+    setUseCurrentLocation(false);
+    setTurfListOpen(false);
+    setTurfQuery('');
+  };
+
+  /** Host at a listed turf: its name and address become the venue. */
+  const selectTurfVenue = (option: TurfVenueOption) => {
+    setForm(prev => ({
+      ...prev,
+      venueType: 'Turf',
+      turfId: option.id,
+      selectedGround: option.name.slice(0, MAX_VENUE_NAME_LENGTH),
+      address: option.address,
+      latLng: '',
+    }));
+    setTurfListOpen(false);
+    setTurfQuery('');
+  };
+
+  const handleTurfSearch = (text: string) => {
+    setTurfQuery(text);
+    setTurfListOpen(true);
+    // Typing over a picked turf means looking for another one.
+    if (form.turfId) setForm(prev => ({ ...prev, turfId: '', selectedGround: '', address: '' }));
+  };
+
+  const clearTurfSelection = () => {
+    setTurfQuery('');
+    setForm(prev => ({ ...prev, turfId: '', selectedGround: '', address: '' }));
+  };
 
   /**
    * Vouchers drafted for this tournament. Published into the offer store on
@@ -519,6 +626,8 @@ export default function CreateTournamentScreen() {
   // organiser writes themselves.
   const rulePresets = rulePresetsForSport(form.sportType).slice(0, RULE_PRESET_LIMIT);
   const oversEnabled = supportsOvers(form.sportType);
+  /** Longest a voucher can run: until the tournament's last day. */
+  const maxVoucherDays = voucherMaxDays(form.tournEnd);
 
   const toggleRule = (rule: string) => {
     setForm(prev => ({
@@ -664,6 +773,22 @@ export default function CreateTournamentScreen() {
    * Dates and fees ship with sensible defaults, so those steps validate on
    * ordering/sanity rather than presence.
    */
+  // Super Admin layout for the Create Tournament form: renamed, hidden and
+  // required fields, plus any fields the admin added (shown on the first step).
+  const cupForm = useFormConfig('create_tournament');
+  const cf = {
+    name: cupForm.field('name', { label: 'Tournament name', placeholder: 'e.g. London Summer Slam', required: true }),
+    description: cupForm.field('description', {
+      label: 'Description',
+      placeholder: 'Describe your tournament, match timings, general guidelines...',
+    }),
+    organizer: cupForm.field('organizerName', { label: 'Organizer name', placeholder: 'e.g. Apex Sports Club', required: true }),
+    contact: cupForm.field('organizerPhone', { label: 'Organizer contact', placeholder: '98765 43210', required: true }),
+    entryFee: cupForm.field('entryFee', { label: 'Entry fee (per team)', placeholder: '150', required: true }),
+  };
+  const hiddenStyle = { display: 'none' } as const;
+  const [customAnswers, setCustomAnswers] = useState<CustomAnswers>({});
+
   /**
    * The first problem with the current step, or null when it is complete.
    *
@@ -677,10 +802,18 @@ export default function CreateTournamentScreen() {
     if (step === 0) {
       const nameIssue = nameLengthIssue('Tournament name', form.name, MAX_TOURNAMENT_NAME_LENGTH);
       if (nameIssue) return nameIssue;
-      const organizerIssue = nameLengthIssue('Organizer name', form.organizerName, MAX_ORGANIZER_NAME_LENGTH);
+      if (cf.description.visible && cf.description.required && !form.description.trim()) {
+        return `${cf.description.label} is required`;
+      }
+      const checkOrganizer = cf.organizer.visible && (cf.organizer.required || !!form.organizerName.trim());
+      const organizerIssue = checkOrganizer
+        ? nameLengthIssue('Organizer name', form.organizerName, MAX_ORGANIZER_NAME_LENGTH)
+        : null;
       if (organizerIssue) return organizerIssue;
-      if (!form.organizerContact.trim()) return 'Organizer contact is required';
-      if (!isValidPhone(form.organizerContact)) return 'Enter a valid 10-digit mobile number';
+      const phoneErr = cf.contact.visible ? getPhoneValidationError(form.organizerContact, cf.contact.required) : null;
+      if (phoneErr) return phoneErr;
+      const customIssue = validateCustomAnswers(cupForm.customFields, customAnswers)[0];
+      if (customIssue) return customIssue;
       return null;
     }
     if (step === 1) {
@@ -696,7 +829,8 @@ export default function CreateTournamentScreen() {
       return null;
     }
     if (step === 2) {
-      if (!form.selectedGround.trim()) return 'Pick a venue for the tournament';
+      if (venueType === 'Turf') return form.turfId ? null : 'Pick a turf from the list';
+      if (!form.selectedGround.trim()) return 'Enter the ground name';
       return null;
     }
     if (step === 3) {
@@ -709,7 +843,13 @@ export default function CreateTournamentScreen() {
       // of one team is not a tournament.
       const teams = parseAmount(form.maxTeams);
       if (teams < MIN_TEAMS) return `A tournament needs at least ${MIN_TEAMS} teams`;
-      if (parseAmount(form.entryFee) <= 0) return 'Entry fee is required';
+      // A voucher for "the first 20 teams" in a 16-team cup promises places
+      // that do not exist.
+      const overCap = voucherDrafts.find(v => Number(v.maxRedemptions) > teams);
+      if (overCap) {
+        return `Voucher ${overCap.code || ''} is limited to ${overCap.maxRedemptions} teams, but only ${teams} can enter`.replace('  ', ' ');
+      }
+      if (cf.entryFee.required && parseAmount(form.entryFee) <= 0) return 'Entry fee is required';
       return null;
     }
     if (step === 5) {
@@ -747,8 +887,8 @@ export default function CreateTournamentScreen() {
 
   /** Inline error under the contact field, shown only once something is typed. */
   const contactError =
-    form.organizerContact.trim() && !isValidPhone(form.organizerContact)
-      ? 'Enter a valid 10-digit mobile number'
+    form.organizerContact.trim()
+      ? getPhoneValidationError(form.organizerContact, false) || ''
       : '';
 
   const validateStep = (step: number): boolean => {
@@ -800,6 +940,13 @@ export default function CreateTournamentScreen() {
       id: draftId,
       name: form.name || 'Untitled Draft',
       savedAt: new Date().toISOString(),
+      cashbackEnabled,
+      cashbackType,
+      cashbackAmount,
+      cashbackName,
+      cashbackCode,
+      cashbackMaxAmount,
+      cashbackOneTime,
     };
     setDrafts(prev => {
       const next = [newDraft, ...prev];
@@ -815,6 +962,16 @@ export default function CreateTournamentScreen() {
     // `banner` is stripped when a draft is saved (a require()'d asset id does
     // not survive a reload), so keep whatever the form already holds.
     setForm(prev => ({ ...prev, ...draft, banner: prev.banner }));
+    if (draft.cashbackEnabled !== undefined) setCashbackEnabled(Boolean(draft.cashbackEnabled));
+    if (draft.cashbackType) setCashbackType(draft.cashbackType);
+    if (draft.cashbackAmount) {
+      setCashbackAmount(String(draft.cashbackAmount));
+      if (draft.cashbackEnabled === undefined && Number(draft.cashbackAmount) > 0) setCashbackEnabled(true);
+    }
+    if (draft.cashbackName) setCashbackName(draft.cashbackName);
+    if (draft.cashbackCode) setCashbackCode(draft.cashbackCode);
+    if (draft.cashbackMaxAmount) setCashbackMaxAmount(String(draft.cashbackMaxAmount));
+    if (draft.cashbackOneTime !== undefined) setCashbackOneTime(Boolean(draft.cashbackOneTime));
     setLoadedDraftId(draft.id);
     triggerToast(`Loaded draft: ${draft.name}`);
   };
@@ -862,7 +1019,7 @@ export default function CreateTournamentScreen() {
       setCurrentStep(0);
       return;
     }
-    if (!form.organizerName.trim()) {
+    if (cf.organizer.visible && cf.organizer.required && !form.organizerName.trim()) {
       triggerToast('Organizer name is required.');
       setCurrentStep(0);
       return;
@@ -877,6 +1034,9 @@ export default function CreateTournamentScreen() {
       setCurrentStep(0);
       return;
     }
+
+    const parsedCashback = parseFloat(cashbackAmount) || 0;
+    const isCashbackActive = cashbackEnabled && parsedCashback > 0;
 
     // The full wizard answer set. Everything the organizer typed is stored,
     // not just the fields the public card shows, so reopening this wizard to
@@ -899,6 +1059,8 @@ export default function CreateTournamentScreen() {
       regStart: form.regStart,
       regEnd: form.regEnd,
       venueAddress: form.address,
+      venueType,
+      turfId: venueType === 'Turf' ? form.turfId : '',
       matchDuration: form.matchDuration,
       teamSize: form.teamSize,
       overs: form.overs,
@@ -915,12 +1077,24 @@ export default function CreateTournamentScreen() {
       sponsors: form.sponsors,
       coverImages: tournamentImages,
       coverIndex: pinnedIndex,
+      cashbackEnabled: isCashbackActive,
+      cashbackType,
+      cashbackAmount: isCashbackActive ? parsedCashback : undefined,
+      cashbackName: isCashbackActive ? (cashbackName.trim() || `${form.name || 'Tournament'} Cashback`) : undefined,
+      cashbackCode: isCashbackActive ? (cashbackCode.trim() || activeCashbackCode) : undefined,
+      cashbackMaxAmount: isCashbackActive && cashbackMaxAmount ? parseFloat(cashbackMaxAmount) : undefined,
+      cashbackOneTime: isCashbackActive ? cashbackOneTime : undefined,
     };
 
     if (isEditing && editId) {
       // teamsCount and status are owned by the registration/lifecycle flows —
       // an edit must not reset a cup that already has teams in it.
-      updateTournament(editId, record);
+      // Moving the venue moves the draw with it, so fixtures don't keep
+      // pointing at a ground the tournament no longer uses.
+      const before: any = publishedTournaments.find((x: any) => x.id === editId);
+      const movedFixtures = renameFixtureVenue<StoredFixture>(before?.fixtures, before?.location, record.location);
+      updateTournament(editId, movedFixtures ? { ...record, fixtures: movedFixtures } : record);
+      void saveCustomAnswers('create_tournament', 'tournament', editId, customAnswers, cupForm.customFields);
       triggerToast('Tournament updated!');
       setTimeout(() => {
         if (router.canGoBack()) router.back();
@@ -935,7 +1109,8 @@ export default function CreateTournamentScreen() {
     voucherDrafts.forEach((v) => {
       const value = parseAmount(v.discountValue);
       if (!v.code.trim() || value <= 0) return;
-      const days = parseInt(v.validDays, 10) || 30;
+      // Never past the tournament's end, whatever was typed.
+      const days = Math.min(parseInt(v.validDays, 10) || 30, voucherMaxDays(form.tournEnd) ?? Number.MAX_SAFE_INTEGER);
       addOffer({
         code: v.code.trim().toUpperCase(),
         title: v.title.trim() || `${form.name} Voucher`,
@@ -961,17 +1136,19 @@ export default function CreateTournamentScreen() {
       setLoadedDraftId(null);
     }
 
+    const publishedId = generateTournamentId();
     addTournament({
       ...record,
       // Stamped once, from the signed-in profile. Deliberately absent from the
       // edit patch above so renaming the organizer can never change ownership.
       organizerId: ownerKey,
-      id: generateTournamentId(),
+      id: publishedId,
       teamsCount: 0,
       status: 'Registering',
       createdAt: new Date().toISOString(),
     });
 
+    void saveCustomAnswers('create_tournament', 'tournament', publishedId, customAnswers, cupForm.customFields);
     triggerToast('Tournament published successfully!');
     setTimeout(() => {
       if (router.canGoBack()) router.back();
@@ -981,6 +1158,28 @@ export default function CreateTournamentScreen() {
 
   const updateField = (key: string, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  /**
+   * Switching sport resets the format to that sport's defaults. The points
+   * line stayed "3 pts Win, 1 pt Draw" on a cricket tournament, and rules
+   * ticked for one sport carried over to the other.
+   */
+  const handleSportChange = (sport: TournamentSport) => {
+    const defaults = formatDefaultsFor(sport);
+    const presets = rulePresetsForSport(sport).slice(0, RULE_PRESET_LIMIT);
+    setForm(prev => {
+      if (prev.sportType === sport) return prev;
+      return {
+        ...prev,
+        sportType: sport,
+        pointSystem: defaults.pointSystem,
+        matchDuration: defaults.matchDuration,
+        teamSize: defaults.teamSize,
+        overs: sport === 'Cricket' ? prev.overs || '20' : '',
+        rules: prev.rules.filter((r: string) => presets.includes(r)),
+      };
+    });
   };
 
   // Step render functions
@@ -993,16 +1192,17 @@ export default function CreateTournamentScreen() {
       case 0:
         return (
           <View style={styles.stepFormContainer}>
+            <DashboardSectionLabel label="Identity" color={ACCENTS.primary.main} style={styles.stepSectionFirst} />
             <View style={styles.inputGroup}>
               <FieldLabel
-                label="Tournament name"
+                label={cf.name.label}
                 required
                 current={form.name.length}
                 max={MAX_TOURNAMENT_NAME_LENGTH}
               />
               <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'name' ? theme.primary : '#00000033' }]}
-                placeholder="e.g. London Summer Slam"
+                placeholder={cf.name.placeholder}
                 placeholderTextColor={theme.textSecondary + '80'}
                 value={form.name}
                 maxLength={MAX_TOURNAMENT_NAME_LENGTH}
@@ -1012,11 +1212,14 @@ export default function CreateTournamentScreen() {
               />
             </View>
 
-            <View style={[styles.inputGroup, { marginTop: 16 }]}>
-              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Description</ThemedText>
+            <View style={[styles.inputGroup, { marginTop: 16 }, !cf.description.visible && hiddenStyle]}>
+              <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
+                {cf.description.label}
+                {cf.description.required && <ThemedText style={styles.requiredStar}> *</ThemedText>}
+              </ThemedText>
               <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'description' ? theme.primary : '#00000033', height: 80, paddingVertical: 10, textAlignVertical: 'top' }]}
-                placeholder="Describe your tournament, match timings, general guidelines..."
+                placeholder={cf.description.placeholder}
                 placeholderTextColor={theme.textSecondary + '80'}
                 multiline
                 numberOfLines={3}
@@ -1027,7 +1230,8 @@ export default function CreateTournamentScreen() {
               />
             </View>
 
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+            <DashboardSectionLabel label="Format" color={ACCENTS.green.main} style={styles.stepSection} />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Sport type</ThemedText>
                 <View style={styles.sportList}>
@@ -1037,19 +1241,19 @@ export default function CreateTournamentScreen() {
                     return (
                       <Pressable
                         key={s}
-                        onPress={() => updateField('sportType', s)}
+                        onPress={() => handleSportChange(s)}
                         style={[
                           styles.sportChip,
                           { backgroundColor: 'transparent', borderColor: '#00000033' },
-                          isActive && { backgroundColor: theme.primary, borderColor: theme.primary }
+                          isActive && [{ backgroundColor: theme.surfaceLowest, borderColor: ACCENTS.primary.main + '55' }, Shadows.level1]
                         ]}
                       >
                         <MaterialIcons
                           name={sportObj.icon as any}
                           size={12}
-                          color={isActive ? '#ffffff' : theme.textSecondary}
+                          color={isActive ? ACCENTS.primary.dark : theme.textSecondary}
                         />
-                        <ThemedText style={[styles.sportChipText, { color: isActive ? '#ffffff' : theme.textSecondary }]}>
+                        <ThemedText style={[styles.sportChipText, { color: isActive ? ACCENTS.primary.dark : theme.textSecondary, fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_500Medium' }]}>
                           {s}
                         </ThemedText>
                       </Pressable>
@@ -1072,15 +1276,15 @@ export default function CreateTournamentScreen() {
                         style={[
                           styles.sportChip,
                           { backgroundColor: 'transparent', borderColor: '#00000033' },
-                          isActive && { backgroundColor: theme.primary, borderColor: theme.primary }
+                          isActive && [{ backgroundColor: theme.surfaceLowest, borderColor: ACCENTS.primary.main + '55' }, Shadows.level1]
                         ]}
                       >
                         <MaterialIcons
                           name={t === 'Knockout' ? 'star' : 'format-list-bulleted'}
                           size={12}
-                          color={isActive ? '#ffffff' : theme.textSecondary}
+                          color={isActive ? ACCENTS.primary.dark : theme.textSecondary}
                         />
-                        <ThemedText style={[styles.sportChipText, { color: isActive ? '#ffffff' : theme.textSecondary }]}>
+                        <ThemedText style={[styles.sportChipText, { color: isActive ? ACCENTS.primary.dark : theme.textSecondary, fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_500Medium' }]}>
                           {t}
                         </ThemedText>
                       </Pressable>
@@ -1090,16 +1294,17 @@ export default function CreateTournamentScreen() {
               </View>
             </View>
 
-            <View style={[styles.inputGroup, { marginTop: 16 }]}>
+            <DashboardSectionLabel label="Organizer" color={ACCENTS.orange.main} style={styles.stepSection} />
+            <View style={[styles.inputGroup, !cf.organizer.visible && hiddenStyle]}>
               <FieldLabel
-                label="Organizer name"
-                required
+                label={cf.organizer.label}
+                required={cf.organizer.required}
                 current={form.organizerName.length}
                 max={MAX_ORGANIZER_NAME_LENGTH}
               />
               <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'organizerName' ? theme.primary : '#00000033' }]}
-                placeholder="e.g. Apex Sports Club"
+                placeholder={cf.organizer.placeholder}
                 placeholderTextColor={theme.textSecondary + '80'}
                 value={form.organizerName}
                 maxLength={MAX_ORGANIZER_NAME_LENGTH}
@@ -1109,9 +1314,9 @@ export default function CreateTournamentScreen() {
               />
             </View>
 
-            <View style={[styles.inputGroup, { marginTop: 16 }]}>
+            <View style={[styles.inputGroup, { marginTop: 16 }, !cf.contact.visible && hiddenStyle]}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>
-                Organizer contact <ThemedText style={styles.requiredStar}>*</ThemedText>
+                {cf.contact.label} {cf.contact.required && <ThemedText style={styles.requiredStar}>*</ThemedText>}
               </ThemedText>
               {/* Fixed +91 country code with a formatted, hard-capped 10-digit
                   field — the same control Create Turf uses. The old free-text
@@ -1124,12 +1329,12 @@ export default function CreateTournamentScreen() {
                 </View>
                 <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[styles.inputRowInner, { color: theme.text }]}
-                  placeholder="98765 43210"
+                  placeholder={cf.contact.placeholder}
                   placeholderTextColor={theme.textSecondary + '80'}
                   keyboardType="phone-pad"
                   maxLength={11}
                   value={form.organizerContact}
-                  onChangeText={(v) => updateField('organizerContact', formatPhone(v))}
+                  onChangeText={(v) => updateField('organizerContact', formatPhoneNumber(v))}
                   onFocus={() => setFocusedField('organizerContact')}
                   onBlur={() => setFocusedField(null)}
                 />
@@ -1138,11 +1343,32 @@ export default function CreateTournamentScreen() {
                 <ThemedText style={styles.errorText}>{contactError}</ThemedText>
               )}
             </View>
+
+            {cupForm.customFields.length > 0 && (
+              <>
+                <DashboardSectionLabel label="More Details" color={ACCENTS.green.main} style={styles.stepSection} />
+                <CustomFieldsSection
+                  fields={cupForm.customFields}
+                  values={customAnswers}
+                  onChange={(key, value) => setCustomAnswers((prev) => ({ ...prev, [key]: value }))}
+                  labelStyle={[styles.fieldLabel, { color: theme.textSecondary }]}
+                  palette={{
+                    label: theme.textSecondary,
+                    text: theme.text,
+                    placeholder: theme.textSecondary + '80',
+                    fieldBg: theme.surfaceLow,
+                    border: '#00000033',
+                    accent: theme.primary,
+                  }}
+                />
+              </>
+            )}
           </View>
         );
       case 1:
         return (
           <View style={styles.stepFormContainer}>
+            <DashboardSectionLabel label="Registration Window" color={ACCENTS.primary.main} style={styles.stepSectionFirst} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Registration start</ThemedText>
@@ -1179,7 +1405,8 @@ export default function CreateTournamentScreen() {
               </View>
             </View>
 
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+            <DashboardSectionLabel label="Tournament Dates" color={ACCENTS.green.main} style={styles.stepSection} />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Tournament start</ThemedText>
                 <Pressable
@@ -1219,37 +1446,213 @@ export default function CreateTournamentScreen() {
       case 2:
         return (
           <View style={styles.stepFormContainer}>
-            {/* Venue name. The three hard-coded grounds that stood here were
-                London placeholders — useless to an organiser anywhere else,
-                and they made the field look like a closed list when the
-                published value is just free text. */}
-            <View style={[styles.inputGroup, { marginBottom: 16 }]}>
-              <FieldLabel
-                label="Venue name"
-                required
-                current={form.selectedGround.length}
-                max={MAX_VENUE_NAME_LENGTH}
-              />
-              <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: focusedField === 'selectedGround' ? theme.primary : '#00000033' }]}
-                placeholder="e.g. Elms Field Ground A"
-                placeholderTextColor={theme.textSecondary + '80'}
-                value={form.selectedGround}
-                maxLength={MAX_VENUE_NAME_LENGTH}
-                onChangeText={(v) => updateField('selectedGround', v)}
-                onFocus={() => setFocusedField('selectedGround')}
-                onBlur={() => setFocusedField(null)}
-              />
+            <DashboardSectionLabel label="Venue" color={ACCENTS.primary.main} style={styles.stepSectionFirst} />
+            {/* Type — a listed turf, or a ground typed in. Same toggle as match
+                creation (BidMatchTab), so organisers see a familiar control. */}
+            <View style={[styles.inputGroup, { marginBottom: 14 }]}>
+              <View style={styles.venueLabelRow}>
+                <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 0 }]}>Type</ThemedText>
+                <ThemedText style={styles.requiredStar}>*</ThemedText>
+              </View>
+              <View style={styles.venueTypeRow}>
+                {([
+                  { label: 'Turf 🌿', value: 'Turf' },
+                  { label: 'Ground 🏟️', value: 'Ground' },
+                ] as const).map((opt) => {
+                  const active = venueType === opt.value;
+                  return (
+                    <Pressable
+                      key={opt.value}
+                      onPress={() => switchVenueType(opt.value)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: active }}
+                      accessibilityLabel={`${opt.value} venue`}
+                      style={({ pressed }) => [
+                        styles.venueTypeCard,
+                        {
+                          backgroundColor: active ? theme.primary + '18' : theme.surfaceLow,
+                          borderColor: active ? theme.primary : theme.outlineVariant + '40',
+                          borderWidth: active ? 1.5 : 1,
+                          opacity: pressed ? 0.85 : 1,
+                        },
+                      ]}
+                    >
+                      <ThemedText style={[styles.venueTypeText, { color: active ? theme.primary : theme.text }]}>
+                        {opt.label}
+                      </ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
+
+            {venueType === 'Turf' ? (
+              <View style={[styles.inputGroup, { marginBottom: 16, zIndex: 30 }]}>
+                <View style={styles.venueLabelRowBetween}>
+                  <View style={styles.venueLabelRow}>
+                    <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 0 }]}>Turf Name</ThemedText>
+                    <ThemedText style={styles.requiredStar}>*</ThemedText>
+                  </View>
+                  <Pressable onPress={() => setTurfListOpen(open => !open)} hitSlop={6} accessibilityRole="button" accessibilityLabel="Select or search turfs">
+                    <ThemedText style={[styles.venueLink, { color: theme.primary }]}>Select or Search</ThemedText>
+                  </Pressable>
+                </View>
+
+                <View
+                  style={[
+                    styles.venueSearchBox,
+                    { backgroundColor: theme.surfaceLow, borderColor: turfListOpen ? theme.primary : theme.outlineVariant + '40' },
+                  ]}
+                >
+                  <Ionicons name="search-outline" size={16} color={theme.primary} style={{ marginRight: 8 }} />
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.venueSearchInput, { color: theme.text }, Platform.OS === 'web' && ({ outlineStyle: 'none', outlineWidth: 0 } as any)]}
+                    placeholder="Search or tap turf below..."
+                    placeholderTextColor="#94a3b8"
+                    value={form.turfId ? form.selectedGround : turfQuery}
+                    onFocus={() => setTurfListOpen(true)}
+                    onChangeText={handleTurfSearch}
+                    accessibilityLabel="Search turfs"
+                  />
+                  {form.turfId || turfQuery ? (
+                    <Pressable onPress={clearTurfSelection} hitSlop={6} style={{ padding: 4 }} accessibilityRole="button" accessibilityLabel="Clear turf">
+                      <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      onPress={() => setTurfListOpen(open => !open)}
+                      hitSlop={6}
+                      style={{ padding: 4 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={turfListOpen ? 'Hide turf list' : 'Show turf list'}
+                    >
+                      <Ionicons name={turfListOpen ? 'chevron-up' : 'chevron-down'} size={16} color={theme.textSecondary} />
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* One-tap turf pills */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.turfPillRow}>
+                  {turfOptions.slice(0, 8).map((option) => {
+                    const selected = form.turfId === option.id;
+                    return (
+                      <Pressable
+                        key={option.id}
+                        onPress={() => selectTurfVenue(option)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={`Host at ${option.name}`}
+                        style={({ pressed }) => [
+                          styles.turfPill,
+                          {
+                            backgroundColor: selected ? theme.primary : theme.surfaceLow,
+                            borderColor: selected ? theme.primary : theme.outlineVariant + '35',
+                            opacity: pressed ? 0.8 : 1,
+                          },
+                        ]}
+                      >
+                        <Ionicons name="location-sharp" size={11} color={selected ? '#ffffff' : theme.primary} />
+                        <ThemedText
+                          numberOfLines={1}
+                          style={[
+                            styles.turfPillText,
+                            { color: selected ? '#ffffff' : theme.text, fontFamily: selected ? 'Sora_600SemiBold' : 'Sora_500Medium' },
+                          ]}
+                        >
+                          {option.name}
+                        </ThemedText>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+
+                {turfListOpen && (
+                  <View style={[styles.turfList, { backgroundColor: theme.surfaceLowest, borderColor: theme.primary }]}>
+                    <View style={[styles.turfListHeader, { backgroundColor: theme.surfaceLow, borderBottomColor: theme.outlineVariant + '20' }]}>
+                      <ThemedText style={[styles.turfListTitle, { color: theme.textSecondary }]}>AVAILABLE TURFS</ThemedText>
+                      <Pressable onPress={() => setTurfListOpen(false)} hitSlop={6} accessibilityRole="button" accessibilityLabel="Close turf list">
+                        <ThemedText style={[styles.turfListTitle, { color: theme.primary }]}>Close ✕</ThemedText>
+                      </Pressable>
+                    </View>
+                    <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always">
+                      {shownTurfOptions.map((option, idx) => {
+                        const selected = form.turfId === option.id;
+                        return (
+                          <Pressable
+                            key={option.id}
+                            onPress={() => selectTurfVenue(option)}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected }}
+                            accessibilityLabel={`${option.name}${option.address ? `, ${option.address}` : ''}`}
+                            style={({ pressed }) => [
+                              styles.turfListRow,
+                              {
+                                borderBottomWidth: idx < shownTurfOptions.length - 1 ? 1 : 0,
+                                borderBottomColor: theme.outlineVariant + '20',
+                                backgroundColor: pressed || selected ? theme.primary + '15' : theme.surfaceLowest,
+                              },
+                            ]}
+                          >
+                            <Ionicons name="location-sharp" size={14} color={theme.primary} />
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <ThemedText numberOfLines={1} style={[styles.turfListName, { color: theme.text }]}>{option.name}</ThemedText>
+                              <ThemedText numberOfLines={1} style={[styles.turfListAddress, { color: theme.textSecondary }]}>
+                                {[option.address, option.source === 'owned' ? 'Your turf' : null].filter(Boolean).join(' · ') || 'Address not listed'}
+                              </ThemedText>
+                            </View>
+                            {selected && <Ionicons name="checkmark-circle" size={16} color={theme.primary} />}
+                          </Pressable>
+                        );
+                      })}
+                      {shownTurfOptions.length === 0 && (
+                        <ThemedText style={[styles.turfListAddress, { color: theme.textSecondary, textAlign: 'center', paddingVertical: 14, paddingHorizontal: 12 }]}>
+                          No turf matches “{turfQuery.trim()}”. Switch Type to Ground to enter it yourself.
+                        </ThemedText>
+                      )}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <View style={[styles.inputGroup, { marginBottom: 16 }]}>
+                <FieldLabel
+                  label="Ground Name"
+                  required
+                  current={form.selectedGround.length}
+                  max={MAX_VENUE_NAME_LENGTH}
+                />
+                <View
+                  style={[
+                    styles.venueSearchBox,
+                    { backgroundColor: theme.surfaceLow, borderColor: focusedField === 'selectedGround' ? theme.primary : theme.outlineVariant + '40' },
+                  ]}
+                >
+                  <Ionicons name="location-outline" size={16} color={theme.textSecondary} style={{ marginRight: 8 }} />
+                  <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.venueSearchInput, { color: theme.text }, Platform.OS === 'web' && ({ outlineStyle: 'none', outlineWidth: 0 } as any)]}
+                    placeholder="e.g. Anna Stadium Ground"
+                    placeholderTextColor="#94a3b8"
+                    value={form.selectedGround}
+                    maxLength={MAX_VENUE_NAME_LENGTH}
+                    onChangeText={(v) => updateField('selectedGround', v)}
+                    onFocus={() => setFocusedField('selectedGround')}
+                    onBlur={() => setFocusedField(null)}
+                    accessibilityLabel="Ground name"
+                  />
+                </View>
+              </View>
+            )}
 
             {/* Address — the same two-mode picker create-turf uses: detect via
                 GPS, or type it. A single "use my location" button left it
                 ambiguous whether the field was still editable. */}
+            {(venueType === 'Ground' || !!form.turfId) && (
             <View style={styles.inputGroup}>
               <View style={styles.labelRow}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 0 }]}>
                   Detailed address <ThemedText style={styles.requiredStar}>*</ThemedText>
                 </ThemedText>
+                {!form.turfId && (
                 <Pressable
                   onPress={() => {
                     const next = !useCurrentLocation;
@@ -1282,9 +1685,24 @@ export default function CreateTournamentScreen() {
                     {useCurrentLocation ? 'Current Location' : 'Enter Address'}
                   </ThemedText>
                 </Pressable>
+                )}
               </View>
 
-              {useCurrentLocation ? (
+              {form.turfId ? (
+                <View style={[styles.locationCard, { backgroundColor: theme.surfaceLow, borderColor: theme.primary + '33' }]}>
+                  <View style={[styles.locationIconBg, { backgroundColor: theme.primary + '18' }]}>
+                    <Ionicons name="location" size={18} color={theme.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={[styles.locationText, { color: theme.text }]} numberOfLines={2}>
+                      {form.address || 'Address not listed for this turf'}
+                    </ThemedText>
+                    <ThemedText style={[styles.locationHint, { color: theme.textSecondary }]}>
+                      From the selected turf • change the turf above
+                    </ThemedText>
+                  </View>
+                </View>
+              ) : useCurrentLocation ? (
                 <Pressable
                   onPress={handleUseCurrentLocation}
                   disabled={isLocatingVenue}
@@ -1327,6 +1745,7 @@ export default function CreateTournamentScreen() {
                 />
               )}
             </View>
+            )}
 
             {/* ── Promotional Vouchers ──────────────────────────────────
                 Same card design as the class voucher builder, so an organiser
@@ -1362,7 +1781,7 @@ export default function CreateTournamentScreen() {
 
               {voucherDrafts.length === 0 ? (
                 <View style={[styles.voucherEmptyBox, { backgroundColor: theme.surfaceLow }]}>
-                  <Ionicons name="pricetags-outline" size={24} color={theme.textSecondary} />
+                  <Ionicons name="pricetags-outline" size={20} color={theme.textSecondary} />
                   <ThemedText style={[styles.voucherEmptyText, { color: theme.textSecondary }]}>
                     No vouchers added. Tap &apos;+ Add Voucher&apos; to create one.
                   </ThemedText>
@@ -1512,8 +1931,17 @@ export default function CreateTournamentScreen() {
                           keyboardType="number-pad"
                           maxLength={3}
                           value={v.validDays}
-                          onChangeText={(t) => patchVoucher(v.localId, { validDays: digitsOnly(t, 3) })}
+                          onChangeText={(t) => {
+                            const n = digitsOnly(t, 3);
+                            const capped = maxVoucherDays !== null && Number(n) > maxVoucherDays ? String(maxVoucherDays) : n;
+                            patchVoucher(v.localId, { validDays: capped });
+                          }}
                         />
+                        {maxVoucherDays !== null && (
+                          <ThemedText style={styles.voucherLimitHint}>
+                            Max {maxVoucherDays} {maxVoucherDays === 1 ? 'day' : 'days'} · ends {formatIsoDate(form.tournEnd)}
+                          </ThemedText>
+                        )}
                       </View>
                       <View style={{ flex: 1 }}>
                         <ThemedText style={styles.voucherFieldLabel}>FIRST N TEAMS</ThemedText>
@@ -1526,6 +1954,11 @@ export default function CreateTournamentScreen() {
                           value={v.maxRedemptions}
                           onChangeText={(t) => patchVoucher(v.localId, { maxRedemptions: digitsOnly(t, 4) })}
                         />
+                        {Number(v.maxRedemptions) > parseAmount(form.maxTeams) && parseAmount(form.maxTeams) > 0 && (
+                          <ThemedText style={styles.voucherLimitWarn}>
+                            Only {parseAmount(form.maxTeams)} teams can enter — lower this to {parseAmount(form.maxTeams)} or fewer.
+                          </ThemedText>
+                        )}
                       </View>
                     </View>
 
@@ -1548,6 +1981,7 @@ export default function CreateTournamentScreen() {
       case 3:
         return (
           <View style={styles.stepFormContainer}>
+            <DashboardSectionLabel label="Match Format" color={ACCENTS.primary.main} style={styles.stepSectionFirst} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Match duration</ThemedText>
@@ -1633,7 +2067,8 @@ export default function CreateTournamentScreen() {
 
             {/* Tournament rules — tick the ones that apply. The preset list
                 follows the sport, so cricket gets its own conditions. */}
-            <View style={[styles.inputGroup, { marginTop: 20 }]}>
+            <DashboardSectionLabel label="Match Rules" color={ACCENTS.green.main} style={styles.stepSection} />
+            <View style={styles.inputGroup}>
               <View style={styles.labelRowBetween}>
                 <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary, marginBottom: 0 }]}>
                   Match rules ({form.rules.length} selected)
@@ -1725,6 +2160,7 @@ export default function CreateTournamentScreen() {
       case 4:
         return (
           <View style={styles.stepFormContainer}>
+            <DashboardSectionLabel label="Teams" color={ACCENTS.primary.main} style={styles.stepSectionFirst} />
             {/* Max teams was published as a fixed 16 with no way to change it —
                 the field existed on the record but had no input. */}
             <View style={styles.inputGroup}>
@@ -1743,13 +2179,14 @@ export default function CreateTournamentScreen() {
                       style={[
                         styles.maxTeamsChip,
                         {
-                          backgroundColor: active ? theme.primary : 'transparent',
-                          borderColor: active ? theme.primary : theme.outlineVariant + '55',
+                          backgroundColor: active ? theme.surfaceLowest : 'transparent',
+                          borderColor: active ? ACCENTS.primary.main + '55' : theme.outlineVariant + '55',
                         },
+                        active && Shadows.level1,
                       ]}
                     >
                       <ThemedText
-                        style={[styles.maxTeamsChipText, { color: active ? '#ffffff' : theme.textSecondary }]}
+                        style={[styles.maxTeamsChipText, { color: active ? ACCENTS.primary.dark : theme.textSecondary }]}
                       >
                         {n}
                       </ThemedText>
@@ -1765,7 +2202,7 @@ export default function CreateTournamentScreen() {
                   ]}
                 >
                   <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
-                    style={[styles.inputRowInner, { color: theme.text, textAlign: 'center' }]}
+                    style={[styles.inputRowInner, styles.maxTeamsInput, { color: theme.text }]}
                     placeholder="Custom"
                     placeholderTextColor={theme.textSecondary + '80'}
                     keyboardType="number-pad"
@@ -1782,13 +2219,14 @@ export default function CreateTournamentScreen() {
               </ThemedText>
             </View>
 
-            <View style={[styles.inputGroup, { marginTop: 16 }]}>
-                <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>Entry fee (per team) <ThemedText style={styles.requiredStar}>*</ThemedText></ThemedText>
+            <DashboardSectionLabel label="Fees" color={ACCENTS.orange.main} style={styles.stepSection} />
+            <View style={styles.inputGroup}>
+                <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>{cf.entryFee.label} {cf.entryFee.required && <ThemedText style={styles.requiredStar}>*</ThemedText>}</ThemedText>
               <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: focusedField === 'entryFee' ? theme.primary : '#00000033' }]}>
                 <ThemedText style={styles.unitPrefix}>₹</ThemedText>
                 <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                   style={[styles.inputRowInner, { color: theme.text }]}
-                  placeholder="150"
+                  placeholder={cf.entryFee.placeholder}
                   placeholderTextColor={theme.textSecondary + '80'}
                   keyboardType="number-pad"
                   maxLength={MAX_MONEY_DIGITS}
@@ -1836,11 +2274,250 @@ export default function CreateTournamentScreen() {
                 </View>
               </View>
             </View>
+
+            {/* What a team pays at registration, at a glance. */}
+            <View style={{ marginTop: 16 }}>
+              <StatTiles
+                items={[
+                  { value: prizeLabel(parseAmount(form.entryFee), '₹0'), label: 'Entry', color: ACCENTS.green.dark },
+                  { value: prizeLabel(parseAmount(form.registrationFee), '₹0'), label: 'Admin fee' },
+                  { value: prizeLabel(parseAmount(form.deposit), '₹0'), label: 'Deposit' },
+                  { value: String(form.maxTeams || '–'), label: 'Teams' },
+                ]}
+              />
+            </View>
+
+            {/* ── Cashback Reward Section ── */}
+            <View style={[styles.inputGroup, { marginTop: 20 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="wallet-outline" size={16} color="#10b981" />
+                  <ThemedText style={[styles.fieldLabel, { fontSize: 10.5, color: '#10b981', letterSpacing: 0.6, marginBottom: 0 }]}>
+                    CASHBACK REWARD (WALLET CREDIT)
+                  </ThemedText>
+                </View>
+                <Pressable
+                  onPress={() => setCashbackEnabled(!cashbackEnabled)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 5,
+                    backgroundColor: cashbackEnabled ? '#10b98118' : theme.surfaceLow,
+                    borderWidth: 1,
+                    borderColor: cashbackEnabled ? '#10b981' : theme.outlineVariant + '44',
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: BorderRadius.full,
+                  }}
+                >
+                  <Ionicons
+                    name={cashbackEnabled ? "checkbox" : "square-outline"}
+                    size={14}
+                    color={cashbackEnabled ? '#10b981' : theme.textSecondary}
+                  />
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: cashbackEnabled ? '#10b981' : theme.textSecondary }}>
+                    {cashbackEnabled ? 'Enabled' : 'Enable Cashback'}
+                  </ThemedText>
+                </Pressable>
+              </View>
+              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: theme.textSecondary, marginBottom: 8 }}>
+                Give teams a cashback incentive when they complete tournament registration. Cashback is credited directly to their Sport Wallet.
+              </ThemedText>
+
+              {cashbackEnabled && (
+                <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant + '33', gap: 12 }}>
+                  {/* 1. Cashback Title Input */}
+                  <View>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                      Cashback Title / Campaign Name
+                    </ThemedText>
+                    <TextInput
+                      maxFontSizeMultiplier={MAX_FONT_SCALE}
+                      value={cashbackName}
+                      onChangeText={setCashbackName}
+                      placeholder={`e.g. ${form.name.trim().slice(0, 14) || 'Tournament'} Cashback Reward`}
+                      placeholderTextColor="#94a3b8"
+                      style={[styles.input, { backgroundColor: theme.surfaceLowest, color: theme.text, height: 42 }]}
+                    />
+                  </View>
+
+                  {/* 2. Cashback Code Input + Copy Button */}
+                  <View>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                      Cashback Code (Optional Custom Code)
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 8, borderWidth: 1, borderColor: theme.outlineVariant + '44', paddingHorizontal: 10, height: 42, gap: 8 }}>
+                      <Ionicons name="pricetag-outline" size={15} color="#10b981" />
+                      <TextInput
+                        maxFontSizeMultiplier={MAX_FONT_SCALE}
+                        value={cashbackCode}
+                        onChangeText={(val) => setCashbackCode(val.toUpperCase())}
+                        placeholder={`e.g. ${activeCashbackCode}`}
+                        placeholderTextColor="#94a3b8"
+                        autoCapitalize="characters"
+                        style={{ flex: 1, fontSize: 13, fontFamily: 'Sora_600SemiBold', color: '#10b981', height: 40, letterSpacing: 0.8, ...({ outlineStyle: 'none' } as any) }}
+                      />
+                      <Pressable
+                        onPress={() => handleCopyCashbackCode(activeCashbackCode)}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10b98120', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
+                      >
+                        <Ionicons name="copy-outline" size={12} color="#10b981" />
+                        <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: '#10b981' }}>
+                          Copy
+                        </ThemedText>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  {/* 3. Type Switcher: Flat ₹ vs Percentage % */}
+                  <View>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                      Cashback Type
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <Pressable
+                        onPress={() => setCashbackType('flat')}
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          paddingVertical: 9,
+                          borderRadius: 8,
+                          backgroundColor: cashbackType === 'flat' ? '#10b98118' : theme.surfaceLowest,
+                          borderWidth: 1.5,
+                          borderColor: cashbackType === 'flat' ? '#10b981' : theme.outlineVariant + '33',
+                        }}
+                      >
+                        <Ionicons name="cash-outline" size={15} color={cashbackType === 'flat' ? '#10b981' : theme.textSecondary} />
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: cashbackType === 'flat' ? '#10b981' : theme.text }}>
+                          Flat Amount (₹)
+                        </ThemedText>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => setCashbackType('percent')}
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          paddingVertical: 9,
+                          borderRadius: 8,
+                          backgroundColor: cashbackType === 'percent' ? '#10b98118' : theme.surfaceLowest,
+                          borderWidth: 1.5,
+                          borderColor: cashbackType === 'percent' ? '#10b981' : theme.outlineVariant + '33',
+                        }}
+                      >
+                        <Ionicons name="pie-chart-outline" size={15} color={cashbackType === 'percent' ? '#10b981' : theme.textSecondary} />
+                        <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: cashbackType === 'percent' ? '#10b981' : theme.text }}>
+                          Percentage (%)
+                        </ThemedText>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  {/* 4. Cashback Amount Input */}
+                  <View>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                      {cashbackType === 'flat' ? 'Cashback Amount (₹)' : 'Cashback Percentage (%)'}
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 8, borderWidth: 1, borderColor: theme.outlineVariant + '44', paddingHorizontal: 10, height: 42 }}>
+                      <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: '#10b981', marginRight: 6 }}>
+                        {cashbackType === 'flat' ? '₹' : '%'}
+                      </ThemedText>
+                      <TextInput
+                        maxFontSizeMultiplier={MAX_FONT_SCALE}
+                        value={cashbackAmount}
+                        onChangeText={(val) => setCashbackAmount(val.replace(/[^0-9.]/g, ''))}
+                        placeholder={cashbackType === 'flat' ? 'e.g. 100' : 'e.g. 15'}
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="decimal-pad"
+                        style={{ flex: 1, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 13, height: 40, ...({ outlineStyle: 'none' } as any) }}
+                      />
+                    </View>
+                  </View>
+
+                  {/* 5. Max Cashback Cap (if percentage) */}
+                  {cashbackType === 'percent' && (
+                    <View>
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                        Max Cashback Cap (₹) (Optional)
+                      </ThemedText>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 8, borderWidth: 1, borderColor: theme.outlineVariant + '44', paddingHorizontal: 10, height: 42 }}>
+                        <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: '#10b981', marginRight: 6 }}>₹</ThemedText>
+                        <TextInput
+                          maxFontSizeMultiplier={MAX_FONT_SCALE}
+                          value={cashbackMaxAmount}
+                          onChangeText={(val) => setCashbackMaxAmount(val.replace(/[^0-9.]/g, ''))}
+                          placeholder="e.g. 200 (Leave empty for no limit)"
+                          placeholderTextColor="#94a3b8"
+                          keyboardType="decimal-pad"
+                          style={{ flex: 1, color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 13, height: 40, ...({ outlineStyle: 'none' } as any) }}
+                        />
+                      </View>
+                    </View>
+                  )}
+
+                  {/* 6. One-Time Usage Switch */}
+                  <Pressable
+                    onPress={() => setCashbackOneTime(!cashbackOneTime)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: theme.surfaceLowest,
+                      padding: 10,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: theme.outlineVariant + '33',
+                    }}
+                  >
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                      <ThemedText style={{ fontSize: 12, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                        One-Time Use Per Team
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_400Regular', color: theme.textSecondary, marginTop: 2 }}>
+                        Restrict cashback claim to first-time team registration only
+                      </ThemedText>
+                    </View>
+                    <Ionicons
+                      name={cashbackOneTime ? "toggle" : "toggle-outline"}
+                      size={22}
+                      color={cashbackOneTime ? '#10b981' : theme.textSecondary}
+                    />
+                  </Pressable>
+
+                  {/* 7. Live Preview Card Output */}
+                  {Boolean(cashbackAmount && parseFloat(cashbackAmount) > 0) && (
+                    <View style={{ marginTop: 6 }}>
+                      <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: '#10b981', letterSpacing: 0.5, marginBottom: 6 }}>
+                        LIVE CASHBACK OUTPUT PREVIEW
+                      </ThemedText>
+                      <CashbackOutputCard
+                        sourceTitle={form.name.trim() || 'Tournament Registration'}
+                        cashbackTitle={cashbackName.trim() || `${form.name.trim() || 'Tournament'} Cashback Reward`}
+                        cashbackCode={cashbackCode.trim().toUpperCase() || activeCashbackCode}
+                        cashbackAmount={parseFloat(cashbackAmount) || 0}
+                        cashbackType={cashbackType}
+                        cashbackMaxAmount={cashbackMaxAmount ? parseFloat(cashbackMaxAmount) : undefined}
+                        cashbackOneTime={cashbackOneTime}
+                        calculatedReward={cashbackType === 'flat' ? (parseFloat(cashbackAmount) || 0) : Math.min(cashbackMaxAmount ? parseFloat(cashbackMaxAmount) : Infinity, Math.round(((parseAmount(form.entryFee) || 150) * (parseFloat(cashbackAmount) || 0)) / 100))}
+                        variant="full"
+                      />
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
           </View>
         );
       case 5:
         return (
           <View style={styles.stepFormContainer}>
+            <DashboardSectionLabel label="Sponsors" color={ACCENTS.orange.main} style={styles.stepSectionFirst} />
             {/* Sponsors — a logo plus the name and tier shown beneath it on the
                 tournament's Overview strip and Sponsors tab. */}
             <View style={[styles.inputGroup, { marginBottom: 20 }]}>
@@ -1910,6 +2587,7 @@ export default function CreateTournamentScreen() {
               )}
             </View>
 
+            <DashboardSectionLabel label="Media Gallery" color={ACCENTS.primary.main} style={styles.stepSection} />
             {/* Gallery — multi-select upload; these appear under the
                 tournament's Media tab once published. */}
             <View style={[styles.inputGroup, { marginBottom: 20 }]}>
@@ -1951,6 +2629,7 @@ export default function CreateTournamentScreen() {
               )}
             </View>
 
+            <DashboardSectionLabel label="Prizes" color={ACCENTS.green.main} style={styles.stepSection} />
             <View style={styles.inputGroup}>
               <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>First prize (winner) <ThemedText style={styles.requiredStar}>*</ThemedText></ThemedText>
               <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
@@ -2049,7 +2728,7 @@ export default function CreateTournamentScreen() {
         {/* Header Stack Bar */}
         <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <Pressable style={styles.backBtn} onPress={handleBack}>
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
           <ThemedText type="headlineMd" style={{ color: theme.text, flex: 1, marginLeft: 12 }}>
             {isEditing ? 'Edit Tournament' : 'Create Tournament'}
@@ -2083,133 +2762,49 @@ export default function CreateTournamentScreen() {
           </View>
         </View>
 
-        {/* Step Tracker — same pattern as Create Turf: every step is named
-            under its own circle, evenly spaced, and a forward jump is gated on
-            the current step validating. */}
-        <View style={styles.progressTrackerCard}>
-          <View style={styles.stepRow}>
-            {STEPS.map((step, idx) => {
-              const isActive = idx === currentStep;
-              const isDone = idx < currentStep;
-              return (
-                <React.Fragment key={step.title}>
-                  <Pressable
-                    onPress={() => {
-                      if (idx < currentStep) {
-                        setCurrentStep(idx);
-                      } else if (idx > currentStep) {
-                        if (!validateStep(currentStep)) return;
-                        setCurrentStep(idx);
-                      }
-                    }}
-                    style={styles.stepItem}
-                  >
-                    <View style={[
-                      styles.stepCircle,
-                      isDone
-                        ? { backgroundColor: theme.primary, borderColor: theme.primary }
-                        : isActive
-                          ? { backgroundColor: theme.primary + '20', borderColor: theme.primary }
-                          : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '55' },
-                    ]}>
-                      {isDone
-                        ? <Ionicons name="checkmark" size={12} color="#fff" />
-                        : <Ionicons name={step.icon as any} size={12} color={isActive ? theme.primary : theme.textSecondary} />}
-                    </View>
-                    <View style={styles.stepLabelBox}>
-                      <ThemedText
-                        numberOfLines={2}
-                        style={[styles.stepLabel, {
-                          color: isActive ? theme.primary : isDone ? theme.text : theme.textSecondary,
-                          fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_500Medium',
-                        }]}
-                      >
-                        {step.title}
-                      </ThemedText>
-                    </View>
-                  </Pressable>
-                  {idx < STEPS.length - 1 && (
-                    <View style={[styles.stepConnector, { backgroundColor: isDone ? theme.primary : theme.outlineVariant + '33' }]} />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </View>
-        </View>
+        {/* Step tracker — the dashboard card: where you are, how far along,
+            and every step as a tappable segment. A forward jump still needs
+            the current step to validate. */}
+        <DashboardCard
+          style={styles.trackerCard}
+          title={`Step ${currentStep + 1} of ${STEPS.length} · ${STEPS[currentStep].title}`}
+          metric={`${Math.round(((currentStep + 1) / STEPS.length) * 100)}% complete`}
+          tag={canAdvance ? '✅ Step complete' : '⚠️ Details needed'}
+          icon={STEPS[currentStep].icon as any}
+          accent={ACCENTS.primary}
+        >
+          <DashboardStepper
+            steps={STEPS.map((step) => step.short)}
+            current={currentStep}
+            onSelect={(idx) => {
+              if (idx < currentStep) {
+                setCurrentStep(idx);
+              } else if (idx > currentStep) {
+                if (!validateStep(currentStep)) return;
+                setCurrentStep(idx);
+              }
+            }}
+          />
+        </DashboardCard>
 
-        {/* Ticket preview, pinned above the scrolling form. It sat as the
-            first child of the ScrollView, so it slid out of view on the
-            very first scroll — the one thing it exists to keep visible. */}
+        {/* Ticket preview, pinned above the scrolling form so it stays in view —
+            in the same card language as the tournament's Cups card. */}
         <View style={[styles.previewPinned, { borderBottomColor: theme.outlineVariant + '33' }]}>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-              LIVE TICKET PREVIEW
-            </ThemedText>
-            
-            <View style={[
-              styles.previewTicketCard,
-              { backgroundColor: theme.surfaceLowest, borderColor: theme.secondaryContainer, borderStyle: 'dashed', borderWidth: 1.5 },
-            ]}>
-              {/* Cutout Notches */}
-              <View style={[styles.previewCutoutTop, { backgroundColor: theme.background }]} />
-              <View style={[styles.previewCutoutBottom, { backgroundColor: theme.background }]} />
-
-              {/* Banner Image */}
-              <Image 
-                source={form.banner} 
-                style={styles.previewTicketLeftImage} 
-                contentFit="cover" 
-              />
-
-              {/* Left Details */}
-              <View style={styles.previewTicketLeft}>
-                <View style={styles.previewSportBadgeRow}>
-                  {form.sportType === 'Football' && <MaterialCommunityIcons name="soccer" size={11} color={theme.secondary} />}
-                  {form.sportType === 'Cricket' && <MaterialCommunityIcons name="cricket" size={11} color={theme.secondary} />}
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9, marginLeft: 4, fontWeight: '500' }}>
-                    {form.sportType.toUpperCase()}
-                  </ThemedText>
-                </View>
-
-                <ThemedText type="bodyLg" numberOfLines={1} style={{ color: theme.text, fontFamily: 'Sora_500Medium', marginTop: 2, fontSize: 13 }}>
-                  {form.name || 'Unnamed Tournament'}
-                </ThemedText>
-
-                <View style={styles.previewMetaRow}>
-                  <Ionicons name="location-outline" size={10} color={theme.textSecondary} />
-                  <ThemedText type="labelSm" numberOfLines={1} style={{ color: theme.textSecondary, fontSize: 9, marginLeft: 2, flex: 1 }}>
-                    {form.selectedGround || 'No venue selected'}
-                  </ThemedText>
-                </View>
-
-                <View style={styles.previewMetaRow}>
-                  <Ionicons name="calendar-outline" size={10} color={theme.textSecondary} />
-                  <ThemedText type="labelSm" numberOfLines={1} style={{ color: theme.textSecondary, fontSize: 9, marginLeft: 2 }}>
-                    {formatIsoDate(form.tournStart)} – {formatIsoDate(form.tournEnd)}
-                  </ThemedText>
-                </View>
-              </View>
-
-              {/* Divider */}
-              <View style={[styles.previewVerticalDivider, { borderColor: theme.outlineVariant + '44' }]} />
-
-              {/* Right Section */}
-              <View style={styles.previewTicketRight}>
-                <View style={{ alignItems: 'center' }}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9 }}>Prize Pool</ThemedText>
-                  <ThemedText type="bodyMd" style={{ color: theme.secondary, fontFamily: 'Sora_500Medium', fontSize: 12, marginTop: 1 }}>
-                    {form.winnerPrize ? form.winnerPrize.split(' ')[0] : 'TBD'}
-                  </ThemedText>
-                </View>
-
-                <View style={{ alignItems: 'center', marginTop: 4 }}>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9 }}>Entry Fee</ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.text, fontWeight: '500', fontSize: 9 }}>
-                    {form.entryFee || 'Free'}
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
-          </View>
+          <DashboardSectionLabel label="Live Ticket Preview" color={ACCENTS.orange.main} style={{ marginBottom: 8 }} />
+          <DashboardCard
+            style={styles.previewCard}
+            title={form.name || 'Unnamed Tournament'}
+            metric={`${formatIsoDate(form.tournStart) || 'Start TBC'} – ${formatIsoDate(form.tournEnd) || 'End TBC'}`}
+            tag={`${sportEmoji(form.sportType)} ${form.sportType}`}
+            accent={ACCENTS.primary}
+            leading={<Image source={form.banner} style={styles.previewThumb} contentFit="cover" />}
+            footer={{
+              label: 'Prize pool',
+              value: prizeLabel(parseAmount(form.winnerPrize), form.winnerPrize),
+              status: `${form.selectedGround || 'No venue selected'} · Entry ${prizeLabel(parseAmount(form.entryFee), 'Free')}`,
+            }}
+          />
+        </View>
 
         {/* Wizard Form Area */}
         <ScrollView 
@@ -2217,18 +2812,15 @@ export default function CreateTournamentScreen() {
           contentContainerStyle={{ paddingBottom: 160, paddingHorizontal: Spacing.containerMargin }} 
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.bentoCard, Shadows.level2, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '44', marginBottom: 20 }]}>
-            <View style={styles.cardHeader}>
-              <View style={[styles.cardIconWrap, { backgroundColor: theme.primary + '11' }]}>
-                <Ionicons name={getStepHeader().icon as any} size={16} color={theme.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <ThemedText style={styles.cardTitle}>{getStepHeader().title}</ThemedText>
-                <ThemedText style={[styles.cardSubtitle, { color: theme.textSecondary }]}>{getStepHeader().subtitle}</ThemedText>
-              </View>
-            </View>
+          <DashboardCard
+            style={{ marginBottom: 20 }}
+            title={getStepHeader().title}
+            metric={getStepHeader().subtitle}
+            icon={getStepHeader().icon as any}
+            accent={ACCENTS.primary}
+          >
             {renderStepContent()}
-          </View>
+          </DashboardCard>
         </ScrollView>
 
         {/* Footer controls */}
@@ -2432,56 +3024,22 @@ const styles = StyleSheet.create({
   backBtn: {
     padding: 4,
   },
-  progressTrackerCard: {
+  // Steps share the row evenly (flex: 1) so the circles sit at regular
+  // intervals no matter how wide each label is — six steps otherwise drift.
+  // Fixed two-line box keeps every circle on the same baseline even when one
+  // label wraps and the others don't.
+  // Derived from the circle geometry rather than eyeballed.
+  trackerCard: {
     marginHorizontal: Spacing.containerMargin,
     marginTop: Spacing.sm,
     marginBottom: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.xl,
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: 12,
+    gap: 10,
   },
-  progressTracker: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Steps share the row evenly (flex: 1) so the circles sit at regular
-  // intervals no matter how wide each label is — six steps otherwise drift.
-  stepRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  stepItem: { flex: 1, alignItems: 'center', gap: 4 },
-  stepCircle: {
-    width: STEP_CIRCLE,
-    height: STEP_CIRCLE,
-    borderRadius: STEP_CIRCLE / 2,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Fixed two-line box keeps every circle on the same baseline even when one
-  // label wraps and the others don't.
-  stepLabelBox: { height: STEP_LABEL_LINE * 2, justifyContent: 'flex-start' },
-  stepLabel: { fontSize: 9, letterSpacing: 0.2, lineHeight: STEP_LABEL_LINE, textAlign: 'center' },
-  // Derived from the circle geometry rather than eyeballed.
-  stepConnector: {
-    width: 10,
-    height: STEP_CONNECTOR_H,
-    marginTop: STEP_CIRCLE / 2 - STEP_CONNECTOR_H / 2,
-    marginHorizontal: 1,
-  },
-  wizardActiveLabel: {
-    marginTop: 8,
-    fontFamily: 'Sora_500Medium',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    fontSize: 11,
-    textAlign: 'center',
-  },
+  previewCard: { padding: 12, gap: 10 },
+  previewThumb: { width: 44, height: 44, borderRadius: 10 },
+  stepSectionFirst: { marginBottom: 10 },
+  stepSection: { marginTop: 18, marginBottom: 10 },
   formScroll: {
     flex: 1,
     paddingTop: Spacing.xs,
@@ -2614,102 +3172,12 @@ const styles = StyleSheet.create({
   },
   toastContainer: {
     position: 'absolute',
-    bottom: 50,
+    top: 56,
     alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.premium,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
     zIndex: 999,
-  },
-  previewTicketCard: {
-    flexDirection: 'row',
-    borderRadius: BorderRadius.xl,
-    overflow: 'hidden',
-    position: 'relative',
-    height: 110,
-    marginBottom: Spacing.sm,
-  },
-  previewCutoutTop: {
-    position: 'absolute',
-    top: -6,
-    right: '25%',
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    zIndex: 10,
-  },
-  previewCutoutBottom: {
-    position: 'absolute',
-    bottom: -6,
-    right: '25%',
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    zIndex: 10,
-  },
-  previewTicketLeftImage: {
-    width: 80,
-    height: '100%',
-  },
-  previewTicketLeft: {
-    flex: 1,
-    padding: 8,
-    justifyContent: 'space-between',
-    position: 'relative',
-  },
-  previewSportBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  previewMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 1,
-  },
-  previewVerticalDivider: {
-    width: 1,
-    height: '100%',
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    position: 'absolute',
-    right: '25%',
-  },
-  previewTicketRight: {
-    width: '25%',
-    paddingHorizontal: 4,
-    paddingTop: 16,
-    paddingBottom: 8,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    position: 'relative',
-  },
-  bentoCard: {
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    padding: 16,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
-  },
-  cardIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: BorderRadius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cardTitle: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 16,
-  },
-  cardSubtitle: {
-    fontFamily: 'Sora_400Regular',
-    fontSize: 12,
-    marginTop: 2,
   },
   fieldLabel: {
     fontFamily: 'Sora_500Medium',
@@ -2752,6 +3220,34 @@ const styles = StyleSheet.create({
   countryCodeBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 8 },
   countryCodeText: { fontSize: 13, fontFamily: 'Sora_500Medium' },
   addressInput: { height: 64, textAlignVertical: 'top', paddingTop: 10 },
+  venueLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: 6 },
+  venueLabelRowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  venueLink: { fontSize: 11, fontFamily: 'Sora_500Medium', marginBottom: 6 },
+  venueTypeRow: { flexDirection: 'row', gap: 8 },
+  venueTypeCard: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10 },
+  venueTypeText: { fontSize: 13, fontFamily: 'Sora_600SemiBold', textAlign: 'center' },
+  venueSearchBox: { flexDirection: 'row', alignItems: 'center', borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, height: 46 },
+  venueSearchInput: { flex: 1, minWidth: 0, fontSize: 13, fontFamily: 'Sora_500Medium' },
+  turfPillRow: { flexDirection: 'row', gap: 6, marginTop: 8, paddingRight: 8 },
+  turfPill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, maxWidth: 190 },
+  turfPillText: { fontSize: 11, flexShrink: 1 },
+  turfList: {
+    marginTop: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    maxHeight: 220,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  turfListHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 7, borderBottomWidth: 1 },
+  turfListTitle: { fontSize: 10.5, fontFamily: 'Sora_600SemiBold' },
+  turfListRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9 },
+  turfListName: { fontSize: 12.5, fontFamily: 'Sora_500Medium' },
+  turfListAddress: { fontSize: 10.5, fontFamily: 'Sora_400Regular', marginTop: 1 },
   togglePill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full, borderWidth: 1 },
   togglePillText: { fontFamily: 'Sora_500Medium', fontSize: 10 },
   locationCard: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: BorderRadius.md, borderWidth: 1, padding: Spacing.md },
@@ -2781,7 +3277,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   maxTeamsChipText: { fontSize: 13, fontFamily: 'Sora_500Medium' },
-  maxTeamsCustom: { width: 96, paddingHorizontal: 8 },
+  maxTeamsCustom: { width: 96, paddingHorizontal: 0 },
+  // textAlign alone never centred this: on web a TextInput renders an <input>
+  // with an intrinsic min-width (~150px), wider than this 96px box, so the
+  // centred text sat right of the visible centre. The input must be allowed
+  // to shrink to the box.
+  maxTeamsInput: { width: '100%', minWidth: 0, paddingHorizontal: 0, textAlign: 'center' },
   // ── Voucher builder, mirroring the class voucher card ────────────────────
   voucherEmptyBox: {
     alignItems: 'center',
@@ -2846,6 +3347,8 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm,
     borderBottomWidth: 1,
   },
+  voucherLimitHint: { fontSize: 9.5, fontFamily: 'Sora_400Regular', color: '#64748b', marginTop: 4 },
+  voucherLimitWarn: { fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#DC2626', marginTop: 4 },
   voucherTermsInput: { height: 58, textAlignVertical: 'top', paddingTop: 9 },
   bannerChip: {
     flexDirection: 'row',

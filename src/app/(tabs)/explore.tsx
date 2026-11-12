@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { STATIC_TURFS } from '@/constants/turfs';
+import { openProfileDrawer } from '@/components/profile-drawer';
 import {
   StyleSheet,
   View,
@@ -8,7 +10,8 @@ import {
   Animated,
   Platform,
   RefreshControl,
-  } from 'react-native';
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
@@ -27,6 +30,8 @@ import { CoinTossModal } from '@/components/coin-toss-modal';
 import { PromoBanner, AutoScrollingHorizontalBanners, BANNER_DESIGNS_10 } from '@/components/promo-banner';
 import { TicketVoucherCarousel } from '@/components/ticket-voucher-card';
 import { turfApi } from '@/services/turf-api';
+import { MotionIllustration } from '@/components/motion-illustration';
+import { PressCard, PulseDot, SectionHeading } from '@/components/home/dashboard-widgets';
 
 // Dynamic 14-day rolling generator starting from Today
 const generateRolling14Days = () => {
@@ -90,14 +95,35 @@ export default function ExploreScreen() {
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
+    setVisibleTurfsCount(4);
     await fetchTurfs();
     setRefreshing(false);
   }, [fetchTurfs]);
+
+  // Infinite Scroll Pagination State
+  const [visibleTurfsCount, setVisibleTurfsCount] = useState(4);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const rolling14Days = React.useMemo(() => generateRolling14Days(), []);
   const [selectedSport, setSelectedSport] = useState('Cricket');
   const [selectedDate, setSelectedDate] = useState(rolling14Days[0].id);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    setVisibleTurfsCount(4);
+  }, [selectedSport, selectedDate, searchQuery]);
+
+  const handleScroll = (event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 220;
+    if (isCloseToBottom && !isLoadingMore) {
+      setIsLoadingMore(true);
+      setTimeout(() => {
+        setVisibleTurfsCount((prev) => prev + 4);
+        setIsLoadingMore(false);
+      }, 300);
+    }
+  };
   const [favorites, setFavorites] = useState<Record<string, boolean>>({ 'skyline': false, 'the-grid': false, 'lords': false, 'wembley': false });
   const [coinTossVisible, setCoinTossVisible] = useState(false);
   // Action feedback toasts
@@ -132,20 +158,291 @@ export default function ExploreScreen() {
     });
   };
 
+  // ── Venue feed ────────────────────────────────────────────────────────────
+  // Computed up front (it used to live inside the list's render IIFE) so the
+  // hero can show live venue and open-slot counts.
+  const selectedDateObj = rolling14Days.find(d => d.id === selectedDate)?.rawDate || new Date();
+
+  const resolveAmenityIcons = (amenitiesObj?: Record<string, boolean>) => {
+    if (!amenitiesObj) return ['flashlight-outline', 'car-outline', 'wifi-outline'];
+    const map: Record<string, string> = {
+      floodlights: 'flashlight-outline',
+      parking: 'car-outline',
+      lockers: 'lock-closed-outline',
+      showers: 'water-outline',
+      bibs: 'shirt-outline',
+      wifi: 'wifi-outline',
+      firstaid: 'medical-outline',
+      canteen: 'cafe-outline',
+    };
+    const active = Object.keys(amenitiesObj).filter(k => amenitiesObj[k] === true).map(k => map[k.toLowerCase()]).filter(Boolean);
+    return active.length > 0 ? active : ['flashlight-outline'];
+  };
+
+  const SPORT_TURF_IMAGES: Record<string, string[]> = {
+    cricket: [
+      'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=600&q=80',
+    ],
+    football: [
+      'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80',
+    ],
+    badminton: [
+      'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=600&q=80',
+    ],
+    basketball: [
+      'https://images.unsplash.com/photo-1505666287802-931dc83948e9?auto=format&fit=crop&w=600&q=80',
+    ],
+    tennis: [
+      'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=600&q=80',
+    ],
+    volleyball: [
+      'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80',
+    ],
+  };
+
+  const BADGE_POOL = ['🆕 JUST ADDED', '💸 BEST VALUE', '🔥 POPULAR', '🏆 PREMIUM', '⭐ 5.0 RATED', '⚡ INSTANT BOOK'];
+
+  const backendFormattedTurfs = (backendTurfs || []).map((t: any, idx: number) => {
+    const metrics = computeTurfSlotMetrics(t, selectedDateObj, bookings || []);
+    const todayAvailableCount = metrics.totalAvailable;
+
+    const sType = (t.sportType || 'Cricket').toLowerCase();
+    const pool = SPORT_TURF_IMAGES[sType] || SPORT_TURF_IMAGES.cricket;
+    const fallbackImgUrl = pool[idx % pool.length];
+    const turfBadge = BADGE_POOL[idx % BADGE_POOL.length];
+
+    let resolvedImage: any = { uri: fallbackImgUrl };
+    if (t.thumbnailImage && typeof t.thumbnailImage === 'string' && (t.thumbnailImage.startsWith('http') || t.thumbnailImage.startsWith('file:'))) {
+      resolvedImage = { uri: t.thumbnailImage };
+    } else if (t.images && Array.isArray(t.images) && t.images[0]) {
+      resolvedImage = { uri: t.images[0] };
+    }
+
+    return {
+      id: t.id,
+      name: t.name,
+      location: cleanLocation(t.address || 'Trichy Zone IV, Tiruchirappalli'),
+      rating: t.rating || 5.0,
+      favCount: (idx + 1) * 3,
+      image: resolvedImage,
+      badge: turfBadge,
+      sport: t.sportType || 'Cricket',
+      surfaceType: t.surfaceType || (sType.includes('cricket') ? 'Astro Turf Pitch' : sType.includes('badminton') ? 'Indoor Woodcourt' : '5G Rubber Infill'),
+      price: t.pricePerSlot || 1000,
+      availableSlots: todayAvailableCount,
+      amenitiesIcons: resolveAmenityIcons(t.amenities),
+      createdAt: t.createdAt || new Date().toISOString(),
+      cashbackEnabled: t.cashbackEnabled,
+      cashbackAmount: t.cashbackAmount,
+      cashbackType: t.cashbackType,
+      cashbackName: t.cashbackName,
+      cashbackCode: t.cashbackCode,
+    };
+  });
+
+  const userFormattedTurfs = (ownedTurfs || []).map((t, idx) => {
+    const metrics = computeTurfSlotMetrics(t, selectedDateObj, bookings || []);
+    const todayAvailableCount = metrics.totalAvailable;
+
+    const sType = (t.sportType || 'Cricket').toLowerCase();
+    const pool = SPORT_TURF_IMAGES[sType] || SPORT_TURF_IMAGES.cricket;
+    const fallbackImgUrl = pool[idx % pool.length];
+    const turfBadge = BADGE_POOL[idx % BADGE_POOL.length];
+
+    let resolvedImage: any = { uri: fallbackImgUrl };
+    if (t.thumbnailImage && typeof t.thumbnailImage === 'string' && (t.thumbnailImage.startsWith('http') || t.thumbnailImage.startsWith('file:'))) {
+      resolvedImage = { uri: t.thumbnailImage };
+    } else if ((t as any).images && Array.isArray((t as any).images) && (t as any).images[0]) {
+      resolvedImage = { uri: (t as any).images[0] };
+    }
+
+    return {
+      id: t.id,
+      name: t.name,
+      location: cleanLocation(t.address || 'Trichy Zone IV, Tiruchirappalli'),
+      rating: t.rating || 5.0,
+      favCount: (idx + 1) * 3,
+      image: resolvedImage,
+      badge: turfBadge,
+      sport: t.sportType || 'Cricket',
+      surfaceType: t.surfaceType || (sType.includes('cricket') ? 'Astro Turf Pitch' : sType.includes('badminton') ? 'Indoor Woodcourt' : '5G Rubber Infill'),
+      price: t.pricePerSlot || 1000,
+      availableSlots: todayAvailableCount,
+      amenitiesIcons: resolveAmenityIcons(t.amenities),
+      createdAt: (t as any).createdAt || new Date().toISOString(),
+      cashbackEnabled: t.cashbackEnabled,
+      cashbackAmount: t.cashbackAmount,
+      cashbackType: t.cashbackType,
+      cashbackName: t.cashbackName,
+      cashbackCode: t.cashbackCode,
+    };
+  });
+
+  // Shipped venues live in constants/turfs so the tournament venue
+  // picker offers the same grounds; availability is added here.
+  const STATIC_TURFS_WITH_SLOTS = STATIC_TURFS.map(t => ({
+    ...t,
+    availableSlots: computeTurfSlotMetrics({ id: t.id, name: t.name }, selectedDateObj, bookings || []).totalAvailable,
+  }));
+
+  const seenIds = new Set<string>();
+  const seenNames = new Set<string>();
+  const ALL_TURFS: any[] = [];
+  [...userFormattedTurfs, ...backendFormattedTurfs, ...STATIC_TURFS_WITH_SLOTS].forEach(t => {
+    const nameKey = (t?.name || '').trim().toLowerCase();
+    if (t && t.id && !seenIds.has(t.id) && (!nameKey || !seenNames.has(nameKey))) {
+      seenIds.add(t.id);
+      if (nameKey) seenNames.add(nameKey);
+      ALL_TURFS.push(t);
+    }
+  });
+
+  // Sort newest/most recently added turfs to the top
+  ALL_TURFS.sort((a, b) => {
+    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : (a.id?.startsWith('turf-') ? parseInt(a.id.replace('turf-', '')) || 0 : 0);
+    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : (b.id?.startsWith('turf-') ? parseInt(b.id.replace('turf-', '')) || 0 : 0);
+    return bTime - aTime;
+  });
+
+  const filteredTurfs = ALL_TURFS.filter(t => {
+    const matchesSport = selectedSport === 'All' || t.sport.toLowerCase() === selectedSport.toLowerCase();
+    const matchesQuery = searchQuery.trim() === '' || t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.location.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSport && matchesQuery;
+  });
+
+  // Home-dashboard palette — the same accents the player dashboard tints with.
+  const accent = '#F59E0B';
+  const info = '#3B82F6';
+  const success = '#10B981';
+
+  const openSlots = filteredTurfs.reduce((sum, t) => sum + (Number(t.availableSlots) || 0), 0);
+  const selectedDay = rolling14Days.find(d => d.id === selectedDate);
+  const dayLabel = !selectedDay || selectedDay.isToday
+    ? 'Today'
+    : `${selectedDay.day.charAt(0)}${selectedDay.day.slice(1).toLowerCase()} ${selectedDay.date}`;
+
+  const renderTurfCard = (turf: any) => {
+    const isFav = !!favorites[turf.id];
+    const turfOffers = getOffersForTurf(turf.name, offers);
+    const activeOffer = turfOffers.find(o => o.appliesTo?.toLowerCase() === turf.name.toLowerCase()) || turfOffers[0];
+    const hasCashback = Boolean(turf.cashbackEnabled && turf.cashbackAmount && turf.cashbackAmount > 0);
+
+    return (
+      <PressCard
+        key={turf.id}
+        onPress={() => handleTurfSelect(turf.id, turf.name, activeOffer?.code)}
+        accessibilityLabel={`${turf.name}, ₹${turf.price} per hour`}
+        scaleTo={0.985}
+        style={[
+          styles.turfCard,
+          { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
+          Shadows.level1,
+        ]}
+      >
+        <View style={styles.imageContainer}>
+          <Image source={turf.image} style={styles.turfImage} contentFit="cover" transition={200} />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.35)', 'transparent', 'rgba(0,0,0,0.5)']}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          {!!turf.badge && (
+            <View style={styles.cardBadge}>
+              <ThemedText style={styles.cardBadgeText} numberOfLines={1}>{turf.badge}</ThemedText>
+            </View>
+          )}
+          <View style={styles.imageRating}>
+            <Ionicons name="star" size={9} color="#FBBF24" />
+            <ThemedText style={styles.imageRatingText}>{turf.rating}</ThemedText>
+          </View>
+        </View>
+
+        <View style={styles.cardInfo}>
+          <View>
+            <ThemedText style={[styles.turfTitle, { color: theme.text }]} numberOfLines={1}>
+              {turf.name}
+            </ThemedText>
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={10.5} color={theme.textSecondary} />
+              <ThemedText style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
+                {turf.location}
+              </ThemedText>
+            </View>
+          </View>
+
+          <View style={styles.tagRow}>
+            <View style={[styles.statusPill, { backgroundColor: success + '1A' }]}>
+              <Ionicons name="flash" size={9} color={success} />
+              <ThemedText style={[styles.statusText, { color: '#047857' }]}>{turf.availableSlots} slots left</ThemedText>
+            </View>
+            {hasCashback && (
+              <View style={[styles.statusPill, { backgroundColor: accent + '1F' }]}>
+                <Ionicons name="wallet-outline" size={9} color="#B45309" />
+                <ThemedText style={[styles.statusText, { color: '#B45309' }]}>
+                  {turf.cashbackType === 'percent' ? `+${turf.cashbackAmount}% Cashback` : `+₹${turf.cashbackAmount} Cashback`}
+                </ThemedText>
+              </View>
+            )}
+            <View style={styles.amenityRow}>
+              {(turf.amenitiesIcons || ['flashlight-outline']).slice(0, 3).map((iconName: any, idx: number) => (
+                <Ionicons key={idx} name={iconName as any} size={11} color={theme.textSecondary} />
+              ))}
+            </View>
+          </View>
+
+          {/* Clean small offer line (no badge, no decorative icons) */}
+          {!!activeOffer && (
+            <ThemedText style={styles.offerText} numberOfLines={1}>
+              {formatDiscount(activeOffer)} · Use code <ThemedText style={styles.offerCode}>{activeOffer.code}</ThemedText>
+            </ThemedText>
+          )}
+
+          <View style={styles.cardActions}>
+            <View style={styles.priceRow}>
+              <ThemedText style={[styles.priceText, { color: theme.text }]}>₹{turf.price}</ThemedText>
+              <ThemedText style={[styles.priceUnit, { color: theme.textSecondary }]}>/hr</ThemedText>
+            </View>
+            <View style={styles.actionGroup}>
+              <Pressable
+                onPress={() => toggleFavorite(turf.id)}
+                hitSlop={4}
+                style={[styles.favButton, { backgroundColor: isFav ? theme.error + '14' : theme.surfaceLow }]}
+              >
+                <Ionicons name={isFav ? 'heart' : 'heart-outline'} size={12} color={isFav ? theme.error : theme.textSecondary} />
+                <ThemedText style={[styles.favCount, { color: theme.textSecondary }]}>{turf.favCount}</ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => handleTurfSelect(turf.id, turf.name, activeOffer?.code)}
+                style={({ pressed }) => [styles.bookButton, { backgroundColor: theme.primary, opacity: pressed ? 0.85 : 1 }]}
+              >
+                <ThemedText style={styles.bookButtonText}>Book Now</ThemedText>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </PressCard>
+    );
+  };
+
+  const firstChunk = filteredTurfs.slice(0, Math.min(4, visibleTurfsCount));
+  const remainingChunk = visibleTurfsCount > 4 ? filteredTurfs.slice(4, visibleTurfsCount) : [];
+
   return (
     <GradientContainer screenName="explore" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Top App Bar */}
         <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <View style={styles.headerLeft}>
-            <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
+            <Pressable style={styles.profileIconButton} onPress={openProfileDrawer}>
               <Image
                 source={getAvatarSource(profile.avatarUrl)}
-                style={styles.headerAvatar}
+                style={[styles.headerAvatar, { borderColor: theme.primary }]}
               />
             </Pressable>
             <View style={styles.headerTextGroup}>
-              <ThemedText type="bodyLg" style={{ color: theme.text, fontFamily: 'Sora_500Medium', lineHeight: 18 }}>
+              <ThemedText type="bodyMd" style={{ color: theme.text, fontFamily: 'Sora_500Medium', lineHeight: 18 }}>
                 {profile.name}
               </ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
@@ -170,66 +467,56 @@ export default function ExploreScreen() {
           </View>
         </View>
 
-        {/* Sticky top Date Selection and Categories Filter Container */}
-        <View style={{ backgroundColor: theme.background, borderBottomWidth: 1, borderColor: theme.outlineVariant + '15', paddingBottom: 4 }}>
-
-          {/* Compact Calendar Picker Row */}
-          <View style={[styles.section, { marginTop: 2, marginBottom: 2 }]}>
-            <View style={[styles.sectionHeader, { marginBottom: 2 }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9.5, fontFamily: 'Sora_500Medium', letterSpacing: 0.5 }}>
+        {/* Sticky date selection and category filters */}
+        <View style={[styles.stickyBar, { backgroundColor: theme.background, borderColor: theme.outlineVariant + '26' }]}>
+          <View style={styles.monthRow}>
+            <View style={styles.monthLeft}>
+              <View style={[styles.monthRule, { backgroundColor: theme.primary }]} />
+              <ThemedText style={[styles.monthLabel, { color: theme.textSecondary }]}>
                 {rolling14Days[0].rawDate.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}
               </ThemedText>
             </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.calendarContainer, { paddingVertical: 2 }]}
-            >
-              {rolling14Days.map((item) => {
-                const isActive = item.id === selectedDate;
-                return (
-                  <Pressable
-                    key={item.id}
-                    onPress={() => setSelectedDate(item.id)}
-                    style={[
-                      styles.calendarDay,
-                      isActive
-                        ? { backgroundColor: theme.secondaryContainer, borderColor: theme.secondaryContainer }
-                        : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
-                    ]}
-                  >
-                    <ThemedText
-                      type="labelSm"
-                      style={{
-                        color: isActive ? '#ffffff' : theme.textSecondary,
-                        fontFamily: 'Sora_500Medium',
-                        fontSize: 8.5,
-                        letterSpacing: 0.3,
-                      }}
-                    >
-                      {item.day}
-                    </ThemedText>
-                    <ThemedText
-                      type="headlineSm"
-                      style={{
-                        color: isActive ? '#ffffff' : theme.text,
-                        fontFamily: 'Sora_500Medium',
-                        marginTop: 1,
-                        fontSize: 12.5,
-                      }}
-                    >
-                      {item.date}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            <ThemedText style={[styles.monthHint, { color: theme.primary }]}>{dayLabel}</ThemedText>
           </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.calendarContainer}
+          >
+            {rolling14Days.map((item) => {
+              const isActive = item.id === selectedDate;
+              return (
+                <Pressable
+                  key={item.id}
+                  onPress={() => setSelectedDate(item.id)}
+                  style={({ pressed }) => [
+                    styles.calendarDay,
+                    isActive
+                      ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                      : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' },
+                    { opacity: pressed ? 0.85 : 1 },
+                  ]}
+                >
+                  <ThemedText style={[styles.calendarDow, { color: isActive ? 'rgba(255,255,255,0.85)' : theme.textSecondary }]}>
+                    {item.day}
+                  </ThemedText>
+                  <ThemedText style={[styles.calendarDate, { color: isActive ? '#ffffff' : theme.text }]}>
+                    {item.date}
+                  </ThemedText>
+                  <View
+                    style={[
+                      styles.todayDot,
+                      { backgroundColor: item.isToday ? (isActive ? '#ffffff' : theme.primary) : 'transparent' },
+                    ]}
+                  />
+                </Pressable>
+              );
+            })}
+          </ScrollView>
 
-          {/* Search & Filter Category Row */}
-          <View style={[styles.section, { marginTop: 2, marginBottom: 2 }]}>
-            <View style={[styles.searchContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-              <Ionicons name="search" size={15} color={theme.textSecondary} style={{ marginRight: 6 }} />
+          <View style={styles.searchRow}>
+            <View style={[styles.searchContainer, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' }]}>
+              <Ionicons name="search" size={14} color={theme.textSecondary} />
               <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.searchInput, { color: theme.text }]}
                 placeholder="Search venues or sports..."
@@ -237,85 +524,121 @@ export default function ExploreScreen() {
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
+              {searchQuery ? (
+                <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={15} color="#94a3b8" />
+                </Pressable>
+              ) : null}
             </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.filtersContainer, { paddingVertical: 2 }]}
-              style={{ marginTop: 2 }}
-            >
-              {[{ name: 'All', icon: 'apps', color: theme.primary }, ...SPORTS_LIST].map((sport) => {
-                const isActive = sport.name === selectedSport;
-                return (
-                  <Pressable
-                    key={sport.name}
-                    onPress={() => setSelectedSport(sport.name)}
-                    style={[
-                      styles.filterChip,
-                      { backgroundColor: theme.surfaceLow, borderColor: isActive ? theme.primary : theme.outlineVariant + '44' },
-                      isActive && { backgroundColor: theme.primary, borderColor: theme.primary },
-                    ]}
-                  >
-                    <MaterialIcons
-                      name={sport.icon as any}
-                      size={12}
-                      color={isActive ? '#ffffff' : theme.textSecondary}
-                      style={{ marginRight: 3 }}
-                    />
-                    <ThemedText
-                      type="labelMd"
-                      style={{
-                        color: isActive ? '#ffffff' : theme.text,
-                        fontFamily: 'Sora_600SemiBold',
-                        fontSize: 9.5,
-                        letterSpacing: 0.2,
-                      }}
-                    >
-                      {sport.name}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
           </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersContainer}
+          >
+            {[{ name: 'All', icon: 'apps', color: theme.primary }, ...SPORTS_LIST].map((sport) => {
+              const isActive = sport.name === selectedSport;
+              return (
+                <Pressable
+                  key={sport.name}
+                  onPress={() => setSelectedSport(sport.name)}
+                  style={({ pressed }) => [
+                    styles.filterChip,
+                    isActive
+                      ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                      : { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' },
+                    { opacity: pressed ? 0.85 : 1 },
+                  ]}
+                >
+                  <MaterialIcons
+                    name={sport.icon as any}
+                    size={12}
+                    color={isActive ? '#ffffff' : theme.textSecondary}
+                  />
+                  <ThemedText style={[styles.filterChipText, { color: isActive ? '#ffffff' : theme.text }]}>
+                    {sport.name}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
 
         <Reanimated.View entering={FadeInDown.duration(600).damping(14)} style={{ flex: 1 }}>
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
             }
           >
-            {/* Booking Hero Banner */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, marginBottom: Spacing.xs }}>
-              <View style={{ flex: 1 }}>
-                <ThemedText type="headlineLg" style={{ color: theme.text }}>
-                  Book a Turf
-                </ThemedText>
-                <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
-                  Find and book the perfect sports turf near you.
-                </ThemedText>
+            {/* ── Hero band with motion illustration ── */}
+            <View style={[styles.section, { marginTop: 10 }]}>
+              <View style={[styles.heroCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level2]}>
+                <LinearGradient
+                  colors={[theme.primary + '26', success + '10', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={styles.heroBody}>
+                  <View style={styles.heroText}>
+                    <View style={[styles.heroBadge, { backgroundColor: success + '1F' }]}>
+                      <PulseDot color={success} size={7} />
+                      <ThemedText style={[styles.heroBadgeText, { color: '#047857' }]}>
+                        {openSlots} SLOTS OPEN · {dayLabel.toUpperCase()}
+                      </ThemedText>
+                    </View>
+                    <ThemedText style={[styles.heroTitle, { color: theme.text }]}>Book a Turf</ThemedText>
+                    <ThemedText style={[styles.heroSub, { color: theme.textSecondary }]}>
+                      Find and book the perfect sports turf near you.
+                    </ThemedText>
+                    <View style={styles.heroMetaRow}>
+                      <View style={[styles.metaPill, { backgroundColor: theme.primary + '14' }]}>
+                        <Ionicons name="business-outline" size={11} color={theme.primary} />
+                        <ThemedText style={[styles.metaPillText, { color: theme.primary }]}>
+                          {filteredTurfs.length} venue{filteredTurfs.length === 1 ? '' : 's'}
+                        </ThemedText>
+                      </View>
+                      <Pressable
+                        onPress={() => router.push('/wallet')}
+                        style={[styles.metaPill, { backgroundColor: accent + '1F' }]}
+                      >
+                        <Ionicons name="wallet-outline" size={11} color="#B45309" />
+                        <ThemedText style={[styles.metaPillText, { color: '#B45309' }]}>
+                          ₹{Math.round(Number(walletBalance) || 0)}
+                        </ThemedText>
+                      </Pressable>
+                    </View>
+                  </View>
+                  <MotionIllustration
+                    scenario="booking"
+                    size={92}
+                    glow={[theme.primary + '33', theme.primary + '00']}
+                    accents={[
+                      { name: 'calendar', color: theme.primary },
+                      { name: 'flash', color: accent },
+                      { name: 'star', color: info },
+                    ]}
+                    accessibilityLabel="Turf booking illustration"
+                  />
+                </View>
               </View>
-              <Image
-                source={require('@/assets/images/illustrations/booking_hero.png')}
-                style={{ width: 100, height: 100 }}
-                contentFit="contain"
-              />
             </View>
 
-            {/* Ticket Vouchers (Matching Exact Design) */}
-            <View style={{ marginBottom: 4 }}>
+            {/* Ticket vouchers */}
+            <View style={styles.voucherWrap}>
               <TicketVoucherCarousel title="EXCLUSIVE DEALS & VOUCHERS" />
             </View>
 
-            {/* Offers & Gift Vouchers */}
-            <View style={[styles.section, { paddingHorizontal: 0 }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary, paddingHorizontal: Spacing.containerMargin, marginBottom: 4, letterSpacing: 0.5, fontSize: 8.5 }}>
-                FEATURED HIGHLIGHTS
-              </ThemedText>
+            {/* Offers & gift vouchers */}
+            <View style={styles.sectionBleed}>
+              <View style={styles.sectionInset}>
+                <SectionHeading title="Featured highlights" tint={accent} />
+              </View>
               <AutoScrollingHorizontalBanners
                 cardWidth={265}
                 gap={10}
@@ -329,342 +652,41 @@ export default function ExploreScreen() {
               />
             </View>
 
-            {/* Turf List */}
-            <View style={[styles.section, { gap: 10, paddingBottom: 100 }]}>
-              {(() => {
-                const selectedDateObj = rolling14Days.find(d => d.id === selectedDate)?.rawDate || new Date();
+            {/* Turf list */}
+            <View style={[styles.section, styles.venueSection]}>
+              <SectionHeading
+                title={selectedSport === 'All' ? 'All venues' : `${selectedSport} venues`}
+                tint={theme.primary}
+              />
 
-                const resolveAmenityIcons = (amenitiesObj?: Record<string, boolean>) => {
-                  if (!amenitiesObj) return ['flashlight-outline', 'car-outline', 'wifi-outline'];
-                  const map: Record<string, string> = {
-                    floodlights: 'flashlight-outline',
-                    parking: 'car-outline',
-                    lockers: 'lock-closed-outline',
-                    showers: 'water-outline',
-                    bibs: 'shirt-outline',
-                    wifi: 'wifi-outline',
-                    firstaid: 'medical-outline',
-                    canteen: 'cafe-outline',
-                  };
-                  const active = Object.keys(amenitiesObj).filter(k => amenitiesObj[k] === true).map(k => map[k.toLowerCase()]).filter(Boolean);
-                  return active.length > 0 ? active : ['flashlight-outline'];
-                };
+              {filteredTurfs.length === 0 ? (
+                <View style={[styles.emptyCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+                  <View style={[styles.emptyIcon, { backgroundColor: theme.primary + '14' }]}>
+                    <Ionicons name="search-outline" size={20} color={theme.primary} />
+                  </View>
+                  <ThemedText style={[styles.emptyTitle, { color: theme.text }]}>
+                    No {selectedSport} Turfs Found
+                  </ThemedText>
+                  <ThemedText style={[styles.emptyBody, { color: theme.textSecondary }]}>
+                    There are currently no {selectedSport} venues listed. Switch filter to All Sports or add a new pitch!
+                  </ThemedText>
+                  <Pressable
+                    onPress={() => setSelectedSport('All')}
+                    style={({ pressed }) => [styles.emptyBtn, { backgroundColor: theme.primary, opacity: pressed ? 0.85 : 1 }]}
+                  >
+                    <ThemedText style={styles.emptyBtnText}>Show All Sports</ThemedText>
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={styles.cardList}>
+                  {firstChunk.map(renderTurfCard)}
 
-                const SPORT_TURF_IMAGES: Record<string, string[]> = {
-                  cricket: [
-                    'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=600&q=80',
-                    'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=600&q=80',
-                  ],
-                  football: [
-                    'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80',
-                    'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80',
-                  ],
-                  badminton: [
-                    'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=600&q=80',
-                  ],
-                  basketball: [
-                    'https://images.unsplash.com/photo-1505666287802-931dc83948e9?auto=format&fit=crop&w=600&q=80',
-                  ],
-                  tennis: [
-                    'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=600&q=80',
-                  ],
-                  volleyball: [
-                    'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80',
-                  ],
-                };
-
-                const BADGE_POOL = ['🆕 JUST ADDED', '💸 BEST VALUE', '🔥 POPULAR', '🏆 PREMIUM', '⭐ 5.0 RATED', '⚡ INSTANT BOOK'];
-
-                const backendFormattedTurfs = (backendTurfs || []).map((t: any, idx: number) => {
-                  const metrics = computeTurfSlotMetrics(t, selectedDateObj, bookings || []);
-                  const todayAvailableCount = metrics.totalAvailable;
-
-                  const sType = (t.sportType || 'Cricket').toLowerCase();
-                  const pool = SPORT_TURF_IMAGES[sType] || SPORT_TURF_IMAGES.cricket;
-                  const fallbackImgUrl = pool[idx % pool.length];
-                  const turfBadge = BADGE_POOL[idx % BADGE_POOL.length];
-
-                  let resolvedImage: any = { uri: fallbackImgUrl };
-                  if (t.thumbnailImage && typeof t.thumbnailImage === 'string' && (t.thumbnailImage.startsWith('http') || t.thumbnailImage.startsWith('file:'))) {
-                    resolvedImage = { uri: t.thumbnailImage };
-                  } else if (t.images && Array.isArray(t.images) && t.images[0]) {
-                    resolvedImage = { uri: t.images[0] };
-                  }
-
-                  return {
-                    id: t.id,
-                    name: t.name,
-                    location: cleanLocation(t.address || 'Trichy Zone IV, Tiruchirappalli'),
-                    rating: t.rating || 5.0,
-                    favCount: (idx + 1) * 3,
-                    image: resolvedImage,
-                    badge: turfBadge,
-                    sport: t.sportType || 'Cricket',
-                    surfaceType: t.surfaceType || (sType.includes('cricket') ? 'Astro Turf Pitch' : sType.includes('badminton') ? 'Indoor Woodcourt' : '5G Rubber Infill'),
-                    price: t.pricePerSlot || 1000,
-                    availableSlots: todayAvailableCount,
-                    amenitiesIcons: resolveAmenityIcons(t.amenities),
-                    createdAt: t.createdAt || new Date().toISOString(),
-                  };
-                });
-
-                const userFormattedTurfs = (ownedTurfs || []).map((t, idx) => {
-                  const metrics = computeTurfSlotMetrics(t, selectedDateObj, bookings || []);
-                  const todayAvailableCount = metrics.totalAvailable;
-
-                  const sType = (t.sportType || 'Cricket').toLowerCase();
-                  const pool = SPORT_TURF_IMAGES[sType] || SPORT_TURF_IMAGES.cricket;
-                  const fallbackImgUrl = pool[idx % pool.length];
-                  const turfBadge = BADGE_POOL[idx % BADGE_POOL.length];
-
-                  let resolvedImage: any = { uri: fallbackImgUrl };
-                  if (t.thumbnailImage && typeof t.thumbnailImage === 'string' && (t.thumbnailImage.startsWith('http') || t.thumbnailImage.startsWith('file:'))) {
-                    resolvedImage = { uri: t.thumbnailImage };
-                  } else if ((t as any).images && Array.isArray((t as any).images) && (t as any).images[0]) {
-                    resolvedImage = { uri: (t as any).images[0] };
-                  }
-
-                  return {
-                    id: t.id,
-                    name: t.name,
-                    location: cleanLocation(t.address || 'Trichy Zone IV, Tiruchirappalli'),
-                    rating: t.rating || 5.0,
-                    favCount: (idx + 1) * 3,
-                    image: resolvedImage,
-                    badge: turfBadge,
-                    sport: t.sportType || 'Cricket',
-                    surfaceType: t.surfaceType || (sType.includes('cricket') ? 'Astro Turf Pitch' : sType.includes('badminton') ? 'Indoor Woodcourt' : '5G Rubber Infill'),
-                    price: t.pricePerSlot || 1000,
-                    availableSlots: todayAvailableCount,
-                    amenitiesIcons: resolveAmenityIcons(t.amenities),
-                    createdAt: (t as any).createdAt || new Date().toISOString(),
-                  };
-                });
-
-                const STATIC_TURFS = [
-                  {
-                    id: 'skyline',
-                    name: 'Skyline Arena Elite',
-                    location: 'Canary Wharf, East London',
-                    rating: 4.9,
-                    favCount: 124,
-                    image: { uri: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=600&q=80' },
-                    badge: '💸 BEST VALUE',
-                    sport: 'Football',
-                    surfaceType: '5G Rubber Infill',
-                    price: 2500,
-                    availableSlots: computeTurfSlotMetrics({ id: 'skyline', name: 'Skyline Arena Elite' }, selectedDateObj, bookings || []).totalAvailable,
-                    amenitiesIcons: ['flashlight-outline', 'car-outline', 'wifi-outline'],
-                    createdAt: '2025-01-01T00:00:00.000Z',
-                  },
-                  {
-                    id: 'the-grid',
-                    name: 'The Grid Sports Complex',
-                    location: 'Stratford, London',
-                    rating: 4.7,
-                    favCount: 89,
-                    image: { uri: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=600&q=80' },
-                    badge: '🔥 POPULAR',
-                    sport: 'Cricket',
-                    surfaceType: 'Astro Turf Pitch',
-                    price: 2000,
-                    availableSlots: computeTurfSlotMetrics({ id: 'the-grid', name: 'The Grid Sports Complex' }, selectedDateObj, bookings || []).totalAvailable,
-                    amenitiesIcons: ['flashlight-outline', 'shirt-outline', 'water-outline'],
-                    createdAt: '2025-01-02T00:00:00.000Z',
-                  },
-                  {
-                    id: 'lords',
-                    name: 'Lord’s Indoor Nets',
-                    location: 'St John’s Wood, London',
-                    rating: 4.95,
-                    favCount: 312,
-                    image: { uri: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=600&q=80' },
-                    badge: '🏆 PREMIUM',
-                    sport: 'Cricket',
-                    surfaceType: 'Indoor Woodcourt',
-                    price: 3500,
-                    availableSlots: computeTurfSlotMetrics({ id: 'lords', name: 'Lord’s Indoor Nets' }, selectedDateObj, bookings || []).totalAvailable,
-                    amenitiesIcons: ['flashlight-outline', 'lock-closed-outline', 'car-outline'],
-                    createdAt: '2025-01-03T00:00:00.000Z',
-                  },
-                  {
-                    id: 'wembley',
-                    name: 'Wembley Powerleague',
-                    location: 'Wembley, London',
-                    rating: 4.8,
-                    favCount: 205,
-                    image: { uri: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80' },
-                    badge: '⭐ 5.0 RATED',
-                    sport: 'Football',
-                    surfaceType: 'Synthetic Grass',
-                    price: 3000,
-                    availableSlots: computeTurfSlotMetrics({ id: 'wembley', name: 'Wembley Powerleague' }, selectedDateObj, bookings || []).totalAvailable,
-                    amenitiesIcons: ['flashlight-outline', 'car-outline', 'wifi-outline'],
-                    createdAt: '2025-01-04T00:00:00.000Z',
-                  },
-                ];
-
-                const seenIds = new Set<string>();
-                const seenNames = new Set<string>();
-                const ALL_TURFS: any[] = [];
-                [...userFormattedTurfs, ...backendFormattedTurfs, ...STATIC_TURFS].forEach(t => {
-                  const nameKey = (t?.name || '').trim().toLowerCase();
-                  if (t && t.id && !seenIds.has(t.id) && (!nameKey || !seenNames.has(nameKey))) {
-                    seenIds.add(t.id);
-                    if (nameKey) seenNames.add(nameKey);
-                    ALL_TURFS.push(t);
-                  }
-                });
-
-                // Sort newest/most recently added turfs to the top
-                ALL_TURFS.sort((a, b) => {
-                  const aTime = a.createdAt ? new Date(a.createdAt).getTime() : (a.id?.startsWith('turf-') ? parseInt(a.id.replace('turf-', '')) || 0 : 0);
-                  const bTime = b.createdAt ? new Date(b.createdAt).getTime() : (b.id?.startsWith('turf-') ? parseInt(b.id.replace('turf-', '')) || 0 : 0);
-                  return bTime - aTime;
-                });
-
-                const filteredTurfs = ALL_TURFS.filter(t => {
-                  const matchesSport = selectedSport === 'All' || t.sport.toLowerCase() === selectedSport.toLowerCase();
-                  const matchesQuery = searchQuery.trim() === '' || t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.location.toLowerCase().includes(searchQuery.toLowerCase());
-                  return matchesSport && matchesQuery;
-                });
-
-                const renderTurfCard = (turf: any) => {
-                  const isFav = !!favorites[turf.id];
-                  const turfOffers = getOffersForTurf(turf.name, offers);
-                  const activeOffer = turfOffers.find(o => o.appliesTo?.toLowerCase() === turf.name.toLowerCase()) || turfOffers[0];
-
-                  return (
-                    <Pressable
-                      key={turf.id}
-                      onPress={() => handleTurfSelect(turf.id, turf.name, activeOffer?.code)}
-                      style={[styles.turfCard, { backgroundColor: theme.surfaceLowest }, Shadows.level2]}
-                    >
-                      <View style={styles.imageContainer}>
-                        <Image
-                          source={turf.image}
-                          style={styles.turfImage}
-                          contentFit="cover"
-                          transition={200}
-                        />
-                        {!!turf.badge && (
-                          <View style={styles.cardBadge}>
-                            <ThemedText style={styles.cardBadgeText}>{turf.badge}</ThemedText>
-                          </View>
-                        )}
+                  {/* Tournament offer zone — rendered strictly after 4 cards */}
+                  {visibleTurfsCount >= 4 && (
+                    <View style={styles.offerZone}>
+                      <View style={styles.sectionInset}>
+                        <SectionHeading title="Tournament offer zone" tint={accent} />
                       </View>
-
-                      <View style={styles.cardInfo}>
-                        <View style={styles.cardHeaderRow}>
-                          <View style={{ flex: 1, paddingRight: 4 }}>
-                            <ThemedText type="headlineSm" style={[styles.turfTitle, { color: theme.text }]} numberOfLines={1}>
-                              {turf.name}
-                            </ThemedText>
-                            <View style={styles.locationRow}>
-                              <Ionicons name="location-outline" size={10.5} color={theme.textSecondary} style={{ marginRight: 2 }} />
-                              <ThemedText type="bodyMd" style={[styles.locationText, { color: theme.textSecondary }]} numberOfLines={1}>
-                                {turf.location}
-                              </ThemedText>
-                            </View>
-                          </View>
-                          <View style={styles.ratingBadge}>
-                            <Ionicons name="star" size={10.5} color="#f59e0b" />
-                            <ThemedText type="labelMd" style={{ color: theme.text, marginLeft: 2, fontSize: 10, fontFamily: 'Sora_500Medium' }}>
-                              {turf.rating}
-                            </ThemedText>
-                          </View>
-                        </View>
-
-                        <View style={styles.midInfoRow}>
-                          <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
-                            {(turf.amenitiesIcons || ['flashlight-outline']).slice(0, 3).map((iconName: any, idx: number) => (
-                              <Ionicons key={idx} name={iconName as any} size={11} color={theme.primary} />
-                            ))}
-                          </View>
-                          <View style={styles.slotsPill}>
-                            <ThemedText style={styles.slotsPillText}>
-                              ⚡ {turf.availableSlots} slots left
-                            </ThemedText>
-                          </View>
-                        </View>
-
-                        {/* Clean Small Offer Text (no badge, no decorative icons) */}
-                        {!!activeOffer && (
-                          <ThemedText style={{ fontSize: 8.5, color: '#059669', fontFamily: 'Sora_500Medium', marginTop: 1, marginBottom: 1 }} numberOfLines={1}>
-                            {formatDiscount(activeOffer)} · Use code <ThemedText style={{ fontFamily: 'Sora_500Medium', color: '#047857', fontSize: 8.5 }}>{activeOffer.code}</ThemedText>
-                          </ThemedText>
-                        )}
-
-                        <View style={styles.cardActions}>
-                          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                            <ThemedText type="headlineSm" style={{ color: theme.primary, fontSize: 13.5, fontFamily: 'Sora_500Medium' }}>
-                              ₹{turf.price}
-                            </ThemedText>
-                            <ThemedText type="labelSm" style={{ color: theme.textSecondary, fontSize: 9.5, marginLeft: 2 }}>
-                              /hr
-                            </ThemedText>
-                          </View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Pressable
-                              onPress={() => handleTurfSelect(turf.id, turf.name, activeOffer?.code)}
-                              style={[styles.actionButton, { backgroundColor: theme.primary }]}
-                            >
-                              <ThemedText type="labelMd" style={{ color: '#ffffff', fontSize: 10.5, fontFamily: 'Sora_500Medium' }}>
-                                Book Now
-                              </ThemedText>
-                            </Pressable>
-                            <Pressable
-                              onPress={() => toggleFavorite(turf.id)}
-                              style={[styles.favButton, { backgroundColor: theme.surfaceLow }]}
-                            >
-                              <Ionicons
-                                name={isFav ? 'heart' : 'heart-outline'}
-                                size={13}
-                                color={isFav ? theme.error : theme.textSecondary}
-                              />
-                              <ThemedText type="labelSm" style={{ color: theme.textSecondary, marginLeft: 2, fontSize: 9.5 }}>
-                                {turf.favCount}
-                              </ThemedText>
-                            </Pressable>
-                          </View>
-                        </View>
-                      </View>
-                    </Pressable>
-                  );
-                };
-
-                if (filteredTurfs.length === 0) {
-                  return (
-                    <View style={{ padding: Spacing.xl, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surfaceLowest, borderRadius: BorderRadius.xl, marginVertical: Spacing.md, borderColor: theme.outlineVariant + '33', borderWidth: 1 }}>
-                      <Ionicons name="search-outline" size={44} color={theme.textSecondary} style={{ opacity: 0.5, marginBottom: 10 }} />
-                      <ThemedText type="headlineSm" style={{ color: theme.text, textAlign: 'center', fontFamily: 'Sora_500Medium' }}>
-                        No {selectedSport} Turfs Found
-                      </ThemedText>
-                      <ThemedText style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 6, fontSize: 12, lineHeight: 18 }}>
-                        There are currently no {selectedSport} venues listed. Switch filter to All Sports or add a new pitch!
-                      </ThemedText>
-                      <Pressable
-                        onPress={() => setSelectedSport('All')}
-                        style={{ backgroundColor: theme.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: BorderRadius.lg, marginTop: 14 }}
-                      >
-                        <ThemedText style={{ color: '#ffffff', fontSize: 11, fontFamily: 'Sora_500Medium' }}>Show All Sports</ThemedText>
-                      </Pressable>
-                    </View>
-                  );
-                }
-
-                const firstChunk = filteredTurfs.slice(0, 4);
-                const remainingChunk = filteredTurfs.slice(4);
-
-                return (
-                  <>
-                    {firstChunk.map(renderTurfCard)}
-
-                    {/* Tournament Offer Zone — Rendered strictly after 4 cards */}
-                    <View style={{ marginVertical: 6, paddingHorizontal: 0, marginLeft: -Spacing.containerMargin, marginRight: -Spacing.containerMargin }}>
-                      <ThemedText type="labelSm" style={{ color: theme.textSecondary, paddingHorizontal: Spacing.containerMargin, marginBottom: 8, letterSpacing: 0.5 }}>
-                        TOURNAMENT OFFER ZONE
-                      </ThemedText>
                       <AutoScrollingHorizontalBanners
                         cardWidth={305}
                         gap={16}
@@ -698,19 +720,33 @@ export default function ExploreScreen() {
                         ]}
                       />
                     </View>
+                  )}
 
-                    {remainingChunk.map(renderTurfCard)}
-                  </>
-                );
-              })()}
+                  {remainingChunk.map(renderTurfCard)}
+
+                  {/* ── Auto-load more indicator / end of turfs list ── */}
+                  {filteredTurfs.length > visibleTurfsCount ? (
+                    <View style={[styles.loadMore, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+                      <ActivityIndicator size="small" color={theme.primary} />
+                      <ThemedText style={[styles.loadMoreText, { color: theme.textSecondary }]}>
+                        {isLoadingMore ? 'Loading more venues...' : `Scroll to auto-load (${filteredTurfs.length - visibleTurfsCount} remaining)`}
+                      </ThemedText>
+                    </View>
+                  ) : filteredTurfs.length > 4 ? (
+                    <ThemedText style={[styles.listEnd, { color: theme.textSecondary }]}>
+                      ✓ All {filteredTurfs.length} venues loaded
+                    </ThemedText>
+                  ) : null}
+                </View>
+              )}
             </View>
           </ScrollView>
         </Reanimated.View>
       </SafeAreaView>
       {/* Floating Toast Notification */}
       {toastMsg && (
-        <Animated.View style={[styles.toastContainer, { opacity: toastOpacity, backgroundColor: theme.primaryContainer }]}>
-          <ThemedText type="labelSm" style={{ color: '#ffffff' }}>{toastMsg}</ThemedText>
+        <Animated.View style={[styles.toastContainer, { opacity: toastOpacity, backgroundColor: theme.primaryContainer }, Shadows.level2]}>
+          <ThemedText style={styles.toastText}>{toastMsg}</ThemedText>
         </Animated.View>
       )}
       <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
@@ -718,98 +754,63 @@ export default function ExploreScreen() {
   );
 }
 
+const GUTTER = Spacing.containerMargin;
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
+
+  // top app bar — mirrors the player home dashboard header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.containerMargin,
+    paddingHorizontal: GUTTER,
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: '#0000000a',
     zIndex: 10,
   },
-  headerLeft: {
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerAvatar: { width: 36, height: 36, borderRadius: 18, borderWidth: 1.5 },
+  headerTextGroup: { flexDirection: 'column', justifyContent: 'center' },
+  headerRightActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  iconButton: { padding: 4 },
+  profileIconButton: { padding: 2 },
+
+  // sticky date + filters
+  stickyBar: { borderBottomWidth: 1, paddingTop: 8, paddingBottom: 8, gap: 7 },
+  monthRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  headerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: '#5D68E8', // Gold ring around avatar
-  },
-  headerTextGroup: {
-    flexDirection: 'column',
-    justifyContent: 'center',
-  },
-  headerRightActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  iconButton: {
-    padding: 4,
-  },
-  profileIconButton: {
-    padding: 2,
-  },
-  classCard: {
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    padding: 14,
-    marginBottom: 12,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  section: {
-    marginTop: Spacing.lg,
-    paddingHorizontal: Spacing.containerMargin,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: Spacing.sm,
+    paddingHorizontal: GUTTER,
   },
-  calendarContainer: {
-    gap: 6,
-    paddingVertical: 2,
-  },
+  monthLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  monthRule: { width: 3.5, height: 12, borderRadius: 2 },
+  monthLabel: { fontFamily: 'Sora_500Medium', fontSize: 9.5, letterSpacing: 0.9 },
+  monthHint: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+  calendarContainer: { gap: 6, paddingHorizontal: GUTTER, paddingVertical: 1 },
   calendarDay: {
-    width: 39,
-    height: 47,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 42,
+    height: 54,
+    borderRadius: 14,
     borderWidth: 1,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  calendarDow: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.5 },
+  calendarDate: { fontFamily: 'Sora_500Medium', fontSize: 14, marginTop: 1 },
+  todayDot: { width: 4, height: 4, borderRadius: 2, marginTop: 3 },
+  searchRow: { paddingHorizontal: GUTTER },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 7,
     borderWidth: 1,
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: 10,
-    height: 33,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    height: 36,
   },
   searchInput: {
     flex: 1,
@@ -820,280 +821,183 @@ const styles = StyleSheet.create({
     ...({ outlineStyle: 'none' } as any),
     includeFontPadding: false,
   },
-  filtersContainer: {
-    gap: 4,
-    marginTop: 2,
-    paddingBottom: 2,
-  },
+  filtersContainer: { gap: 6, paddingHorizontal: GUTTER, paddingVertical: 1 },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 2.5,
-    borderRadius: 5,
+    gap: 4,
+    paddingHorizontal: 11,
+    height: 28,
+    borderRadius: 999,
     borderWidth: 1,
-    height: 25,
-    justifyContent: 'center',
   },
-  bannerContainer: {
-    borderRadius: BorderRadius.premium,
-    padding: Spacing.lg,
-    position: 'relative',
-    overflow: 'hidden',
-    shadowColor: '#001b3d',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 5,
-  },
-  bannerIllustration: {
-    position: 'absolute',
-    right: -20,
-    top: 0,
-    width: '45%',
-    height: '100%',
-    opacity: 0.25,
-  },
-  bannerContent: {
-    zIndex: 2,
-    width: '70%',
-  },
-  bannerBadgeContainer: {
+  filterChipText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+
+  scrollContent: { paddingBottom: 40 },
+  section: { marginTop: Spacing.lg, paddingHorizontal: GUTTER },
+  sectionBleed: { marginTop: Spacing.lg },
+  sectionInset: { paddingHorizontal: GUTTER },
+  voucherWrap: { marginTop: 6 },
+
+  // hero
+  heroCard: { borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
+  heroBody: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    justifyContent: 'space-between',
+    padding: Spacing.md,
   },
-  bannerBadge: {
-    backgroundColor: '#5D68E8',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.default,
-  },
-  bannerTitle: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontFamily: 'Sora_500Medium',
-    marginBottom: Spacing.base,
-    lineHeight: 22,
-  },
-  bannerSub: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 13,
-    marginBottom: Spacing.md,
-    lineHeight: 18,
-  },
-  bannerButton: {
+  heroText: { flex: 1, paddingRight: 8 },
+  heroBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#5D68E8',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginBottom: 7,
   },
+  heroBadgeText: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.8 },
+  heroTitle: { fontFamily: 'Sora_500Medium', fontSize: 15.5 },
+  heroSub: { fontFamily: 'Sora_400Regular', fontSize: 11, marginTop: 2, lineHeight: 15 },
+  heroMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 9 },
+  metaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 999,
+  },
+  metaPillText: { fontFamily: 'Sora_500Medium', fontSize: 10 },
+
+  // venue list
+  venueSection: { paddingBottom: 100 },
+  cardList: { gap: 10 },
   turfCard: {
     flexDirection: 'row',
-    borderRadius: 10,
+    borderRadius: BorderRadius.premium,
+    borderWidth: 1,
     overflow: 'hidden',
-    minHeight: 117,
-    marginBottom: 0,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    minHeight: 124,
   },
-  imageContainer: {
-    width: 96,
-    height: '100%',
-    position: 'relative',
-    backgroundColor: '#1e293b',
-    overflow: 'hidden',
-  },
-  turfImage: {
-    width: '100%',
-    height: '100%',
-  },
+  imageContainer: { width: 104, backgroundColor: '#1e293b', overflow: 'hidden' },
+  turfImage: { width: '100%', height: '100%' },
   cardBadge: {
     position: 'absolute',
     top: 6,
     left: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    paddingHorizontal: 5,
-    paddingVertical: 1.5,
-    borderRadius: 3,
+    right: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
   },
   cardBadgeText: {
     color: '#ffffff',
-    fontSize: 8.5,
+    fontSize: 8,
     fontFamily: 'Sora_500Medium',
     letterSpacing: 0.3,
   },
-  cardOfferBadge: {
+  imageRating: {
     position: 'absolute',
-    bottom: 6,
     left: 6,
-    backgroundColor: '#10b981',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 3,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
-    shadowRadius: 2,
-    elevation: 3,
-  },
-  cardOfferBadgeText: {
-    color: '#ffffff',
-    fontSize: 8.5,
-    fontFamily: 'Sora_500Medium',
-    letterSpacing: 0.2,
-  },
-  cardOfferStrip: {
+    bottom: 6,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    paddingHorizontal: 5,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    marginTop: 1,
-    marginBottom: 1,
+    borderRadius: 999,
   },
-  cardOfferStripText: {
-    fontSize: 9,
+  imageRatingText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 9.5 },
+  cardInfo: { flex: 1, paddingHorizontal: 10, paddingVertical: 9, justifyContent: 'space-between', gap: 5 },
+  turfTitle: { fontFamily: 'Sora_500Medium', fontSize: 13.5, lineHeight: 17 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 1 },
+  locationText: { fontFamily: 'Sora_400Regular', fontSize: 10, flex: 1 },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 5 },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 999,
+  },
+  statusText: {
     fontFamily: 'Sora_500Medium',
-    color: '#047857',
-    flex: 1,
-  },
-  cardInfo: {
-    flex: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    justifyContent: 'space-between',
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  turfTitle: {
-    color: '#111c2c',
-    fontSize: 13.5,
-    fontFamily: 'Sora_500Medium',
-    letterSpacing: -0.1,
-    lineHeight: 17,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 1,
-  },
-  locationText: {
-    color: '#43474b',
-    fontSize: 9.5,
-    fontFamily: 'Sora_400Regular',
-    flex: 1,
-  },
-  ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef3c7',
-    paddingHorizontal: 4,
-    paddingVertical: 1.5,
-    borderRadius: 4,
-  },
-  midInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 1,
-  },
-  slotsPill: {
-    backgroundColor: '#ecfdf5',
-    paddingHorizontal: 4,
-    paddingVertical: 1.5,
-    borderRadius: 3,
-  },
-  slotsPillText: {
-    color: '#059669',
     fontSize: 8.5,
-    fontFamily: 'Sora_500Medium',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
-  cardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 1,
-  },
-  actionButton: {
-    height: 24,
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#5D68E8',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
-  },
+  amenityRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 2 },
+  offerText: { fontFamily: 'Sora_400Regular', fontSize: 9.5, color: '#059669' },
+  offerCode: { fontFamily: 'Sora_500Medium', fontSize: 9.5, color: '#047857' },
+  cardActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline' },
+  priceText: { fontFamily: 'Sora_500Medium', fontSize: 15 },
+  priceUnit: { fontFamily: 'Sora_400Regular', fontSize: 10, marginLeft: 2 },
+  actionGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   favButton: {
-    height: 24,
-    paddingHorizontal: 6.5,
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    height: 28,
+    paddingHorizontal: 8,
+    borderRadius: 999,
     flexDirection: 'row',
-    marginLeft: 6,
+    alignItems: 'center',
+    gap: 3,
   },
+  favCount: { fontFamily: 'Sora_500Medium', fontSize: 10 },
+  bookButton: {
+    height: 28,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookButtonText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 11 },
+
+  offerZone: { marginVertical: 6, marginHorizontal: -GUTTER },
+
+  // empty state
+  emptyCard: {
+    alignItems: 'center',
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.premium,
+    borderWidth: 1,
+    gap: 3,
+  },
+  emptyIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  emptyTitle: { fontFamily: 'Sora_500Medium', fontSize: 13, textAlign: 'center' },
+  emptyBody: { fontFamily: 'Sora_400Regular', fontSize: 11, textAlign: 'center', lineHeight: 15 },
+  emptyBtn: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 7, borderRadius: 999 },
+  emptyBtnText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 11 },
+
+  loadMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  loadMoreText: { fontFamily: 'Sora_500Medium', fontSize: 11 },
+  listEnd: { fontFamily: 'Sora_400Regular', fontSize: 10, textAlign: 'center', paddingVertical: 8, opacity: 0.7 },
+
   toastContainer: {
     position: 'absolute',
-    bottom: 100,
+    top: 56,
     alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.premium,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
     zIndex: 999,
   },
-  createPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    marginRight: 4,
-  },
-  createPillText: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 11,
-    color: '#ffffff',
-    letterSpacing: 0.2,
-  },
-  fabTop: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 108 : 88,
-    right: Spacing.md,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2.5,
-    borderColor: '#ffffff',
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.55,
-    shadowRadius: 10,
-    elevation: 12,
-    zIndex: 999,
-  },
-  fabGradient: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  toastText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 11 },
 });

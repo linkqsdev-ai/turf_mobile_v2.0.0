@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { openProfileDrawer } from '@/components/profile-drawer';
 import {
   StyleSheet,
   View,
@@ -6,6 +7,8 @@ import {
   Pressable,
   TextInput,
   Platform,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -411,6 +414,11 @@ export default function NetworkScreen() {
   const [selectedSport, setSelectedSport] = useState<'All' | 'Cricket' | 'Football' | 'Badminton'>('All');
   const [connectedIds, setConnectedIds] = useState<Record<string, boolean>>({ p1: true });
 
+  // Infinite Scroll Pagination State
+  const [visiblePlayersCount, setVisiblePlayersCount] = useState(3);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
   const shortLocation = getShortLocation(profile.location);
 
   const toggleConnect = (id: string) => {
@@ -430,6 +438,28 @@ export default function NetworkScreen() {
     return matchesSport && matchesSearch;
   });
 
+  useEffect(() => {
+    setVisiblePlayersCount(3);
+  }, [selectedSport, searchQuery]);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    setVisiblePlayersCount(3);
+    setTimeout(() => setRefreshing(false), 600);
+  }, []);
+
+  const handleScroll = (event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 220;
+    if (isCloseToBottom && visiblePlayersCount < filteredPlayers.length && !isLoadingMore) {
+      setIsLoadingMore(true);
+      setTimeout(() => {
+        setVisiblePlayersCount((prev) => Math.min(prev + 3, filteredPlayers.length));
+        setIsLoadingMore(false);
+      }, 300);
+    }
+  };
+
   // For a Player this tab is "Class": the coaching they have booked, not the
   // player network. The route keeps its name so deep links and the layout
   // registration are unaffected.
@@ -440,7 +470,7 @@ export default function NetworkScreen() {
           {/* Top App Bar with Username (Azarudeen) and Location Short Form */}
           <View style={[styles.header, { backgroundColor: 'transparent' }]}>
             <View style={styles.headerLeft}>
-              <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
+              <Pressable style={styles.profileIconButton} onPress={openProfileDrawer}>
                 <Image
                   source={getAvatarSource(profile.avatarUrl)}
                   style={styles.headerAvatar}
@@ -487,7 +517,7 @@ export default function NetworkScreen() {
         {/* Top App Bar with Username (Azarudeen) and Location Short Form */}
         <View style={[styles.header, { backgroundColor: 'transparent' }]}>
           <View style={styles.headerLeft}>
-            <Pressable style={styles.profileIconButton} onPress={() => router.push('/profile')}>
+            <Pressable style={styles.profileIconButton} onPress={openProfileDrawer}>
               <Image
                 source={getAvatarSource(profile.avatarUrl)}
                 style={styles.headerAvatar}
@@ -524,6 +554,11 @@ export default function NetworkScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+          }
         >
           {/* Hero Section with Community Badge */}
           <Reanimated.View entering={FadeInDown.duration(500).damping(14)} style={styles.heroHeader}>
@@ -630,7 +665,7 @@ export default function NetworkScreen() {
               </ThemedText>
             </View>
 
-            {filteredPlayers.map((player, idx) => {
+            {filteredPlayers.slice(0, visiblePlayersCount).map((player, idx) => {
               const isConnected = connectedIds[player.id];
               return (
                 <Reanimated.View
@@ -719,6 +754,37 @@ export default function NetworkScreen() {
                 </Reanimated.View>
               );
             })}
+
+            {/* ── Auto-Load More Indicator / End of Network List ── */}
+            {filteredPlayers.length > visiblePlayersCount ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: 10,
+                  paddingHorizontal: 16,
+                  borderRadius: 12,
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(139, 92, 246, 0.25)',
+                  marginTop: 6,
+                  marginBottom: 6,
+                  gap: 8,
+                }}
+              >
+                <ActivityIndicator size="small" color="#8b5cf6" />
+                <ThemedText style={{ color: '#6b7280', fontSize: 11, fontFamily: 'Sora_500Medium' }}>
+                  {isLoadingMore ? 'Loading more athletes...' : `Scroll to auto-load (${filteredPlayers.length - visiblePlayersCount} remaining)`}
+                </ThemedText>
+              </View>
+            ) : filteredPlayers.length > 3 ? (
+              <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+                <ThemedText style={{ color: '#9ca3af', fontSize: 10, fontFamily: 'Sora_400Regular' }}>
+                  ✓ All {filteredPlayers.length} athletes loaded
+                </ThemedText>
+              </View>
+            ) : null}
           </View>
         </ScrollView>
 
@@ -801,7 +867,7 @@ const styles = StyleSheet.create({
   },
   mainHeadline: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 22,
+    fontSize: 18,
     lineHeight: 28,
   },
   visualizerWrapper: {

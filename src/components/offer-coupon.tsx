@@ -20,9 +20,12 @@ import { OwnerOffer, formatDiscount } from '@/store/offer-store';
 export function OfferCoupon({
   offer,
   brand,
+  applied = false,
   onApply,
 }: {
   offer: OwnerOffer;
+  /** True once this code is applied — the button turns green with a tick. */
+  applied?: boolean;
   /** Shown on the coupon's brand block, e.g. the venue or "TURF PASS". */
   brand: string;
   onApply: (code: string) => void;
@@ -95,11 +98,14 @@ export function OfferCoupon({
 
           <Pressable
             onPress={() => onApply(offer.code)}
+            disabled={applied}
             accessibilityRole="button"
-            accessibilityLabel={`Apply coupon ${offer.code}`}
-            style={styles.kakaoApplyBtn}
+            accessibilityState={{ selected: applied, disabled: applied }}
+            accessibilityLabel={applied ? `Coupon ${offer.code} applied` : `Apply coupon ${offer.code}`}
+            style={[styles.kakaoApplyBtn, applied && styles.kakaoAppliedBtn]}
           >
-            <ThemedText style={styles.kakaoApplyBtnText}>Apply →</ThemedText>
+            {applied && <Ionicons name="checkmark-circle" size={13} color="#ffffff" />}
+            <ThemedText style={styles.kakaoApplyBtnText}>{applied ? 'Applied' : 'Apply →'}</ThemedText>
           </Pressable>
         </View>
       </View>
@@ -130,7 +136,7 @@ export function LocationCard({ name, location }: { name: string; location: strin
         <Image source={{ uri: MAP_PREVIEW }} style={styles.mapImage} contentFit="cover" />
         <View style={styles.mapMarkerContainer}>
           <View style={[styles.mapMarker, { backgroundColor: theme.primaryContainer }]}>
-            <Ionicons name="location" size={24} color="#ffffff" />
+            <Ionicons name="location" size={20} color="#ffffff" />
           </View>
         </View>
       </Pressable>
@@ -257,14 +263,14 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   kakaoBigDiscount: {
-    fontSize: 48,
+    fontSize: 36,
     fontFamily: 'Sora_500Medium',
     color: '#ffffff',
     lineHeight: 48,
     letterSpacing: -1,
   },
   kakaoBigOff: {
-    fontSize: 40,
+    fontSize: 32,
     fontFamily: 'Sora_500Medium',
     color: '#ffffff',
     lineHeight: 40,
@@ -308,11 +314,15 @@ const styles = StyleSheet.create({
     maxWidth: 210,
   },
   kakaoApplyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: '#FF1E70',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
+  kakaoAppliedBtn: { backgroundColor: '#16A34A' },
   kakaoApplyBtnText: {
     color: '#ffffff',
     fontSize: 11.5,

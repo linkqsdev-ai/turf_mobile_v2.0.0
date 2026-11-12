@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -18,13 +18,20 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
-import { Spacing, BorderRadius } from '@/constants/theme';
+import { TicketVoucherCard } from '@/components/ticket-voucher-card';
+import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { SPORTS_LIST } from '@/constants/sports';
 import { useTheme } from '@/hooks/use-theme';
 import { useTurfStore, useOfferStore, useBookings } from '@/store/app-store';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { OfferDiscountType } from '@/store/offer-store';
 import { getCurrentGPSLocation, cleanLocation } from '@/utils/location';
 import { turfApi } from '@/services/turf-api';
+import { useFormConfig } from '@/context/RemoteConfigContext';
+import { CustomFieldsSection } from '@/components/forms/CustomFieldsSection';
+import { loadCustomAnswers, saveCustomAnswers } from '@/services/custom-answers';
+import { validateCustomAnswers, type CustomAnswers } from '@/lib/remote-config';
+import { formatPhoneNumber, getPhoneValidationError } from '@/utils/phone-utils';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -129,13 +136,6 @@ const WEB_INPUT: any = Platform.OS === 'web'
   ? { outlineWidth: 0, outlineStyle: 'none', outlineColor: 'transparent' }
   : {};
 
-// Helper: Format phone number as XXXXX XXXXX (10 digits)
-export const formatPhoneNumber = (val: string): string => {
-  const digits = String(val || '').replace(/\D/g, '').slice(0, 10);
-  if (digits.length <= 5) return digits;
-  return `${digits.slice(0, 5)} ${digits.slice(5)}`;
-};
-
 // Helper: Format Indian currency with commas (e.g. 1,200)
 export const formatIndianCurrency = (rawText: string | number): string => {
   const digits = String(rawText ?? '').replace(/\D/g, '');
@@ -186,6 +186,7 @@ export default function CreateTurfScreen() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const params = useLocalSearchParams<{ editId?: string }>();
+  const { profile } = useUserProfile();
   const { addTurf, updateTurf, ownedTurfs } = useTurfStore();
   const { bookings } = useBookings();
   // Live count for the header badge, so an owner sees at a glance that slots
@@ -224,7 +225,16 @@ export default function CreateTurfScreen() {
   const [useCurrentLocation, setUseCurrentLocation] = useState(true);
   const [detectedLocation, setDetectedLocation] = useState('Tiruchirappalli, Tamil Nadu, India');
   const [manualAddress, setManualAddress] = useState('');
-  const [contactNumber, setContactNumber] = useState('');
+  const [contactNumber, setContactNumber] = useState(
+    !params.editId && profile?.phone ? formatPhoneNumber(profile.phone) : ''
+  );
+
+  // Sync profile phone if it loads asynchronously on new turf creation
+  useEffect(() => {
+    if (!params.editId && profile?.phone && !contactNumber) {
+      setContactNumber(formatPhoneNumber(profile.phone));
+    }
+  }, [profile?.phone, params.editId]);
   // Starts blank so the owner enters a real rate — validateStepOne blocks
   // publishing until they do, rather than a placeholder price going live.
   const [pricePerSlot, setPricePerSlot] = useState('');
@@ -247,6 +257,15 @@ export default function CreateTurfScreen() {
   // Step 3: Amenities & Description
   const [amenities, setAmenities] = useState<Record<string, boolean>>({ floodlights: true, parking: true });
   const [description, setDescription] = useState('');
+
+  // Step 4: Cashback Rewards & Guardrails
+  const [cashbackEnabled, setCashbackEnabled] = useState(false);
+  const [cashbackType, setCashbackType] = useState<'flat' | 'percent'>('flat');
+  const [cashbackAmount, setCashbackAmount] = useState('');
+  const [cashbackName, setCashbackName] = useState('');
+  const [cashbackCode, setCashbackCode] = useState('');
+  const [cashbackMaxAmount, setCashbackMaxAmount] = useState('');
+  const [cashbackOneTime, setCashbackOneTime] = useState(true);
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const toastOpacity = useRef(new Animated.Value(0)).current;
@@ -381,6 +400,18 @@ export default function CreateTurfScreen() {
           setAmenities(turf.amenities || { floodlights: true, parking: true });
           setDescription(turf.description || '');
 
+          // Cashback Rewards
+          if (turf.cashbackEnabled !== undefined) setCashbackEnabled(Boolean(turf.cashbackEnabled));
+          if (turf.cashbackType) setCashbackType(turf.cashbackType);
+          if (turf.cashbackAmount !== undefined) {
+            setCashbackAmount(String(turf.cashbackAmount));
+            if (Number(turf.cashbackAmount) > 0) setCashbackEnabled(true);
+          }
+          if (turf.cashbackName) setCashbackName(turf.cashbackName);
+          if (turf.cashbackCode) setCashbackCode(turf.cashbackCode);
+          if (turf.cashbackMaxAmount !== undefined) setCashbackMaxAmount(String(turf.cashbackMaxAmount));
+          if (turf.cashbackOneTime !== undefined) setCashbackOneTime(Boolean(turf.cashbackOneTime));
+
           // Slots
           if (turf.slots && turf.slots.length > 0) {
             const smap: Record<string, SlotState> = createInitialSlotsMap();
@@ -484,10 +515,33 @@ export default function CreateTurfScreen() {
 
   // ─── Validation ──────────────────────────────────────────────────────────
 
+  // Super Admin layout for the Create Turf form: renamed, hidden and required
+  // fields, plus any fields the admin added.
+  const turfForm = useFormConfig('create_turf');
+  const tf = {
+    photos: turfForm.field('turfImages', { label: 'Turf Photos', required: true }),
+    name: turfForm.field('turfName', { label: 'Turf Name', placeholder: 'e.g. Skyline Football Arena', required: true }),
+    sport: turfForm.field('sportType', { label: 'Sport Type', required: true }),
+    surface: turfForm.field('surfaceType', { label: 'Surface Type', required: true }),
+    address: turfForm.field('address', { label: 'Location', placeholder: 'e.g. 12 Bypass Road, Thillai Nagar, Tiruchirappalli - 620018', required: true }),
+    contact: turfForm.field('contactNumber', { label: 'Mobile Number', placeholder: '98765 43210', required: true }),
+    price: turfForm.field('pricePerSlot', { label: 'Price / Slot (₹)', placeholder: '1,200', required: true }),
+    amenities: turfForm.field('amenities', { label: 'Selected Amenities' }),
+    description: turfForm.field('description', {
+      label: 'Venue Description',
+      placeholder: 'e.g. State-of-the-art turf with FIFA-standard shockpad rubber infill and LED night floodlights.',
+    }),
+  };
+  const hiddenStyle = { display: 'none' } as const;
+  const [customAnswers, setCustomAnswers] = useState<CustomAnswers>({});
+  useEffect(() => {
+    if (params.editId) loadCustomAnswers('create_turf', 'turf', params.editId).then(setCustomAnswers);
+  }, [params.editId]);
+
   const validateStepOne = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!turfImages.some(Boolean)) {
+    if (tf.photos.visible && tf.photos.required && !turfImages.some(Boolean)) {
       newErrors.turfPhotos = 'Please upload at least 1 Turf Image';
     }
     if (!turfName.trim()) {
@@ -501,13 +555,9 @@ export default function CreateTurfScreen() {
     }
 
     // Mandatory Mobile Number validation (10 digits)
-    const cleanPhone = contactNumber.replace(/\D/g, '');
-    if (!cleanPhone) {
-      newErrors.contactNumber = 'Mobile Number is mandatory';
-    } else if (cleanPhone.length !== 10) {
-      newErrors.contactNumber = 'Mobile Number must be 10 digits';
-    } else if (!/^[6-9]/.test(cleanPhone)) {
-      newErrors.contactNumber = 'Mobile Number should start with 6, 7, 8, or 9';
+    const phoneError = tf.contact.visible ? getPhoneValidationError(contactNumber, tf.contact.required) : null;
+    if (phoneError) {
+      newErrors.contactNumber = phoneError;
     }
 
     // Location format validation
@@ -521,7 +571,7 @@ export default function CreateTurfScreen() {
     if (!sportType) {
       newErrors.sportType = 'Sport Type is required';
     }
-    if (!surfaceType) {
+    if (tf.surface.visible && tf.surface.required && !surfaceType) {
       newErrors.surfaceType = 'Surface Type is required';
     }
 
@@ -529,6 +579,10 @@ export default function CreateTurfScreen() {
     if (!pricePerSlot.trim() || isNaN(cleanPrice) || cleanPrice <= 0) {
       newErrors.pricePerSlot = 'Valid Price / Slot is required';
     }
+
+    validateCustomAnswers(turfForm.customFields, customAnswers).forEach((message, i) => {
+      newErrors[`custom${i}`] = message;
+    });
 
     setErrors(newErrors);
 
@@ -766,6 +820,10 @@ export default function CreateTurfScreen() {
       triggerToast('Fix the highlighted offer details first.');
       return;
     }
+    if (tf.description.visible && tf.description.required && !description.trim()) {
+      triggerToast(`⚠️ ${tf.description.label} is required`);
+      return;
+    }
 
     const address = cleanLocation(useCurrentLocation ? detectedLocation : manualAddress);
     // No fallback price: validateStepOne has already guaranteed a positive
@@ -782,6 +840,9 @@ export default function CreateTurfScreen() {
       return { day, time, status: (status || 'available') as 'available' | 'blocked' | 'maintenance' };
     });
 
+    const parsedCashback = parseFloat(cashbackAmount) || 0;
+    const isCashbackActive = cashbackEnabled && parsedCashback > 0;
+
     const turfPayload = {
       name: turfName || 'My Turf',
       sportType: sportType || 'Football',
@@ -795,6 +856,13 @@ export default function CreateTurfScreen() {
       thumbnailImage: coverUri,
       description: description || '',
       ownerId: 'current-user',
+      cashbackEnabled: isCashbackActive,
+      cashbackType,
+      cashbackAmount: isCashbackActive ? parsedCashback : 0,
+      cashbackName: isCashbackActive && cashbackName.trim() ? cashbackName.trim() : undefined,
+      cashbackCode: isCashbackActive && cashbackCode.trim() ? cashbackCode.trim().toUpperCase() : undefined,
+      cashbackMaxAmount: isCashbackActive && parseFloat(cashbackMaxAmount) > 0 ? parseFloat(cashbackMaxAmount) : undefined,
+      cashbackOneTime: isCashbackActive ? cashbackOneTime : undefined,
     };
 
     // Update existing pitch (from Manage Pitch)
@@ -807,6 +875,7 @@ export default function CreateTurfScreen() {
       }
 
       updateTurf(params.editId, turfPayload);
+      void saveCustomAnswers('create_turf', 'turf', params.editId, customAnswers, turfForm.customFields);
       syncOffersToStore(turfPayload.name);
       triggerToast('✅ Pitch updated successfully!');
       setTimeout(() => {
@@ -816,9 +885,11 @@ export default function CreateTurfScreen() {
       return;
     }
 
-    // Create new turf
+    // Create new turf. Custom answers attach to the backend turf when one was
+    // created, otherwise to the turf's name on this device.
+    let answersTurfId = turfPayload.name;
     try {
-      await turfApi.createTurf({
+      const createdTurf = await turfApi.createTurf({
         name: turfPayload.name,
         sportType: turfPayload.sportType,
         address: turfPayload.address,
@@ -830,12 +901,14 @@ export default function CreateTurfScreen() {
         description: turfPayload.description || undefined,
         slots: turfPayload.slots,
       });
+      if (createdTurf?.id) answersTurfId = createdTurf.id;
       console.log('Turf successfully published to backend database.');
     } catch (err: any) {
       console.warn('Backend createTurf failed, stored locally:', err.message);
     }
 
     addTurf(turfPayload);
+    void saveCustomAnswers('create_turf', 'turf', answersTurfId, customAnswers, turfForm.customFields);
     syncOffersToStore(turfPayload.name);
     triggerToast('🎉 Turf published successfully!');
 
@@ -852,10 +925,10 @@ export default function CreateTurfScreen() {
       <View style={styles.formCard}>
 
         {/* 1. Turf Photos (3 Upload Slots with Pin Icon to set Cover) */}
-        <View style={styles.fieldGroup}>
+        <View style={[styles.fieldGroup, !tf.photos.visible && hiddenStyle]}>
           <View style={styles.labelRow}>
             <ThemedText style={styles.fieldLabel}>
-              Turf Photos <ThemedText style={styles.requiredStar}>*</ThemedText>
+              {tf.photos.label} {tf.photos.required && <ThemedText style={styles.requiredStar}>*</ThemedText>}
             </ThemedText>
             <ThemedText style={[styles.fieldLabelSub, { color: theme.textSecondary }]}>
               Tap 📌 on any image to set Cover
@@ -942,7 +1015,7 @@ export default function CreateTurfScreen() {
         {/* 2. Turf Name */}
         <View style={styles.fieldGroup}>
           <ThemedText style={styles.fieldLabel}>
-            Turf Name <ThemedText style={styles.requiredStar}>*</ThemedText>
+            {tf.name.label} <ThemedText style={styles.requiredStar}>*</ThemedText>
           </ThemedText>
           <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
             value={turfName}
@@ -957,7 +1030,7 @@ export default function CreateTurfScreen() {
                 setErrors(prev => ({ ...prev, turfName: 'A turf with this name already exists. Please choose a unique name.' }));
               }
             }}
-            placeholder="e.g. Skyline Football Arena"
+            placeholder={tf.name.placeholder}
             placeholderTextColor="#94a3b8"
             style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: errors.turfName ? '#ef4444' : theme.outlineVariant + '44' }, WEB_INPUT]}
           />
@@ -969,7 +1042,7 @@ export default function CreateTurfScreen() {
         {/* 3. Sport Type (Top 5 filled inline on row 1, remaining filled on row 2) */}
         <View style={styles.fieldGroup}>
           <ThemedText style={styles.fieldLabel}>
-            Sport Type <ThemedText style={styles.requiredStar}>*</ThemedText>
+            {tf.sport.label} <ThemedText style={styles.requiredStar}>*</ThemedText>
           </ThemedText>
 
           {/* Row 1: Top 5 Sports completely filled */}
@@ -1064,9 +1137,9 @@ export default function CreateTurfScreen() {
         </View>
 
         {/* 4. Surface Type */}
-        <View style={styles.fieldGroup}>
+        <View style={[styles.fieldGroup, !tf.surface.visible && hiddenStyle]}>
           <ThemedText style={styles.fieldLabel}>
-            Surface Type <ThemedText style={styles.requiredStar}>*</ThemedText>
+            {tf.surface.label} {tf.surface.required && <ThemedText style={styles.requiredStar}>*</ThemedText>}
           </ThemedText>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
             {SURFACE_TYPES.map(s => {
@@ -1098,7 +1171,7 @@ export default function CreateTurfScreen() {
         <View style={styles.fieldGroup}>
           <View style={styles.labelRow}>
             <ThemedText style={styles.fieldLabel}>
-              Location <ThemedText style={styles.requiredStar}>*</ThemedText>
+              {tf.address.label} <ThemedText style={styles.requiredStar}>*</ThemedText>
             </ThemedText>
             <Pressable onPress={() => { const next = !useCurrentLocation; setUseCurrentLocation(next); if (next) handleDetectLocation(); }} style={[styles.togglePill, { backgroundColor: useCurrentLocation ? theme.primary + '18' : theme.surfaceLow, borderColor: useCurrentLocation ? theme.primary + '44' : theme.outlineVariant + '33' }]}>
               <Ionicons name={useCurrentLocation ? 'locate' : 'create-outline'} size={11} color={useCurrentLocation ? theme.primary : theme.textSecondary} />
@@ -1124,7 +1197,7 @@ export default function CreateTurfScreen() {
                 setManualAddress(t);
                 if (errors.location) setErrors(prev => ({ ...prev, location: '' }));
               }}
-              placeholder="e.g. 12 Bypass Road, Thillai Nagar, Tiruchirappalli - 620018"
+              placeholder={tf.address.placeholder}
               placeholderTextColor="#94a3b8"
               style={[styles.input, { backgroundColor: theme.surfaceLow, color: theme.text, borderColor: errors.location ? '#ef4444' : theme.outlineVariant + '44' }, WEB_INPUT]}
             />
@@ -1135,9 +1208,9 @@ export default function CreateTurfScreen() {
         </View>
 
         {/* 6. Mobile Number (Formatted with +91 and 10 digits) */}
-        <View style={styles.fieldGroup}>
+        <View style={[styles.fieldGroup, !tf.contact.visible && hiddenStyle]}>
           <ThemedText style={styles.fieldLabel}>
-            Mobile Number <ThemedText style={styles.requiredStar}>*</ThemedText>
+            {tf.contact.label} {tf.contact.required && <ThemedText style={styles.requiredStar}>*</ThemedText>}
           </ThemedText>
           <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: errors.contactNumber ? '#ef4444' : theme.outlineVariant + '44' }]}>
             <View style={[styles.countryCodeBadge, { backgroundColor: theme.primary + '18' }]}>
@@ -1151,7 +1224,7 @@ export default function CreateTurfScreen() {
                 setContactNumber(formatted);
                 if (errors.contactNumber) setErrors(prev => ({ ...prev, contactNumber: '' }));
               }}
-              placeholder="98765 43210"
+              placeholder={tf.contact.placeholder}
               placeholderTextColor="#94a3b8"
               keyboardType="phone-pad"
               style={[styles.inputRowInner, { color: theme.text }, WEB_INPUT]}
@@ -1165,7 +1238,7 @@ export default function CreateTurfScreen() {
         {/* 7. Price / Slot (Formatted with ₹ and comma separators) */}
         <View style={styles.fieldGroup}>
           <ThemedText style={styles.fieldLabel}>
-            Price / Slot (₹) <ThemedText style={styles.requiredStar}>*</ThemedText>
+            {tf.price.label} <ThemedText style={styles.requiredStar}>*</ThemedText>
           </ThemedText>
           <View style={[styles.inputRow, { backgroundColor: theme.surfaceLow, borderColor: errors.pricePerSlot ? '#ef4444' : theme.outlineVariant + '44' }]}>
             <ThemedText style={[styles.currencyPrefix, { color: theme.secondary }]}>₹</ThemedText>
@@ -1177,7 +1250,7 @@ export default function CreateTurfScreen() {
                 if (errors.pricePerSlot) setErrors(prev => ({ ...prev, pricePerSlot: '' }));
               }}
               keyboardType="number-pad"
-              placeholder="1,200"
+              placeholder={tf.price.placeholder}
               placeholderTextColor="#94a3b8"
               style={[styles.inputRowInner, { color: theme.text }, WEB_INPUT]}
             />
@@ -1187,6 +1260,26 @@ export default function CreateTurfScreen() {
             <ThemedText style={styles.errorText}>{errors.pricePerSlot}</ThemedText>
           )}
         </View>
+
+        {/* 8. Fields added by the Super Admin */}
+        {turfForm.customFields.length > 0 && (
+          <View style={styles.fieldGroup}>
+            <CustomFieldsSection
+              fields={turfForm.customFields}
+              values={customAnswers}
+              onChange={(key, value) => setCustomAnswers((prev) => ({ ...prev, [key]: value }))}
+              labelStyle={styles.fieldLabel}
+              palette={{
+                label: theme.text,
+                text: theme.text,
+                placeholder: '#94a3b8',
+                fieldBg: theme.surfaceLow,
+                border: theme.outlineVariant + '44',
+                accent: theme.primary,
+              }}
+            />
+          </View>
+        )}
 
       </View>
     </ScrollView>
@@ -1663,6 +1756,166 @@ export default function CreateTurfScreen() {
     );
   };
 
+  const activeCashbackCode = useMemo(() => {
+    if (cashbackCode.trim()) return cashbackCode.trim().toUpperCase();
+    const cleanPrefix = (turfName || 'TURF').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase() || 'TURF';
+    const numSuffix = cashbackType === 'percent' ? (cashbackAmount || '15') : (cashbackAmount || '100');
+    return `CB-${cleanPrefix}${numSuffix}`;
+  }, [cashbackCode, turfName, cashbackType, cashbackAmount]);
+
+  const activeCashbackTitle = useMemo(() => {
+    if (cashbackName.trim()) return cashbackName.trim();
+    return `${turfName.trim().slice(0, 16) || 'Pitch'} Cashback Reward`;
+  }, [cashbackName, turfName]);
+
+  const handleCopyCashbackCode = (codeToCopy: string) => {
+    if (!codeToCopy) return;
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(codeToCopy);
+    }
+    triggerToast(`📋 Cashback code "${codeToCopy}" copied!`);
+  };
+
+  const renderCashbackDesignCard = () => {
+    const val = parseFloat(cashbackAmount) || 0;
+    const discountText = cashbackType === 'percent' ? `${val}% BACK` : `₹${val} BACK`;
+    const appliesTo = turfName.trim() || 'Turf Pitch Booking';
+
+    return (
+      <View style={{ alignItems: 'center', marginVertical: 6, width: '100%' }}>
+        <TicketVoucherCard
+          item={{
+            id: 'turf-cashback-preview',
+            code: activeCashbackCode,
+            title: activeCashbackTitle,
+            appliesTo,
+            discountText,
+            color: '#10b981',
+            subType: 'BACK',
+            category: 'wallet',
+          }}
+          index={3}
+        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 280, marginTop: 5, paddingHorizontal: 4 }}>
+          <Pressable
+            onPress={() => handleCopyCashbackCode(activeCashbackCode)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10b98118', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}
+          >
+            <Ionicons name="copy-outline" size={10} color="#10b981" />
+            <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: '#10b981' }}>
+              Copy {activeCashbackCode}
+            </ThemedText>
+          </Pressable>
+          <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary }}>
+            {cashbackOneTime ? '1x Per Player' : 'All Players'}
+            {cashbackMaxAmount && parseFloat(cashbackMaxAmount) > 0 ? ` · Max ₹${cashbackMaxAmount}` : ''}
+          </ThemedText>
+        </View>
+      </View>
+    );
+  };
+
+  const renderCashbackDetailsOutput = () => {
+    const val = parseFloat(cashbackAmount) || 0;
+    const isPercent = cashbackType === 'percent';
+    const cashbackText = isPercent ? `+${val}% CASHBACK` : `+₹${val} CASHBACK`;
+    const slotPrice = parseFloat(pricePerSlot.replace(/,/g, '')) || 1000;
+    let estimatedAmt = isPercent ? Math.round((slotPrice * val) / 100) : val;
+    if (cashbackMaxAmount && parseFloat(cashbackMaxAmount) > 0) {
+      estimatedAmt = Math.min(estimatedAmt, parseFloat(cashbackMaxAmount));
+    }
+    const bannerUri = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=800&q=80';
+    const appliesTo = turfName.trim() || 'Turf Pitch Booking';
+
+    return (
+      <View
+        style={[
+          styles.voucherOutputCard,
+          { backgroundColor: theme.surfaceLowest, borderColor: '#10b98144' },
+          Shadows.level1,
+        ]}
+      >
+        {/* Banner with Emerald Gradient Overlay */}
+        <View style={styles.voucherOutputBanner}>
+          <Image source={{ uri: bannerUri }} style={styles.voucherOutputImg} contentFit="cover" />
+          <LinearGradient
+            colors={['rgba(6, 78, 59, 0.45)', 'rgba(6, 78, 59, 0.94)']}
+            style={StyleSheet.absoluteFill}
+          />
+
+          {/* Top Badges */}
+          <View style={styles.voucherOutputTopBar}>
+            <View style={[styles.voucherBrandPill, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+              <Ionicons name="wallet-outline" size={11} color="#34d399" />
+              <ThemedText style={[styles.voucherBrandPillText, { color: '#34d399' }]}>WALLET REWARD</ThemedText>
+            </View>
+            <View style={[styles.voucherDiscountBadge, { backgroundColor: '#10b981' }]}>
+              <ThemedText style={styles.voucherDiscountValue}>{cashbackText}</ThemedText>
+            </View>
+          </View>
+        </View>
+
+        {/* Details Spec Body */}
+        <View style={styles.voucherOutputBody}>
+          <ThemedText style={[styles.voucherOutputTitle, { color: theme.text, marginTop: 8 }]} numberOfLines={1}>
+            {activeCashbackTitle}
+          </ThemedText>
+          <ThemedText style={[styles.voucherOutputDesc, { color: theme.textSecondary }]} numberOfLines={2}>
+            Auto-credited to player's universal wallet upon payment. Usable towards any turf booking or coaching class ({cashbackOneTime ? '1x per player' : 'All bookings'}).
+          </ThemedText>
+
+          {/* Code & Copy Row */}
+          <View style={styles.voucherOutputFooter}>
+            <View style={[styles.voucherCodePill, { borderColor: '#10b981', backgroundColor: '#10b98115' }]}>
+              <Ionicons name="gift-outline" size={13} color="#10b981" />
+              <ThemedText style={[styles.voucherCodeText, { color: '#10b981' }]}>
+                {activeCashbackCode}
+              </ThemedText>
+            </View>
+
+            <Pressable
+              onPress={() => handleCopyCashbackCode(activeCashbackCode)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10b981', paddingHorizontal: 10, paddingVertical: 5, borderRadius: BorderRadius.md }}
+            >
+              <Ionicons name="copy-outline" size={12} color="#ffffff" />
+              <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_600SemiBold', fontSize: 11 }}>
+                COPY CODE
+              </ThemedText>
+            </Pressable>
+          </View>
+
+          {/* 4-Metric Grid */}
+          <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: theme.outlineVariant + '22', marginTop: 10, paddingTop: 8, justifyContent: 'space-between' }}>
+            <View style={{ alignItems: 'center', flex: 1 }}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>REWARD TYPE</ThemedText>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                {isPercent ? 'Percent (%)' : 'Flat (₹)'}
+              </ThemedText>
+            </View>
+            <View style={{ alignItems: 'center', flex: 1 }}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>CASHBACK</ThemedText>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: '#10b981' }}>
+                {isPercent ? `${val}%` : `₹${val}`}
+              </ThemedText>
+            </View>
+            <View style={{ alignItems: 'center', flex: 1 }}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>MAX CAP</ThemedText>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                {cashbackMaxAmount && parseFloat(cashbackMaxAmount) > 0 ? `₹${cashbackMaxAmount}` : 'No Cap'}
+              </ThemedText>
+            </View>
+            <View style={{ alignItems: 'center', flex: 1 }}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: theme.textSecondary }}>USAGE</ThemedText>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                {cashbackOneTime ? '1x / Player' : 'Unlimited'}
+              </ThemedText>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   const renderStepOffers = () => {
     const offerField = (
       draft: TurfOfferDraft,
@@ -1700,6 +1953,313 @@ export default function CreateTurfScreen() {
 
     return (
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPad}>
+        {/* ── 1. Dedicated Turf Cashback Reward Generator ── */}
+        <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest, marginBottom: Spacing.md }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="wallet-outline" size={16} color="#10b981" />
+              <ThemedText style={[styles.fieldLabel, { fontSize: 11, color: '#10b981', letterSpacing: 0.6 }]}>
+                TURF CASHBACK REWARD (WALLET CREDIT)
+              </ThemedText>
+            </View>
+            <Pressable
+              onPress={() => setCashbackEnabled(!cashbackEnabled)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                backgroundColor: cashbackEnabled ? '#10b98118' : theme.surfaceLow,
+                borderWidth: 1,
+                borderColor: cashbackEnabled ? '#10b981' : theme.outlineVariant + '44',
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: BorderRadius.full,
+              }}
+            >
+              <Ionicons
+                name={cashbackEnabled ? 'checkbox' : 'square-outline'}
+                size={14}
+                color={cashbackEnabled ? '#10b981' : theme.textSecondary}
+              />
+              <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_600SemiBold', color: cashbackEnabled ? '#10b981' : theme.textSecondary }}>
+                {cashbackEnabled ? 'Enabled' : 'Enable Cashback'}
+              </ThemedText>
+            </Pressable>
+          </View>
+          <ThemedText style={[styles.helperText, { color: theme.textSecondary, marginBottom: 8 }]}>
+            Give players a cashback incentive when they complete turf booking payment. Cashback is credited to their Turf Wallet and locked strictly for future bookings of this turf.
+          </ThemedText>
+
+          {cashbackEnabled && (
+            <View style={{ backgroundColor: theme.surfaceLow, padding: 12, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: theme.outlineVariant + '33', gap: 12 }}>
+              {/* 1. Cashback Name Input */}
+              <View>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                  Cashback Title / Campaign Name
+                </ThemedText>
+                <TextInput
+                  maxFontSizeMultiplier={MAX_FONT_SCALE}
+                  value={cashbackName}
+                  onChangeText={setCashbackName}
+                  placeholder={`e.g. ${turfName.trim().slice(0, 14) || 'Pitch'} Cashback Reward`}
+                  placeholderTextColor="#94a3b8"
+                  style={[styles.input, { backgroundColor: theme.surfaceLowest, color: theme.text, borderColor: theme.outlineVariant + '44' }]}
+                />
+              </View>
+
+              {/* 2. Cashback Code Input + Copy Button */}
+              <View>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                  Cashback Code (Optional Custom Code)
+                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 8, borderWidth: 1, borderColor: theme.outlineVariant + '44', paddingHorizontal: 10, height: 42, gap: 8 }}>
+                  <Ionicons name="pricetag-outline" size={15} color="#10b981" />
+                  <TextInput
+                    maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    value={cashbackCode}
+                    onChangeText={(val) => setCashbackCode(val.toUpperCase())}
+                    placeholder={`e.g. ${activeCashbackCode}`}
+                    placeholderTextColor="#94a3b8"
+                    autoCapitalize="characters"
+                    style={{ flex: 1, fontSize: 13, fontFamily: 'Sora_600SemiBold', color: '#10b981', height: 40, letterSpacing: 0.8, ...WEB_INPUT }}
+                  />
+                  <Pressable
+                    onPress={() => handleCopyCashbackCode(activeCashbackCode)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10b98120', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
+                  >
+                    <Ionicons name="copy-outline" size={12} color="#10b981" />
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: '#10b981' }}>
+                      Copy
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* 3. Type Switcher: Flat ₹ vs Percentage % */}
+              <View>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                  Cashback Type
+                </ThemedText>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Pressable
+                    onPress={() => setCashbackType('flat')}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      backgroundColor: cashbackType === 'flat' ? '#10b981' : theme.surfaceLowest,
+                      borderWidth: 1,
+                      borderColor: cashbackType === 'flat' ? '#10b981' : theme.outlineVariant + '33',
+                    }}
+                  >
+                    <Ionicons name="cash-outline" size={14} color={cashbackType === 'flat' ? '#ffffff' : theme.text} />
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: cashbackType === 'flat' ? '#ffffff' : theme.text }}>
+                      Flat ₹ Cashback
+                    </ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => setCashbackType('percent')}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      backgroundColor: cashbackType === 'percent' ? '#10b981' : theme.surfaceLowest,
+                      borderWidth: 1,
+                      borderColor: cashbackType === 'percent' ? '#10b981' : theme.outlineVariant + '33',
+                    }}
+                  >
+                    <Ionicons name="pie-chart-outline" size={14} color={cashbackType === 'percent' ? '#ffffff' : theme.text} />
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: cashbackType === 'percent' ? '#ffffff' : theme.text }}>
+                      Percentage %
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* 4. Amount Input */}
+              <View>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 6 }}>
+                  {cashbackType === 'flat' ? 'Cashback Amount (₹)' : 'Cashback Percentage (%)'}
+                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLowest, borderRadius: 8, borderWidth: 1, borderColor: theme.outlineVariant + '44', paddingHorizontal: 10, height: 42 }}>
+                  <ThemedText style={{ fontSize: 14, fontFamily: 'Sora_600SemiBold', color: '#10b981', marginRight: 6 }}>
+                    {cashbackType === 'flat' ? '₹' : '%'}
+                  </ThemedText>
+                  <TextInput
+                    maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    value={cashbackAmount}
+                    onChangeText={setCashbackAmount}
+                    keyboardType="decimal-pad"
+                    placeholder={cashbackType === 'flat' ? 'e.g. 100' : 'e.g. 15'}
+                    placeholderTextColor="#94a3b8"
+                    style={{ flex: 1, fontSize: 13, fontFamily: 'Sora_500Medium', color: theme.text, height: 40, ...WEB_INPUT }}
+                  />
+                  {cashbackAmount !== '' && (
+                    <Pressable onPress={() => setCashbackAmount('')}>
+                      <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+
+              {/* Quick suggestion chips */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {(cashbackType === 'flat' ? ['50', '100', '150', '200', '300'] : ['5', '10', '15', '20']).map(chip => (
+                  <Pressable
+                    key={chip}
+                    onPress={() => setCashbackAmount(chip)}
+                    style={{
+                      paddingVertical: 3,
+                      paddingHorizontal: 8,
+                      borderRadius: 6,
+                      backgroundColor: cashbackAmount === chip ? '#10b98120' : theme.surfaceLowest,
+                      borderWidth: 1,
+                      borderColor: cashbackAmount === chip ? '#10b981' : theme.outlineVariant + '33',
+                    }}
+                  >
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: cashbackAmount === chip ? '#10b981' : theme.textSecondary }}>
+                      {cashbackType === 'flat' ? `₹${chip}` : `${chip}%`}
+                    </ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+
+              {/* 5. Restrictions: Max Amount Cap & One-Time Toggle */}
+              <View style={{ backgroundColor: theme.surfaceLowest, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: theme.outlineVariant + '33', gap: 10, marginTop: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="shield-checkmark-outline" size={14} color="#10b981" />
+                  <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_600SemiBold', color: theme.text }}>
+                    CASHBACK RESTRICTIONS & GUARDRAILS
+                  </ThemedText>
+                </View>
+
+                {/* Max Cap Input */}
+                <View>
+                  <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary, marginBottom: 5 }}>
+                    Maximum Cashback Cap (₹) — {cashbackType === 'percent' ? 'Recommended for % rates' : 'Optional Limit'}
+                  </ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surfaceLow, borderRadius: 6, borderWidth: 1, borderColor: theme.outlineVariant + '44', paddingHorizontal: 10, height: 38 }}>
+                    <ThemedText style={{ fontSize: 13, fontFamily: 'Sora_600SemiBold', color: theme.textSecondary, marginRight: 6 }}>₹</ThemedText>
+                    <TextInput
+                      maxFontSizeMultiplier={MAX_FONT_SCALE}
+                      value={cashbackMaxAmount}
+                      onChangeText={setCashbackMaxAmount}
+                      keyboardType="decimal-pad"
+                      placeholder="e.g. 200 (Leave blank for no limit)"
+                      placeholderTextColor="#94a3b8"
+                      style={{ flex: 1, fontSize: 12, fontFamily: 'Sora_500Medium', color: theme.text, height: 36, ...WEB_INPUT }}
+                    />
+                    {cashbackMaxAmount !== '' && (
+                      <Pressable onPress={() => setCashbackMaxAmount('')}>
+                        <Ionicons name="close-circle" size={14} color={theme.textSecondary} />
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+
+                {/* One-Time Usage Switcher */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 2 }}>
+                  <View style={{ flex: 1, marginRight: 10 }}>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: theme.text }}>
+                      One-Time Usage per Player
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_400Regular', color: theme.textSecondary }}>
+                      {cashbackOneTime ? 'Only first booking gets cashback reward' : 'Player earns cashback on every booking payment'}
+                    </ThemedText>
+                  </View>
+                  <Pressable
+                    onPress={() => setCashbackOneTime(!cashbackOneTime)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 6,
+                      backgroundColor: cashbackOneTime ? '#10b98120' : theme.surfaceLow,
+                      borderWidth: 1,
+                      borderColor: cashbackOneTime ? '#10b981' : theme.outlineVariant + '44',
+                    }}
+                  >
+                    <Ionicons
+                      name={cashbackOneTime ? 'checkbox' : 'square-outline'}
+                      size={13}
+                      color={cashbackOneTime ? '#10b981' : theme.textSecondary}
+                    />
+                    <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_600SemiBold', color: cashbackOneTime ? '#10b981' : theme.textSecondary }}>
+                      {cashbackOneTime ? '1x Only' : 'Multi-use'}
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Live Preview Callout */}
+              {parseFloat(cashbackAmount) > 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#10b98115', borderWidth: 1, borderColor: '#10b98133', padding: 8, borderRadius: 8 }}>
+                  <Ionicons name="gift" size={14} color="#10b981" />
+                  <ThemedText style={{ flex: 1, fontSize: 10.5, fontFamily: 'Sora_500Medium', color: '#10b981' }}>
+                    Player earns {cashbackType === 'flat' ? `₹${parseFloat(cashbackAmount) || 0}` : `${parseFloat(cashbackAmount) || 0}% (~₹${Math.round(((parseFloat(pricePerSlot.replace(/,/g, '')) || 1000) * (parseFloat(cashbackAmount) || 0)) / 100)})`}{cashbackMaxAmount && parseFloat(cashbackMaxAmount) > 0 ? ` (Max Cap ₹${cashbackMaxAmount})` : ''} Cashback into their wallet upon completing payment!
+                  </ThemedText>
+                </View>
+              )}
+
+              {/* 1. Live Cashback Design Card */}
+              {parseFloat(cashbackAmount) > 0 && (
+                <View style={{ marginTop: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="card-outline" size={13} color="#10b981" />
+                      <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 10.5, color: '#10b981', letterSpacing: 0.3 }}>
+                        LIVE CASHBACK CARD DESIGN
+                      </ThemedText>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#10b98118', paddingHorizontal: 6, paddingVertical: 2, borderRadius: BorderRadius.full }}>
+                      <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#10b981' }} />
+                      <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: '#10b981' }}>
+                        Live Bound
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  {renderCashbackDesignCard()}
+                </View>
+              )}
+
+              {/* 2. Live Cashback Details Output */}
+              {parseFloat(cashbackAmount) > 0 && (
+                <View style={{ marginTop: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="document-text-outline" size={13} color="#10b981" />
+                      <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 10.5, color: '#10b981', letterSpacing: 0.3 }}>
+                        CASHBACK DETAILS OUTPUT
+                      </ThemedText>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#10b98118', paddingHorizontal: 6, paddingVertical: 2, borderRadius: BorderRadius.full }}>
+                      <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#10b981' }} />
+                      <ThemedText style={{ fontSize: 9, fontFamily: 'Sora_500Medium', color: '#10b981' }}>
+                        Live Bound
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  {renderCashbackDetailsOutput()}
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* ── 2. Promotional Vouchers & Offers Section ── */}
         <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 15 }}>
@@ -1717,7 +2277,7 @@ export default function CreateTurfScreen() {
 
           {turfOffers.length === 0 ? (
             <View style={styles.offerEmptyBox}>
-              <Ionicons name="pricetags-outline" size={26} color={theme.textSecondary} />
+              <Ionicons name="pricetags-outline" size={22} color={theme.textSecondary} />
               <ThemedText style={[styles.offerEmptyText, { color: theme.textSecondary }]}>
                 No vouchers — that&apos;s fine, just continue.
               </ThemedText>
@@ -1961,7 +2521,7 @@ export default function CreateTurfScreen() {
                 <ThemedText style={[styles.previewSuperLabel, { color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', fontSize: 10, letterSpacing: 0.5 }]}>
                   {sportType || 'Sport'} • {surfaceType || 'Surface'}
                 </ThemedText>
-                <ThemedText style={[styles.previewName, { fontSize: 20, marginTop: 2 }]}>{turfName || 'Untitled Turf'}</ThemedText>
+                <ThemedText style={[styles.previewName, { fontSize: 16.5, marginTop: 2 }]}>{turfName || 'Untitled Turf'}</ThemedText>
               </View>
               <View style={{ backgroundColor: '#10b981', paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full }}>
                 <ThemedText style={{ color: '#fff', fontSize: 12, fontFamily: 'Sora_500Medium' }}>
@@ -1987,8 +2547,8 @@ export default function CreateTurfScreen() {
           </View>
 
           {/* Amenities Selection */}
-          <View style={[styles.fieldGroup, { marginTop: Spacing.md }]}>
-            <ThemedText style={styles.fieldLabel}>Selected Amenities</ThemedText>
+          <View style={[styles.fieldGroup, { marginTop: Spacing.md }, !tf.amenities.visible && hiddenStyle]}>
+            <ThemedText style={styles.fieldLabel}>{tf.amenities.label}</ThemedText>
             <View style={styles.amenityGrid}>
               {AMENITIES.map(a => {
                 const isSelected = !!amenities[a.key];
@@ -2037,12 +2597,15 @@ export default function CreateTurfScreen() {
           </View>
 
           {/* Description */}
-          <View style={styles.fieldGroup}>
-            <ThemedText style={styles.fieldLabel}>Venue Description (Optional)</ThemedText>
+          <View style={[styles.fieldGroup, !tf.description.visible && hiddenStyle]}>
+            <ThemedText style={styles.fieldLabel}>
+              {tf.description.label}
+              {tf.description.required ? <ThemedText style={styles.requiredStar}> *</ThemedText> : ' (Optional)'}
+            </ThemedText>
             <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
               value={description}
               onChangeText={setDescription}
-              placeholder="e.g. State-of-the-art turf with FIFA-standard shockpad rubber infill and LED night floodlights."
+              placeholder={tf.description.placeholder}
               placeholderTextColor="#94a3b8"
               multiline
               numberOfLines={4}
@@ -2061,7 +2624,7 @@ export default function CreateTurfScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Pressable style={styles.backBtn} onPress={handleBack}>
-            <Ionicons name="arrow-back" size={22} color={theme.text} />
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
           <ThemedText style={[styles.headerTitle, { color: theme.text }]}>
             {params.editId ? 'Manage Pitch' : currentStep === PUBLISH_STEP ? 'Preview & Publish' : 'Create Turf'}
@@ -2190,7 +2753,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.containerMargin, paddingVertical: Spacing.sm, zIndex: 10 },
   backBtn: { padding: 4 },
-  headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 17, flex: 1, marginLeft: 10 },
+  headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 15, flex: 1, marginLeft: 10 },
   headerActionBtn: {
     width: 38,
     height: 38,
@@ -2441,7 +3004,7 @@ const styles = StyleSheet.create({
   previewCard: { borderRadius: BorderRadius['2xl'], padding: Spacing.lg, marginBottom: Spacing.lg },
   previewCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: Spacing.md },
   previewSuperLabel: { fontFamily: 'Sora_500Medium', fontSize: 9, letterSpacing: 0.4, marginBottom: 4 },
-  previewName: { fontFamily: 'Sora_500Medium', fontSize: 20, color: '#ffffff' },
+  previewName: { fontFamily: 'Sora_500Medium', fontSize: 16.5, color: '#ffffff' },
   previewMeta: { flexDirection: 'row', gap: Spacing.md, flexWrap: 'wrap' },
   previewMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   previewMetaText: { fontFamily: 'Sora_500Medium', fontSize: 11, color: 'rgba(255,255,255,0.8)' },
@@ -2610,14 +3173,14 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   kakaoBigDiscount: {
-    fontSize: 48,
+    fontSize: 36,
     fontFamily: 'Sora_500Medium',
     color: '#ffffff',
     lineHeight: 48,
     letterSpacing: -1,
   },
   kakaoBigOff: {
-    fontSize: 40,
+    fontSize: 32,
     fontFamily: 'Sora_500Medium',
     color: '#ffffff',
     lineHeight: 40,

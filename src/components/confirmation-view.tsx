@@ -9,8 +9,8 @@ import { useTheme } from '@/hooks/use-theme';
 /**
  * confirmation-view.tsx
  *
- * The "you're confirmed" screen: ringed tick, a copyable reference, a dashed
- * receipt of detail rows, a money summary and two actions.
+ * The "you're confirmed" screen: ringed tick, a copyable reference, a
+ * perforated receipt of detail rows, a money summary and two actions.
  *
  * Written once and shared. Turf booking had this design; tournament
  * registration had a different, thinner one built inline — so the same moment
@@ -44,9 +44,13 @@ export interface ConfirmationViewProps {
   notice?: string;
   /** Optional highlight card above the receipt (e.g. cashback). */
   highlight?: { icon: keyof typeof Ionicons.glyphMap; title: string; subtitle: string };
+  /** Optional custom content rendered above the receipt (e.g. Cashback Output Card). */
+  extraContent?: React.ReactNode;
   secondaryAction?: ConfirmationAction;
   primaryAction: ConfirmationAction;
 }
+
+const SUCCESS = '#10b981';
 
 export function ConfirmationView({
   title,
@@ -59,6 +63,7 @@ export function ConfirmationView({
   rightSummary,
   notice,
   highlight,
+  extraContent,
   secondaryAction,
   primaryAction,
 }: ConfirmationViewProps) {
@@ -79,18 +84,32 @@ export function ConfirmationView({
     }
   };
 
+  // Punched notches on both edges with a dashed tear line — the receipt reads
+  // as a ticket, matching the dashboard voucher tickets.
+  const perforation = (
+    <View style={styles.perforation}>
+      <View style={[styles.notch, styles.notchLeft, { backgroundColor: theme.background }]} />
+      <View style={[styles.tearLine, { borderColor: theme.outlineVariant + '88' }]} />
+      <View style={[styles.notch, styles.notchRight, { backgroundColor: theme.background }]} />
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.heroSection}>
           <View style={styles.outerRing}>
             <View style={styles.middleRing}>
-              <View style={[styles.innerCircle, { backgroundColor: '#10b981' }, Shadows.level3]}>
-                <Ionicons name="checkmark" size={36} color="#ffffff" />
+              <View style={[styles.innerCircle, { backgroundColor: SUCCESS }, Shadows.level3]}>
+                <Ionicons name="checkmark" size={26} color="#ffffff" />
               </View>
             </View>
           </View>
 
+          <View style={[styles.statusPill, { backgroundColor: SUCCESS + '1A' }]}>
+            <View style={[styles.statusDot, { backgroundColor: SUCCESS }]} />
+            <ThemedText style={[styles.statusText, { color: '#047857' }]}>Confirmed</ThemedText>
+          </View>
           <ThemedText style={[styles.heroTitle, { color: theme.text }]}>{title}</ThemedText>
           <ThemedText style={[styles.heroSubtitle, { color: theme.textSecondary }]}>
             {subtitle}
@@ -98,9 +117,9 @@ export function ConfirmationView({
         </View>
 
         {highlight && (
-          <View style={[styles.highlightCard, { backgroundColor: '#10b98114', borderColor: '#10b98144' }]}>
-            <View style={[styles.highlightIconBg, { backgroundColor: '#10b981' }]}>
-              <Ionicons name={highlight.icon} size={18} color="#ffffff" />
+          <View style={[styles.highlightCard, { backgroundColor: SUCCESS + '12', borderColor: SUCCESS + '40' }]}>
+            <View style={[styles.highlightIconBg, { backgroundColor: SUCCESS }]}>
+              <Ionicons name={highlight.icon} size={16} color="#ffffff" />
             </View>
             <View style={{ flex: 1 }}>
               <ThemedText style={styles.highlightTitle}>{highlight.title}</ThemedText>
@@ -108,6 +127,8 @@ export function ConfirmationView({
             </View>
           </View>
         )}
+
+        {extraContent}
 
         <View
           style={[
@@ -118,7 +139,7 @@ export function ConfirmationView({
         >
           <View style={styles.refRow}>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <ThemedText style={[styles.refLabel, { color: theme.textSecondary }]}>
+              <ThemedText style={[styles.microLabel, { color: theme.textSecondary }]}>
                 {referenceLabel}
               </ThemedText>
               <ThemedText style={[styles.refValue, { color: theme.primary }]} numberOfLines={1}>
@@ -129,14 +150,19 @@ export function ConfirmationView({
               onPress={handleCopy}
               accessibilityRole="button"
               accessibilityLabel={`Copy reference ${reference}`}
-              style={[styles.copyBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' }]}
+              style={[
+                styles.copyBtn,
+                copied
+                  ? { backgroundColor: SUCCESS + '14', borderColor: SUCCESS + '44' }
+                  : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '44' },
+              ]}
             >
               <Ionicons
                 name={copied ? 'checkmark' : 'copy-outline'}
                 size={13}
-                color={copied ? '#10b981' : theme.textSecondary}
+                color={copied ? SUCCESS : theme.textSecondary}
               />
-              <ThemedText style={[styles.copyBtnText, { color: copied ? '#10b981' : theme.textSecondary }]}>
+              <ThemedText style={[styles.copyBtnText, { color: copied ? SUCCESS : theme.textSecondary }]}>
                 {copied ? 'Copied' : 'Copy'}
               </ThemedText>
             </Pressable>
@@ -144,15 +170,15 @@ export function ConfirmationView({
 
           {infoRows.length > 0 && (
             <>
-              <View style={[styles.dashedDivider, { borderColor: theme.outlineVariant + '44' }]} />
+              {perforation}
               <View style={styles.infoList}>
                 {infoRows.map((row, i) => (
                   <View key={`${row.label}-${i}`} style={styles.infoRow}>
                     <View style={[styles.iconPill, { backgroundColor: theme.primary + '14' }]}>
-                      <Ionicons name={row.icon} size={15} color={theme.primary} />
+                      <Ionicons name={row.icon} size={14} color={theme.primary} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <ThemedText style={[styles.infoLabel, { color: theme.textSecondary }]}>
+                      <ThemedText style={[styles.microLabel, { color: theme.textSecondary }]}>
                         {row.label}
                       </ThemedText>
                       <ThemedText style={[styles.infoValue, { color: theme.text }]} numberOfLines={2}>
@@ -167,7 +193,7 @@ export function ConfirmationView({
 
           {breakdown.length > 0 && (
             <>
-              <View style={[styles.dashedDivider, { borderColor: theme.outlineVariant + '44' }]} />
+              {perforation}
               <View style={styles.breakdown}>
                 {breakdown.map((line, i) => (
                   <View key={`${line.label}-${i}`} style={styles.breakdownRow}>
@@ -185,14 +211,14 @@ export function ConfirmationView({
 
           {(leftSummary || rightSummary) && (
             <>
-              <View style={[styles.dashedDivider, { borderColor: theme.outlineVariant + '44' }]} />
-              <View style={styles.priceRow}>
+              {perforation}
+              <View style={[styles.priceRow, { backgroundColor: theme.surfaceLow }]}>
                 {leftSummary ? (
                   <View>
-                    <ThemedText style={[styles.infoLabel, { color: theme.textSecondary }]}>
+                    <ThemedText style={[styles.microLabel, { color: theme.textSecondary }]}>
                       {leftSummary.label}
                     </ThemedText>
-                    <ThemedText style={[styles.paidAmount, { color: '#10b981' }]}>
+                    <ThemedText style={[styles.paidAmount, { color: '#047857' }]}>
                       {leftSummary.value}
                     </ThemedText>
                   </View>
@@ -200,7 +226,7 @@ export function ConfirmationView({
 
                 {rightSummary && (
                   <View style={{ alignItems: 'flex-end' }}>
-                    <ThemedText style={[styles.infoLabel, { color: theme.textSecondary }]}>
+                    <ThemedText style={[styles.microLabel, { color: theme.textSecondary }]}>
                       {rightSummary.label}
                     </ThemedText>
                     <ThemedText style={[styles.totalAmount, { color: theme.text }]}>
@@ -214,8 +240,10 @@ export function ConfirmationView({
         </View>
 
         {!!notice && (
-          <View style={[styles.noticeCard, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
-            <Ionicons name="information-circle" size={18} color={theme.primary} style={{ marginTop: 1 }} />
+          <View style={[styles.noticeCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
+            <View style={[styles.noticeIcon, { backgroundColor: theme.primary + '14' }]}>
+              <Ionicons name="information" size={14} color={theme.primary} />
+            </View>
             <ThemedText style={[styles.noticeText, { color: theme.textSecondary }]}>{notice}</ThemedText>
           </View>
         )}
@@ -225,16 +253,15 @@ export function ConfirmationView({
         style={[
           styles.bottomBar,
           { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '33' },
-          Shadows.level2,
         ]}
       >
         {secondaryAction && (
           <Pressable
             onPress={secondaryAction.onPress}
             accessibilityRole="button"
-            style={[styles.outlineBtn, { borderColor: theme.outlineVariant + '88' }]}
+            style={({ pressed }) => [styles.outlineBtn, { borderColor: theme.outlineVariant + '88', opacity: pressed ? 0.85 : 1 }]}
           >
-            <Ionicons name={secondaryAction.icon} size={16} color={theme.text} />
+            <Ionicons name={secondaryAction.icon} size={15} color={theme.text} />
             <ThemedText style={[styles.outlineBtnText, { color: theme.text }]}>
               {secondaryAction.label}
             </ThemedText>
@@ -244,9 +271,9 @@ export function ConfirmationView({
         <Pressable
           onPress={primaryAction.onPress}
           accessibilityRole="button"
-          style={[styles.primaryBtn, { backgroundColor: theme.primary }]}
+          style={({ pressed }) => [styles.primaryBtn, { backgroundColor: theme.primary, opacity: pressed ? 0.85 : 1 }, Shadows.level2]}
         >
-          <Ionicons name={primaryAction.icon} size={16} color="#ffffff" />
+          <Ionicons name={primaryAction.icon} size={15} color="#ffffff" />
           <ThemedText style={styles.primaryBtnText}>{primaryAction.label}</ThemedText>
         </Pressable>
       </View>
@@ -254,66 +281,85 @@ export function ConfirmationView({
   );
 }
 
+const CARD_PADDING = 16;
+const NOTCH = 18;
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: Spacing.containerMargin, paddingTop: 24, paddingBottom: 130 },
+  scrollContent: { paddingHorizontal: Spacing.containerMargin, paddingTop: 22, paddingBottom: 130 },
 
-  heroSection: { alignItems: 'center', marginBottom: 24 },
+  heroSection: { alignItems: 'center', marginBottom: 20 },
   outerRing: {
-    width: 116, height: 116, borderRadius: 58,
-    backgroundColor: '#10b98114', alignItems: 'center', justifyContent: 'center',
+    width: 104, height: 104, borderRadius: 52,
+    backgroundColor: SUCCESS + '14', alignItems: 'center', justifyContent: 'center',
   },
   middleRing: {
-    width: 90, height: 90, borderRadius: 45,
-    backgroundColor: '#10b98122', alignItems: 'center', justifyContent: 'center',
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: SUCCESS + '22', alignItems: 'center', justifyContent: 'center',
   },
-  innerCircle: { width: 66, height: 66, borderRadius: 33, alignItems: 'center', justifyContent: 'center' },
-  heroTitle: { fontSize: 19, fontFamily: 'Sora_500Medium', marginTop: 18, textAlign: 'center' },
+  innerCircle: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center' },
+  statusPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 16,
+    paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999,
+  },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.8, textTransform: 'uppercase' },
+  heroTitle: { fontSize: 15, fontFamily: 'Sora_500Medium', marginTop: 8, textAlign: 'center' },
   heroSubtitle: {
-    fontSize: 12.5, lineHeight: 18, fontFamily: 'Sora_400Regular',
-    marginTop: 6, textAlign: 'center', paddingHorizontal: 20,
+    fontSize: 11.5, lineHeight: 16, fontFamily: 'Sora_400Regular',
+    marginTop: 4, textAlign: 'center', paddingHorizontal: 20,
   },
 
   highlightCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    borderRadius: BorderRadius.lg, borderWidth: 1, padding: 14, marginBottom: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderRadius: BorderRadius.premium, borderWidth: 1, padding: 12, marginBottom: 14,
   },
-  highlightIconBg: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  highlightTitle: { fontSize: 13, fontFamily: 'Sora_500Medium', color: '#047857' },
-  highlightSub: { fontSize: 11, fontFamily: 'Sora_400Regular', color: '#059669', marginTop: 2 },
+  highlightIconBg: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  highlightTitle: { fontSize: 12.5, fontFamily: 'Sora_500Medium', color: '#047857' },
+  highlightSub: { fontSize: 10.5, fontFamily: 'Sora_400Regular', color: '#059669', marginTop: 1 },
 
-  ticketCard: { borderRadius: BorderRadius.lg, borderWidth: 1, padding: 16 },
+  ticketCard: { borderRadius: 20, borderWidth: 1, padding: CARD_PADDING, overflow: 'hidden' },
   refRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  refLabel: { fontSize: 9.5, fontFamily: 'Sora_400Regular', letterSpacing: 0.6 },
-  refValue: { fontSize: 16, fontFamily: 'Sora_500Medium', marginTop: 2 },
+  microLabel: { fontSize: 8.5, fontFamily: 'Sora_500Medium', letterSpacing: 0.7, textTransform: 'uppercase' },
+  refValue: { fontSize: 14.5, fontFamily: 'Sora_500Medium', marginTop: 2, letterSpacing: 0.3 },
   copyBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0,
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: BorderRadius.full, borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0,
+    height: 30, paddingHorizontal: 11, borderRadius: 999, borderWidth: 1,
   },
   copyBtnText: { fontSize: 10.5, fontFamily: 'Sora_500Medium' },
 
-  dashedDivider: { borderTopWidth: 1, borderStyle: 'dashed', marginVertical: 14 },
+  perforation: {
+    flexDirection: 'row', alignItems: 'center', height: NOTCH,
+    marginHorizontal: -CARD_PADDING, marginVertical: 12,
+  },
+  notch: { width: NOTCH, height: NOTCH, borderRadius: NOTCH / 2 },
+  notchLeft: { marginLeft: -NOTCH / 2 },
+  notchRight: { marginRight: -NOTCH / 2 },
+  tearLine: { flex: 1, borderTopWidth: 1.5, borderStyle: 'dashed', marginHorizontal: 6 },
 
-  infoList: { gap: 14 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  infoList: { gap: 12 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   iconPill: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  infoLabel: { fontSize: 9.5, fontFamily: 'Sora_400Regular', letterSpacing: 0.6 },
-  infoValue: { fontSize: 13, lineHeight: 18, fontFamily: 'Sora_500Medium', marginTop: 2 },
+  infoValue: { fontSize: 12.5, lineHeight: 17, fontFamily: 'Sora_500Medium', marginTop: 1 },
 
-  breakdown: { gap: 9 },
+  breakdown: { gap: 8 },
   breakdownRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  breakdownLabel: { fontSize: 12, fontFamily: 'Sora_400Regular', flexShrink: 1 },
-  breakdownValue: { fontSize: 12, fontFamily: 'Sora_500Medium', flexShrink: 0 },
+  breakdownLabel: { fontSize: 11, fontFamily: 'Sora_400Regular', flexShrink: 1 },
+  breakdownValue: { fontSize: 11.5, fontFamily: 'Sora_500Medium', flexShrink: 0 },
 
-  priceRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 },
-  paidAmount: { fontSize: 17, fontFamily: 'Sora_500Medium', marginTop: 2 },
-  totalAmount: { fontSize: 17, fontFamily: 'Sora_500Medium', marginTop: 2 },
+  priceRow: {
+    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10,
+    borderRadius: BorderRadius.premium, paddingHorizontal: 12, paddingVertical: 10,
+  },
+  paidAmount: { fontSize: 14.5, fontFamily: 'Sora_500Medium', marginTop: 2 },
+  totalAmount: { fontSize: 14.5, fontFamily: 'Sora_500Medium', marginTop: 2 },
 
   noticeCard: {
     flexDirection: 'row', gap: 10, alignItems: 'flex-start',
-    borderRadius: BorderRadius.lg, borderWidth: 1, padding: 13, marginTop: 16,
+    borderRadius: BorderRadius.premium, borderWidth: 1, padding: 12, marginTop: 14,
   },
-  noticeText: { flex: 1, fontSize: 11.5, lineHeight: 17, fontFamily: 'Sora_400Regular' },
+  noticeIcon: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  noticeText: { flex: 1, fontSize: 11, lineHeight: 16, fontFamily: 'Sora_400Regular' },
 
   bottomBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
@@ -321,13 +367,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.containerMargin, paddingTop: 12, paddingBottom: 26,
   },
   outlineBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    height: 48, borderRadius: BorderRadius.full, borderWidth: 1,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    height: 48, borderRadius: 999, borderWidth: 1,
   },
-  outlineBtnText: { fontSize: 13, fontFamily: 'Sora_500Medium' },
+  outlineBtnText: { fontSize: 12.5, fontFamily: 'Sora_500Medium' },
   primaryBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    height: 48, borderRadius: BorderRadius.full,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    height: 48, borderRadius: 999,
   },
-  primaryBtnText: { color: '#ffffff', fontSize: 13, fontFamily: 'Sora_500Medium' },
+  primaryBtnText: { color: '#ffffff', fontSize: 12.5, fontFamily: 'Sora_500Medium' },
 });

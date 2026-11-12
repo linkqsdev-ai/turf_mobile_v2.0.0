@@ -3,10 +3,6 @@
  *
  * The owner's money view: every booking's payment, where it sits in the 24-hour
  * escrow, and a downloadable statement for each.
- *
- * The player's payment is held by the platform and auto-credits at T+24h, so
- * the important thing this screen answers is "when do I actually get paid" —
- * hence the live countdown on every held row rather than a bare status word.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -18,9 +14,8 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
-import { BorderRadius, Shadows, Spacing } from '@/constants/theme';
+import { BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useTypeRamp } from '@/lib/typography';
 import { useToast } from '@/context/ToastContext';
 import { useBookings } from '@/store/app-store';
 import {
@@ -34,6 +29,13 @@ import {
 import { exportInvoicePDF, invoiceNumberFor } from '@/services/payout-invoice';
 import { type PayeeProfile } from '@/store/payout-store';
 import { type Booking } from '@/store/booking-store';
+import {
+  DashboardCard,
+  DashboardSectionLabel,
+  ProgressPill,
+  StatTiles,
+} from '@/components/dashboard/analytics-kit';
+import { ACCENTS, type Accent } from '@/constants/dashboard-accents';
 
 const PROFILE_KEY = '@turf_payout_profile';
 
@@ -43,28 +45,36 @@ interface EarningRow {
   status: PayoutStatus;
 }
 
-interface Totals { inEscrow: number; crediting: number; credited: number }
+interface Totals {
+  inEscrow: number;
+  crediting: number;
+  credited: number;
+}
 
-const STATUS_META: Record<string, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  held: { label: 'In escrow', color: '#E08A3C', icon: 'time-outline' },
-  payable: { label: 'Crediting', color: '#4F46E5', icon: 'sync-outline' },
-  processing: { label: 'Processing', color: '#4F46E5', icon: 'sync-outline' },
-  paid: { label: 'Credited', color: '#10B981', icon: 'checkmark-circle' },
-  failed: { label: 'Failed', color: '#EF4444', icon: 'alert-circle' },
-  on_hold: { label: 'On hold', color: '#EF4444', icon: 'pause-circle' },
-  refunded: { label: 'Refunded', color: '#6B7280', icon: 'return-down-back' },
+const STATUS_META: Record<
+  string,
+  { label: string; emoji: string; accent: Accent; icon: keyof typeof Ionicons.glyphMap }
+> = {
+  held: { label: 'In escrow', emoji: '⏳', accent: ACCENTS.orange, icon: 'time-outline' },
+  payable: { label: 'Crediting', emoji: '🔄', accent: ACCENTS.primary, icon: 'sync-outline' },
+  processing: { label: 'Processing', emoji: '🔄', accent: ACCENTS.primary, icon: 'sync-outline' },
+  paid: { label: 'Credited', emoji: '✅', accent: ACCENTS.green, icon: 'checkmark-circle' },
+  failed: { label: 'Failed', emoji: '⚠️', accent: ACCENTS.red, icon: 'alert-circle' },
+  on_hold: { label: 'On hold', emoji: '⏸️', accent: ACCENTS.red, icon: 'pause-circle' },
+  refunded: { label: 'Refunded', emoji: '↩️', accent: ACCENTS.slate, icon: 'return-down-back' },
 };
+
+/** Whole rupees in Indian grouping, e.g. ₹1,24,500. */
+const rupees = (n: number, digits = 0) =>
+  `₹${n.toLocaleString('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
 
 export default function OwnerEarningsScreen() {
   const theme = useTheme();
-  const type = useTypeRamp();
   const router = useRouter();
   const { showSuccess, showWarning } = useToast();
   const { bookings } = useBookings();
 
   const [profile, setProfile] = useState<PayeeProfile | null>(null);
-  // Ticks the countdown so a row flips from "In escrow" to "Crediting" while
-  // the screen is open, rather than only on a re-mount.
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -95,14 +105,17 @@ export default function OwnerEarningsScreen() {
         const status: PayoutStatus = escrowStatus(b.createdAt, null, now);
         return { booking: b, settlement, status };
       })
-      .sort((a: EarningRow, b: EarningRow) => (a.booking.createdAt < b.booking.createdAt ? 1 : -1));
+      .sort((a: EarningRow, b: EarningRow) =>
+        a.booking.createdAt < b.booking.createdAt ? 1 : -1
+      );
   }, [bookings, now]);
 
   const totals = useMemo(() => {
     return rows.reduce(
       (acc: Totals, r: EarningRow) => {
         if (r.status === 'held') acc.inEscrow = money(acc.inEscrow + r.settlement.ownerPayout);
-        else if (r.status === 'paid') acc.credited = money(acc.credited + r.settlement.ownerPayout);
+        else if (r.status === 'paid')
+          acc.credited = money(acc.credited + r.settlement.ownerPayout);
         else acc.crediting = money(acc.crediting + r.settlement.ownerPayout);
         return acc;
       },
@@ -112,12 +125,20 @@ export default function OwnerEarningsScreen() {
 
   const handleInvoice = async (row: EarningRow) => {
     if (!profile) {
-      showWarning('Add your payout details first', 'A statement needs your billing address and GSTIN.');
+      showWarning(
+        'Add your payout details first',
+        'A statement needs your billing address and GSTIN.'
+      );
       router.push('/payout-settings');
       return;
     }
     const b = row.booking;
-    const addr = [profile.address?.line1, profile.address?.city, profile.address?.state, profile.address?.pincode]
+    const addr = [
+      profile.address?.line1,
+      profile.address?.city,
+      profile.address?.state,
+      profile.address?.pincode,
+    ]
       .filter(Boolean)
       .join(', ');
     try {
@@ -138,147 +159,223 @@ export default function OwnerEarningsScreen() {
     }
   };
 
+  const totalPayout = money(totals.inEscrow + totals.crediting + totals.credited);
+  const settledShare = totalPayout > 0 ? totals.credited / totalPayout : 0;
+
   return (
-    <GradientContainer screenName="settings" style={{ flex: 1 }}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={[styles.header, { borderBottomColor: theme.outlineVariant + '33' }]}>
+    <GradientContainer screenName="settings" style={styles.container}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Header Stack Bar */}
+        <View style={styles.header}>
           <Pressable
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
             hitSlop={8}
-            style={styles.backBtn}
+            style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
+            accessibilityRole="button"
             accessibilityLabel="Go back"
           >
             <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
-          <ThemedText style={[type.title, { color: theme.text }]}>Earnings & Payments</ThemedText>
-          <Pressable onPress={() => router.push('/payout-settings')} hitSlop={8} style={styles.backBtn} accessibilityLabel="Payout settings">
-            <Ionicons name="settings-outline" size={18} color={theme.textSecondary} />
+          <ThemedText style={[styles.headerTitle, { color: theme.text }]}>
+            Payment Transactions
+          </ThemedText>
+          <Pressable
+            onPress={() => router.push('/payout-settings')}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.headerActionBtn,
+              { backgroundColor: theme.surfaceLow },
+              pressed && { opacity: 0.7 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Payout settings"
+          >
+            <Ionicons name="settings-outline" size={17} color={theme.textSecondary} />
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-          {/* Money at a glance */}
-          <View style={styles.totalsRow}>
-            <TotalCard label="In escrow" value={totals.inEscrow} color="#E08A3C" hint={`Releases ${HOLD_PERIOD_HOURS}h after booking`} />
-            <TotalCard label="Crediting" value={totals.crediting} color="#4F46E5" hint="On the way to your account" />
-            <TotalCard label="Credited" value={totals.credited} color="#10B981" hint="Settled" />
-          </View>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Money at a glance — where every rupee sits in the escrow cycle */}
+          <DashboardCard
+            title="Earnings at a Glance"
+            metric={`${rupees(totalPayout)} across ${rows.length} ${rows.length === 1 ? 'payment' : 'payments'}`}
+            tag={totals.inEscrow > 0 ? `⏳ ${rupees(totals.inEscrow)} in escrow` : '✅ Nothing on hold'}
+            icon="wallet"
+            accent={ACCENTS.green}
+            footer={{
+              label: 'Hold period',
+              value: `${HOLD_PERIOD_HOURS}h`,
+              status: 'Auto-credits after each booking',
+            }}
+          >
+            <StatTiles
+              items={[
+                { value: rupees(totals.inEscrow), label: 'In escrow', color: ACCENTS.orange.dark },
+                { value: rupees(totals.crediting), label: 'Crediting', color: ACCENTS.primary.dark },
+                { value: rupees(totals.credited), label: 'Credited', color: ACCENTS.green.dark },
+              ]}
+            />
+            <ProgressPill
+              progress={settledShare}
+              accent={ACCENTS.green}
+              label="Settled to your account"
+              value={`${Math.round(settledShare * 100)}%`}
+            />
+          </DashboardCard>
 
+          {/* Nothing can be paid out until the payee details exist. */}
           {!profile && (
-            <Pressable
+            <DashboardCard
+              style={styles.cardGap}
+              title="Payouts on hold"
+              metric="Add bank or UPI details to get paid"
+              tag="⚠️ Action needed"
+              icon="alert-circle"
+              accent={ACCENTS.red}
               onPress={() => router.push('/payout-settings')}
-              style={[styles.warnCard, { backgroundColor: theme.error + '12', borderColor: theme.error + '44' }]}
-            >
-              <Ionicons name="alert-circle" size={16} color={theme.error} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <ThemedText style={[type.bodyStrong, { color: theme.error }]}>Payouts on hold</ThemedText>
-                <ThemedText style={[type.micro, { color: theme.textSecondary, marginTop: 1 }]}>
-                  Add your account details once — you can edit them any time.
+              accessibilityLabel="Payouts on hold. Add your payout details"
+              footer={{ label: 'Needed for', value: 'settlements & statements', status: 'Add details ›' }}
+            />
+          )}
+
+          <DashboardSectionLabel
+            label="Transactions"
+            color={ACCENTS.primary.main}
+            style={styles.sectionLabel}
+            right={
+              <View style={[styles.countBadge, { backgroundColor: theme.surfaceLow }]}>
+                <ThemedText style={[styles.countBadgeText, { color: theme.textSecondary }]}>
+                  {rows.length}
                 </ThemedText>
               </View>
-              <Ionicons name="chevron-forward" size={15} color={theme.error} />
-            </Pressable>
-          )}
+            }
+          />
 
-          <ThemedText style={[type.micro, styles.sectionTitle, { color: theme.textSecondary }]}>
-            PAYMENTS ({rows.length})
-          </ThemedText>
+          {rows.length === 0 ? (
+            <DashboardCard
+              title="No transactions yet"
+              metric="Booking payments and settlements appear here"
+              icon="receipt-outline"
+              accent={ACCENTS.slate}
+            />
+          ) : (
+            <View style={styles.cardsList}>
+              {rows.map((row) => {
+                const meta = STATUS_META[row.status] || STATUS_META.held;
+                const held = row.status === 'held';
+                const slots = row.booking.slots?.length || 1;
 
-          {rows.length === 0 && (
-            <View style={[styles.empty, { borderColor: theme.outlineVariant + '55' }]}>
-              <ThemedText style={[type.small, { color: theme.textSecondary }]}>
-                No bookings yet. Payments appear here as soon as a player books.
-              </ThemedText>
+                return (
+                  <DashboardCard
+                    key={row.booking.id}
+                    title={row.booking.venueName}
+                    metric={`${rupees(row.settlement.ownerPayout, 2)} payout`}
+                    tag={`${meta.emoji} ${meta.label}`}
+                    icon={meta.icon}
+                    accent={meta.accent}
+                    footer={{
+                      left: (
+                        <View style={styles.footerNote}>
+                          <Ionicons
+                            name={held ? 'hourglass-outline' : 'checkmark-circle-outline'}
+                            size={12}
+                            color={held ? ACCENTS.orange.dark : meta.accent.dark}
+                          />
+                          <ThemedText
+                            style={[styles.footerNoteText, { color: held ? ACCENTS.orange.dark : theme.textSecondary }]}
+                            numberOfLines={1}
+                          >
+                            {held
+                              ? `Auto-credits in ${formatTimeUntilRelease(row.booking.createdAt, now)}`
+                              : 'Released to your account'}
+                          </ThemedText>
+                        </View>
+                      ),
+                      status: (
+                        <Pressable
+                          onPress={() => handleInvoice(row)}
+                          hitSlop={6}
+                          style={({ pressed }) => [
+                            styles.invoiceBtn,
+                            { borderColor: ACCENTS.primary.main + '40', backgroundColor: ACCENTS.primary.main + '0D' },
+                            pressed && { opacity: 0.75 },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Download statement for ${row.booking.bookingRef}`}
+                        >
+                          <Ionicons name="document-text-outline" size={12} color={ACCENTS.primary.dark} />
+                          <ThemedText style={[styles.invoiceBtnText, { color: ACCENTS.primary.dark }]}>
+                            Statement
+                          </ThemedText>
+                        </Pressable>
+                      ),
+                    }}
+                  >
+                    <ThemedText style={[styles.metaLine, { color: theme.textSecondary }]} numberOfLines={1}>
+                      {row.booking.bookingRef} · {row.booking.dayLabel} · {slots} {slots === 1 ? 'slot' : 'slots'}
+                    </ThemedText>
+
+                    {/* Settlement breakdown */}
+                    <View
+                      style={[
+                        styles.breakdown,
+                        { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '1A' },
+                      ]}
+                    >
+                      <BreakdownRow label="Player paid" value={`₹${row.settlement.playerPays.toFixed(2)}`} />
+                      <BreakdownRow
+                        label="Platform fee + GST"
+                        value={`− ₹${row.settlement.platformDeduction.toFixed(2)}`}
+                        negative
+                      />
+                      {row.settlement.ownerReimbursement > 0 && (
+                        <BreakdownRow
+                          label="Voucher reimbursed"
+                          value={`+ ₹${row.settlement.ownerReimbursement.toFixed(2)}`}
+                          positive
+                        />
+                      )}
+                      <View style={[styles.breakdownDivider, { backgroundColor: theme.outlineVariant + '33' }]} />
+                      <BreakdownRow label="You receive" value={`₹${row.settlement.ownerPayout.toFixed(2)}`} strong />
+                    </View>
+                  </DashboardCard>
+                );
+              })}
             </View>
           )}
-
-          {rows.map((row) => {
-            const meta = STATUS_META[row.status] || STATUS_META.held;
-            const held = row.status === 'held';
-            return (
-              <View
-                key={row.booking.id}
-                style={[styles.card, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}
-              >
-                <View style={styles.cardTop}>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <ThemedText style={[type.bodyStrong, { color: theme.text }]} numberOfLines={1}>
-                      {row.booking.venueName}
-                    </ThemedText>
-                    <ThemedText style={[type.micro, { color: theme.textSecondary, marginTop: 1 }]} numberOfLines={1}>
-                      {row.booking.bookingRef} · {row.booking.dayLabel} · {row.booking.slots?.length || 0} slot
-                      {(row.booking.slots?.length || 0) === 1 ? '' : 's'}
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.badge, { backgroundColor: meta.color + '1F' }]}>
-                    <Ionicons name={meta.icon} size={11} color={meta.color} />
-                    <ThemedText style={[type.micro, { color: meta.color }]}>{meta.label}</ThemedText>
-                  </View>
-                </View>
-
-                <View style={[styles.divider, { backgroundColor: theme.outlineVariant + '33' }]} />
-
-                <Row label="Player paid" value={`₹${row.settlement.playerPays.toFixed(2)}`} />
-                <Row label="Platform fee + GST" value={`− ₹${row.settlement.platformDeduction.toFixed(2)}`} />
-                {row.settlement.ownerReimbursement > 0 && (
-                  <Row label="Voucher reimbursed" value={`+ ₹${row.settlement.ownerReimbursement.toFixed(2)}`} positive />
-                )}
-                <Row label="You receive" value={`₹${row.settlement.ownerPayout.toFixed(2)}`} strong />
-
-                <View style={styles.cardFooter}>
-                  {held ? (
-                    <View style={styles.countdown}>
-                      <Ionicons name="hourglass-outline" size={12} color="#E08A3C" />
-                      <ThemedText style={[type.micro, { color: '#E08A3C' }]}>
-                        Auto-credits in {formatTimeUntilRelease(row.booking.createdAt, now)}
-                      </ThemedText>
-                    </View>
-                  ) : (
-                    <View style={styles.countdown}>
-                      <Ionicons name="checkmark-circle-outline" size={12} color={meta.color} />
-                      <ThemedText style={[type.micro, { color: theme.textSecondary }]}>
-                        Released to your account
-                      </ThemedText>
-                    </View>
-                  )}
-                  <Pressable
-                    onPress={() => handleInvoice(row)}
-                    style={[styles.invoiceBtn, { borderColor: theme.primary + '55' }]}
-                  >
-                    <Ionicons name="document-text-outline" size={12} color={theme.primary} />
-                    <ThemedText style={[type.micro, { color: theme.primary }]}>Statement</ThemedText>
-                  </Pressable>
-                </View>
-              </View>
-            );
-          })}
         </ScrollView>
       </SafeAreaView>
     </GradientContainer>
   );
 }
 
-function TotalCard({ label, value, color, hint }: { label: string; value: number; color: string; hint: string }) {
+function BreakdownRow({
+  label,
+  value,
+  strong,
+  positive,
+  negative,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  positive?: boolean;
+  negative?: boolean;
+}) {
   const theme = useTheme();
-  const type = useTypeRamp();
+  const valueColor = positive ? ACCENTS.green.dark : negative ? ACCENTS.red.dark : theme.text;
   return (
-    <View style={[styles.totalCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-      <ThemedText style={[type.micro, { color: theme.textSecondary }]} numberOfLines={1}>{label}</ThemedText>
-      <ThemedText style={[type.display, { color }]} numberOfLines={1}>₹{value.toFixed(0)}</ThemedText>
-      <ThemedText style={[type.micro, { color: theme.textSecondary }]} numberOfLines={2}>{hint}</ThemedText>
-    </View>
-  );
-}
-
-function Row({ label, value, strong, positive }: { label: string; value: string; strong?: boolean; positive?: boolean }) {
-  const theme = useTheme();
-  const type = useTypeRamp();
-  return (
-    <View style={styles.row}>
-      <ThemedText style={[strong ? type.bodyStrong : type.small, { color: theme.text, flex: 1, minWidth: 0 }]} numberOfLines={1}>
+    <View style={styles.breakdownRow}>
+      <ThemedText
+        style={[
+          strong ? styles.breakdownLabelStrong : styles.breakdownLabel,
+          { color: strong ? theme.text : theme.textSecondary, flex: 1 },
+        ]}
+        numberOfLines={1}
+      >
         {label}
       </ThemedText>
-      <ThemedText style={[strong ? type.bodyStrong : type.small, { color: positive ? '#10B981' : theme.text }]}>
+      <ThemedText style={[strong ? styles.breakdownValueStrong : styles.breakdownValue, { color: valueColor }]}>
         {value}
       </ThemedText>
     </View>
@@ -286,75 +383,43 @@ function Row({ label, value, strong, positive }: { label: string; value: string;
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.base,
-    height: 52,
-    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    height: 48,
+    zIndex: 10,
   },
-  backBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  body: { padding: Spacing.base, paddingBottom: Spacing.xl },
-
-  totalsRow: { flexDirection: 'row', gap: 8 },
-  totalCard: {
-    flex: 1,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    padding: 10,
-    gap: 2,
-    ...Shadows.level1,
-  },
-
-  warnCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    marginTop: Spacing.md,
-  },
-
-  sectionTitle: { letterSpacing: 0.6, marginTop: Spacing.lg, marginBottom: Spacing.sm },
-
-  card: {
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    padding: 12,
-    marginBottom: Spacing.md,
-    ...Shadows.level1,
-  },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.full,
-  },
-  divider: { height: 1, marginVertical: 9 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 3 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 10 },
-  countdown: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 },
+  backButton: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  headerActionBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 14.5 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40 },
+  cardGap: { marginTop: 12 },
+  sectionLabel: { marginTop: 22, marginBottom: 10 },
+  countBadge: { paddingHorizontal: 7, paddingVertical: 1, borderRadius: 999 },
+  countBadgeText: { fontFamily: 'Sora_500Medium', fontSize: 10 },
+  cardsList: { gap: 12 },
+  metaLine: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: -4 },
+  breakdown: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8, gap: 4 },
+  breakdownRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  breakdownLabel: { fontFamily: 'Sora_400Regular', fontSize: 11 },
+  breakdownLabelStrong: { fontFamily: 'Sora_500Medium', fontSize: 12 },
+  breakdownValue: { fontFamily: 'Sora_500Medium', fontSize: 11 },
+  breakdownValueStrong: { fontFamily: 'Sora_600SemiBold', fontSize: 12.5 },
+  breakdownDivider: { height: 1, marginVertical: 3 },
+  footerNote: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 },
+  footerNoteText: { fontFamily: 'Sora_500Medium', fontSize: 10, flexShrink: 1 },
   invoiceBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     borderWidth: 1,
-    borderRadius: BorderRadius.full,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-  },
-
-  empty: {
     borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    padding: 18,
-    alignItems: 'center',
+    paddingHorizontal: 10,
+    height: 28,
   },
+  invoiceBtnText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
 });

@@ -14,7 +14,8 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
-
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { formatPhoneNumber, getPhoneValidationError } from '@/utils/phone-utils';
 import { SPORTS_LIST } from '@/constants/sports';
 
 const SPORT_ROLES: Record<string, { id: string, icon: any, desc: string }[]> = {
@@ -53,15 +54,26 @@ const BOWLING_STYLES = [
 
 export function CreatePlayerTab() {
   const theme = useTheme();
+  const { profile } = useUserProfile();
 
-  const [fullName, setFullName] = useState('');
+  const [fullName, setFullName] = useState(profile?.name || '');
   const [jerseyNo, setJerseyNo] = useState('');
-  const [mobileNo, setMobileNo] = useState('');
+  const [mobileNo, setMobileNo] = useState(profile?.phone ? formatPhoneNumber(profile.phone) : '');
   const [selectedSport, setSelectedSport] = useState('Cricket');
   const [playingRole, setPlayingRole] = useState(SPORT_ROLES['Cricket'][0].id);
   const [battingStyle, setBattingStyle] = useState('Right Hand Bat');
   const [bowlingStyle, setBowlingStyle] = useState('None / Not Applicable');
   const [profileImage, setProfileImage] = useState<any>(require('@/assets/images/avatars/avatar_1.png'));
+
+  // Sync profile details if they load asynchronously
+  useEffect(() => {
+    if (profile?.name && !fullName) {
+      setFullName(profile.name);
+    }
+    if (profile?.phone && !mobileNo) {
+      setMobileNo(formatPhoneNumber(profile.phone));
+    }
+  }, [profile?.name, profile?.phone]);
 
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [showBattingModal, setShowBattingModal] = useState(false);
@@ -83,13 +95,10 @@ export function CreatePlayerTab() {
   };
 
   const handleMobileChange = (text: string) => {
-    const cleaned = text.replace(/[^0-9+]/g, '').replace(/(?!^)\+/g, '');
-    setMobileNo(cleaned);
-    if (cleaned.length > 0 && cleaned.replace('+', '').length < 7) {
-      setMobileError('Enter a valid phone number (min 7 digits)');
-    } else {
-      setMobileError('');
-    }
+    const formatted = formatPhoneNumber(text);
+    setMobileNo(formatted);
+    const valErr = getPhoneValidationError(formatted, false);
+    setMobileError(valErr || '');
   };
 
   // Auto-update playing role when sport changes
@@ -156,7 +165,13 @@ export function CreatePlayerTab() {
   const handleCreatePlayer = () => {
     let hasError = false;
     if (!fullName.trim()) { setNameError('Full name is required'); hasError = true; } else { setNameError(''); }
-    if (mobileNo && mobileNo.replace('+', '').length < 7) { setMobileError('Enter a valid phone number (min 7 digits)'); hasError = true; } else { setMobileError(''); }
+    if (mobileNo.trim()) {
+      const valErr = getPhoneValidationError(mobileNo, false);
+      if (valErr) { setMobileError(valErr); hasError = true; }
+      else { setMobileError(''); }
+    } else {
+      setMobileError('');
+    }
     if (hasError) return;
     Alert.alert('Success', `Player profile for "${fullName}" created successfully!`);
   };
@@ -245,7 +260,7 @@ export function CreatePlayerTab() {
               <Image source={typeof profileImage === 'string' ? { uri: profileImage } : profileImage} style={styles.logoImage} />
             ) : (
               <>
-                <Ionicons name="camera-outline" size={24} color={theme.textSecondary} />
+                <Ionicons name="camera-outline" size={20} color={theme.textSecondary} />
                 <ThemedText style={[styles.logoUploadTitle, { color: theme.text }]}>Photo</ThemedText>
                 <ThemedText style={[styles.logoUploadHint, { color: theme.textSecondary }]}>Tap to upload</ThemedText>
               </>
@@ -340,9 +355,10 @@ export function CreatePlayerTab() {
                 styles.input,
                 { backgroundColor: 'transparent', color: theme.text, borderColor: mobileError ? '#ef4444' : isMobileFocused ? theme.primary : '#00000033' }
               ]}
-              placeholder="+91..."
+              placeholder="98765 43210"
               placeholderTextColor="#94a3b8"
               keyboardType="phone-pad"
+              maxLength={11}
               value={mobileNo}
               onChangeText={handleMobileChange}
               onFocus={() => setIsMobileFocused(true)}
@@ -382,7 +398,7 @@ export function CreatePlayerTab() {
               <View style={styles.modalHeader}>
                 <ThemedText style={[styles.modalTitle, { color: theme.text }]}>Select Playing Role</ThemedText>
                 <Pressable onPress={() => setShowRoleModal(false)} style={styles.modalClose}>
-                  <Ionicons name="close" size={24} color={theme.textSecondary} />
+                  <Ionicons name="close" size={20} color={theme.textSecondary} />
                 </Pressable>
               </View>
               <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
@@ -576,7 +592,7 @@ const styles = StyleSheet.create({
   },
   bannerTitle: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 24,
+    fontSize: 19,
     color: '#ffffff',
     marginBottom: 6,
   },
@@ -850,7 +866,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontFamily: 'Sora_500Medium',
-    fontSize: 18,
+    fontSize: 15.5,
   },
   modalClose: {
     padding: 4,

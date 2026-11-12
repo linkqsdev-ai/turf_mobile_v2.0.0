@@ -15,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { useTokens } from '@/hooks/use-scheme';
 import { Text } from '@/components/ui/text';
+import { useRemoteConfig } from '@/context/RemoteConfigContext';
+import { isFeatureOn, tabFeature } from '@/lib/remote-config';
 
 type IconLib = 'ion' | 'mc';
 
@@ -213,6 +215,9 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const role = profile.role || 'Player';
   const isSuperAdmin = role === 'Super Admin' || role === 'Admin';
+  // Super Admin feature switches can take a tab away from a role.
+  const { config } = useRemoteConfig();
+  const tabOn = (tab: string) => isFeatureOn(config, tabFeature(tab, role));
 
   return (
     <Tabs
@@ -250,6 +255,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="matches"
         options={{
+          href: tabOn('matches') ? undefined : null,
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="tennisball" />,
           tabBarLabel: ({ focused }) => <TabLabel label="Matches" focused={focused} />,
         }}
@@ -257,6 +263,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
+          href: tabOn('explore') ? undefined : null,
           tabBarItemStyle: { overflow: 'visible' },
           tabBarIcon: ({ focused }) => <BookTab focused={focused} />,
           tabBarLabel: ({ focused }) => <TabLabel label="Turf Book" focused={focused} />,
@@ -265,6 +272,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="tournaments"
         options={{
+          href: tabOn('tournaments') ? undefined : null,
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="trophy" />,
           tabBarLabel: ({ focused }) => <TabLabel label="Cups" focused={focused} />,
         }}
@@ -272,7 +280,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="network"
         options={{
-          href: isSuperAdmin ? undefined : null,
+          href: isSuperAdmin && tabOn('network') ? undefined : null,
           tabBarIcon: ({ focused }) => (
             <TabIcon focused={focused} name="share-social" />
           ),
@@ -287,7 +295,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="club"
         options={{
-          href: role === 'Organizer' || isSuperAdmin ? undefined : null,
+          href: (role === 'Organizer' || isSuperAdmin) && tabOn('club') ? undefined : null,
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} lib="mc" name="tournament" />,
           tabBarLabel: ({ focused }) => <TabLabel label="Host" focused={focused} />,
         }}
@@ -295,7 +303,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="coach"
         options={{
-          href: role === 'Organizer' ? null : undefined,
+          href: role === 'Organizer' || !tabOn('coach') ? null : undefined,
           tabBarIcon: ({ focused }) => (
             <TabIcon
               focused={focused}

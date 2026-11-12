@@ -13,6 +13,7 @@ interface FoFAvatarStackProps {
   captainName?: string;
   connections?: FoFConnectionResult[];
   size?: number;
+  maxAvatars?: number;
   showCountBadge?: boolean;
   interactive?: boolean;
 }
@@ -21,7 +22,8 @@ export function FoFAvatarStack({
   teamName = 'Opponent Team',
   captainName,
   connections: customConnections,
-  size = 22,
+  size = 28,
+  maxAvatars = 2,
   showCountBadge = true,
   interactive = true,
 }: FoFAvatarStackProps) {
@@ -34,8 +36,8 @@ export function FoFAvatarStack({
       ? customConnections
       : getTeamFoFConnections(teamName, captainName);
 
-  // Take up to 2 or 3 avatars for the visual stack
-  const displayAvatars = connections.slice(0, 3);
+  // Display primary player plus 1 mutual friend (or maxAvatars)
+  const displayAvatars = connections.slice(0, maxAvatars);
 
   const handlePress = (e: any) => {
     if (!interactive) return;
@@ -47,8 +49,10 @@ export function FoFAvatarStack({
     if (typeof avatarUrl === 'string' && (avatarUrl.startsWith('http') || avatarUrl.startsWith('data:'))) {
       return { uri: avatarUrl };
     }
-    return { uri: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80' };
+    return { uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=85' };
   };
+
+  const overlapMargin = -Math.max(6, Math.round(size * 0.28));
 
   return (
     <>
@@ -72,14 +76,19 @@ export function FoFAvatarStack({
                     width: size,
                     height: size,
                     borderRadius: size / 2,
-                    marginLeft: idx === 0 ? 0 : -8,
+                    marginLeft: idx === 0 ? 0 : overlapMargin,
                     zIndex: 10 - idx,
                     borderColor: '#ffffff',
                     backgroundColor: theme.surfaceLow,
                   },
                 ]}
               >
-                <Image source={avatarUri} style={{ width: '100%', height: '100%', borderRadius: size / 2 }} contentFit="cover" />
+                <Image
+                  source={avatarUri}
+                  style={{ width: '100%', height: '100%', borderRadius: size / 2 }}
+                  contentFit="cover"
+                  transition={150}
+                />
               </View>
             );
           })}
@@ -111,7 +120,12 @@ const styles = StyleSheet.create({
   },
   avatarWrap: {
     borderWidth: 1.5,
-    overflow: 'visible',
+    overflow: 'hidden',
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+    elevation: 2,
   },
 });

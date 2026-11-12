@@ -13,42 +13,36 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { ThemedText, MAX_FONT_SCALE } from '@/components/themed-text';
 import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import {
-  payoutReadiness,
-  maskAccountNumber,
-  type PayeeProfile,
-} from '@/store/payout-store';
 import { getAvatarSource } from '@/constants/avatars';
-import { useWalletStore } from '@/store/app-store';
 import { useToast } from '@/context/ToastContext';
 import { setAuthToken } from '@/services/api-client';
 
-// Tamil and Hindi are shown so people know they're planned, but are
-// temporarily disabled until translations are ready.
 const LANGUAGES: { name: string; comingSoon?: boolean }[] = [
   { name: 'English' },
   { name: 'Tamil', comingSoon: true },
   { name: 'Hindi', comingSoon: true },
 ];
 
-// A settings row that saves the moment it changes — no separate Save button,
-// matching the platform convention (iOS/Android Settings) rather than the
-// old modal's manual Save/Cancel.
 function SwitchRow({
+  icon,
+  iconColor,
   title,
   subtitle,
   value,
   onValueChange,
   theme,
 }: {
+  icon?: keyof typeof Ionicons.glyphMap;
+  iconColor?: string;
   title: string;
   subtitle: string;
   value: boolean;
@@ -57,7 +51,12 @@ function SwitchRow({
 }) {
   return (
     <View style={styles.switchRow}>
-      <View style={{ flex: 1, marginRight: Spacing.md }}>
+      {icon && (
+        <View style={[styles.iconBadge, { backgroundColor: (iconColor || theme.primary) + '18' }]}>
+          <Ionicons name={icon} size={17} color={iconColor || theme.primary} />
+        </View>
+      )}
+      <View style={{ flex: 1, marginRight: Spacing.sm }}>
         <ThemedText style={[styles.rowTitle, { color: theme.text }]}>{title}</ThemedText>
         <ThemedText style={[styles.rowSubtitle, { color: theme.textSecondary }]}>{subtitle}</ThemedText>
       </View>
@@ -73,42 +72,75 @@ function SwitchRow({
 
 function LinkRow({
   icon,
+  iconColor,
   title,
   subtitle,
+  valueBadge,
   onPress,
   theme,
   danger,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
+  iconColor?: string;
   title: string;
   subtitle?: string;
+  valueBadge?: string;
   onPress: () => void;
   theme: any;
   danger?: boolean;
 }) {
-  const color = danger ? '#ba1a1a' : theme.text;
+  const textColor = danger ? '#EF4444' : theme.text;
+  const badgeColor = danger ? '#EF4444' : (iconColor || theme.primary);
+
   return (
-    <Pressable style={styles.linkRow} onPress={onPress}>
-      <View style={[styles.linkIconWrap, { backgroundColor: danger ? '#ba1a1a15' : theme.surfaceLow }]}>
-        <Ionicons name={icon} size={17} color={danger ? '#ba1a1a' : theme.primary} />
+    <Pressable
+      style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.75 }]}
+      onPress={onPress}
+    >
+      <View style={[styles.iconBadge, { backgroundColor: badgeColor + '18' }]}>
+        <Ionicons name={icon} size={17} color={badgeColor} />
       </View>
       <View style={{ flex: 1, marginLeft: 12 }}>
-        <ThemedText style={[styles.rowTitle, { color }]}>{title}</ThemedText>
+        <ThemedText style={[styles.rowTitle, { color: textColor }]}>{title}</ThemedText>
         {subtitle ? <ThemedText style={[styles.rowSubtitle, { color: theme.textSecondary }]}>{subtitle}</ThemedText> : null}
       </View>
-      <Ionicons name="chevron-forward" size={16} color={theme.outline} />
+      {valueBadge && (
+        <View style={[styles.valueBadgeWrap, { backgroundColor: theme.surfaceLow }]}>
+          <ThemedText style={[styles.valueBadgeText, { color: theme.textSecondary }]}>{valueBadge}</ThemedText>
+        </View>
+      )}
+      <Ionicons name="chevron-forward" size={15} color={theme.outline} style={{ marginLeft: 6 }} />
     </Pressable>
   );
 }
 
-function SectionCard({ title, icon, children, theme }: { title: string; icon: keyof typeof Ionicons.glyphMap; children: React.ReactNode; theme: any }) {
+function SectionCard({
+  title,
+  indicatorColor = '#5D68E8',
+  children,
+  theme,
+}: {
+  title: string;
+  indicatorColor?: string;
+  children: React.ReactNode;
+  theme: any;
+}) {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeaderRow}>
-        <Ionicons name={icon} size={15} color={theme.secondary} />
+        <View style={[styles.verticalIndicator, { backgroundColor: indicatorColor }]} />
         <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>{title}</ThemedText>
       </View>
-      <View style={[styles.sectionCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}>
+      <View
+        style={[
+          styles.sectionCard,
+          {
+            backgroundColor: theme.surfaceLowest,
+            borderColor: theme.outlineVariant + '33',
+          },
+          Shadows.level1,
+        ]}
+      >
         {children}
       </View>
     </View>
@@ -123,60 +155,11 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { profile, updateProfile } = useUserProfile();
-  const { walletBalance } = useWalletStore();
   const { showSuccess } = useToast();
-
-  /**
-   * Only these roles ever receive money. A Player has nothing to be paid for,
-   * so payout and tax fields are hidden from them entirely rather than shown
-   * and left permanently empty.
-   */
-  const role = profile.role || 'Player';
-  const isTurfOwner = role === 'Owner' || role === 'Super Admin';
-  /**
-   * Everyone who can receive money: owners, coaches and organizers all get paid
-   * through the same payee profile. Players never do, so the whole section —
-   * bank details, PAN, GST — stays hidden from them.
-   */
-  const isPayee = isTurfOwner || role === 'Coach' || role === 'Organizer';
-
-  // Mirrors payout-settings' own storage, read-only, so this screen can report
-  // real completion status instead of a static "set this up" prompt.
-  const [payeeProfile, setPayeeProfile] = useState<Partial<PayeeProfile> | null>(null);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      let alive = true;
-      (async () => {
-        try {
-          const raw = await AsyncStorage.getItem('@turf_payout_profile');
-          if (alive) setPayeeProfile(raw ? JSON.parse(raw) : null);
-        } catch {
-          if (alive) setPayeeProfile(null);
-        }
-      })();
-      return () => {
-        alive = false;
-      };
-    }, [])
-  );
-
-  const readiness = React.useMemo(() => payoutReadiness(payeeProfile), [payeeProfile]);
-
-  /** Where money actually lands, summarised for an at-a-glance check. */
-  const payoutTargetLabel = React.useMemo(() => {
-    if (!payeeProfile) return 'Not set up yet';
-    if (payeeProfile.payoutMethod === 'upi') {
-      return payeeProfile.upiId ? `UPI · ${payeeProfile.upiId}` : 'UPI · not set';
-    }
-    const acc = payeeProfile.bank?.accountNumber;
-    return acc ? `Bank · ${maskAccountNumber(acc)}` : 'Bank · not set';
-  }, [payeeProfile]);
 
   const [languagePickerOpen, setLanguagePickerOpen] = useState(false);
   const [signOutVisible, setSignOutVisible] = useState(false);
   const [deleteAccountVisible, setDeleteAccountVisible] = useState(false);
-  const [clearCacheVisible, setClearCacheVisible] = useState(false);
   const [geminiKey, setGeminiKey] = useState(profile.geminiApiKey ?? '');
 
   const set = (patch: Partial<typeof profile>) => {
@@ -195,22 +178,6 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleClearCache = async () => {
-    try {
-      const allKeys = await AsyncStorage.getAllKeys();
-      // Keep auth + profile, wipe everything else the app has cached
-      // (bookings, teams, matches, turfs, classes, bids, offers, drafts…).
-      const keep = new Set(['@turf_auth_token', '@turf_user_profile']);
-      const toRemove = allKeys.filter((k) => !keep.has(k));
-      await AsyncStorage.multiRemove(toRemove);
-      setClearCacheVisible(false);
-      showSuccess('Cache cleared');
-    } catch (err) {
-      console.error('Settings: Failed to clear cache', err);
-      Alert.alert('Something went wrong', 'Could not clear the cache. Please try again.');
-    }
-  };
-
   const handleDeleteAccount = async () => {
     try {
       await AsyncStorage.clear();
@@ -225,77 +192,71 @@ export default function SettingsScreen() {
   return (
     <GradientContainer screenName="settings" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Header Bar */}
         <View style={styles.header}>
-          <Pressable style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}>
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
+          <Pressable
+            style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+          >
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
-          <ThemedText type="headlineMd" style={{ color: theme.text, flex: 1, marginLeft: 12 }}>
-            Settings
-          </ThemedText>
+          <ThemedText style={[styles.headerTitle, { color: theme.text }]}>Settings</ThemedText>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 50 }}>
-          {/* ── Account ── */}
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
+          {/* ── User Account Bento Card ── */}
           <View style={styles.section}>
             <Pressable
-              style={[styles.accountCard, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }, Shadows.level1]}
+              style={({ pressed }) => [
+                styles.accountCard,
+                {
+                  backgroundColor: theme.surfaceLowest,
+                  borderColor: theme.outlineVariant + '33',
+                },
+                Shadows.level2,
+                pressed && { opacity: 0.88 },
+              ]}
               onPress={() => router.push('/edit-profile')}
             >
-              <Image
-                source={getAvatarSource(profile.avatarUrl)}
-                style={styles.avatarImage}
+              <LinearGradient
+                colors={['#5D68E812', 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
               />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <ThemedText style={[styles.accountName, { color: theme.text }]} numberOfLines={1}>{profile.name}</ThemedText>
-                <ThemedText style={[styles.accountMeta, { color: theme.textSecondary }]}>{profile.role} · Edit profile</ThemedText>
+              <View style={styles.avatarWrap}>
+                <Image source={getAvatarSource(profile.avatarUrl)} style={styles.avatarImage} />
+                <View style={[styles.avatarVerifiedBadge, { backgroundColor: '#10B981' }]}>
+                  <Ionicons name="checkmark" size={10} color="#ffffff" />
+                </View>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={theme.outline} />
+              <View style={{ flex: 1, marginLeft: 14 }}>
+                <ThemedText style={[styles.accountName, { color: theme.text }]} numberOfLines={1}>
+                  {profile.name}
+                </ThemedText>
+                <View style={styles.accountRoleRow}>
+                  <View style={[styles.roleCapsule, { backgroundColor: theme.primary + '18' }]}>
+                    <ThemedText style={[styles.roleCapsuleText, { color: theme.primary }]}>
+                      {profile.role || 'Player'}
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={[styles.accountMeta, { color: theme.textSecondary }]}>
+                    Edit Profile
+                  </ThemedText>
+                </View>
+              </View>
+              <View style={[styles.editPillBtn, { backgroundColor: theme.surfaceLow }]}>
+                <Ionicons name="create-outline" size={14} color={theme.primary} />
+                <Ionicons name="chevron-forward" size={14} color={theme.outline} style={{ marginLeft: 2 }} />
+              </View>
             </Pressable>
           </View>
 
-          {/* ── Appearance ── */}
-          <SectionCard title="APPEARANCE" icon="color-palette-outline" theme={theme}>
-            <ThemedText style={[styles.rowTitle, { color: theme.text, marginBottom: 10 }]}>Application Theme</ThemedText>
-            <View style={styles.themeRow}>
-              {([
-                { key: 'light', label: 'Light', icon: 'sunny-outline' as const },
-                { key: 'dark', label: 'Dark', icon: 'moon-outline' as const },
-                { key: 'blue', label: 'Blue', icon: 'color-fill-outline' as const },
-              ]).map((opt) => {
-                const active = (profile.theme || 'blue') === opt.key;
-                return (
-                  <Pressable
-                    key={opt.key}
-                    onPress={() => set({ theme: opt.key as 'light' | 'dark' | 'blue' })}
-                    style={[
-                      styles.themeOptionBtn,
-                      active ? { backgroundColor: theme.primary, borderColor: theme.primary } : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
-                    ]}
-                  >
-                    <Ionicons name={opt.icon} size={16} color={active ? theme.onPrimary : theme.text} />
-                    <ThemedText style={{ color: active ? theme.onPrimary : theme.text, fontSize: 11, fontFamily: 'Sora_500Medium' }}>{opt.label}</ThemedText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </SectionCard>
-
-          {/* ── Notifications ── */}
-          <SectionCard title="NOTIFICATIONS" icon="notifications-outline" theme={theme}>
-            <SwitchRow theme={theme} title="Push Notifications" subtitle="Alerts for matches, bookings, and chats" value={profile.pushNotifications ?? true} onValueChange={(v) => set({ pushNotifications: v })} />
-            <Divider theme={theme} />
-            <SwitchRow theme={theme} title="Email Alerts" subtitle="Weekly summaries and invoicing" value={profile.emailAlerts ?? false} onValueChange={(v) => set({ emailAlerts: v })} />
-            <Divider theme={theme} />
-            <SwitchRow theme={theme} title="SMS Alerts" subtitle="Text message reminders for urgent updates" value={profile.smsAlerts ?? false} onValueChange={(v) => set({ smsAlerts: v })} />
-            <Divider theme={theme} />
-            <SwitchRow theme={theme} title="Match Reminders" subtitle="Reminders before your scheduled matches" value={profile.matchReminders ?? true} onValueChange={(v) => set({ matchReminders: v })} />
-            <Divider theme={theme} />
-            <SwitchRow theme={theme} title="Promotional Offers" subtitle="Discounts, vouchers, and seasonal deals" value={profile.promoOffers ?? false} onValueChange={(v) => set({ promoOffers: v })} />
-          </SectionCard>
-
           {/* ── Privacy & Security ── */}
-          <SectionCard title="PRIVACY & SECURITY" icon="shield-checkmark-outline" theme={theme}>
-            <ThemedText style={[styles.rowTitle, { color: theme.text, marginBottom: 10 }]}>Profile Visibility</ThemedText>
+          <SectionCard title="PRIVACY & SECURITY" indicatorColor="#10B981" theme={theme}>
+            <ThemedText style={[styles.rowTitle, { color: theme.text, marginBottom: 8 }]}>
+              Profile Visibility
+            </ThemedText>
             <View style={styles.visibilityRow}>
               {(['public', 'private'] as const).map((v) => {
                 const active = (profile.profileVisibility || 'public') === v;
@@ -305,11 +266,22 @@ export default function SettingsScreen() {
                     onPress={() => set({ profileVisibility: v })}
                     style={[
                       styles.visibilityBtn,
-                      active ? { backgroundColor: theme.primary, borderColor: theme.primary } : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
+                      active
+                        ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                        : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
                     ]}
                   >
-                    <Ionicons name={v === 'public' ? 'globe-outline' : 'lock-closed-outline'} size={14} color={active ? theme.onPrimary : theme.text} />
-                    <ThemedText style={{ color: active ? theme.onPrimary : theme.text, fontSize: 12, fontFamily: 'Sora_500Medium', marginLeft: 6 }}>
+                    <Ionicons
+                      name={v === 'public' ? 'globe-outline' : 'lock-closed-outline'}
+                      size={14}
+                      color={active ? theme.onPrimary : theme.text}
+                    />
+                    <ThemedText
+                      style={[
+                        styles.visibilityBtnText,
+                        { color: active ? theme.onPrimary : theme.text },
+                      ]}
+                    >
                       {v === 'public' ? 'Public' : 'Private'}
                     </ThemedText>
                   </Pressable>
@@ -317,205 +289,227 @@ export default function SettingsScreen() {
               })}
             </View>
             <Divider theme={theme} />
-            <SwitchRow theme={theme} title="Location Sharing" subtitle="Let the app detect your location for nearby turfs" value={profile.locationSharingEnabled ?? true} onValueChange={(v) => set({ locationSharingEnabled: v })} />
-            <Divider theme={theme} />
-            <LinkRow theme={theme} icon="key-outline" title="Change Password" subtitle="Reset your account password" onPress={() => router.push('/forgot-password')} />
+            <SwitchRow
+              icon="location-outline"
+              iconColor="#10B981"
+              theme={theme}
+              title="Location Sharing"
+              subtitle="Let the app detect your location for nearby turfs"
+              value={profile.locationSharingEnabled ?? true}
+              onValueChange={(v) => set({ locationSharingEnabled: v })}
+            />
           </SectionCard>
 
           {/* ── Integrations (PRO) ── */}
-          <SectionCard title="INTEGRATIONS" icon="extension-puzzle-outline" theme={theme}>
+          <SectionCard title="INTEGRATIONS" indicatorColor="#8B5CF6" theme={theme}>
             <Pressable
-              onPress={() => Alert.alert('🔒 PRO Feature', 'Integrations & API key configuration are exclusive PRO features. Upgrade to unlock!')}
-              style={{ opacity: 0.55 }}
+              onPress={() =>
+                Alert.alert(
+                  '🔒 PRO Feature',
+                  'Integrations & API key configuration are exclusive PRO features. Upgrade to unlock!'
+                )
+              }
+              style={{ opacity: 0.65 }}
             >
               <View pointerEvents="none">
-                <ThemedText style={[styles.rowTitle, { color: theme.textSecondary, marginBottom: 6 }]}>Service API Key</ThemedText>
-                <TextInput maxFontSizeMultiplier={MAX_FONT_SCALE}
+                <ThemedText style={[styles.rowTitle, { color: theme.textSecondary, marginBottom: 8 }]}>
+                  Service API Key
+                </ThemedText>
+                <TextInput
+                  maxFontSizeMultiplier={MAX_FONT_SCALE}
                   value={geminiKey}
                   onChangeText={setGeminiKey}
                   editable={false}
                   secureTextEntry
-                  style={[styles.textInput, { backgroundColor: theme.surfaceLow, color: theme.textSecondary, borderColor: theme.outlineVariant + '33' }]}
+                  style={[
+                    styles.textInput,
+                    {
+                      backgroundColor: theme.surfaceLow,
+                      color: theme.textSecondary,
+                      borderColor: theme.outlineVariant + '33',
+                    },
+                  ]}
                   placeholder="Enter API key…"
                   placeholderTextColor="#94a3b8"
                 />
                 <View style={[styles.switchRow, { marginTop: Spacing.md, paddingVertical: 0 }]}>
-                  <ThemedText style={[styles.rowSubtitle, { color: theme.textSecondary, flex: 1 }]}>Suggestions & auto-generation</ThemedText>
-                  <Switch value disabled trackColor={{ false: theme.surfaceLow, true: theme.primary }} thumbColor="#ffffff" />
+                  <ThemedText style={[styles.rowSubtitle, { color: theme.textSecondary, flex: 1 }]}>
+                    AI suggestions & match analytics
+                  </ThemedText>
+                  <Switch
+                    value
+                    disabled
+                    trackColor={{ false: theme.surfaceLow, true: theme.primary }}
+                    thumbColor="#ffffff"
+                  />
                 </View>
               </View>
             </Pressable>
           </SectionCard>
 
-          {/* ── Bookings & Wallet ── */}
-          <SectionCard title="BOOKINGS & PAYMENTS" icon="calendar-outline" theme={theme}>
-            <LinkRow theme={theme} icon="calendar-outline" title="Booking History" subtitle="View active, completed & cancelled reservations" onPress={() => router.push('/booking-history')} />
-            <Divider theme={theme} />
-            <LinkRow theme={theme} icon="wallet-outline" title="My Sports Wallet" subtitle={`Balance: ₹${walletBalance.toFixed(2)}`} onPress={() => router.push('/wallet')} />
-          </SectionCard>
-
-          {/* ── Payees only: owner, coach, organizer (never a player) ──────── */}
-          {isPayee && (
-            <SectionCard
-              title={isTurfOwner ? 'TURF OWNER' : 'PAYMENTS & PAYOUTS'}
-              icon="business-outline"
-              theme={theme}
-            >
-              {/* Status first: an owner whose details are incomplete is not
-                  getting paid, and that should be the first thing they see. */}
-              <View
-                style={[
-                  styles.ownerStatusBanner,
-                  {
-                    backgroundColor: readiness.payable ? '#DCFCE7' : '#FEF3C7',
-                    borderColor: readiness.payable ? '#86EFAC' : '#FDE68A',
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={readiness.payable ? 'checkmark-circle' : 'alert-circle'}
-                  size={16}
-                  color={readiness.payable ? '#15803D' : '#B45309'}
-                />
-                <View style={{ flex: 1 }}>
-                  <ThemedText
-                    style={[
-                      styles.ownerStatusTitle,
-                      { color: readiness.payable ? '#15803D' : '#B45309' },
-                    ]}
-                  >
-                    {readiness.payable
-                      ? 'Ready to receive payments'
-                      : payeeProfile
-                        ? `${readiness.issues.length} detail${readiness.issues.length === 1 ? '' : 's'} still needed`
-                        : 'Payment details not set up'}
-                  </ThemedText>
-                  <ThemedText
-                    style={[
-                      styles.ownerStatusBody,
-                      { color: readiness.payable ? '#166534' : '#92400E' },
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {readiness.payable
-                      ? payoutTargetLabel
-                      : readiness.issues[0]?.message || 'Add your business and bank details to get paid.'}
-                  </ThemedText>
-                </View>
-              </View>
-
-              <Divider theme={theme} />
-              <LinkRow
-                theme={theme}
-                icon="business-outline"
-                title={isTurfOwner ? 'Turf Owner Details' : 'Your Details'}
-                subtitle={
-                  payeeProfile?.legalName
-                    ? `${payeeProfile.legalName}${payeeProfile.gstin ? ` · GST ${payeeProfile.gstin}` : ''}`
-                    : 'Legal name, address, PAN and GST'
-                }
-                onPress={() =>
-                  router.push({ pathname: '/payout-settings', params: { section: 'identity' } })
-                }
-              />
-              <Divider theme={theme} />
-              <LinkRow
-                theme={theme}
-                icon="card-outline"
-                title="Payment Details"
-                subtitle={payoutTargetLabel}
-                onPress={() =>
-                  router.push({ pathname: '/payout-settings', params: { section: 'payment' } })
-                }
-              />
-              <Divider theme={theme} />
-              <LinkRow
-                theme={theme}
-                icon="receipt-outline"
-                title="Payment Transactions"
-                subtitle="Settlements, escrow status and statements"
-                onPress={() => router.push('/owner-earnings')}
-              />
-              {isTurfOwner && (
-                <>
-                  <Divider theme={theme} />
-                  <LinkRow
-                    theme={theme}
-                    icon="calendar-outline"
-                    title="Turf Bookings"
-                    subtitle="Who has booked your venues"
-                    onPress={() => router.push('/turf-bookings')}
-                  />
-                </>
-              )}
-            </SectionCard>
-          )}
-
           {/* ── Language & Region ── */}
-          <SectionCard title="LANGUAGE & REGION" icon="language-outline" theme={theme}>
-            <LinkRow theme={theme} icon="language-outline" title="App Language" subtitle={profile.language || 'English'} onPress={() => setLanguagePickerOpen(true)} />
-          </SectionCard>
-
-          {/* ── Data & Storage ── */}
-          <SectionCard title="DATA & STORAGE" icon="server-outline" theme={theme}>
-            <LinkRow theme={theme} icon="trash-bin-outline" title="Clear Cache" subtitle="Free up space by clearing cached bookings, teams & matches" onPress={() => setClearCacheVisible(true)} />
+          <SectionCard title="LANGUAGE & REGION" indicatorColor="#06B6D4" theme={theme}>
+            <LinkRow
+              icon="language-outline"
+              iconColor="#06B6D4"
+              theme={theme}
+              title="App Language"
+              valueBadge={profile.language || 'English'}
+              onPress={() => setLanguagePickerOpen(true)}
+            />
           </SectionCard>
 
           {/* ── Help & Support ── */}
-          <SectionCard title="HELP & SUPPORT" icon="help-circle-outline" theme={theme}>
-            <LinkRow theme={theme} icon="help-buoy-outline" title="FAQs" subtitle="Answers to common questions" onPress={() => Alert.alert('FAQs', 'Our FAQ center is coming soon. In the meantime, reach out via Contact Support.')} />
+          <SectionCard title="HELP & SUPPORT" indicatorColor="#F59E0B" theme={theme}>
+            <LinkRow
+              icon="help-buoy-outline"
+              iconColor="#F59E0B"
+              theme={theme}
+              title="FAQs"
+              subtitle="Answers to common questions"
+              onPress={() =>
+                Alert.alert('FAQs', 'Our FAQ center is coming soon. In the meantime, reach out via Contact Support.')
+              }
+            />
             <Divider theme={theme} />
-            <LinkRow theme={theme} icon="mail-outline" title="Contact Support" subtitle="support@nonstricker.com" onPress={() => Linking.openURL('mailto:support@nonstricker.com')} />
+            <LinkRow
+              icon="mail-outline"
+              iconColor="#5D68E8"
+              theme={theme}
+              title="Contact Support"
+              subtitle="support@nonstricker.com"
+              onPress={() => Linking.openURL('mailto:support@nonstricker.com')}
+            />
             <Divider theme={theme} />
-            <LinkRow theme={theme} icon="warning-outline" title="Report a Problem" subtitle="Tell us what went wrong" onPress={() => Alert.alert('Report a Problem', 'Please describe the issue to support@nonstricker.com and our team will follow up.')} />
+            <LinkRow
+              icon="warning-outline"
+              iconColor="#EF4444"
+              theme={theme}
+              title="Report a Problem"
+              subtitle="Tell us what went wrong"
+              onPress={() =>
+                Alert.alert('Report a Problem', 'Please describe the issue to support@nonstricker.com and our team will follow up.')
+              }
+            />
           </SectionCard>
 
           {/* ── About ── */}
-          <SectionCard title="ABOUT" icon="information-circle-outline" theme={theme}>
+          <SectionCard title="ABOUT" indicatorColor="#64748B" theme={theme}>
             <View style={styles.switchRow}>
-              <ThemedText style={[styles.rowTitle, { color: theme.text }]}>App Version</ThemedText>
-              <ThemedText style={[styles.rowSubtitle, { color: theme.textSecondary }]}>1.0.0</ThemedText>
+              <View style={[styles.iconBadge, { backgroundColor: '#64748B18' }]}>
+                <Ionicons name="information-circle-outline" size={17} color="#64748B" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <ThemedText style={[styles.rowTitle, { color: theme.text }]}>App Version</ThemedText>
+              </View>
+              <View style={[styles.valueBadgeWrap, { backgroundColor: theme.surfaceLow }]}>
+                <ThemedText style={[styles.valueBadgeText, { color: theme.textSecondary }]}>v2.0.0</ThemedText>
+              </View>
             </View>
             <Divider theme={theme} />
-            <LinkRow theme={theme} icon="document-text-outline" title="Terms of Service" onPress={() => Alert.alert('Terms of Service', 'Our Terms of Service will be available here soon.')} />
+            <LinkRow
+              icon="document-text-outline"
+              iconColor="#64748B"
+              theme={theme}
+              title="Terms of Service"
+              onPress={() => Alert.alert('Terms of Service', 'Our Terms of Service will be available here soon.')}
+            />
             <Divider theme={theme} />
-            <LinkRow theme={theme} icon="lock-closed-outline" title="Privacy Policy" onPress={() => Alert.alert('Privacy Policy', 'Our Privacy Policy will be available here soon.')} />
+            <LinkRow
+              icon="shield-outline"
+              iconColor="#64748B"
+              theme={theme}
+              title="Privacy Policy"
+              onPress={() => Alert.alert('Privacy Policy', 'Our Privacy Policy will be available here soon.')}
+            />
           </SectionCard>
 
           {/* ── Danger Zone ── */}
-          <View style={styles.section}>
-            <View style={[styles.sectionCard, { backgroundColor: theme.surfaceLowest, borderColor: '#ba1a1a22' }, Shadows.level1]}>
-              <LinkRow theme={theme} icon="power-outline" title="Sign Out" onPress={() => setSignOutVisible(true)} danger />
-              <Divider theme={theme} />
-              <LinkRow theme={theme} icon="trash-outline" title="Delete Account" subtitle="Permanently remove your account and data" onPress={() => setDeleteAccountVisible(true)} danger />
-            </View>
-          </View>
+          <SectionCard title="ACCOUNT ACTIONS" indicatorColor="#EF4444" theme={theme}>
+            <LinkRow
+              icon="log-out-outline"
+              iconColor="#EF4444"
+              theme={theme}
+              title="Sign Out"
+              onPress={() => setSignOutVisible(true)}
+              danger
+            />
+            <Divider theme={theme} />
+            <LinkRow
+              icon="trash-outline"
+              iconColor="#EF4444"
+              theme={theme}
+              title="Delete Account"
+              subtitle="Permanently remove your account and data"
+              onPress={() => setDeleteAccountVisible(true)}
+              danger
+            />
+          </SectionCard>
         </ScrollView>
       </SafeAreaView>
 
-      {/* Language Picker */}
-      <Modal visible={languagePickerOpen} transparent animationType="fade" onRequestClose={() => setLanguagePickerOpen(false)}>
+      {/* Language Picker Modal */}
+      <Modal
+        visible={languagePickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLanguagePickerOpen(false)}
+      >
         <Pressable style={styles.confirmModalBackdrop} onPress={() => setLanguagePickerOpen(false)}>
-          <Pressable style={[styles.pickerSheet, { backgroundColor: theme.surfaceLowest }]} onPress={(e) => e.stopPropagation()}>
-            <ThemedText type="headlineSm" style={{ color: theme.text, marginBottom: Spacing.sm }}>App Language</ThemedText>
-            {LANGUAGES.map((lang) => {
+          <Pressable
+            style={[
+              styles.pickerSheet,
+              { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
+              Shadows.level2,
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeaderRow}>
+              <View style={[styles.verticalIndicator, { backgroundColor: '#06B6D4' }]} />
+              <ThemedText style={[styles.modalTitle, { color: theme.text }]}>App Language</ThemedText>
+            </View>
+            {LANGUAGES.map((lang, index) => {
               const isSelected = (profile.language || 'English') === lang.name;
               return (
                 <Pressable
                   key={lang.name}
-                  style={[styles.languageOption, lang.comingSoon && { opacity: 0.45 }]}
+                  style={[
+                    styles.languageOption,
+                    isSelected && { backgroundColor: theme.primary + '12' },
+                    lang.comingSoon && { opacity: 0.5 },
+                  ]}
                   disabled={lang.comingSoon}
-                  onPress={() => { set({ language: lang.name }); setLanguagePickerOpen(false); }}
+                  onPress={() => {
+                    set({ language: lang.name });
+                    setLanguagePickerOpen(false);
+                  }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <ThemedText style={{ color: theme.text, fontSize: 14, fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_500Medium' }}>{lang.name}</ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <ThemedText
+                      style={{
+                        color: theme.text,
+                        fontSize: 13.5,
+                        fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_400Regular',
+                      }}
+                    >
+                      {lang.name}
+                    </ThemedText>
                     {lang.comingSoon && (
                       <View style={[styles.comingSoonBadge, { backgroundColor: theme.surfaceLow }]}>
-                        <ThemedText style={{ fontSize: 8.5, fontFamily: 'Sora_500Medium', color: theme.textSecondary, letterSpacing: 0.3 }}>COMING SOON</ThemedText>
+                        <ThemedText
+                          style={{
+                            fontSize: 8.5,
+                            fontFamily: 'Sora_600SemiBold',
+                            color: theme.textSecondary,
+                            letterSpacing: 0.3,
+                          }}
+                        >
+                          COMING SOON
+                        </ThemedText>
                       </View>
                     )}
                   </View>
-                  {isSelected && <Ionicons name="checkmark" size={18} color={theme.primary} />}
+                  {isSelected && <Ionicons name="checkmark-circle" size={18} color={theme.primary} />}
                 </Pressable>
               );
             })}
@@ -523,65 +517,94 @@ export default function SettingsScreen() {
         </Pressable>
       </Modal>
 
-      {/* Clear Cache Confirmation */}
-      <Modal visible={clearCacheVisible} transparent animationType="fade" onRequestClose={() => setClearCacheVisible(false)}>
+      {/* Sign Out Confirmation Modal */}
+      <Modal
+        visible={signOutVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSignOutVisible(false)}
+      >
         <View style={styles.confirmModalBackdrop}>
-          <View style={[styles.confirmModalCard, { backgroundColor: theme.surfaceLowest }]}>
-            <Ionicons name="trash-bin" size={44} color={theme.primary} style={{ alignSelf: 'center', marginBottom: 12 }} />
-            <ThemedText type="headlineSm" style={{ textAlign: 'center', color: theme.text }}>Clear Cache?</ThemedText>
-            <ThemedText type="bodySm" style={{ textAlign: 'center', color: theme.textSecondary, marginVertical: 12 }}>
-              This removes locally cached bookings, teams, matches, and turfs. Your login and profile stay intact.
-            </ThemedText>
-            <View style={styles.confirmActionsRow}>
-              <Pressable style={[styles.confirmBtn, styles.cancelBtn, { borderColor: theme.outlineVariant + '55' }]} onPress={() => setClearCacheVisible(false)}>
-                <ThemedText type="labelMd" style={{ color: theme.text }}>Cancel</ThemedText>
-              </Pressable>
-              <Pressable style={[styles.confirmBtn, { backgroundColor: theme.primary }]} onPress={handleClearCache}>
-                <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Clear Cache</ThemedText>
-              </Pressable>
+          <View
+            style={[
+              styles.confirmModalCard,
+              { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
+              Shadows.level2,
+            ]}
+          >
+            <View style={[styles.confirmIconWrap, { backgroundColor: '#EF444415' }]}>
+              <Ionicons name="power" size={20} color="#EF4444" />
             </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Sign Out Confirmation */}
-      <Modal visible={signOutVisible} transparent animationType="fade" onRequestClose={() => setSignOutVisible(false)}>
-        <View style={styles.confirmModalBackdrop}>
-          <View style={[styles.confirmModalCard, { backgroundColor: theme.surfaceLowest }]}>
-            <View style={[styles.confirmIconWrap, { backgroundColor: theme.error + '15' }]}>
-              <Ionicons name="power" size={26} color={theme.error} />
-            </View>
-            <ThemedText type="headlineSm" style={{ textAlign: 'center', color: theme.text }}>Sign Out</ThemedText>
-            <ThemedText type="bodySm" style={{ textAlign: 'center', color: theme.textSecondary, marginVertical: 12 }}>
+            <ThemedText style={[styles.confirmTitle, { color: theme.text }]}>Sign Out</ThemedText>
+            <ThemedText style={[styles.confirmSubtitle, { color: theme.textSecondary }]}>
               Are you sure you want to sign out from NonStricker?
             </ThemedText>
             <View style={styles.confirmActionsRow}>
-              <Pressable style={[styles.confirmBtn, styles.cancelBtn, { borderColor: theme.outlineVariant + '55' }]} onPress={() => setSignOutVisible(false)}>
-                <ThemedText type="labelMd" style={{ color: theme.text }}>Cancel</ThemedText>
+              <Pressable
+                style={[
+                  styles.confirmBtn,
+                  styles.cancelBtn,
+                  { borderColor: theme.outlineVariant + '55', backgroundColor: theme.surfaceLow },
+                ]}
+                onPress={() => setSignOutVisible(false)}
+              >
+                <ThemedText style={[styles.confirmBtnText, { color: theme.text }]}>Cancel</ThemedText>
               </Pressable>
-              <Pressable style={[styles.confirmBtn, { backgroundColor: theme.error }]} onPress={() => { setSignOutVisible(false); logOut(); }}>
-                <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Sign Out</ThemedText>
+              <Pressable
+                style={[styles.confirmBtn, { backgroundColor: '#EF4444' }]}
+                onPress={() => {
+                  setSignOutVisible(false);
+                  logOut();
+                }}
+              >
+                <ThemedText style={[styles.confirmBtnText, { color: '#ffffff' }]}>Sign Out</ThemedText>
               </Pressable>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Delete Account Confirmation */}
-      <Modal visible={deleteAccountVisible} transparent animationType="fade" onRequestClose={() => setDeleteAccountVisible(false)}>
+      {/* Delete Account Confirmation Modal */}
+      <Modal
+        visible={deleteAccountVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteAccountVisible(false)}
+      >
         <View style={styles.confirmModalBackdrop}>
-          <View style={[styles.confirmModalCard, { backgroundColor: theme.surfaceLowest }]}>
-            <Ionicons name="warning" size={44} color="#ba1a1a" style={{ alignSelf: 'center', marginBottom: 12 }} />
-            <ThemedText type="headlineSm" style={{ textAlign: 'center', color: theme.text }}>Delete Account?</ThemedText>
-            <ThemedText type="bodySm" style={{ textAlign: 'center', color: theme.textSecondary, marginVertical: 12 }}>
-              This permanently deletes your profile, teams, bookings, and matches from this device. This cannot be undone.
+          <View
+            style={[
+              styles.confirmModalCard,
+              { backgroundColor: theme.surfaceLowest, borderColor: '#EF444433' },
+              Shadows.level2,
+            ]}
+          >
+            <View style={[styles.confirmIconWrap, { backgroundColor: '#EF444415' }]}>
+              <Ionicons name="warning" size={22} color="#EF4444" />
+            </View>
+            <ThemedText style={[styles.confirmTitle, { color: theme.text }]}>Delete Account?</ThemedText>
+            <ThemedText style={[styles.confirmSubtitle, { color: theme.textSecondary }]}>
+              This permanently deletes your profile, teams, bookings, and match history from this device. This action cannot be undone.
             </ThemedText>
             <View style={styles.confirmActionsRow}>
-              <Pressable style={[styles.confirmBtn, styles.cancelBtn, { borderColor: theme.outlineVariant + '55' }]} onPress={() => setDeleteAccountVisible(false)}>
-                <ThemedText type="labelMd" style={{ color: theme.text }}>Cancel</ThemedText>
+              <Pressable
+                style={[
+                  styles.confirmBtn,
+                  styles.cancelBtn,
+                  { borderColor: theme.outlineVariant + '55', backgroundColor: theme.surfaceLow },
+                ]}
+                onPress={() => setDeleteAccountVisible(false)}
+              >
+                <ThemedText style={[styles.confirmBtnText, { color: theme.text }]}>Cancel</ThemedText>
               </Pressable>
-              <Pressable style={[styles.confirmBtn, { backgroundColor: '#ba1a1a' }]} onPress={() => { setDeleteAccountVisible(false); handleDeleteAccount(); }}>
-                <ThemedText type="labelMd" style={{ color: '#ffffff' }}>Delete</ThemedText>
+              <Pressable
+                style={[styles.confirmBtn, { backgroundColor: '#EF4444' }]}
+                onPress={() => {
+                  setDeleteAccountVisible(false);
+                  handleDeleteAccount();
+                }}
+              >
+                <ThemedText style={[styles.confirmBtnText, { color: '#ffffff' }]}>Delete</ThemedText>
               </Pressable>
             </View>
           </View>
@@ -597,53 +620,111 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.containerMargin,
-    paddingVertical: Spacing.md,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     zIndex: 10,
   },
-  backBtn: { padding: 4 },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 14.5,
+    fontFamily: 'Sora_500Medium',
+    marginLeft: 8,
+  },
 
   section: {
-    paddingHorizontal: Spacing.containerMargin,
-    marginTop: Spacing.md,
+    paddingHorizontal: 16,
+    marginTop: 18,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: Spacing.sm,
+    marginBottom: 8,
+  },
+  verticalIndicator: {
+    width: 3.5,
+    height: 14,
+    borderRadius: 2,
+    marginRight: 7,
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: 'Sora_500Medium',
-    letterSpacing: 0.6,
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
   },
   sectionCard: {
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    padding: Spacing.md,
+    borderRadius: 18,
+    borderWidth: 1.2,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    overflow: 'hidden',
   },
 
   accountCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    padding: Spacing.md,
+    borderRadius: 20,
+    borderWidth: 1.2,
+    padding: 14,
+    overflow: 'hidden',
+  },
+  avatarWrap: {
+    position: 'relative',
   },
   avatarImage: {
     width: 52,
     height: 52,
     borderRadius: 26,
   },
+  avatarVerifiedBadge: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
   accountName: {
-    fontSize: 15,
+    fontSize: 15.5,
     fontFamily: 'Sora_500Medium',
   },
-  accountMeta: {
-    fontSize: 11,
-    marginTop: 2,
+  accountRoleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 8,
+  },
+  roleCapsule: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  roleCapsuleText: {
+    fontSize: 8.5,
     fontFamily: 'Sora_500Medium',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  accountMeta: {
+    fontSize: 10.5,
+    fontFamily: 'Sora_400Regular',
+  },
+  editPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
 
   switchRow: {
@@ -651,28 +732,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
   },
-  ownerStatusBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    padding: 12,
-    marginBottom: 4,
-  },
-  ownerStatusTitle: { fontSize: 12.5, fontFamily: 'Sora_700Bold' },
-  ownerStatusBody: { fontSize: 11, lineHeight: 16, marginTop: 3 },
   divider: {
     height: 1,
+    marginVertical: 4,
   },
   rowTitle: {
     fontSize: 13,
     fontFamily: 'Sora_500Medium',
   },
   rowSubtitle: {
-    fontSize: 11,
-    fontFamily: 'Sora_500Medium',
+    fontSize: 10.5,
+    fontFamily: 'Sora_400Regular',
     marginTop: 2,
+    lineHeight: 14,
   },
 
   linkRow: {
@@ -680,32 +752,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
   },
-  linkIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
+  iconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
-  themeRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
+  valueBadgeWrap: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
   },
-  themeOptionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1.5,
+  valueBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Sora_500Medium',
   },
 
   visibilityRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    gap: 10,
+    marginBottom: 6,
   },
   visibilityBtn: {
     flex: 1,
@@ -713,75 +781,109 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 9,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1.5,
+    borderRadius: 12,
+    borderWidth: 1.2,
+  },
+  visibilityBtnText: {
+    fontSize: 11.5,
+    fontFamily: 'Sora_500Medium',
+    marginLeft: 6,
   },
 
   textInput: {
-    height: 34,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.sm,
-    fontSize: 11.5,
+    height: 38,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    fontSize: 12.5,
     fontFamily: 'Sora_500Medium',
     borderWidth: 1,
-    includeFontPadding: false,
-    paddingVertical: 0,
   },
 
   // Modals
   confirmModalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(5, 21, 30, 0.5)',
+    backgroundColor: 'rgba(5, 21, 30, 0.65)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.lg,
+    padding: 20,
   },
   confirmModalCard: {
     width: '100%',
     maxWidth: 340,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
+    borderRadius: 20,
+    borderWidth: 1.2,
+    padding: 20,
+    alignItems: 'center',
   },
   confirmIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: Spacing.xs,
+    marginBottom: 12,
+  },
+  confirmTitle: {
+    fontSize: 15.5,
+    fontFamily: 'Sora_500Medium',
+    textAlign: 'center',
+  },
+  confirmSubtitle: {
+    fontSize: 11,
+    fontFamily: 'Sora_400Regular',
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 18,
+    lineHeight: 16,
   },
   confirmActionsRow: {
     flexDirection: 'row',
-    gap: Spacing.xs,
-    marginTop: Spacing.xs,
+    gap: 10,
+    width: '100%',
   },
   confirmBtn: {
     flex: 1,
-    height: 32,
-    borderRadius: BorderRadius.full,
+    height: 38,
+    borderRadius: 999,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cancelBtn: {
     borderWidth: 1,
   },
+  confirmBtnText: {
+    fontSize: 11.5,
+    fontFamily: 'Sora_500Medium',
+  },
 
   pickerSheet: {
     width: '100%',
     maxWidth: 340,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
+    borderRadius: 20,
+    borderWidth: 1.2,
+    padding: 18,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 14,
+    fontFamily: 'Sora_500Medium',
   },
   languageOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginVertical: 2,
   },
   comingSoonBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: BorderRadius.full,
+    borderRadius: 999,
   },
 });

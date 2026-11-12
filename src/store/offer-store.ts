@@ -151,21 +151,6 @@ export function defaultOwnerOffers(): OwnerOffer[] {
 
   return [
     {
-      id: 'offer-seed-yawah',
-      code: 'YAWAH50',
-      title: 'YAWAH OFFER',
-      description: 'Claim this voucher discount during booking checkout.',
-      discountType: 'percent',
-      discountValue: 20,
-      minBooking: 500,
-      maxRedemptions: 10,
-      redeemedCount: 0,
-      validTill: daysFromNow(30),
-      appliesTo: 'Grand Turf',
-      status: 'active',
-      createdAt: new Date().toISOString(),
-    },
-    {
       id: 'offer-seed-1',
       code: 'WEEKDAY20',
       title: 'Weekday Morning Saver',

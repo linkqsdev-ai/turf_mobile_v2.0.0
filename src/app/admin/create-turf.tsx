@@ -82,7 +82,7 @@ export default function CreateTurf() {
         >
           {slots.length === 0 ? (
             <Card variant="muted" className="items-center py-8">
-              <Ionicons name="time-outline" size={22} color="#94a5a0" />
+              <Ionicons name="time-outline" size={20} color="#94a5a0" />
               <Text variant="caption" className="mt-2">
                 No slots yet — add your first one.
               </Text>

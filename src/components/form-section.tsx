@@ -1,15 +1,16 @@
 import React from 'react';
 import { StyleSheet, View, StyleProp, ViewStyle } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { Shadows } from '@/constants/theme';
+import { BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { DashboardSectionLabel } from '@/components/dashboard/analytics-kit';
 
 /**
  * form-section.tsx
  *
- * The form vocabulary used by the enrolment screen: an accent-ruled uppercase
- * heading above a white card of fields.
+ * The form vocabulary used by the enrolment and team registration screens: the
+ * dashboard kit's accent-bar section label above a white 12px card of fields,
+ * so forms read in the same language as the Home analytics cards.
  *
  * Extracted so the registration screens share one implementation. Team
  * registration had numbered headings ("1. Team Details") and bare fields,
@@ -27,17 +28,7 @@ export function SectionHeading({
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useTheme();
-  return (
-    <View style={[styles.headingRow, style]}>
-      <View style={styles.headingLeft}>
-        <View style={[styles.headingRule, { backgroundColor: theme.primary }]} />
-        <ThemedText style={[styles.headingText, { color: theme.textSecondary }]}>
-          {title}
-        </ThemedText>
-      </View>
-      {right}
-    </View>
-  );
+  return <DashboardSectionLabel label={title} color={theme.primary} right={right} style={[styles.headingRow, style]} />;
 }
 
 export function FormCard({
@@ -53,7 +44,7 @@ export function FormCard({
       style={[
         styles.formCard,
         { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' },
-        Shadows.level1,
+        Shadows.level2,
         style,
       ]}
     >
@@ -116,21 +107,6 @@ export const formStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   section: { marginTop: 16 },
-  headingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    marginLeft: 2,
-    gap: 8,
-  },
-  headingLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
-  headingRule: { width: 3.5, height: 13, borderRadius: 2 },
-  headingText: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 10,
-    letterSpacing: 0.9,
-    textTransform: 'uppercase',
-  },
-  formCard: { borderRadius: 14, borderWidth: 1, padding: 14 },
+  headingRow: { marginBottom: 8, marginLeft: 2 },
+  formCard: { borderRadius: BorderRadius.premium, borderWidth: 1, padding: 14 },
 });

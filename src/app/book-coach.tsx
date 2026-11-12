@@ -16,6 +16,8 @@ import { GradientContainer } from '@/components/gradient-container';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { isTimeSlotPassed } from '@/utils/date-utils';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SectionHeading } from '@/components/home/dashboard-widgets';
 
 // Predefined coach sessions
 const COACH_SESSIONS = [
@@ -87,7 +89,6 @@ export default function BookCoachScreen() {
         {
           text: "Back to Home",
           onPress: () => {
-            router.dismissAll();
             router.replace('/(tabs)');
           }
         }
@@ -102,30 +103,64 @@ export default function BookCoachScreen() {
 
   const selectedSession = COACH_SESSIONS.find(s => s.id === selectedSessionId);
 
+  // Home-dashboard palette — the same accents the player dashboard tints with.
+  const accent = '#F59E0B';
+  const info = '#3B82F6';
+  const success = '#10B981';
+
+  const cardSurface = {
+    backgroundColor: theme.surfaceLowest,
+    borderColor: theme.outlineVariant + '33',
+  };
+
+  const addOns = [
+    { key: 'video', icon: 'videocam' as const, title: 'Detailed Video Analysis', price: '+₹500 / Session', on: videoAnalysis, toggle: () => setVideoAnalysis(!videoAnalysis), tint: info },
+    { key: 'diet', icon: 'nutrition' as const, title: 'Personalized Diet Plan', price: '+₹300', on: dietPlan, toggle: () => setDietPlan(!dietPlan), tint: success },
+  ];
+
   return (
     <GradientContainer screenName="booking" style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Top App Bar */}
+        {/* Top app bar */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/coach')} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
+          <Pressable
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/coach')}
+            hitSlop={6}
+            style={[styles.roundBtn, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '40' }]}
+          >
+            <Ionicons name="arrow-back" size={18} color={theme.text} />
           </Pressable>
-          <ThemedText type="headlineSm" style={styles.headerTitle}>
-            Book Coach
-          </ThemedText>
-          <View style={{ width: 36 }} />
+          <View style={styles.headerCenter}>
+            <ThemedText style={[styles.headerEyebrow, { color: theme.textSecondary }]}>BOOK COACH</ThemedText>
+            <ThemedText style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>{coachName}</ThemedText>
+          </View>
+          <View style={styles.roundSpacer} />
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {/* Hero Card */}
-          <View style={styles.section}>
-            <View style={[styles.heroCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
+          {/* Hero card */}
+          <View style={[styles.section, { marginTop: 12 }]}>
+            <View style={[styles.heroCard, cardSurface, Shadows.level2]}>
+              <LinearGradient
+                colors={[theme.primary + '26', info + '10', 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
               <View style={styles.heroRow}>
-                <Image source={typeof coachAvatar === 'string' && !/^\d+$/.test(coachAvatar) ? { uri: coachAvatar } : (typeof coachAvatar === 'number' ? coachAvatar : parseInt(coachAvatar, 10))} style={styles.heroAvatar} contentFit="cover" />
+                <View style={[styles.avatarRing, { borderColor: theme.primary }]}>
+                  <Image
+                    source={typeof coachAvatar === 'string' && !/^\d+$/.test(coachAvatar) ? { uri: coachAvatar } : (typeof coachAvatar === 'number' ? coachAvatar : parseInt(coachAvatar, 10))}
+                    style={styles.heroAvatar}
+                    contentFit="cover"
+                  />
+                </View>
                 <View style={styles.heroDetails}>
-                  <ThemedText type="labelSm" style={{ color: theme.secondary, letterSpacing: 0.5 }}>COACH SESSION</ThemedText>
-                  <ThemedText type="headlineMd" style={{ color: theme.text, marginTop: 4 }}>{coachName}</ThemedText>
-                  <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginTop: 4 }}>
+                  <View style={[styles.heroBadge, { backgroundColor: theme.primary + '22' }]}>
+                    <ThemedText style={[styles.heroBadgeText, { color: theme.primary }]}>COACH SESSION</ThemedText>
+                  </View>
+                  <ThemedText style={[styles.heroTitle, { color: theme.text }]} numberOfLines={1}>{coachName}</ThemedText>
+                  <ThemedText style={[styles.heroSub, { color: theme.textSecondary }]}>
                     Base rate: {coachRateStr}
                   </ThemedText>
                 </View>
@@ -133,24 +168,25 @@ export default function BookCoachScreen() {
             </View>
           </View>
 
-          {/* Date Picker Grid */}
+          {/* Date picker */}
           <View style={styles.section}>
-            <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
+            <SectionHeading title="Pick a date" tint={theme.primary} />
+            <View style={[styles.card, cardSurface, Shadows.level1]}>
               <View style={styles.monthHeader}>
-                <ThemedText type="headlineSm" style={{ color: theme.text }}>February 2024</ThemedText>
+                <ThemedText style={[styles.cardTitle, { color: theme.text }]}>February 2024</ThemedText>
                 <View style={styles.monthNav}>
-                  <Pressable style={styles.monthNavBtn}>
-                    <Ionicons name="chevron-back" size={18} color={theme.text} />
+                  <Pressable style={[styles.monthNavBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
+                    <Ionicons name="chevron-back" size={15} color={theme.text} />
                   </Pressable>
-                  <Pressable style={styles.monthNavBtn}>
-                    <Ionicons name="chevron-forward" size={18} color={theme.text} />
+                  <Pressable style={[styles.monthNavBtn, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
+                    <Ionicons name="chevron-forward" size={15} color={theme.text} />
                   </Pressable>
                 </View>
               </View>
 
               <View style={styles.dayLabelsRow}>
                 {['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'].map((d) => (
-                  <ThemedText key={d} type="labelSm" style={[styles.dayLabelText, { color: theme.textSecondary }]}>
+                  <ThemedText key={d} style={[styles.dayLabelText, { color: theme.textSecondary }]}>
                     {d}
                   </ThemedText>
                 ))}
@@ -166,20 +202,21 @@ export default function BookCoachScreen() {
                     <Pressable
                       key={`day-${item.dayNumber}`}
                       onPress={() => setSelectedDayOfMonth(item.dayNumber)}
-                      style={[
-                        styles.calendarDayCell,
-                        isSelected && { backgroundColor: theme.secondaryContainer, borderRadius: BorderRadius.md },
-                      ]}
+                      style={styles.calendarDayCell}
                     >
-                      <ThemedText
-                        type="bodyMd"
-                        style={{
-                          color: isSelected ? theme.onSecondaryContainer : isCurrent ? theme.textSecondary : theme.text,
-                          fontFamily: isSelected ? 'Sora_600SemiBold' : 'Sora_400Regular',
-                        }}
-                      >
-                        {item.dayNumber}
-                      </ThemedText>
+                      <View style={[styles.calendarDayInner, isSelected && { backgroundColor: theme.primary }]}>
+                        <ThemedText
+                          style={[
+                            styles.calendarDayText,
+                            {
+                              color: isSelected ? '#ffffff' : isCurrent ? theme.textSecondary : theme.text,
+                              fontFamily: isSelected ? 'Sora_500Medium' : 'Sora_400Regular',
+                            },
+                          ]}
+                        >
+                          {item.dayNumber}
+                        </ThemedText>
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -187,9 +224,10 @@ export default function BookCoachScreen() {
             </View>
           </View>
 
-          {/* Predefined Sessions List */}
+          {/* Predefined sessions */}
           <View style={styles.section}>
-            <View style={[styles.formCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
+            <SectionHeading title="Sessions" tint={accent} />
+            <View style={[styles.card, cardSurface, Shadows.level1]}>
               <View style={styles.daySelectorGrid}>
                 {DAYS_OF_WEEK.map((d, dayIdx) => {
                   const isActive = d.full === selectedDayOfWeek;
@@ -214,19 +252,12 @@ export default function BookCoachScreen() {
                       style={[
                         styles.daySelectorTab,
                         isActive
-                          ? [styles.daySelectorTabActive, { backgroundColor: theme.secondaryContainer, borderColor: theme.secondary + '44' }]
-                          : { backgroundColor: theme.surfaceLow, borderColor: 'transparent' },
-                        isPastDay && { opacity: 0.35, backgroundColor: theme.surfaceLow + '80' },
+                          ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                          : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' },
+                        isPastDay && { opacity: 0.35 },
                       ]}
                     >
-                      <ThemedText
-                        type="labelMd"
-                        style={{
-                          color: isActive ? theme.onSecondaryContainer : isPastDay ? theme.textSecondary : theme.textSecondary,
-                          fontFamily: isActive ? 'Sora_600SemiBold' : 'Sora_600SemiBold',
-                          fontSize: 11.5,
-                        }}
-                      >
+                      <ThemedText style={[styles.daySelectorText, { color: isActive ? '#ffffff' : theme.textSecondary }]}>
                         {d.short}
                       </ThemedText>
                     </Pressable>
@@ -239,7 +270,7 @@ export default function BookCoachScreen() {
                   const isPassed = isTimeSlotPassed(session.time, selectedDayOfWeek);
                   const isSelected = selectedSessionId === session.id;
                   const isDisabled = session.disabled || isPassed;
-                  
+
                   return (
                     <Pressable
                       key={session.id}
@@ -247,166 +278,155 @@ export default function BookCoachScreen() {
                       onPress={() => setSelectedSessionId(session.id)}
                       style={[
                         styles.sessionItem,
-                        { backgroundColor: theme.surfaceLow },
-                        isSelected && { backgroundColor: theme.primary, borderColor: theme.primary },
-                        isDisabled && { opacity: 0.35, backgroundColor: theme.surfaceLow + '60' },
+                        isSelected
+                          ? { backgroundColor: theme.primary + '0D', borderColor: theme.primary }
+                          : { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '26' },
+                        isDisabled && { opacity: 0.4 },
                       ]}
                     >
+                      <View style={[styles.sessionIcon, { backgroundColor: isSelected ? theme.primary : theme.surfaceLowest }]}>
+                        <Ionicons name="time-outline" size={14} color={isSelected ? '#ffffff' : theme.textSecondary} />
+                      </View>
                       <View style={styles.sessionItemLeft}>
                         <ThemedText
-                          type="headlineSm"
-                          style={{
-                            color: isSelected ? '#ffffff' : isDisabled ? theme.textSecondary : theme.text,
-                            fontSize: 15,
-                            textDecorationLine: isDisabled ? 'line-through' : 'none',
-                          }}
+                          style={[
+                            styles.sessionTitle,
+                            {
+                              color: isSelected ? theme.primary : theme.text,
+                              textDecorationLine: isDisabled ? 'line-through' : 'none',
+                            },
+                          ]}
                         >
                           {session.title}
                         </ThemedText>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                          <Ionicons
-                            name="time-outline"
-                            size={14}
-                            color={isSelected ? '#ffffffcc' : isDisabled ? theme.textSecondary + '60' : theme.textSecondary}
-                          />
-                          <ThemedText
-                            type="labelSm"
-                            style={{
-                              color: isSelected ? '#ffffffcc' : isDisabled ? theme.textSecondary + '60' : theme.textSecondary,
-                              marginLeft: 4,
-                              textDecorationLine: isDisabled ? 'line-through' : 'none',
-                            }}
-                          >
-                            {session.time}
-                          </ThemedText>
-                        </View>
+                        <ThemedText
+                          style={[
+                            styles.sessionTime,
+                            { color: theme.textSecondary, textDecorationLine: isDisabled ? 'line-through' : 'none' },
+                          ]}
+                        >
+                          {session.time}
+                        </ThemedText>
                       </View>
-                      
-                      <View style={[styles.radioCircle, isSelected && { borderColor: '#ffffff' }, isDisabled && { opacity: 0.3 }]}>
-                        {isSelected && <View style={styles.radioInner} />}
+
+                      <View style={[styles.radioCircle, { borderColor: isSelected ? theme.primary : theme.outlineVariant }]}>
+                        {isSelected && <View style={[styles.radioInner, { backgroundColor: theme.primary }]} />}
                       </View>
                     </Pressable>
                   );
                 })}
               </View>
 
-              <View style={styles.noticeRow}>
-                <Ionicons name="information-circle-outline" size={16} color={theme.textSecondary} />
-                <ThemedText type="bodySm" style={{ color: theme.textSecondary, marginLeft: 4, flex: 1 }}>
+              <View style={[styles.noticeRow, { backgroundColor: theme.surfaceLow }]}>
+                <Ionicons name="information-circle-outline" size={14} color={theme.textSecondary} />
+                <ThemedText style={[styles.noticeText, { color: theme.textSecondary }]}>
                   Select one session. Free cancellation up to 24h before.
                 </ThemedText>
               </View>
             </View>
           </View>
 
-          {/* Coach Add-ons */}
+          {/* Coach add-ons */}
           <View style={styles.section}>
-            <ThemedText type="labelMd" style={{ color: theme.textSecondary, marginBottom: Spacing.sm, letterSpacing: 0.5 }}>
-              COACH ADD-ONS
-            </ThemedText>
-
-            <View style={[styles.serviceRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
-              <View style={styles.serviceLeft}>
-                <View style={[styles.serviceIconWrap, { backgroundColor: theme.secondaryContainer + '1a' }]}>
-                  <Ionicons name="videocam" size={18} color={theme.secondaryContainer} />
+            <SectionHeading title="Coach add-ons" tint={success} />
+            <View style={[styles.card, cardSurface, Shadows.level1, { paddingVertical: 4 }]}>
+              {addOns.map((addOn, idx) => (
+                <View
+                  key={addOn.key}
+                  style={[styles.serviceRow, idx > 0 && { borderTopWidth: 1, borderTopColor: theme.outlineVariant + '26' }]}
+                >
+                  <View style={[styles.cardIcon, { backgroundColor: addOn.tint + '1A' }]}>
+                    <Ionicons name={addOn.icon} size={15} color={addOn.tint} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={[styles.cardTitle, { color: theme.text }]}>{addOn.title}</ThemedText>
+                    <ThemedText style={[styles.cardSub, { color: theme.textSecondary }]}>{addOn.price}</ThemedText>
+                  </View>
+                  <Pressable
+                    onPress={addOn.toggle}
+                    style={[
+                      styles.serviceAddBtn,
+                      addOn.on
+                        ? { backgroundColor: theme.primary, borderColor: theme.primary }
+                        : { backgroundColor: theme.surfaceLowest, borderColor: theme.primary + '66' },
+                    ]}
+                  >
+                    <Ionicons name={addOn.on ? 'checkmark' : 'add'} size={12} color={addOn.on ? '#ffffff' : theme.primary} />
+                    <ThemedText style={[styles.serviceAddText, { color: addOn.on ? '#ffffff' : theme.primary }]}>
+                      {addOn.on ? 'Added' : 'Add'}
+                    </ThemedText>
+                  </Pressable>
                 </View>
-                <View style={{ marginLeft: Spacing.sm }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Detailed Video Analysis</ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>+₹500 / Session</ThemedText>
-                </View>
-              </View>
-              <Pressable
-                onPress={() => setVideoAnalysis(!videoAnalysis)}
-                style={[
-                  styles.serviceAddBtn,
-                  videoAnalysis ? { backgroundColor: theme.primary } : { backgroundColor: theme.secondaryContainer }
-                ]}
-              >
-                <ThemedText type="labelMd" style={{ color: videoAnalysis ? '#ffffff' : theme.onSecondaryContainer }}>
-                  {videoAnalysis ? 'ADDED' : '+ ADD'}
-                </ThemedText>
-              </Pressable>
-            </View>
-
-            <View style={[styles.serviceRow, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33', marginTop: Spacing.sm }]}>
-              <View style={styles.serviceLeft}>
-                <View style={[styles.serviceIconWrap, { backgroundColor: theme.secondaryContainer + '1a' }]}>
-                  <Ionicons name="nutrition" size={18} color={theme.secondaryContainer} />
-                </View>
-                <View style={{ marginLeft: Spacing.sm }}>
-                  <ThemedText type="bodyMd" style={{ fontFamily: 'Sora_500Medium' }}>Personalized Diet Plan</ThemedText>
-                  <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>+₹300</ThemedText>
-                </View>
-              </View>
-              <Pressable
-                onPress={() => setDietPlan(!dietPlan)}
-                style={[
-                  styles.serviceAddBtn,
-                  dietPlan ? { backgroundColor: theme.primary } : { backgroundColor: theme.secondaryContainer }
-                ]}
-              >
-                <ThemedText type="labelMd" style={{ color: dietPlan ? '#ffffff' : theme.onSecondaryContainer }}>
-                  {dietPlan ? 'ADDED' : '+ ADD'}
-                </ThemedText>
-              </Pressable>
+              ))}
             </View>
           </View>
 
-          {/* Payment Method */}
-          <View style={[styles.section, { paddingBottom: 100 }]}>
-            <ThemedText type="headlineSm" style={{ color: theme.text, marginBottom: 4 }}>
-              Payment Method
-            </ThemedText>
-            <View style={{ gap: Spacing.sm, marginTop: Spacing.sm }}>
+          {/* Payment method */}
+          <View style={[styles.section, { paddingBottom: 110 }]}>
+            <SectionHeading title="Payment method" tint={theme.primary} />
+            <View style={styles.methodList}>
               {PAYMENT_METHODS.map(pm => {
                 const isSelected = paymentMethod === pm.id;
                 return (
                   <Pressable
                     key={pm.id}
                     onPress={() => setPaymentMethod(pm.id)}
-                    style={[{ padding: Spacing.md, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: theme.outlineVariant + '40', backgroundColor: theme.surfaceLowest }, isSelected && { borderColor: theme.primary, backgroundColor: theme.primaryContainer }]}
+                    style={[
+                      styles.methodCard,
+                      isSelected
+                        ? { borderColor: theme.primary, backgroundColor: theme.primary + '0D' }
+                        : { borderColor: theme.outlineVariant + '33', backgroundColor: theme.surfaceLowest },
+                    ]}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Ionicons name={pm.icon as any} size={24} color={isSelected ? theme.surfaceLowest : pm.color} />
-                        <ThemedText type="bodyMd" style={{ marginLeft: 12, color: isSelected ? theme.surfaceLowest : theme.text }}>{pm.label}</ThemedText>
-                      </View>
-                      <View style={[{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: theme.outlineVariant, justifyContent: 'center', alignItems: 'center' }, isSelected && { borderColor: theme.surfaceLowest }]}>
-                        {isSelected && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.surfaceLowest }} />}
-                      </View>
+                    <View style={[styles.methodIcon, { backgroundColor: theme.surfaceLow }]}>
+                      <Ionicons name={pm.icon as any} size={17} color={pm.color === '#000000' ? theme.text : pm.color} />
+                    </View>
+                    <ThemedText style={[styles.methodLabel, { color: isSelected ? theme.primary : theme.text }]}>{pm.label}</ThemedText>
+                    <View style={[styles.radioCircle, { borderColor: isSelected ? theme.primary : theme.outlineVariant }]}>
+                      {isSelected && <View style={[styles.radioInner, { backgroundColor: theme.primary }]} />}
                     </View>
                   </Pressable>
                 );
               })}
             </View>
           </View>
-
         </ScrollView>
 
-        {/* Sticky Footer */}
-        <View style={[styles.stickyFooter, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '22' }, Shadows.level3]}>
+        {/* Sticky footer */}
+        <View style={[styles.stickyFooter, { backgroundColor: theme.surfaceLowest, borderTopColor: theme.outlineVariant + '33' }]}>
           <View style={styles.footerLeft}>
-            <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>Total Due</ThemedText>
-            <ThemedText type="headlineMd" style={{ color: theme.primary, fontFamily: 'Sora_500Medium' }}>
+            <ThemedText style={[styles.footerLabel, { color: theme.textSecondary }]}>TOTAL DUE</ThemedText>
+            <ThemedText style={[styles.footerAmount, { color: theme.text }]}>
               ₹{total.toLocaleString()}
             </ThemedText>
+            <ThemedText style={[styles.footerSub, { color: theme.textSecondary }]} numberOfLines={1}>
+              {selectedSession ? selectedSession.title : 'Pick a session'}
+            </ThemedText>
           </View>
-          <Pressable 
-            style={[styles.confirmBtn, !selectedSessionId && { opacity: 0.5 }]} 
+          <Pressable
+            style={({ pressed }) => [
+              styles.confirmBtn,
+              { backgroundColor: theme.primary },
+              Shadows.level2,
+              !selectedSessionId && { opacity: 0.5 },
+              pressed && { opacity: 0.85 },
+            ]}
             onPress={handleConfirmBooking}
             disabled={!selectedSessionId}
           >
-            <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 14 }}>
-              Confirm Booking
-            </ThemedText>
-            <Ionicons name="chevron-forward" size={16} color="#ffffff" style={{ marginLeft: 4 }} />
+            <ThemedText style={styles.confirmText}>Confirm Booking</ThemedText>
+            <View style={styles.confirmArrow}>
+              <Ionicons name="chevron-forward" size={15} color="#ffffff" />
+            </View>
           </Pressable>
         </View>
-
       </SafeAreaView>
     </GradientContainer>
   );
 }
+
+const GUTTER = Spacing.containerMargin;
+const CARD_RADIUS = BorderRadius.premium;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -415,154 +435,141 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    height: 56,
+    gap: 10,
+    paddingHorizontal: GUTTER,
+    height: 58,
+    borderBottomWidth: 1,
+    borderBottomColor: '#0000000a',
   },
-  backButton: { padding: 6 },
-  headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 16 },
+  roundBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roundSpacer: { width: 36 },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  headerEyebrow: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.9 },
+  headerTitle: { fontFamily: 'Sora_500Medium', fontSize: 13.5, marginTop: 1 },
   scrollContent: { paddingBottom: 40 },
-  section: {
-    marginTop: Spacing.lg,
-    paddingHorizontal: Spacing.containerMargin,
-  },
-  heroCard: {
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  heroRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  heroAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-  },
-  heroDetails: {
-    marginLeft: Spacing.md,
-    flex: 1,
-  },
-  formCard: {
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    padding: Spacing.md,
-  },
-  monthHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  monthNav: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-  },
+  section: { marginTop: Spacing.lg, paddingHorizontal: GUTTER },
+
+  // hero
+  heroCard: { borderRadius: 20, borderWidth: 1, overflow: 'hidden', padding: Spacing.md },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatarRing: { width: 66, height: 66, borderRadius: 33, borderWidth: 2, padding: 2 },
+  heroAvatar: { width: '100%', height: '100%', borderRadius: 30 },
+  heroDetails: { flex: 1, minWidth: 0 },
+  heroBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, marginBottom: 6 },
+  heroBadgeText: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.8 },
+  heroTitle: { fontFamily: 'Sora_500Medium', fontSize: 15.5 },
+  heroSub: { fontFamily: 'Sora_400Regular', fontSize: 11, marginTop: 2 },
+
+  // cards
+  card: { borderRadius: CARD_RADIUS, borderWidth: 1, padding: 12 },
+  cardIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { fontFamily: 'Sora_500Medium', fontSize: 12.5 },
+  cardSub: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1 },
+
+  // calendar
+  monthHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  monthNav: { flexDirection: 'row', gap: 6 },
   monthNavBtn: {
-    padding: 6,
-    borderRadius: BorderRadius.full,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  dayLabelsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.xs,
-  },
+  dayLabelsRow: { flexDirection: 'row', marginBottom: 2 },
   dayLabelText: {
     width: `${100 / 7}%`,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: 'Sora_500Medium',
+    fontSize: 8.5,
+    letterSpacing: 0.6,
   },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  calendarDayCell: {
-    width: `${100 / 7}%`,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  daySelectorGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calendarDayCell: { width: `${100 / 7}%`, height: 40, justifyContent: 'center', alignItems: 'center' },
+  calendarDayInner: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  calendarDayText: { fontSize: 12 },
+
+  // sessions
+  daySelectorGrid: { flexDirection: 'row', gap: 4, marginBottom: 12 },
   daySelectorTab: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: BorderRadius.full,
+    flex: 1,
+    height: 30,
+    borderRadius: 999,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  daySelectorTabActive: {
-    borderWidth: 1,
-  },
-  sessionsList: {
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
+  daySelectorText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+  sessionsList: { gap: 7 },
   sessionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
+    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRadius: CARD_RADIUS,
     borderWidth: 1,
-    borderColor: 'transparent',
   },
-  sessionItemLeft: {
-    flex: 1,
-  },
+  sessionIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  sessionItemLeft: { flex: 1 },
+  sessionTitle: { fontFamily: 'Sora_500Medium', fontSize: 12.5 },
+  sessionTime: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1 },
   radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#ccc',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#ffffff',
-  },
+  radioInner: { width: 9, height: 9, borderRadius: 4.5 },
   noticeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.xs,
+    gap: 6,
+    borderRadius: CARD_RADIUS,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 10,
   },
-  serviceRow: {
+  noticeText: { flex: 1, fontFamily: 'Sora_400Regular', fontSize: 10.5, lineHeight: 14 },
+
+  // add-ons
+  serviceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
+  serviceAddBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
+    gap: 3,
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 999,
     borderWidth: 1,
   },
-  serviceLeft: {
+  serviceAddText: { fontFamily: 'Sora_500Medium', fontSize: 10.5 },
+
+  // payment
+  methodList: { gap: 7 },
+  methodCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    gap: 10,
+    borderRadius: CARD_RADIUS,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
   },
-  serviceIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  serviceAddBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-  },
+  methodIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  methodLabel: { flex: 1, fontFamily: 'Sora_500Medium', fontSize: 12 },
+
+  // footer
   stickyFooter: {
     position: 'absolute',
     bottom: 0,
@@ -570,21 +577,32 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.containerMargin,
-    paddingVertical: Spacing.md,
-    paddingBottom: 28,
+    gap: 12,
+    paddingHorizontal: GUTTER,
+    paddingTop: 10,
+    paddingBottom: 26,
     borderTopWidth: 1,
   },
-  footerLeft: {
-    flex: 1,
-  },
+  footerLeft: { flex: 1, minWidth: 0 },
+  footerLabel: { fontFamily: 'Sora_500Medium', fontSize: 8.5, letterSpacing: 0.8 },
+  footerAmount: { fontFamily: 'Sora_500Medium', fontSize: 15.5, marginTop: 1 },
+  footerSub: { fontFamily: 'Sora_400Regular', fontSize: 10 },
   confirmBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#5D68E8',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: BorderRadius.full,
+    gap: 8,
+    height: 50,
+    paddingLeft: 20,
+    paddingRight: 8,
+    borderRadius: 999,
+  },
+  confirmText: { color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 13.5 },
+  confirmArrow: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

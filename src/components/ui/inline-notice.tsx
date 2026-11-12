@@ -4,6 +4,7 @@ import Reanimated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
+import { Shadows } from '@/constants/theme';
 
 export type NoticeTone = 'info' | 'success' | 'warning' | 'error';
 
@@ -15,11 +16,11 @@ export interface Notice {
   key?: number;
 }
 
-const TONES: Record<NoticeTone, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
-  info: { icon: 'information-circle', color: '#5D68E8' },
-  success: { icon: 'checkmark-circle', color: '#10B981' },
-  warning: { icon: 'warning', color: '#F59E0B' },
-  error: { icon: 'close-circle', color: '#EF4444' },
+const TONES: Record<NoticeTone, { icon: keyof typeof Ionicons.glyphMap; color: string; dotColor: string }> = {
+  info: { icon: 'bulb-outline', color: '#8B5CF6', dotColor: '#8B5CF6' },
+  success: { icon: 'checkmark-circle-outline', color: '#10B981', dotColor: '#10B981' },
+  warning: { icon: 'warning-outline', color: '#F59E0B', dotColor: '#F59E0B' },
+  error: { icon: 'close-circle-outline', color: '#EF4444', dotColor: '#EF4444' },
 };
 
 /**
@@ -57,16 +58,34 @@ export function InlineNotice({
       exiting={FadeOut.duration(160)}
       style={[
         styles.card,
-        { backgroundColor: theme.surfaceLowest, borderColor: tone.color + '66' },
+        Shadows.level1,
+        {
+          backgroundColor: theme.surfaceLowest,
+          borderColor: theme.outlineVariant + '35',
+        },
       ]}
     >
-      <View style={[styles.iconWrap, { backgroundColor: tone.color + '1A' }]}>
-        <Ionicons name={tone.icon} size={16} color={tone.color} />
+      <View
+        style={[
+          styles.iconCircle,
+          {
+            backgroundColor: theme.surfaceLow,
+            borderColor: theme.outlineVariant + '28',
+          },
+        ]}
+      >
+        <Ionicons name={tone.icon} size={18} color={tone.color} />
       </View>
+
       <View style={styles.content}>
-        <ThemedText style={[styles.title, { color: theme.text }]}>{notice.title}</ThemedText>
+        <View style={styles.titleRow}>
+          <ThemedText style={[styles.coloredDot, { color: tone.dotColor }]}>•</ThemedText>
+          <ThemedText style={[styles.title, { color: theme.text }]} numberOfLines={1}>
+            {notice.title}
+          </ThemedText>
+        </View>
         {notice.message ? (
-          <ThemedText style={[styles.message, { color: theme.textSecondary }]}>
+          <ThemedText style={[styles.message, { color: theme.textSecondary }]} numberOfLines={2}>
             {notice.message}
           </ThemedText>
         ) : null}
@@ -78,22 +97,47 @@ export function InlineNotice({
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 11,
-    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 16,
     borderWidth: 1,
     marginBottom: 10,
   },
-  iconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 1,
   },
-  content: { flex: 1 },
-  title: { fontFamily: 'Sora_500Medium', fontSize: 12 },
-  message: { fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 1 },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  coloredDot: {
+    fontSize: 13,
+    lineHeight: 15,
+    fontWeight: 'bold',
+  },
+  title: {
+    fontFamily: 'Sora_600SemiBold',
+    fontSize: 12.5,
+    letterSpacing: -0.1,
+    flex: 1,
+  },
+  message: {
+    fontFamily: 'Sora_400Regular',
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 2,
+  },
 });

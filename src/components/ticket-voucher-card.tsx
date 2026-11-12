@@ -7,6 +7,12 @@ import { Shadows, BorderRadius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useOfferStore, useClassStore } from '@/store/app-store';
 import { formatDiscount, isRedeemable } from '@/store/offer-store';
+import {
+  CASHBACK_DEALS,
+  TOURNAMENT_PASSES,
+  type CashbackDeal,
+  type PlatformPass,
+} from '@/constants/platform-deals';
 
 export const STUB_COLORS = [
   '#6366f1', // Indigo / Purple
@@ -40,6 +46,39 @@ const CATEGORY_META: Record<VoucherCategory, { label: string; icon: keyof typeof
   tournament: { label: 'TOURNAMENT', icon: 'trophy-outline', bg: '#FFF7ED', text: '#EA580C' },
   wallet: { label: 'WALLET', icon: 'wallet-outline', bg: '#ECFDF5', text: '#059669' },
 };
+
+const PASS_COLORS = ['#f97316', '#ea580c'];
+const CASHBACK_COLORS = ['#10b981', '#059669'];
+
+function passTicket(p: PlatformPass, idx: number): TicketVoucherItem {
+  return {
+    id: p.id,
+    code: p.code,
+    title: p.title,
+    appliesTo: p.appliesTo,
+    discountText: formatDiscount(p),
+    discountType: p.discountType,
+    discountValue: p.discountValue,
+    color: PASS_COLORS[idx % PASS_COLORS.length],
+    subType: p.discountType === 'flat' ? 'SAVE' : 'OFF',
+    category: 'tournament',
+  };
+}
+
+function cashbackTicket(c: CashbackDeal, idx: number): TicketVoucherItem {
+  return {
+    id: c.id,
+    code: c.code,
+    title: c.title,
+    appliesTo: c.appliesTo,
+    discountText: `₹${c.amount} BACK`,
+    discountType: 'flat',
+    discountValue: c.amount,
+    color: CASHBACK_COLORS[idx % CASHBACK_COLORS.length],
+    subType: 'BACK',
+    category: 'wallet',
+  };
+}
 
 export function TicketVoucherCard({
   item,
@@ -113,7 +152,7 @@ export function TicketVoucherCard({
         },
         Shadows.level2,
       ]}
-      accessibilityRole="button"
+      accessibilityRole={Platform.OS === 'web' ? undefined : 'button'}
       accessibilityLabel={`Voucher ${item.code}, ${item.title}`}
     >
       {/* ── Left Discount Badge Stub ── */}
@@ -275,61 +314,11 @@ export function TicketVoucherCarousel({
         });
       });
 
-      // 2. Tournament Vouchers
-      list.push(
-        {
-          id: 'v_tourn_1',
-          code: 'CUP500',
-          title: 'Tournament Pass',
-          appliesTo: 'State Football & Cricket Cups',
-          discountText: '₹500 OFF',
-          discountType: 'flat',
-          discountValue: 500,
-          color: '#f97316',
-          subType: 'SAVE',
-          category: 'tournament',
-        },
-        {
-          id: 'v_tourn_2',
-          code: 'SUPERLEAGUE',
-          title: 'League Entry Pass',
-          appliesTo: 'All Tournament Registrations',
-          discountText: '25% OFF',
-          discountType: 'percent',
-          discountValue: 25,
-          color: '#ea580c',
-          subType: 'OFF',
-          category: 'tournament',
-        }
-      );
+      // 2. Tournament passes
+      TOURNAMENT_PASSES.forEach((p, idx) => list.push(passTicket(p, idx)));
 
-      // 3. Wallet Cashback Vouchers
-      list.push(
-        {
-          id: 'v_wallet_1',
-          code: 'WALLETCASH100',
-          title: 'Wallet Cashback',
-          appliesTo: 'Instant Wallet Balance Credit',
-          discountText: '₹100 BACK',
-          discountType: 'flat',
-          discountValue: 100,
-          color: '#10b981',
-          subType: 'BACK',
-          category: 'wallet',
-        },
-        {
-          id: 'v_wallet_2',
-          code: 'TOPUP50',
-          title: 'Top-Up Bonus',
-          appliesTo: 'All Online Additions',
-          discountText: '₹50 BACK',
-          discountType: 'flat',
-          discountValue: 50,
-          color: '#059669',
-          subType: 'BACK',
-          category: 'wallet',
-        }
-      );
+      // 3. Wallet cashback
+      CASHBACK_DEALS.forEach((c, idx) => list.push(cashbackTicket(c, idx)));
     } else {
       // 'all': Mix all verified categories with distinct tags
       // 1. Coach class vouchers
@@ -376,32 +365,7 @@ export function TicketVoucherCarousel({
       });
 
       // 3. Tournament & Wallet default vouchers
-      list.push(
-        {
-          id: 'v_tourn_1',
-          code: 'CUP500',
-          title: 'Tournament Pass',
-          appliesTo: 'State Football & Cricket Cups',
-          discountText: '₹500 OFF',
-          discountType: 'flat',
-          discountValue: 500,
-          color: '#f97316',
-          subType: 'SAVE',
-          category: 'tournament',
-        },
-        {
-          id: 'v_wallet_1',
-          code: 'WALLETCASH100',
-          title: 'Wallet Cashback',
-          appliesTo: 'Instant Wallet Balance Credit',
-          discountText: '₹100 BACK',
-          discountType: 'flat',
-          discountValue: 100,
-          color: '#10b981',
-          subType: 'BACK',
-          category: 'wallet',
-        }
-      );
+      list.push(passTicket(TOURNAMENT_PASSES[0], 0), cashbackTicket(CASHBACK_DEALS[0], 0));
     }
 
     return list;
@@ -488,7 +452,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   stubMainText: {
-    fontSize: 18,
+    fontSize: 15.5,
     fontFamily: 'Sora_700Bold',
     color: '#ffffff',
     letterSpacing: -0.5,

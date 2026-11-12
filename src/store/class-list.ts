@@ -185,10 +185,13 @@ export function buildCoachList({
 }: BuildCoachListOptions): CoachListEntry[] {
   const active = (classes ?? []).filter(cls => {
     if (!isActive(cls)) return false;
-    if (enrollmentCount && cls.id) {
+    if (enrollmentCount && (cls.id || cls.className)) {
       const cap = parseInt(String(cls.maxStudents || ''), 10);
       if (!isNaN(cap) && cap > 0) {
-        const enrolled = enrollmentCount(cls.id);
+        const enrolled = Math.max(
+          cls.id ? enrollmentCount(cls.id) : 0,
+          cls.className ? enrollmentCount(cls.className) : 0
+        );
         if (enrolled >= cap) {
           // Reached max capacity — remove from available list
           return false;
@@ -207,6 +210,18 @@ export function buildCoachList({
 
   const q = query.trim().toLowerCase();
   return [...entries, ...samples].filter(c => {
+    if (enrollmentCount && (c.id || c.className)) {
+      const cap = parseInt(String(c.rawClass?.maxStudents ?? (c as any).maxStudents ?? ''), 10);
+      if (!isNaN(cap) && cap > 0) {
+        const enrolled = Math.max(
+          c.id ? enrollmentCount(c.id) : 0,
+          c.className ? enrollmentCount(c.className) : 0
+        );
+        if (enrolled >= cap) {
+          return false;
+        }
+      }
+    }
     const sLower = sport.toLowerCase();
     const sportOk =
       sport === 'All' ||

@@ -15,6 +15,7 @@ import { useWalletStore } from '@/store/app-store';
 
 import { getFoFConnection } from '@/services/fof-network';
 import { FoFChainVisualizerModal } from '@/components/fof/FoFChainVisualizerModal';
+import { PulseDot } from '@/components/home/dashboard-widgets';
 
 export interface BidMatchDetails {
   id: string;
@@ -83,103 +84,130 @@ export function BidAcceptModal({ visible, match, onClose, onConfirm }: BidAccept
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={[styles.modalCard, Shadows.level3, { backgroundColor: theme.surfaceLowest }]}>
-          {/* Header Icon */}
-          <View style={styles.headerIconWrap}>
-            <Ionicons name="hand-left" size={28} color="#10B981" />
+          
+          {/* Section Eyebrow: BID MATCH */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, alignSelf: 'flex-start' }}>
+            <View style={{ width: 3, height: 13, borderRadius: 2, backgroundColor: '#10B981' }} />
+            <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: theme.textSecondary }}>
+              ACCEPT CHALLENGE
+            </ThemedText>
           </View>
 
-          <ThemedText type="headlineLg" style={styles.titleText}>
-            Accept Bid Challenge?
-          </ThemedText>
-
-          <ThemedText type="bodySm" style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 4, paddingHorizontal: 10 }}>
-            You are about to accept the match challenge proposed by <ThemedText type="bodySm" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>{challenger}</ThemedText>.
-          </ThemedText>
+          {/* Header Title Row */}
+          <View style={{ width: '100%', flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 15.5, color: theme.text }}>
+                  Accept match challenge
+                </ThemedText>
+                <PulseDot color="#10B981" size={8} />
+              </View>
+              <ThemedText style={{ fontFamily: 'Sora_400Regular', fontSize: 10.5, marginTop: 2, lineHeight: 14, color: theme.textSecondary }}>
+                You are about to accept the match challenge proposed by <ThemedText style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>{challenger}</ThemedText>.
+              </ThemedText>
+            </View>
+            <Pressable
+              onPress={onClose}
+              style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.surfaceHigh, justifyContent: 'center', alignItems: 'center' }}
+            >
+              <Ionicons name="close" size={16} color={theme.textSecondary} />
+            </Pressable>
+          </View>
 
           {/* 🌐 3-Chain Friend of Friend Trust & Phone Verification Card */}
           <Pressable
             onPress={() => setShowChainModal(true)}
             style={({ pressed }) => [
               styles.fofTrustCard,
-              { backgroundColor: fofConn.badgeBg, borderColor: fofConn.badgeColor + '35' },
+              { backgroundColor: '#8b5cf60c', borderColor: '#8b5cf633' },
               pressed && { opacity: 0.9 },
             ]}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="git-network" size={15} color={fofConn.badgeColor} />
-                <ThemedText style={{ fontSize: 11.5, fontFamily: 'Sora_500Medium', color: fofConn.badgeColor }}>
+                <Ionicons name="git-network" size={14} color="#8b5cf6" />
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Sora_500Medium', color: '#8b5cf6' }}>
                   {fofConn.degreeLabel}
                 </ThemedText>
               </View>
 
-              <ThemedText style={{ fontSize: 10, fontFamily: 'Sora_500Medium', color: '#10B981' }}>
-                ✓ {fofConn.trustScore}% Trust
-              </ThemedText>
+              <View style={{ backgroundColor: '#10b98122', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999 }}>
+                <ThemedText style={{ fontSize: 9.5, fontFamily: 'Sora_500Medium', color: '#10b981' }}>
+                  ✓ {fofConn.trustScore}% Trust
+                </ThemedText>
+              </View>
             </View>
 
             {/* Challenger Phone + Chain Path */}
-            <View style={{ marginTop: 4 }}>
+            <View style={{ marginTop: 5 }}>
               <ThemedText style={{ fontSize: 10.5, fontFamily: 'Sora_500Medium', color: theme.text }}>
                 Challenger Phone: <ThemedText style={{ color: theme.primary, fontFamily: 'Sora_500Medium' }}>{fofConn.targetPhone}</ThemedText>
               </ThemedText>
-              <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginTop: 2 }} numberOfLines={1}>
+              <ThemedText style={{ fontSize: 9.5, color: theme.textSecondary, marginTop: 2, fontFamily: 'Sora_400Regular' }} numberOfLines={1}>
                 {fofConn.chainSummary}
               </ThemedText>
             </View>
           </Pressable>
 
+          {/* Section Eyebrow: MATCH & VENUE DETAILS */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, marginBottom: 8, alignSelf: 'flex-start' }}>
+            <View style={{ width: 3, height: 13, borderRadius: 2, backgroundColor: '#3B82F6' }} />
+            <ThemedText style={{ fontFamily: 'Sora_500Medium', fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: theme.textSecondary }}>
+              MATCH & VENUE DETAILS
+            </ThemedText>
+          </View>
+
           {/* Details Card */}
-          <View style={[styles.detailsBox, { backgroundColor: theme.surfaceLow, borderColor: theme.outlineVariant + '33' }]}>
+          <View style={[styles.detailsBox, { backgroundColor: theme.surfaceLowest, borderColor: theme.outlineVariant + '33' }]}>
             <View style={styles.detailRow}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>MATCH</ThemedText>
-              <ThemedText type="bodySm" style={{ fontFamily: 'Sora_500Medium' }}>
+              <ThemedText style={styles.labelCol}>MATCH</ThemedText>
+              <ThemedText style={styles.valueCol}>
                 {match.tournament || 'Bid Challenge Match'}
               </ThemedText>
             </View>
 
             <View style={styles.detailRow}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>CHALLENGER</ThemedText>
-              <ThemedText type="bodySm" style={{ fontFamily: 'Sora_500Medium', color: theme.primary }}>
+              <ThemedText style={styles.labelCol}>CHALLENGER</ThemedText>
+              <ThemedText style={[styles.valueCol, { color: theme.primary }]}>
                 {match.team1} (by {challenger})
               </ThemedText>
             </View>
 
             <View style={styles.detailRow}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>VENUE</ThemedText>
-              <ThemedText type="bodySm" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>
+              <ThemedText style={styles.labelCol}>VENUE</ThemedText>
+              <ThemedText style={styles.valueCol}>
                 {match.location || 'Skyline Turf Arena, Court #1'}
               </ThemedText>
             </View>
 
             <View style={styles.detailRow}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>SCHEDULE</ThemedText>
-              <ThemedText type="bodySm" style={{ fontFamily: 'Sora_500Medium', color: theme.text }}>
+              <ThemedText style={styles.labelCol}>SCHEDULE</ThemedText>
+              <ThemedText style={styles.valueCol}>
                 {match.time || 'Today, 8:00 PM'}
               </ThemedText>
             </View>
 
-            <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
-              <ThemedText type="labelSm" style={{ color: theme.textSecondary }}>BID STAKE</ThemedText>
+            <View style={[styles.detailRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
+              <ThemedText style={styles.labelCol}>BID STAKE</ThemedText>
               <View style={styles.coinBadge}>
-                <Ionicons name="sparkles" size={12} color="#F59E0B" />
-                <ThemedText type="labelMd" style={{ color: '#D97706', fontFamily: 'Sora_500Medium', marginLeft: 4 }}>
+                <Ionicons name="sparkles" size={12} color="#d97706" />
+                <ThemedText style={{ color: '#d97706', fontFamily: 'Sora_500Medium', fontSize: 11, marginLeft: 4 }}>
                   ₹{stakeCoins} ({stakeCoins} Coins)
                 </ThemedText>
               </View>
             </View>
           </View>
 
-          {/* Buttons */}
+          {/* Buttons matching Dashboard Buttons */}
           <View style={styles.buttonRow}>
             <Pressable
               onPress={onClose}
               style={({ pressed }) => [
                 styles.cancelBtn,
-                { backgroundColor: theme.surfaceLow, opacity: pressed ? 0.8 : 1 }
+                { borderColor: theme.outlineVariant, opacity: pressed ? 0.8 : 1 }
               ]}
             >
-              <ThemedText type="labelMd" style={{ color: theme.textSecondary, fontFamily: 'Sora_500Medium' }}>
+              <ThemedText style={{ color: theme.text, fontFamily: 'Sora_500Medium', fontSize: 12 }}>
                 Cancel
               </ThemedText>
             </Pressable>
@@ -191,8 +219,8 @@ export function BidAcceptModal({ visible, match, onClose, onConfirm }: BidAccept
                 { opacity: pressed ? 0.9 : 1 }
               ]}
             >
-              <Ionicons name="checkmark" size={16} color="#ffffff" style={{ marginRight: 4 }} />
-              <ThemedText type="labelMd" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium' }}>
+              <Ionicons name="checkmark" size={15} color="#ffffff" style={{ marginRight: 4 }} />
+              <ThemedText style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 12 }}>
                 Accept Bid
               </ThemedText>
             </Pressable>
@@ -218,78 +246,77 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   modalCard: {
     width: '100%',
-    maxWidth: 420,
-    borderRadius: 24,
-    padding: 20,
-    alignItems: 'center',
-  },
-  headerIconWrap: {
-    width: 60,
-    height: 60,
+    maxWidth: 400,
     borderRadius: 20,
-    backgroundColor: '#10B9811A',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    padding: 18,
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  titleText: {
-    fontFamily: 'Sora_500Medium',
-    fontSize: 18,
-    textAlign: 'center',
   },
   fofTrustCard: {
     width: '100%',
-    padding: 10,
-    borderRadius: 12,
+    padding: 11,
+    borderRadius: 14,
     borderWidth: 1,
-    marginTop: 12,
+    marginTop: 10,
   },
   detailsBox: {
     width: '100%',
     borderRadius: 16,
     borderWidth: 1,
-    padding: 14,
-    marginTop: 12,
+    padding: 13,
     gap: 8,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 8,
+    paddingBottom: 7,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  labelCol: {
+    color: '#64748b',
+    fontFamily: 'Sora_500Medium',
+    fontSize: 10.5,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  valueCol: {
+    fontFamily: 'Sora_500Medium',
+    fontSize: 12,
   },
   coinBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F59E0B1A',
-    paddingHorizontal: 8,
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 6,
   },
   buttonRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
+    gap: 8,
+    marginTop: 16,
     width: '100%',
   },
   cancelBtn: {
     flex: 1,
-    height: 46,
-    borderRadius: 14,
+    height: 38,
+    borderRadius: 999,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   confirmBtn: {
-    flex: 1.2,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: '#10B981',
+    flex: 1.3,
+    height: 38,
+    borderRadius: 999,
+    backgroundColor: '#10b981',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',

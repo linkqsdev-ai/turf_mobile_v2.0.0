@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { openProfileDrawer } from '@/components/profile-drawer';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -21,6 +22,8 @@ import { QuickMatchTab } from '@/components/matches/QuickMatchTab';
 
 import { useNotifications } from '@/context/NotificationContext';
 import { useBidStore } from '@/store/app-store';
+import { useRemoteConfig } from '@/context/RemoteConfigContext';
+import { MATCH_TAB_FEATURES, filterByFeature, isFeatureOn } from '@/lib/remote-config';
 
 const TABS = ['Home', 'New Team', 'New Player', 'Bid Match', 'Quick Match'];
 const SHOW_CREATE_TABS = false;
@@ -64,10 +67,18 @@ export default function MatchesScreen() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const [activeTab, setActiveTab] = useState('Home');
   const [coinTossVisible, setCoinTossVisible] = useState(false);
-  const [bidListModalVisible, setBidListModalVisible] = useState(false);
   const { openNotificationModal, unreadCount } = useNotifications();
   const { bids } = useBidStore();
   const { profile } = useUserProfile();
+
+  // Super Admin switches can remove Bid Match, Quick Match and the coin toss.
+  const { config } = useRemoteConfig();
+  const tabs = useMemo(() => filterByFeature(VISIBLE_TABS, (tab) => tab, MATCH_TAB_FEATURES, config), [config]);
+  const coinTossOn = isFeatureOn(config, 'scoring.coin_toss');
+
+  useEffect(() => {
+    if (!tabs.includes(activeTab)) setActiveTab('Home');
+  }, [tabs, activeTab]);
 
   useEffect(() => {
     if (params.tab && TABS.includes(params.tab)) setActiveTab(params.tab);
@@ -87,7 +98,7 @@ export default function MatchesScreen() {
       >
         <Pressable
           style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
-          onPress={() => router.push('/profile')}
+          onPress={openProfileDrawer}
         >
           <Image
             source={getAvatarSource(profile.avatarUrl)}
@@ -104,16 +115,6 @@ export default function MatchesScreen() {
         </Pressable>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          {activeTab === 'Bid Match' ? (
-            <Pressable
-              style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
-              hitSlop={8}
-              onPress={() => setBidListModalVisible(true)}
-            >
-              <MaterialCommunityIcons name="clipboard-list-outline" size={22} color={t.primary} />
-              <Dot count={bids.length} color={t.primary} />
-            </Pressable>
-          ) : null}
           <Pressable
             style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
             onPress={openNotificationModal}
@@ -121,16 +122,18 @@ export default function MatchesScreen() {
             <Ionicons name="notifications-outline" size={20} color={t.foreground} />
             <Dot count={unreadCount} color={t.destructive} />
           </Pressable>
-          <Pressable
-            style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
-            onPress={() => setCoinTossVisible(true)}
-          >
-            <Image
-              source={require('@/assets/images/coin_toss_icon.png')}
-              style={{ width: 24, height: 24 }}
-              contentFit="contain"
-            />
-          </Pressable>
+          {coinTossOn && (
+            <Pressable
+              style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
+              onPress={() => setCoinTossVisible(true)}
+            >
+              <Image
+                source={require('@/assets/images/coin_toss_icon.png')}
+                style={{ width: 24, height: 24 }}
+                contentFit="contain"
+              />
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -144,7 +147,7 @@ export default function MatchesScreen() {
           paddingHorizontal: 8,
         }}
       >
-        {VISIBLE_TABS.map((tab) => {
+        {tabs.map((tab) => {
           const active = activeTab === tab;
           const special = tab === 'Bid Match' || tab === 'Quick Match';
           const color = active ? t.primary : special ? t.accent : t.mutedForeground;
@@ -184,12 +187,7 @@ export default function MatchesScreen() {
         {activeTab === 'Home' && <MatchesHomeTab />}
         {activeTab === 'New Team' && <CreateTeamTab onNavigate={setActiveTab} />}
         {activeTab === 'New Player' && <CreatePlayerTab />}
-        {activeTab === 'Bid Match' && (
-          <BidMatchTab
-            showBidListModalExternal={bidListModalVisible}
-            onCloseBidListModalExternal={() => setBidListModalVisible(false)}
-          />
-        )}
+        {activeTab === 'Bid Match' && <BidMatchTab />}
         {activeTab === 'Quick Match' && <QuickMatchTab onNavigate={setActiveTab} />}
       </Reanimated.View>
 

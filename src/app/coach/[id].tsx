@@ -56,7 +56,7 @@ export default function CoachDetail() {
         {/* Top Bar */}
         <View style={styles.topBar}>
           <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/coach')} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={22} color={theme.text} />
+            <Ionicons name="arrow-back" size={20} color={theme.text} />
           </Pressable>
           <ThemedText type="headlineSm" style={{ fontFamily: 'Sora_500Medium' }}>Coach Profile</ThemedText>
           <View style={{ width: 22 }} />

@@ -266,7 +266,7 @@ export default function VolleyballScoring({ matchId, teamA = 'Team A', teamB = '
                     <MaterialCommunityIcons name="volleyball" size={14} color="#ffdd33" style={{ marginLeft: 4 }} />
                   )}
                 </View>
-                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'Sora_500Medium', marginVertical: Spacing.sm }}>
+                <ThemedText type="displayLg" style={{ fontSize: 44, fontFamily: 'Sora_500Medium', marginVertical: Spacing.sm }}>
                   {pointsA}
                 </ThemedText>
                 <Pressable
@@ -287,7 +287,7 @@ export default function VolleyballScoring({ matchId, teamA = 'Team A', teamB = '
                     <MaterialCommunityIcons name="volleyball" size={14} color="#ffdd33" style={{ marginLeft: 4 }} />
                   )}
                 </View>
-                <ThemedText type="displayLg" style={{ fontSize: 60, fontFamily: 'Sora_500Medium', marginVertical: Spacing.sm }}>
+                <ThemedText type="displayLg" style={{ fontSize: 44, fontFamily: 'Sora_500Medium', marginVertical: Spacing.sm }}>
                   {pointsB}
                 </ThemedText>
                 <Pressable

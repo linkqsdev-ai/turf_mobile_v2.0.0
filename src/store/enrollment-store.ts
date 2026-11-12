@@ -17,6 +17,7 @@ export interface ClassEnrollment {
   contactNumber: string;
   amountPaid: number;
   appliedCode?: string;
+  cashbackEarned?: number;
   createdAt: string;
 }
 

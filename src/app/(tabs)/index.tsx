@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { openProfileDrawer } from '@/components/profile-drawer';
 import {
   StyleSheet,
   View,
@@ -27,6 +28,7 @@ import { useClassStore, useTurfStore, useOfferStore } from '@/store/app-store';
 import { isExpired } from '@/store/offer-store';
 import { PlayerDashboard } from '@/components/home/player-dashboard';
 import { OwnerDashboard } from '@/components/home/owner-dashboard';
+import { OrganizerDashboard } from '@/components/home/organizer-dashboard';
 import { useNotifications } from '@/context/NotificationContext';
 import { turfApi } from '@/services/turf-api';
 import { cleanLocation } from '@/utils/location';
@@ -107,7 +109,7 @@ export default function HomeScreen() {
     level: 'Peak',
   });
 
-  const handleProfilePress = () => router.push('/profile');
+  const handleProfilePress = openProfileDrawer;
   const handleNetworkPress = () => router.push('/(tabs)/network');
 
   // Players get the redesigned player dashboard
@@ -130,6 +132,21 @@ export default function HomeScreen() {
     return (
       <>
         <OwnerDashboard
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onOpenNotifications={openNotificationModal}
+          onOpenCoinToss={() => setCoinTossVisible(true)}
+        />
+        <CoinTossModal visible={coinTossVisible} onClose={() => setCoinTossVisible(false)} />
+      </>
+    );
+  }
+
+  // Organizers (Hosts) get the dedicated, redesigned organizer dashboard
+  if (role === 'Organizer') {
+    return (
+      <>
+        <OrganizerDashboard
           refreshing={refreshing}
           onRefresh={onRefresh}
           onOpenNotifications={openNotificationModal}
@@ -194,7 +211,7 @@ export default function HomeScreen() {
                 <ThemedText type="headlineMd" style={{ color: theme.textSecondary, fontSize: 13 }}>
                   Hello, {profile.name.split(' ')[0]}
                 </ThemedText>
-                <ThemedText type="headlineLg" style={[styles.welcomeHeadline, { fontSize: 20, lineHeight: 24 }]}>
+                <ThemedText type="headlineLg" style={[styles.welcomeHeadline, { fontSize: 16.5, lineHeight: 24 }]}>
                   {role === 'Owner'
                     ? "Manage Your Arena"
                     : role === 'Coach'
@@ -425,7 +442,7 @@ export default function HomeScreen() {
                       <View style={[styles.progressRingInner, { borderColor: '#4ade80', borderLeftColor: 'transparent', transform: [{ rotate: '45deg' }] }]} />
                       {/* Straight Aligned Text Container */}
                       <View style={{ position: 'absolute', justifyContent: 'center', alignItems: 'center' }}>
-                        <ThemedText type="headlineSm" style={{ color: '#4ade80', fontFamily: 'Sora_500Medium', fontSize: 18 }}>
+                        <ThemedText type="headlineSm" style={{ color: '#4ade80', fontFamily: 'Sora_500Medium', fontSize: 15.5 }}>
                           67%
                         </ThemedText>
                       </View>
@@ -689,7 +706,7 @@ export default function HomeScreen() {
                         </View>
 
                         <View style={{ marginVertical: 8 }}>
-                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 16, marginBottom: 2 }}>
+                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 14.5, marginBottom: 2 }}>
                             Create Class
                           </ThemedText>
                           <ThemedText style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 10.5, lineHeight: 14 }}>
@@ -761,7 +778,7 @@ export default function HomeScreen() {
                         </View>
 
                         <View style={{ marginVertical: 8 }}>
-                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 16, marginBottom: 2 }}>
+                          <ThemedText type="headlineSm" style={{ color: '#ffffff', fontFamily: 'Sora_500Medium', fontSize: 14.5, marginBottom: 2 }}>
                             My Availability
                           </ThemedText>
                           <ThemedText style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 10.5, lineHeight: 14 }}>
@@ -1087,7 +1104,7 @@ export default function HomeScreen() {
                         <ThemedText type="labelSm" style={{ color: theme.textSecondary, letterSpacing: 0.5, fontSize: 10 }}>
                           {"Today's Revenue"}
                         </ThemedText>
-                        <ThemedText type="headlineSm" style={{ marginTop: 2, fontSize: 16, fontFamily: 'Sora_500Medium' }}>
+                        <ThemedText type="headlineSm" style={{ marginTop: 2, fontSize: 14.5, fontFamily: 'Sora_500Medium' }}>
                           ₹18,500
                         </ThemedText>
                       </View>
@@ -1124,7 +1141,7 @@ export default function HomeScreen() {
                         <ThemedText type="labelSm" style={{ color: 'rgba(255, 255, 255, 0.85)', letterSpacing: 0.5, fontSize: 10 }}>
                           Unpaid Dues
                         </ThemedText>
-                        <ThemedText type="headlineSm" style={{ color: '#ffffff', marginTop: 2, fontSize: 16, fontFamily: 'Sora_500Medium' }}>
+                        <ThemedText type="headlineSm" style={{ color: '#ffffff', marginTop: 2, fontSize: 14.5, fontFamily: 'Sora_500Medium' }}>
                           ₹2,400
                         </ThemedText>
                       </View>
@@ -2069,7 +2086,7 @@ export default function HomeScreen() {
                       {/* Booking 1 */}
                       <View style={[styles.scheduleCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
                         <View style={[styles.scheduleIconWrap, { backgroundColor: theme.primaryContainer + '1a' }]}>
-                          <Ionicons name="football" size={24} color={theme.primary} />
+                          <Ionicons name="football" size={20} color={theme.primary} />
                         </View>
                         <View style={styles.scheduleInfo}>
                           <ThemedText type="headlineSm" style={styles.scheduleTitle}>
@@ -2092,7 +2109,7 @@ export default function HomeScreen() {
                       {/* Booking 2 */}
                       <View style={[styles.scheduleCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
                         <View style={[styles.scheduleIconWrap, { backgroundColor: theme.surface }]}>
-                          <MaterialCommunityIcons name="cricket" size={24} color={theme.secondary} />
+                          <MaterialCommunityIcons name="cricket" size={20} color={theme.secondary} />
                         </View>
                         <View style={styles.scheduleInfo}>
                           <ThemedText type="headlineSm" style={styles.scheduleTitle}>
@@ -2229,7 +2246,7 @@ export default function HomeScreen() {
                       {/* Match 1 */}
                       <View style={[styles.scheduleCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
                         <View style={[styles.scheduleIconWrap, { backgroundColor: theme.primaryContainer + '1a' }]}>
-                          <Ionicons name="trophy" size={24} color={theme.primary} />
+                          <Ionicons name="trophy" size={20} color={theme.primary} />
                         </View>
                         <View style={styles.scheduleInfo}>
                           <ThemedText type="headlineSm" style={styles.scheduleTitle}>
@@ -2252,7 +2269,7 @@ export default function HomeScreen() {
                       {/* Match 2 */}
                       <View style={[styles.scheduleCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
                         <View style={[styles.scheduleIconWrap, { backgroundColor: theme.surface }]}>
-                          <Ionicons name="flag" size={24} color={theme.secondary} />
+                          <Ionicons name="flag" size={20} color={theme.secondary} />
                         </View>
                         <View style={styles.scheduleInfo}>
                           <ThemedText type="headlineSm" style={styles.scheduleTitle}>
@@ -2310,7 +2327,7 @@ export default function HomeScreen() {
                       {/* Practice Session Card */}
                       <View style={[styles.scheduleCard, { backgroundColor: theme.surfaceLowest }, Shadows.level1]}>
                         <View style={[styles.scheduleIconWrap, { backgroundColor: theme.surface }]}>
-                          <Ionicons name="barbell" size={24} color={theme.primary} />
+                          <Ionicons name="barbell" size={20} color={theme.primary} />
                         </View>
                         <View style={styles.scheduleInfo}>
                           <ThemedText type="headlineSm" style={styles.scheduleTitle}>
@@ -3448,7 +3465,7 @@ const styles = StyleSheet.create({
   },
   analyticsValue: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 14.5,
     fontFamily: 'Sora_500Medium',
   },
   analyticsUnit: {
